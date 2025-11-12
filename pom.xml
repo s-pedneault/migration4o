@@ -1,0 +1,191 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 
+         http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    
+    <groupId>com.gestiontechnologies</groupId>
+    <artifactId>migration4o</artifactId>
+    <version>1.0.0</version>
+    <packaging>jar</packaging>
+    
+    <name>Migration4O</name>
+    <description>DB4O Database Migration Assistant - A comprehensive tool for migrating DB4O databases to modern formats</description>
+    
+    <properties>
+        <maven.compiler.source>8</maven.compiler.source>
+        <maven.compiler.target>8</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <main.class>ui.assistant.AssistantLauncher</main.class>
+    </properties>
+    
+    <dependencies>
+        <!-- DB4O Dependencies -->
+        <dependency>
+            <groupId>com.db4o</groupId>
+            <artifactId>db4o-java5</artifactId>
+            <version>7.4.106</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-java5.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.db4o</groupId>
+            <artifactId>db4o-taj</artifactId>
+            <version>7.4.106</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-taj.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.db4o</groupId>
+            <artifactId>db4o-instrumentation</artifactId>
+            <version>7.4.106</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-instrumentation.jar</systemPath>
+        </dependency>
+        
+        <!-- Apache Commons -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-collections4-4.4.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.21</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-compress-1.21.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.15.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-io-2.15.1.jar</systemPath>
+        </dependency>
+        
+        <!-- Apache POI -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi</artifactId>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-5.2.4.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml</artifactId>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-ooxml-5.2.4.jar</systemPath>
+        </dependency>
+        
+        <!-- Log4j -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.20.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/log4j-api-2.20.0.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.20.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/log4j-core-2.20.0.jar</systemPath>
+        </dependency>
+        
+        <!-- Additional Dependencies -->
+        <dependency>
+            <groupId>org.apache.xmlbeans</groupId>
+            <artifactId>xmlbeans</artifactId>
+            <version>5.1.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/xmlbeans-5.1.1.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml-lite</artifactId>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-ooxml-lite-5.2.4.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.google.android.tools.smali</groupId>
+            <artifactId>bloat</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/bloat-1.0.jar</systemPath>
+        </dependency>
+    </dependencies>
+    
+    <build>
+        <sourceDirectory>src/main/java</sourceDirectory>
+        <testSourceDirectory>src/test/java</testSourceDirectory>
+        
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>8</source>
+                    <target>8</target>
+                    <encoding>UTF-8</encoding>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-assembly-plugin</artifactId>
+                <version>3.6.0</version>
+                <configuration>
+                    <descriptorRefs>
+                        <descriptorRef>jar-with-dependencies</descriptorRef>
+                    </descriptorRefs>
+                    <archive>
+                        <manifest>
+                            <mainClass>${main.class}</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>make-assembly</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+</project>
