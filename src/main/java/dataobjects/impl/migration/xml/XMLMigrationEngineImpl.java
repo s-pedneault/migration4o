@@ -57,7 +57,7 @@ public class XMLMigrationEngineImpl implements DOXMLMigrationEngine {
         // Step 2: Export data files
         System.out.println("\n--- Step 2: Exporting Data Files ---");
         XMLDataExporter dataExporter = new XMLDataExporter(engine, SCHEMA_NAMESPACE);
-        
+
         // Export one file per module
         for (DOSchemaModule module : schema.getModules()) {
             String moduleFilePath = dataDir.getAbsolutePath() + "/" + sanitizeFileName(module.getName()) + ".xml";

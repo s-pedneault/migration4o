@@ -42,7 +42,8 @@ public class DOModuleReachabilityResolverImpl implements DOModuleReachabilityRes
                 if (moduleObjects != null) {
                     discoverableObjects.addAll(moduleObjects);
                     if (moduleClassName.contains("DossPrev")) {
-                        System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects from " + moduleClassName);
+                        System.out.println(
+                                "DEBUG: Added " + moduleObjects.size() + " root objects from " + moduleClassName);
                     }
                 } else {
                     // Try to find by simple class name
@@ -51,11 +52,13 @@ public class DOModuleReachabilityResolverImpl implements DOModuleReachabilityRes
                     if (moduleObjects != null) {
                         discoverableObjects.addAll(moduleObjects);
                         if (moduleClassName.contains("DossPrev")) {
-                            System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects from " + moduleClassName + " (matched as " + simpleClassName + ")");
+                            System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects from "
+                                    + moduleClassName + " (matched as " + simpleClassName + ")");
                         }
                     } else {
                         if (moduleClassName.contains("DossPrev")) {
-                            System.out.println("DEBUG: No objects found for module class: " + moduleClassName + " (simple: " + simpleClassName + ")");
+                            System.out.println("DEBUG: No objects found for module class: " + moduleClassName
+                                    + " (simple: " + simpleClassName + ")");
                         }
                     }
                 }

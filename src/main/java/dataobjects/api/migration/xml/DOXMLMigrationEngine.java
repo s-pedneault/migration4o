@@ -4,7 +4,8 @@ import dataobjects.api.engine.DOEngine;
 import java.io.IOException;
 
 /**
- * Engine for exporting database contents to XML files with schema and migration report.
+ * Engine for exporting database contents to XML files with schema and migration
+ * report.
  * Creates:
  * - An XSD schema file describing the structure
  * - One XML data file per schema module

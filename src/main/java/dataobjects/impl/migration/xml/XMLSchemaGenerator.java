@@ -17,7 +17,8 @@ import java.util.Set;
 
 /**
  * Generates XSD schema from DOSchema.
- * Creates complex types for each class, handles inheritance, and defines primitive types.
+ * Creates complex types for each class, handles inheritance, and defines
+ * primitive types.
  */
 public class XMLSchemaGenerator {
 

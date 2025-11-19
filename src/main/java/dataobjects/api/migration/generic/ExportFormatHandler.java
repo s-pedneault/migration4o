@@ -11,7 +11,8 @@ import java.util.List;
 
 /**
  * Interface for format-specific export handlers.
- * Implementations control how data is written to specific output formats (Excel,
+ * Implementations control how data is written to specific output formats
+ * (Excel,
  * XML, etc.)
  */
 public interface ExportFormatHandler {

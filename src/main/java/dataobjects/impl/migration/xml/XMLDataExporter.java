@@ -78,7 +78,7 @@ public class XMLDataExporter {
         // Collect all unreached object IDs (unique set)
         Set<Long> unreachedObjectIds = new HashSet<>();
         Map<Long, DODatabaseClass> objectIdToMostSpecificClass = new HashMap<>();
-        
+
         // Iterate through all database classes to find unreached objects
         for (DODatabaseClass dbClass : engine.getDatabase().getClasses()) {
             DODatabaseObject[] objects = dbClass.getResolvedObjects();
@@ -188,21 +188,21 @@ public class XMLDataExporter {
     /**
      * Export a single object as XML.
      * 
-     * @param writer     The XML writer
-     * @param obj        The object to export
-     * @param elementName The XML element name to use
+     * @param writer        The XML writer
+     * @param obj           The object to export
+     * @param elementName   The XML element name to use
      * @param trackExported Whether to track this as exported (to avoid duplicates)
      */
-    private void exportObject(XMLStreamWriter writer, DODatabaseObject obj, String elementName, boolean trackExported) 
+    private void exportObject(XMLStreamWriter writer, DODatabaseObject obj, String elementName, boolean trackExported)
             throws XMLStreamException {
-        
+
         Long objectId = obj.getObjectId();
-        
+
         // Check if already exported (avoid duplicates)
         if (trackExported && exportedObjectIds.contains(objectId)) {
             return; // Skip duplicate
         }
-        
+
         if (trackExported) {
             exportedObjectIds.add(objectId);
         }
@@ -224,9 +224,9 @@ public class XMLDataExporter {
     /**
      * Export an unreached object with type information.
      */
-    private void exportUnreachedObject(XMLStreamWriter writer, DODatabaseClass dbClass, Long objectId) 
+    private void exportUnreachedObject(XMLStreamWriter writer, DODatabaseClass dbClass, Long objectId)
             throws XMLStreamException {
-        
+
         writer.writeCharacters("  ");
         writer.writeStartElement("object");
         writer.writeAttribute("type", dbClass.getAbsoluteName());
@@ -235,10 +235,10 @@ public class XMLDataExporter {
         // Try to get the actual object to export its fields
         com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
         Object actualObj = container.getByID(objectId);
-        
+
         if (actualObj != null) {
             ObjectResolverUtil.activateObject(container, actualObj, objectId);
-            
+
             // Create a temporary DODatabaseObject representation
             // Export fields based on the database class
             writer.writeCharacters("\n");
@@ -253,9 +253,9 @@ public class XMLDataExporter {
     /**
      * Export fields from a resolved DODatabaseObject.
      */
-    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DOClass clazz) 
+    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DOClass clazz)
             throws XMLStreamException {
-        
+
         if (clazz == null) {
             return;
         }
@@ -272,8 +272,8 @@ public class XMLDataExporter {
         }
 
         // Get primitive field values
-        Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues = 
-            ObjectResolverUtil.extractPrimitiveFieldValues(container, obj.getObjectId(), obj.getAllClasses());
+        Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues = ObjectResolverUtil
+                .extractPrimitiveFieldValues(container, obj.getObjectId(), obj.getAllClasses());
 
         for (DOField field : fields) {
             exportField(writer, field, obj, actualObj, primitiveValues);
@@ -293,16 +293,16 @@ public class XMLDataExporter {
     /**
      * Export fields from an actual object (for unreached objects).
      */
-    private void exportFieldsFromActualObject(XMLStreamWriter writer, Object actualObj, 
+    private void exportFieldsFromActualObject(XMLStreamWriter writer, Object actualObj,
             DODatabaseClass dbClass, Long objectId) throws XMLStreamException {
-        
+
         DOField[] fields = dbClass.getFields();
         if (fields == null) {
             return;
         }
 
         com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
-        
+
         for (DOField field : fields) {
             Object fieldValue = ObjectResolverUtil.getFieldValue(container, actualObj, field);
             exportFieldValue(writer, field, fieldValue);
@@ -314,10 +314,10 @@ public class XMLDataExporter {
      */
     private void exportField(XMLStreamWriter writer, DOField field, DODatabaseObject obj, Object actualObj,
             Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues) throws XMLStreamException {
-        
+
         // Check if it's in primitive values
         ObjectResolverUtil.PrimitiveFieldValue primitiveValue = primitiveValues.get(field.getName());
-        
+
         if (primitiveValue != null && primitiveValue.value != null) {
             // Export primitive value
             writer.writeCharacters("    ");
@@ -338,13 +338,13 @@ public class XMLDataExporter {
         if (!field.isPrimitive() && actualObj != null) {
             com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
             Object fieldValue = ObjectResolverUtil.getFieldValue(container, actualObj, field);
-            
+
             if (fieldValue != null) {
                 Long refObjectId = ObjectResolverUtil.getObjectId(container, fieldValue);
                 if (refObjectId != null) {
                     // Determine if we should nest or reference by ID
                     boolean shouldNest = shouldNestObject(refObjectId);
-                    
+
                     if (shouldNest) {
                         // Export nested object
                         writer.writeCharacters("    ");
@@ -392,9 +392,9 @@ public class XMLDataExporter {
     /**
      * Export a collection field.
      */
-    private void exportCollection(XMLStreamWriter writer, DOField field, DODatabaseObject obj, Object actualObj) 
+    private void exportCollection(XMLStreamWriter writer, DOField field, DODatabaseObject obj, Object actualObj)
             throws XMLStreamException {
-        
+
         if (actualObj == null) {
             return;
         }
@@ -422,9 +422,9 @@ public class XMLDataExporter {
             Object item = container.getByID(itemId);
             if (item != null) {
                 ObjectResolverUtil.activateObject(container, item, itemId);
-                
+
                 boolean shouldNest = shouldNestObject(itemId);
-                
+
                 writer.writeCharacters("    ");
                 if (shouldNest) {
                     exportNestedObject(writer, item, itemId, field.getName());
@@ -441,23 +441,23 @@ public class XMLDataExporter {
     /**
      * Export an object as a nested element.
      */
-    private void exportNestedObject(XMLStreamWriter writer, Object obj, Long objectId, String elementName) 
+    private void exportNestedObject(XMLStreamWriter writer, Object obj, Long objectId, String elementName)
             throws XMLStreamException {
-        
+
         writer.writeStartElement(sanitizeName(elementName));
         writer.writeAttribute("id", String.valueOf(objectId));
-        
+
         // Mark as exported
         exportedObjectIds.add(objectId);
 
         // Export fields of the nested object
         com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
         ObjectResolverUtil.activateObject(container, obj, objectId);
-        
+
         // Get the class and export its fields
         // For now, we'll use a simplified approach
         writer.writeCharacters("<!-- Nested object: " + obj.getClass().getName() + " -->");
-        
+
         writer.writeEndElement();
     }
 

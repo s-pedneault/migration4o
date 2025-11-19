@@ -18,7 +18,8 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * Generic export engine implementation that delegates format-specific operations
+ * Generic export engine implementation that delegates format-specific
+ * operations
  * to an ExportFormatHandler.
  * Contains all the common logic for iterating through modules, classes, and
  * objects,
@@ -107,17 +108,19 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
 
         // Get all resolved objects for this class
         // NOTE: Temporarily using getResolvedObjects() instead of getReachableObjects()
-        // because reachability resolution may not be working correctly for module root classes
+        // because reachability resolution may not be working correctly for module root
+        // classes
         DODatabaseObject[] objects = dbClass.getResolvedObjects();
         if (objects == null || objects.length == 0) {
             System.out.println("No objects found for class: " + exportName);
             return;
         }
-        
+
         // DEBUG: Check reachability for DossPrev
         if (exportName.contains("DossierAdresse")) {
             int reachableCount = dbClass.getReachableObjects() != null ? dbClass.getReachableObjects().length : 0;
-            System.out.println("DEBUG " + exportName + ": resolved=" + objects.length + ", reachable=" + reachableCount);
+            System.out
+                    .println("DEBUG " + exportName + ": resolved=" + objects.length + ", reachable=" + reachableCount);
         }
 
         // Build the column structure (including flattened ID fields)
@@ -331,12 +334,13 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
                         }
                     }
                 } else {
-                    // Non-ID collection - check if items are database objects (GenericObject or regular objects)
+                    // Non-ID collection - check if items are database objects (GenericObject or
+                    // regular objects)
                     Long itemId = ObjectResolverUtil.getObjectId(container, item);
                     if (itemId != null) {
                         // This is a database object (including GenericObject) - extract its mID
                         ObjectResolverUtil.activateObject(container, item, itemId);
-                        
+
                         // Try to find mID field in the content type class
                         DOClass itemClass = field.getContentTypeClass();
                         if (itemClass != null) {

@@ -150,16 +150,16 @@ public class XMLReportGenerator {
         writer.writeStartElement("class");
         writer.writeAttribute("name", schemaClass.getShortName());
         writer.writeAttribute("absoluteName", schemaClass.getAbsoluteName());
-        
+
         if (schemaClass.getExportName() != null && !schemaClass.getExportName().isEmpty()) {
             writer.writeAttribute("exportName", schemaClass.getExportName());
         }
-        
+
         String superClass = schemaClass.getSuperClassAbsoluteName();
         if (superClass != null && !superClass.equals("java.lang.Object")) {
             writer.writeAttribute("extends", superClass);
         }
-        
+
         writer.writeCharacters("\n");
 
         // Write fields
@@ -191,22 +191,22 @@ public class XMLReportGenerator {
         writer.writeStartElement("field");
         writer.writeAttribute("name", field.getName());
         writer.writeAttribute("type", field.getTypeName());
-        
+
         if (field.isArray()) {
             writer.writeAttribute("array", "true");
             if (field.getContentTypeName() != null) {
                 writer.writeAttribute("contentType", field.getContentTypeName());
             }
         }
-        
+
         if (field.isPrimitive()) {
             writer.writeAttribute("primitive", "true");
         }
-        
+
         if (field.getDescription() != null && !field.getDescription().isEmpty()) {
             writer.writeAttribute("description", field.getDescription());
         }
-        
+
         writer.writeEndElement(); // field
         writer.writeCharacters("\n");
     }
@@ -242,7 +242,7 @@ public class XMLReportGenerator {
         writer.writeCharacters("\n");
 
         DOObjectReachabilityTracker tracker = engine.getReachabilityTracker();
-        
+
         long totalCount = tracker.getObjectCountByClass(dbClass);
         long reachedCount = tracker.getReachedObjectCountByClass(dbClass);
         long unreachedCount = tracker.getUnreachedObjectCountByClass(dbClass);
@@ -250,7 +250,7 @@ public class XMLReportGenerator {
         writeElement(writer, "totalObjects", String.valueOf(totalCount), 6);
         writeElement(writer, "reachedObjects", String.valueOf(reachedCount), 6);
         writeElement(writer, "unreachedObjects", String.valueOf(unreachedCount), 6);
-        
+
         if (totalCount > 0) {
             double reachabilityPercentage = (reachedCount * 100.0) / totalCount;
             writeElement(writer, "reachabilityPercentage", String.format("%.2f", reachabilityPercentage), 6);
@@ -281,7 +281,7 @@ public class XMLReportGenerator {
         Set<Long> uniqueObjectIds = new HashSet<>();
         Set<Long> uniqueReachableIds = new HashSet<>();
         Set<Long> uniqueUnreachableIds = new HashSet<>();
-        
+
         DODatabase database = engine.getDatabase();
         if (database != null && database.getClasses() != null) {
             for (DODatabaseClass dbClass : database.getClasses()) {
@@ -307,7 +307,7 @@ public class XMLReportGenerator {
         writeElement(writer, "totalObjectsWithInheritance", String.valueOf(totalObjects), 4);
         writeElement(writer, "reachedObjectsWithInheritance", String.valueOf(reachedObjects), 4);
         writeElement(writer, "unreachedObjectsWithInheritance", String.valueOf(unreachedObjects), 4);
-        
+
         // Write unique counts
         writer.writeCharacters("\n");
         writer.writeCharacters("    ");
@@ -316,7 +316,7 @@ public class XMLReportGenerator {
         writeElement(writer, "uniqueTotalObjects", String.valueOf(uniqueObjectIds.size()), 4);
         writeElement(writer, "uniqueReachedObjects", String.valueOf(uniqueReachableIds.size()), 4);
         writeElement(writer, "uniqueUnreachedObjects", String.valueOf(uniqueUnreachableIds.size()), 4);
-        
+
         if (uniqueObjectIds.size() > 0) {
             double overallReachability = (uniqueReachableIds.size() * 100.0) / uniqueObjectIds.size();
             writeElement(writer, "overallReachabilityPercentage", String.format("%.2f", overallReachability), 4);
@@ -345,7 +345,7 @@ public class XMLReportGenerator {
 
                 if (module.getClasses() != null) {
                     writeElement(writer, "classCount", String.valueOf(module.getClasses().length), 6);
-                    
+
                     // Calculate total objects in this module
                     int totalModuleObjects = 0;
                     for (DOSchemaClass schemaClass : module.getClasses()) {
@@ -371,9 +371,9 @@ public class XMLReportGenerator {
     /**
      * Helper method to write a simple element with text content.
      */
-    private void writeElement(XMLStreamWriter writer, String name, String value, int indent) 
+    private void writeElement(XMLStreamWriter writer, String name, String value, int indent)
             throws XMLStreamException {
-        
+
         String indentStr = " ".repeat(indent);
         writer.writeCharacters(indentStr);
         writer.writeStartElement(name);
