@@ -453,6 +453,11 @@ public class DOObjectResolverImpl implements DOObjectResolver {
         // Convert to array and mark as reached
         DODatabaseClass[] classes = classesInChain.toArray(new DODatabaseClass[0]);
         tracker.markObjectAsReached(objectId, classes);
+        
+        // DEBUG: Log DossPrev objects
+        if (mostSpecificClass.getAbsoluteName().contains("DossPrev") && mostSpecificClass.getAbsoluteName().endsWith("DossPrev")) {
+            System.out.println("DEBUG: Marked DossPrev object " + objectId + " as reached (class: " + mostSpecificClass.getAbsoluteName() + ")");
+        }
     }
 
     /**

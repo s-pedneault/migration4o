@@ -27,8 +27,7 @@ public class DOModuleReachabilityResolverImpl implements DOModuleReachabilityRes
 
             // Get all classes that are part of modules (root objects)
             String[] moduleClassNames = getModuleClassNames(schema);
-            // System.out.println("DEBUG: Found " + moduleClassNames.length + " classes in
-            // modules");
+            System.out.println("DEBUG: Found " + moduleClassNames.length + " classes in modules");
 
             // Create a map of class name to object IDs for quick lookup
             Map<String, Set<Long>> classToObjectIds = new HashMap<>();
@@ -42,22 +41,22 @@ public class DOModuleReachabilityResolverImpl implements DOModuleReachabilityRes
                 Set<Long> moduleObjects = classToObjectIds.get(moduleClassName);
                 if (moduleObjects != null) {
                     discoverableObjects.addAll(moduleObjects);
-                    // System.out
-                    // .println("DEBUG: Added " + moduleObjects.size() + " root objects from " +
-                    // moduleClassName);
+                    if (moduleClassName.contains("DossPrev")) {
+                        System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects from " + moduleClassName);
+                    }
                 } else {
                     // Try to find by simple class name
                     String simpleClassName = getSimpleClassName(moduleClassName);
                     moduleObjects = classToObjectIds.get(simpleClassName);
                     if (moduleObjects != null) {
                         discoverableObjects.addAll(moduleObjects);
-                        // System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects
-                        // from "
-                        // + moduleClassName + " (matched as " + simpleClassName + ")");
+                        if (moduleClassName.contains("DossPrev")) {
+                            System.out.println("DEBUG: Added " + moduleObjects.size() + " root objects from " + moduleClassName + " (matched as " + simpleClassName + ")");
+                        }
                     } else {
-                        // System.out.println("DEBUG: No objects found for module class: " +
-                        // moduleClassName + " (simple: "
-                        // + simpleClassName + ")");
+                        if (moduleClassName.contains("DossPrev")) {
+                            System.out.println("DEBUG: No objects found for module class: " + moduleClassName + " (simple: " + simpleClassName + ")");
+                        }
                     }
                 }
             }

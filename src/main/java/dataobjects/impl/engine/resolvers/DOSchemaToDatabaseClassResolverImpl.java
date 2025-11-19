@@ -27,6 +27,11 @@ public class DOSchemaToDatabaseClassResolverImpl implements DOSchemaToDatabaseCl
                 if (databaseClass != null && schemaClassName.equals(databaseClass.getAbsoluteName())) {
                     // Found a match - set the database class on the schema class
                     schemaClass.setDatabaseClass(databaseClass);
+                    
+                    // DEBUG: Log DossierAdresse linkage
+                    if (schemaClassName.contains("IDDossPrev")) {
+                        System.out.println("DEBUG: Linked schema class '" + schemaClassName + "' to database class: " + databaseClass.getAbsoluteName() + " with " + databaseClass.getTotalObjectCount() + " objects");
+                    }
                     return;
                 }
             }
@@ -36,6 +41,9 @@ public class DOSchemaToDatabaseClassResolverImpl implements DOSchemaToDatabaseCl
         // This is not necessarily an error - the schema may define classes that don't
         // exist in this database
         // The schema class will simply have a null database class
+        if (schemaClassName.contains("IDDossPrev")) {
+            System.out.println("DEBUG: FAILED to link schema class '" + schemaClassName + "' - no matching database class found!");
+        }
         engine.getMonitoring().addSchemaClassWithNoDatabaseClass(schemaClass);
     }
 }

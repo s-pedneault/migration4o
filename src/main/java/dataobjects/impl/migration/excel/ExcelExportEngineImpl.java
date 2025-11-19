@@ -144,6 +144,8 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
         }
 
         // Get all resolved objects for this class
+        // NOTE: Temporarily using getResolvedObjects() instead of getReachableObjects()
+        // because reachability resolution may not be working correctly for module root classes
         DODatabaseObject[] objects = dbClass.getResolvedObjects();
         if (objects == null || objects.length == 0) {
             System.out.println("No objects found for class: " + exportName);
