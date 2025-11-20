@@ -1,4 +1,4 @@
-package dataobjects.impl.migration.excel;
+package dataobjects.impl.migration.xml;
 
 import dataobjects.api.migration.generic.ExportFormatHandler;
 import dataobjects.api.migration.generic.ExportColumn;

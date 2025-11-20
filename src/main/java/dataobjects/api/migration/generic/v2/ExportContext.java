@@ -1,0 +1,16 @@
+package dataobjects.api.migration.generic.v2;
+
+/**
+ * Base class for all export contexts, providing common functionality.
+ */
+public abstract class ExportContext {
+    protected final String outputDirectory;
+
+    protected ExportContext(String outputDirectory) {
+        this.outputDirectory = outputDirectory;
+    }
+
+    public String getOutputDirectory() {
+        return outputDirectory;
+    }
+}

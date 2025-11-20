@@ -39,6 +39,7 @@ Thumbs.db
 dependency-reduced-pom.xml
 
 # Migration specific outputs
+archives/
 output/
 temp/
 backup/

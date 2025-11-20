@@ -4,6 +4,7 @@ import dataobjects.api.engine.DOEngine;
 import dataobjects.api.migration.generic.DOGenericExportEngine;
 import dataobjects.api.migration.generic.ExportFormatHandler;
 import dataobjects.api.migration.generic.ExportColumn;
+import dataobjects.api.migration.generic.CollectionValue;
 import dataobjects.api.models.schema.DOSchema;
 import dataobjects.api.models.schema.DOSchemaModule;
 import dataobjects.api.models.schema.DOSchemaClass;
@@ -15,6 +16,7 @@ import dataobjects.api.models.DOClass;
 import dataobjects.util.ObjectResolverUtil;
 
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -58,7 +60,7 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
         }
 
         // Finalize the export
-        handler.finalize();
+        handler.cleanup();
     }
 
     private void exportModule(DOSchemaModule module, ExportFormatHandler handler) throws IOException {
@@ -282,12 +284,9 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
      * For collections of ID objects, exports the mID values.
      * For collections of primitives, exports the values directly.
      */
-    private String formatCollectionForExport(com.db4o.ext.ExtObjectContainer container, Object collectionObj,
+    private CollectionValue formatCollectionForExport(com.db4o.ext.ExtObjectContainer container, Object collectionObj,
             DOField field) {
         try {
-            StringBuilder result = new StringBuilder();
-            int count = 0;
-
             // Convert collection to iterable
             Iterable<?> iterable = null;
             if (collectionObj instanceof Iterable) {
@@ -305,13 +304,65 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
             boolean isIDCollection = contentTypeName != null
                     && (contentTypeName.startsWith("gen.util.ID") || contentTypeName.contains(".ID"));
 
+            // Determine referenced class and export module name
+            String referencedClassName = null;
+            String exportModuleName = null;
+
+            DOClass contentTypeClass = field.getContentTypeClass();
+
+            if (contentTypeClass instanceof DODatabaseClass) {
+                DODatabaseClass dbClass = (DODatabaseClass) contentTypeClass;
+
+                if (isIDCollection) {
+                    DODatabaseClass targetClass = findTargetClassForIDType(dbClass);
+                    if (targetClass != null) {
+                        referencedClassName = targetClass.getShortName();
+                        exportModuleName = getExportNameForClass(targetClass);
+                    } else {
+                        String idClassName = dbClass.getShortName();
+                        if (idClassName.startsWith("ID")) {
+                            referencedClassName = idClassName.substring(2);
+                        } else {
+                            referencedClassName = idClassName;
+                        }
+                        exportModuleName = getExportNameForClass(dbClass);
+                    }
+                } else {
+                    referencedClassName = dbClass.getShortName();
+                    exportModuleName = getExportNameForClass(dbClass);
+                }
+            } else if (contentTypeClass instanceof DOSchemaClass) {
+                DOSchemaClass schemaClass = (DOSchemaClass) contentTypeClass;
+                DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+
+                if (dbClass != null) {
+                    if (isIDCollection) {
+                        DODatabaseClass targetClass = findTargetClassForIDType(dbClass);
+                        if (targetClass != null) {
+                            referencedClassName = targetClass.getShortName();
+                            exportModuleName = getExportNameForClass(targetClass);
+                        } else {
+                            String idClassName = dbClass.getShortName();
+                            if (idClassName.startsWith("ID")) {
+                                referencedClassName = idClassName.substring(2);
+                            } else {
+                                referencedClassName = idClassName;
+                            }
+                            exportModuleName = getExportNameForClass(dbClass);
+                        }
+                    } else {
+                        referencedClassName = dbClass.getShortName();
+                        exportModuleName = getExportNameForClass(dbClass);
+                    }
+                }
+            }
+
+            CollectionValue result = new CollectionValue(field.getName(), isIDCollection, referencedClassName,
+                    exportModuleName);
+
             for (Object item : iterable) {
                 if (item == null) {
                     continue;
-                }
-
-                if (count > 0) {
-                    result.append(", ");
                 }
 
                 if (isIDCollection) {
@@ -327,8 +378,7 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
                             if (mIdField != null) {
                                 Object mIdValue = ObjectResolverUtil.getFieldValue(container, item, mIdField);
                                 if (mIdValue != null && !"-1".equals(mIdValue.toString())) {
-                                    result.append(mIdValue.toString());
-                                    count++;
+                                    result.addItem(mIdValue.toString());
                                 }
                             }
                         }
@@ -348,20 +398,18 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
                             if (mIdField != null) {
                                 Object mIdValue = ObjectResolverUtil.getFieldValue(container, item, mIdField);
                                 if (mIdValue != null && !"-1".equals(mIdValue.toString())) {
-                                    result.append(mIdValue.toString());
-                                    count++;
+                                    result.addItem(mIdValue.toString());
                                 }
                             }
                         }
                     } else {
                         // Truly primitive value - use toString()
-                        result.append(item.toString());
-                        count++;
+                        result.addItem(item.toString());
                     }
                 }
             }
 
-            return result.toString();
+            return result;
         } catch (Exception e) {
             System.err.println("Error formatting collection: " + e.getMessage());
             return null;
@@ -428,15 +476,16 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
      * available).
      */
     private String getExportNameForClass(DODatabaseClass dbClass) {
-        // Try to find the corresponding schema class
-        if (engine.getSchema() != null && engine.getSchema().getClasses() != null) {
-            for (dataobjects.api.models.schema.DOSchemaClass schemaClass : engine.getSchema().getClasses()) {
-                if (schemaClass.getDatabaseClass() == dbClass) {
-                    String exportName = schemaClass.getExportName();
-                    if (exportName != null && !exportName.isEmpty()) {
-                        return exportName;
+        // Try to find the module containing this class
+        if (engine.getSchema() != null && engine.getSchema().getModules() != null) {
+            for (dataobjects.api.models.schema.DOSchemaModule module : engine.getSchema().getModules()) {
+                if (module.getClasses() != null) {
+                    for (dataobjects.api.models.schema.DOSchemaClass schemaClass : module.getClasses()) {
+                        if (schemaClass.getDatabaseClass() == dbClass) {
+                            // Return the module name, not the class name
+                            return module.getName();
+                        }
                     }
-                    return schemaClass.getShortName();
                 }
             }
         }
@@ -512,15 +561,44 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
     }
 
     /**
-     * Clean field name by removing leading 'm' if present.
+     * Clean field name by removing leading 'm' if present and converting to
+     * camelCase.
+     * Special handling for ID fields:
+     * - mID -> id (fully lowercase)
+     * - mIDSSI -> idssi (fully lowercase)
+     * - IDPrefix... -> idPrefix... (lowercase 'id' prefix)
      */
     private String cleanFieldName(String fieldName) {
-        if (fieldName != null && fieldName.length() > 1 && fieldName.startsWith("m")
-                && Character.isUpperCase(fieldName.charAt(1))) {
-            // Remove leading 'm' from mXxx pattern
-            return fieldName.substring(1);
+        if (fieldName == null) {
+            return fieldName;
         }
-        return fieldName;
+
+        String cleaned = fieldName;
+
+        // Remove leading 'm' from mXxx pattern
+        if (cleaned.length() > 1 && cleaned.startsWith("m") && Character.isUpperCase(cleaned.charAt(1))) {
+            cleaned = cleaned.substring(1);
+        }
+
+        // Special handling for ID fields
+        if (cleaned.equals("ID")) {
+            return "id";
+        }
+        if (cleaned.equals("IDSSI")) {
+            return "idssi";
+        }
+
+        // Handle IDPrefix patterns (e.g., IDDossPrev -> idDossPrev)
+        if (cleaned.startsWith("ID") && cleaned.length() > 2 && Character.isUpperCase(cleaned.charAt(2))) {
+            cleaned = "id" + cleaned.substring(2);
+        }
+
+        // Convert to camelCase (first letter lowercase)
+        if (cleaned.length() > 0) {
+            cleaned = Character.toLowerCase(cleaned.charAt(0)) + cleaned.substring(1);
+        }
+
+        return cleaned;
     }
 
     private boolean isIDTypeField(DOField field) {
@@ -618,5 +696,32 @@ public class GenericExportEngineImpl implements DOGenericExportEngine {
         }
 
         return null;
+    }
+
+    /**
+     * Remove accented characters from text by normalizing to NFD form
+     * and removing combining diacritical marks.
+     */
+    public static String removeAccents(String text) {
+        if (text == null) {
+            return null;
+        }
+        // Normalize to NFD (decomposed form) and remove combining diacritical marks
+        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{M}", "");
+    }
+
+    /**
+     * Sanitize a module name to create a safe filename.
+     * First removes accents, then replaces any remaining non-alphanumeric chars
+     * with underscores.
+     */
+    public static String sanitizeModuleName(String moduleName) {
+        if (moduleName == null) {
+            return "unknown";
+        }
+        // First remove accents, then replace any remaining non-alphanumeric chars
+        String withoutAccents = removeAccents(moduleName);
+        return withoutAccents.replaceAll("[^a-zA-Z0-9.-]", "_");
     }
 }

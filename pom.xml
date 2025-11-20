@@ -14,14 +14,14 @@
     <description>DB4O Database Migration Assistant - A comprehensive tool for migrating DB4O databases to modern formats</description>
     
     <properties>
-        <maven.compiler.source>8</maven.compiler.source>
-        <maven.compiler.target>8</maven.compiler.target>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.class>ui.assistant.AssistantLauncher</main.class>
     </properties>
     
     <dependencies>
-        <!-- DB4O Dependencies -->
+        <!-- DB4O Dependencies - keeping as system scope if JARs exist -->
         <dependency>
             <groupId>com.db4o</groupId>
             <artifactId>db4o-java5</artifactId>
@@ -46,88 +46,62 @@
             <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-instrumentation.jar</systemPath>
         </dependency>
         
-        <!-- Apache Commons -->
+        <!-- Apache Commons - Updated to managed dependencies for Java 21 -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
             <version>4.4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/commons-collections4-4.4.jar</systemPath>
         </dependency>
         
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-compress</artifactId>
-            <version>1.21</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/commons-compress-1.21.jar</systemPath>
+            <version>1.26.0</version>
         </dependency>
         
         <dependency>
             <groupId>commons-io</groupId>
             <artifactId>commons-io</artifactId>
-            <version>2.15.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/commons-io-2.15.1.jar</systemPath>
+            <version>2.16.1</version>
         </dependency>
         
-        <!-- Apache POI -->
+        <!-- Apache POI - Updated for Java 21 -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
-            <version>5.2.4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/poi-5.2.4.jar</systemPath>
+            <version>5.2.5</version>
         </dependency>
         
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/poi-ooxml-5.2.4.jar</systemPath>
-        </dependency>
-        
-        <!-- Log4j -->
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-api</artifactId>
-            <version>2.20.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/log4j-api-2.20.0.jar</systemPath>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.20.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/log4j-core-2.20.0.jar</systemPath>
-        </dependency>
-        
-        <!-- Additional Dependencies -->
-        <dependency>
-            <groupId>org.apache.xmlbeans</groupId>
-            <artifactId>xmlbeans</artifactId>
-            <version>5.1.1</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/xmlbeans-5.1.1.jar</systemPath>
+            <version>5.2.5</version>
         </dependency>
         
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml-lite</artifactId>
-            <version>5.2.4</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/poi-ooxml-lite-5.2.4.jar</systemPath>
+            <version>5.2.5</version>
+        </dependency>
+        
+        <!-- Log4j - Updated for Java 21 -->
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.22.1</version>
         </dependency>
         
         <dependency>
-            <groupId>com.google.android.tools.smali</groupId>
-            <artifactId>bloat</artifactId>
-            <version>1.0</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/bloat-1.0.jar</systemPath>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.22.1</version>
+        </dependency>
+        
+        <!-- XMLBeans - Updated for Java 21 -->
+        <dependency>
+            <groupId>org.apache.xmlbeans</groupId>
+            <artifactId>xmlbeans</artifactId>
+            <version>5.2.0</version>
         </dependency>
     </dependencies>
     
@@ -141,8 +115,8 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
                 <configuration>
-                    <source>8</source>
-                    <target>8</target>
+                    <source>21</source>
+                    <target>21</target>
                     <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>

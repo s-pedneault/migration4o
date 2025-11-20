@@ -16,8 +16,11 @@ public class DOTest {
             // "local/PremLigne.dat");
             // DOEngine engine = DataObjectAPI.newEngine("schema/migration-schema.xml",
             // "local/54060/BackupManuel.dat");
+
+            // DOEngine engine = DataObjectAPI.newEngine("schema/migration-schema.xml",
+            // "local/54060/BackupManuel.dat");
             DOEngine engine = DataObjectAPI.newEngine("schema/migration-schema.xml",
-                    "local/54060/BackupManuel.dat");
+                    "local/00000/PremLigne.dat");
 
             // Print the original hierarchy
             System.out.println("=== ORIGINAL HIERARCHY ===");
@@ -54,13 +57,13 @@ public class DOTest {
             // System.out.println("Reachability analysis report generated successfully!");
 
             // Export database to Excel files
-            System.out.println("\n=== EXPORTING TO EXCEL ===");
-            DataObjectAPI.exportToExcel(engine);
-            System.out.println("Excel export completed successfully!");
+            // System.out.println("\n=== EXPORTING TO EXCEL ===");
+            // DataObjectAPI.exportToExcel(engine);
+            // System.out.println("Excel export completed successfully!");
 
             // Export database to XML files with schema and report
-            System.out.println("\n=== EXPORTING TO XML ===");
-            DataObjectAPI.exportToXML(engine);
+            System.out.println("\n=== EXPORTING TO XML (V2) ===");
+            DataObjectAPI.exportToXMLV2(engine);
             System.out.println("XML migration export completed successfully!");
 
         } catch (Exception e) {

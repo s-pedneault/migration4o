@@ -4,6 +4,7 @@ import dataobjects.api.engine.DOEngine;
 import dataobjects.api.migration.xml.DOXMLMigrationEngine;
 import dataobjects.api.models.schema.DOSchema;
 import dataobjects.api.models.schema.DOSchemaModule;
+import dataobjects.impl.migration.generic.GenericExportEngineImpl;
 
 import java.io.File;
 import java.io.IOException;
@@ -60,7 +61,8 @@ public class XMLMigrationEngineImpl implements DOXMLMigrationEngine {
 
         // Export one file per module
         for (DOSchemaModule module : schema.getModules()) {
-            String moduleFilePath = dataDir.getAbsolutePath() + "/" + sanitizeFileName(module.getName()) + ".xml";
+            String moduleFilePath = dataDir.getAbsolutePath() + "/"
+                    + GenericExportEngineImpl.sanitizeModuleName(module.getName()) + ".xml";
             dataExporter.exportModule(module, moduleFilePath);
             System.out.println("Module exported: " + module.getName());
         }
@@ -83,11 +85,4 @@ public class XMLMigrationEngineImpl implements DOXMLMigrationEngine {
     /**
      * Sanitize a filename by replacing problematic characters.
      */
-    private String sanitizeFileName(String name) {
-        if (name == null) {
-            return "unnamed";
-        }
-        // Replace any non-alphanumeric chars (except dots and dashes) with underscores
-        return name.replaceAll("[^a-zA-Z0-9.-]", "_");
-    }
 }

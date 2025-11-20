@@ -11,6 +11,7 @@ import dataobjects.api.models.database.DODatabase;
 import dataobjects.api.models.DOField;
 import dataobjects.api.models.DOClass;
 import dataobjects.util.ObjectResolverUtil;
+import dataobjects.impl.migration.generic.GenericExportEngineImpl;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -18,7 +19,6 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.Normalizer;
 import java.util.*;
 
 /**
@@ -94,7 +94,8 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
     }
 
     private void exportModule(DOSchemaModule module, String outputDirectory) throws IOException {
-        String fileName = outputDirectory + "/" + sanitizeFileName(module.getName()) + ".xlsx";
+        String fileName = outputDirectory + "/" + GenericExportEngineImpl.sanitizeModuleName(module.getName())
+                + ".xlsx";
         System.out.println("Exporting module: " + module.getName() + " to " + fileName);
 
         try (Workbook workbook = new XSSFWorkbook()) {
@@ -582,24 +583,9 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
     /**
      * Remove accents from text by normalizing and removing diacritical marks.
      */
-    private String removeAccents(String text) {
-        if (text == null) {
-            return null;
-        }
-        // Normalize to NFD (decomposed form) and remove combining diacritical marks
-        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
-        return normalized.replaceAll("\\p{M}", "");
-    }
-
-    private String sanitizeFileName(String name) {
-        // First remove accents, then replace any remaining non-alphanumeric chars
-        String withoutAccents = removeAccents(name);
-        return withoutAccents.replaceAll("[^a-zA-Z0-9.-]", "_");
-    }
-
     private String sanitizeSheetName(String name) {
         // First remove accents
-        String withoutAccents = removeAccents(name);
+        String withoutAccents = GenericExportEngineImpl.removeAccents(name);
         // Excel sheet names have restrictions: no \/:*?[]
         String sanitized = withoutAccents.replaceAll("[\\\\/:*?\\[\\]]", "_");
         // Max length is 31 characters

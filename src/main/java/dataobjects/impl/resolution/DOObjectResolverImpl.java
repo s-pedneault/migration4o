@@ -457,8 +457,9 @@ public class DOObjectResolverImpl implements DOObjectResolver {
         // DEBUG: Log DossPrev objects
         if (mostSpecificClass.getAbsoluteName().contains("DossPrev")
                 && mostSpecificClass.getAbsoluteName().endsWith("DossPrev")) {
-            System.out.println("DEBUG: Marked DossPrev object " + objectId + " as reached (class: "
-                    + mostSpecificClass.getAbsoluteName() + ")");
+            // System.out.println("DEBUG: Marked DossPrev object " + objectId + " as reached
+            // (class: "
+            // + mostSpecificClass.getAbsoluteName() + ")");
         }
     }
 
