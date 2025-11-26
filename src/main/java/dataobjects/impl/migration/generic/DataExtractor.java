@@ -122,8 +122,12 @@ public class DataExtractor {
         if (actualObj != null) {
             Object fieldObj = ObjectResolverUtil.getFieldValue(container, actualObj, column.field);
 
-            if (fieldObj != null && ObjectResolverUtil.isAnyCollectionType(fieldObj)) {
-                return formatCollectionForExport(fieldObj);
+            // Return the raw collection/object - format handlers will process it
+            if (fieldObj != null) {
+                // Activate collections and complex objects for inspection
+                if (ObjectResolverUtil.isAnyCollectionType(fieldObj) || !isPrimitiveOrWrapper(fieldObj.getClass())) {
+                    ObjectResolverUtil.activateObject(container, fieldObj, -1L);
+                }
             }
 
             return fieldObj;
@@ -133,18 +137,28 @@ public class DataExtractor {
     }
 
     /**
+     * Check if a class is a primitive type or wrapper.
+     */
+    private boolean isPrimitiveOrWrapper(Class<?> clazz) {
+        return clazz.isPrimitive() ||
+                clazz == String.class ||
+                clazz == Boolean.class ||
+                clazz == Integer.class ||
+                clazz == Long.class ||
+                clazz == Double.class ||
+                clazz == Float.class ||
+                clazz == Short.class ||
+                clazz == Byte.class ||
+                clazz == Character.class ||
+                java.util.Date.class.isAssignableFrom(clazz);
+    }
+
+    /**
      * Check if a field is an ID-type field.
      */
     private boolean isIDTypeField(DOField field) {
         String typeName = field.getTypeName();
         return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
-    }
-
-    /**
-     * Simple collection formatting (can be enhanced later).
-     */
-    private Object formatCollectionForExport(Object collectionObj) {
-        return "[Collection: " + collectionObj.getClass().getSimpleName() + "]";
     }
 
     /**

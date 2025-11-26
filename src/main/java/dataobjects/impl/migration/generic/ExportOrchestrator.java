@@ -65,9 +65,9 @@ public class ExportOrchestrator {
             throws IOException {
         System.out.println("Exporting module: " + module.getName());
 
-        // Create module context
+        // Create module context with engine reference
         String sanitizedName = sanitizeModuleName(module.getName());
-        ModuleExportContext moduleContext = new ModuleExportContext(outputDirectory, module, sanitizedName);
+        ModuleExportContext moduleContext = new ModuleExportContext(outputDirectory, engine, module, sanitizedName);
 
         // Begin module processing
         Object moduleHandle = handler.beginModule(moduleContext);

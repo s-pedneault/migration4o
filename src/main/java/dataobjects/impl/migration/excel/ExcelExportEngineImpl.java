@@ -29,12 +29,6 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
 
     private static final String DEFAULT_OUTPUT_DIR = "output/excel";
 
-    // Fields to export first (in this order) if they exist
-    private static final String[] PRIORITY_FIELDS = {
-            "mID",
-            "mIDSSI"
-    };
-
     private DOEngine engine;
 
     /**
@@ -502,52 +496,12 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
     }
 
     /**
-     * Get all fields sorted with priority fields first.
+     * Get all fields sorted with priority fields first, then non-collection fields,
+     * then collection fields.
      */
     private List<DOField> getSortedFields(DODatabaseClass dbClass) {
         List<DOField> allFields = getAllFields(dbClass);
-
-        // Separate priority fields from other fields
-        List<DOField> priorityFields = new ArrayList<>();
-        List<DOField> otherFields = new ArrayList<>();
-
-        for (DOField field : allFields) {
-            boolean isPriority = false;
-            for (String priorityName : PRIORITY_FIELDS) {
-                if (priorityName.equals(field.getName())) {
-                    isPriority = true;
-                    break;
-                }
-            }
-
-            if (isPriority) {
-                priorityFields.add(field);
-            } else {
-                otherFields.add(field);
-            }
-        }
-
-        // Sort priority fields in the order defined in PRIORITY_FIELDS
-        priorityFields.sort((f1, f2) -> {
-            int index1 = -1;
-            int index2 = -1;
-            for (int i = 0; i < PRIORITY_FIELDS.length; i++) {
-                if (PRIORITY_FIELDS[i].equals(f1.getName())) {
-                    index1 = i;
-                }
-                if (PRIORITY_FIELDS[i].equals(f2.getName())) {
-                    index2 = i;
-                }
-            }
-            return Integer.compare(index1, index2);
-        });
-
-        // Combine: priority fields first, then others
-        List<DOField> sortedFields = new ArrayList<>();
-        sortedFields.addAll(priorityFields);
-        sortedFields.addAll(otherFields);
-
-        return sortedFields;
+        return ExportUtils.sortFieldsForExport(allFields);
     }
 
     private List<DOField> getAllFields(DODatabaseClass dbClass) {

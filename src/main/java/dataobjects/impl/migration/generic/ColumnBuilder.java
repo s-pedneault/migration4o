@@ -16,12 +16,6 @@ public class ColumnBuilder {
 
     private final DOEngine engine;
 
-    // Fields to export first (in this order) if they exist
-    private static final String[] PRIORITY_FIELDS = {
-            "mID",
-            "mIDSSI"
-    };
-
     public ColumnBuilder(DOEngine engine) {
         this.engine = engine;
     }
@@ -113,49 +107,12 @@ public class ColumnBuilder {
     }
 
     /**
-     * Get all fields sorted with priority fields first.
+     * Get all fields sorted with priority fields first, then non-collection fields,
+     * then collection fields.
      */
     private List<DOField> getSortedFields(DODatabaseClass dbClass) {
         List<DOField> allFields = getAllFields(dbClass);
-
-        List<DOField> priorityFields = new ArrayList<>();
-        List<DOField> otherFields = new ArrayList<>();
-
-        for (DOField field : allFields) {
-            if (isPriorityField(field.getName())) {
-                priorityFields.add(field);
-            } else {
-                otherFields.add(field);
-            }
-        }
-
-        // Combine priority fields first, then others
-        List<DOField> sortedFields = new ArrayList<>();
-
-        // Add priority fields in the order defined in PRIORITY_FIELDS
-        for (String priorityName : PRIORITY_FIELDS) {
-            for (DOField field : priorityFields) {
-                if (priorityName.equals(field.getName())) {
-                    sortedFields.add(field);
-                    break;
-                }
-            }
-        }
-
-        sortedFields.addAll(otherFields);
-        return sortedFields;
-    }
-
-    /**
-     * Check if a field name is a priority field.
-     */
-    private boolean isPriorityField(String fieldName) {
-        for (String priorityName : PRIORITY_FIELDS) {
-            if (priorityName.equals(fieldName)) {
-                return true;
-            }
-        }
-        return false;
+        return ExportUtils.sortFieldsForExport(allFields);
     }
 
     /**

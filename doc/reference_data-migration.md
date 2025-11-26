@@ -4,12 +4,12 @@ This document describes the XML export format for Migration4O database content, 
 
 ## Overview
 
-The export generates a single XML file per database with a robust two-part structure:
+The export generates one XML file per module with a robust two-part structure:
 
 1. **Type Definitions Section**: Maps simple type names to full Java class names
 2. **Data Modules Section**: Clean, optimized data using simple type references
 
-This approach provides **complete schema validation** while minimizing redundancy in data files.
+This approach provides **complete schema validation** while minimizing redundancy in data files and keeping file sizes manageable.
 
 ## XML Structure
 

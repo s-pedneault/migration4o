@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           targetNamespace="http://migration4o/schema"
+           xmlns:m4o="http://migration4o/schema"
+           elementFormDefault="qualified">
+
+    <!-- Root element: migration -->
+    <xs:element name="migration">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="types" type="m4o:TypesType"/>
+                <xs:element name="modules" type="m4o:ModulesType"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Types section -->
+    <xs:complexType name="TypesType">
+        <xs:sequence>
+            <xs:element name="type" type="m4o:TypeDefinitionType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Type definition -->
+    <xs:complexType name="TypeDefinitionType">
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="class" type="xs:string" use="required"/>
+        <xs:attribute name="module" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- Modules section -->
+    <xs:complexType name="ModulesType">
+        <xs:sequence>
+            <xs:element name="module" type="m4o:ModuleType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Module -->
+    <xs:complexType name="ModuleType">
+        <xs:sequence>
+            <xs:element name="objects" type="m4o:ObjectsType"/>
+        </xs:sequence>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- Objects container -->
+    <xs:complexType name="ObjectsType">
+        <xs:sequence>
+            <xs:element name="object" type="m4o:ObjectType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- Object -->
+    <xs:complexType name="ObjectType">
+        <xs:sequence>
+            <xs:element name="field" type="m4o:FieldType" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="type" type="xs:string" use="required"/>
+        <xs:attribute name="id" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <!-- Field - can contain simple value, collection, reference, or embedded object -->
+    <xs:complexType name="FieldType" mixed="true">
+        <xs:choice minOccurs="0" maxOccurs="unbounded">
+            <!-- For collections: value elements or embedded objects -->
+            <xs:element name="value" type="xs:string"/>
+            <xs:element name="object" type="m4o:ObjectType"/>
+        </xs:choice>
+        <xs:attribute name="name" type="xs:string" use="required"/>
+        <xs:attribute name="type" type="m4o:FieldTypeEnum" use="required"/>
+        
+        <!-- For reference fields -->
+        <xs:attribute name="targetType" type="xs:string" use="optional"/>
+        <xs:attribute name="targetModule" type="xs:string" use="optional"/>
+        
+        <!-- For collection fields -->
+        <xs:attribute name="elementType" type="xs:string" use="optional"/>
+        <xs:attribute name="elementClass" type="xs:string" use="optional"/>
+        <xs:attribute name="elementModule" type="xs:string" use="optional"/>
+    </xs:complexType>
+
+    <!-- Field type enumeration -->
+    <xs:simpleType name="FieldTypeEnum">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="string"/>
+            <xs:enumeration value="integer"/>
+            <xs:enumeration value="double"/>
+            <xs:enumeration value="boolean"/>
+            <xs:enumeration value="date"/>
+            <xs:enumeration value="reference"/>
+            <xs:enumeration value="embedded"/>
+            <xs:enumeration value="collection"/>
+            <xs:enumeration value="empty"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

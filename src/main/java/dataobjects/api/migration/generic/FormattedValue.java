@@ -3,6 +3,7 @@ package dataobjects.api.migration.generic;
 import dataobjects.api.migration.generic.ExportColumn;
 
 import java.text.SimpleDateFormat;
+import java.util.Collection;
 import java.util.Date;
 
 /**
@@ -79,6 +80,49 @@ public class FormattedValue {
      */
     public boolean isEmpty() {
         return isEmpty;
+    }
+
+    /**
+     * Check if this value is a collection.
+     */
+    public boolean isCollection() {
+        return rawValue instanceof Collection ||
+                (rawValue != null && rawValue.getClass().getName().contains("Vector"));
+    }
+
+    /**
+     * Check if this value is a complex object (not a primitive or collection).
+     */
+    public boolean isComplexObject() {
+        if (rawValue == null || isEmpty) {
+            return false;
+        }
+
+        // Check if it's a primitive type
+        if (type == ValueType.STRING || type == ValueType.INTEGER ||
+                type == ValueType.DOUBLE || type == ValueType.BOOLEAN ||
+                type == ValueType.DATE || type == ValueType.EMPTY) {
+            return false;
+        }
+
+        // Check if it's a collection
+        if (isCollection()) {
+            return false;
+        }
+
+        // It's a complex object (likely a referenced database object)
+        return true;
+    }
+
+    /**
+     * Get the collection as an iterable (if it is a collection).
+     */
+    @SuppressWarnings("unchecked")
+    public Collection<?> getCollection() {
+        if (rawValue instanceof Collection) {
+            return (Collection<?>) rawValue;
+        }
+        return null;
     }
 
     /**
