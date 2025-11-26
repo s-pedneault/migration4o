@@ -1,6 +1,6 @@
-package dataobjects.impl.migration.xml.v2;
+package dataobjects.impl.migration.xml;
 
-import dataobjects.api.migration.generic.v2.*;
+import dataobjects.api.migration.generic.*;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamWriter;

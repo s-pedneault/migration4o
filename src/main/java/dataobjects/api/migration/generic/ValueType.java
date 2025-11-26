@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 /**
  * Represents the type of a formatted value for export.

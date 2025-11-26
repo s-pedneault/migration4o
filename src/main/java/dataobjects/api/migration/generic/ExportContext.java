@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 /**
  * Base class for all export contexts, providing common functionality.

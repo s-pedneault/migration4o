@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 import java.io.File;
 import java.io.IOException;
@@ -44,12 +44,10 @@ public abstract class TabularFormatHandler implements ExportFormatHandler {
      * Subclasses can override to customize header creation.
      */
     protected String[] createHeaders(ClassExportContext context) {
-        List<FormattedValue> columns = context.getColumns().stream()
-                .map(col -> new FormattedValue(col.columnName, col))
-                .collect(java.util.stream.Collectors.toList());
+        List<ExportColumn> columns = context.getColumns();
 
         return columns.stream()
-                .map(FormattedValue::getStringValue)
+                .map(col -> col.columnName)
                 .toArray(String[]::new);
     }
 

@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 import java.io.File;
 import java.io.IOException;

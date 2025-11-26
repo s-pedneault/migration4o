@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 /**
  * Defines the preferred output structure for a format handler.

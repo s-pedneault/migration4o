@@ -11,7 +11,7 @@ import dataobjects.api.models.database.DODatabase;
 import dataobjects.api.models.DOField;
 import dataobjects.api.models.DOClass;
 import dataobjects.util.ObjectResolverUtil;
-import dataobjects.impl.migration.generic.GenericExportEngineImpl;
+import dataobjects.impl.migration.generic.ExportUtils;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -94,7 +94,7 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
     }
 
     private void exportModule(DOSchemaModule module, String outputDirectory) throws IOException {
-        String fileName = outputDirectory + "/" + GenericExportEngineImpl.sanitizeModuleName(module.getName())
+        String fileName = outputDirectory + "/" + ExportUtils.sanitizeModuleName(module.getName())
                 + ".xlsx";
         System.out.println("Exporting module: " + module.getName() + " to " + fileName);
 
@@ -585,7 +585,7 @@ public class ExcelExportEngineImpl implements DOExcelExportEngine {
      */
     private String sanitizeSheetName(String name) {
         // First remove accents
-        String withoutAccents = GenericExportEngineImpl.removeAccents(name);
+        String withoutAccents = ExportUtils.removeAccents(name);
         // Excel sheet names have restrictions: no \/:*?[]
         String sanitized = withoutAccents.replaceAll("[\\\\/:*?\\[\\]]", "_");
         // Max length is 31 characters

@@ -1,34 +1,29 @@
 package dataobjects.api.migration.generic;
 
 import dataobjects.api.engine.DOEngine;
+import dataobjects.impl.migration.generic.ExportOrchestrator;
 import java.io.IOException;
 
 /**
- * Generic export engine that can export to multiple formats.
- * Delegates format-specific operations to an ExportFormatHandler.
+ * Main API class for the enhanced export system.
+ * Provides a clean, simple interface for performing exports.
  */
-public interface DOGenericExportEngine {
+public class DOGenericExportEngine {
 
     /**
-     * Export database contents using the specified format handler.
-     * Creates output files in the default directory for the format.
-     *
-     * @param engine  The fully-loaded DOEngine instance
-     * @param handler The format-specific handler that controls output generation
-     * @throws IOException if there's an error writing the output files
+     * Export using a format handler with its default output directory.
      */
-    void export(DOEngine engine, ExportFormatHandler handler) throws IOException;
+    public static void export(DOEngine engine, ExportFormatHandler handler) throws IOException {
+        ExportOrchestrator orchestrator = new ExportOrchestrator(engine);
+        orchestrator.export(handler);
+    }
 
     /**
-     * Export database contents using the specified format handler to a custom
-     * directory.
-     *
-     * @param engine          The fully-loaded DOEngine instance
-     * @param handler         The format-specific handler that controls output
-     *                        generation
-     * @param outputDirectory The directory where output files should be created
-     * @throws IOException if there's an error writing the output files
+     * Export using a format handler with a custom output directory.
      */
-    void export(DOEngine engine, ExportFormatHandler handler, String outputDirectory) throws IOException;
-
+    public static void export(DOEngine engine, ExportFormatHandler handler, String outputDirectory)
+            throws IOException {
+        ExportOrchestrator orchestrator = new ExportOrchestrator(engine);
+        orchestrator.export(handler, outputDirectory);
+    }
 }

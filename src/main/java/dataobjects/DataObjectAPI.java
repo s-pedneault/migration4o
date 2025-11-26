@@ -148,8 +148,7 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the Excel files
      */
     public static void exportToExcel(DOEngine engine) throws IOException {
-        DOGenericExportEngine exporter = DOFactory.createGenericExportEngine();
-        exporter.export(engine, new ExcelFormatHandler());
+        DOGenericExportEngine.export(engine, new ExcelFormatHandler());
     }
 
     /**
@@ -163,49 +162,42 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the Excel files
      */
     public static void exportToExcel(DOEngine engine, String outputDirectory) throws IOException {
-        DOGenericExportEngine exporter = DOFactory.createGenericExportEngine();
-        exporter.export(engine, new ExcelFormatHandler(), outputDirectory);
+        DOGenericExportEngine.export(engine, new ExcelFormatHandler(), outputDirectory);
     }
 
     /**
-     * Export database contents to XML files organized by module using the enhanced
-     * v2 system.
+     * Export database contents to XML files organized by module.
      * Creates one XML data file per schema module in the "output/migration/data"
      * directory.
      * Each file contains all objects for classes in that module with proper field
      * flattening.
-     * Uses the new modular export architecture for better performance and
-     * reliability.
+     * Uses the modular export architecture for better performance and reliability.
      * 
      * @param engine The fully-loaded DOEngine instance
      * @throws IOException if there's an error writing the XML files
      */
-    public static void exportToXMLV2(DOEngine engine) throws IOException {
-        dataobjects.api.migration.generic.v2.DOGenericExportEngineV2.export(
-                engine, new dataobjects.impl.migration.xml.v2.XMLFormatHandler());
+    public static void exportToXML(DOEngine engine) throws IOException {
+        dataobjects.api.migration.generic.DOGenericExportEngine.export(
+                engine, new dataobjects.impl.migration.xml.XMLFormatHandler());
     }
 
     /**
-     * Export database contents to XML files organized by module using the enhanced
-     * v2 system.
+     * Export database contents to XML files organized by module.
      * Creates one XML data file per schema module in the specified directory.
      * Each file contains all objects for classes in that module with proper field
      * flattening.
-     * Uses the new modular export architecture for better performance and
-     * reliability.
+     * Uses the modular export architecture for better performance and reliability.
      * 
      * @param engine          The fully-loaded DOEngine instance
      * @param outputDirectory The directory where XML files should be created
      * @throws IOException if there's an error writing the XML files
      */
-    public static void exportToXMLV2(DOEngine engine, String outputDirectory) throws IOException {
-        dataobjects.api.migration.generic.v2.DOGenericExportEngineV2.export(
-                engine, new dataobjects.impl.migration.xml.v2.XMLFormatHandler(), outputDirectory);
-    }
-
-    /**
-     * Note: The old v1 XML export methods have been deprecated and removed.
-     * Use exportToXMLV2() methods instead for better performance and reliability.
-     */
+    public static void exportToXML(DOEngine engine, String outputDirectory) throws IOException {
+        dataobjects.api.migration.generic.DOGenericExportEngine.export(
+                engine, new dataobjects.impl.migration.xml.XMLFormatHandler(), outputDirectory);
+    } /**
+       * Note: This is the main XML export functionality.
+       * The old v1 system and temporary v2 naming have been cleaned up.
+       */
 
 }

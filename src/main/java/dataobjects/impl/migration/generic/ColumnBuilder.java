@@ -1,4 +1,4 @@
-package dataobjects.impl.migration.generic.v2;
+package dataobjects.impl.migration.generic;
 
 import dataobjects.api.engine.DOEngine;
 import dataobjects.api.models.database.DODatabaseClass;

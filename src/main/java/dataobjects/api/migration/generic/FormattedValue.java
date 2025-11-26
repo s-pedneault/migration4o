@@ -1,4 +1,4 @@
-package dataobjects.api.migration.generic.v2;
+package dataobjects.api.migration.generic;
 
 import dataobjects.api.migration.generic.ExportColumn;
 

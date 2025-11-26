@@ -1,12 +1,6 @@
 package dataobjects.impl.migration.excel;
 
-import dataobjects.api.migration.generic.ExportFormatHandler;
-import dataobjects.api.migration.generic.ExportColumn;
-import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.impl.migration.generic.GenericExportEngineImpl;
+import dataobjects.api.migration.generic.*;
 
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -14,17 +8,16 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.Normalizer;
 import java.util.*;
 
 /**
  * Excel format handler for the generic export engine.
  * Handles Excel-specific operations using Apache POI.
  */
-public class ExcelFormatHandler implements ExportFormatHandler {
+public class ExcelFormatHandler extends TabularFormatHandler {
 
     private static final String DEFAULT_OUTPUT_DIR = "output/excel";
-
-    private String outputDirectory;
 
     // Context class for module (workbook)
     private static class ModuleContext {
@@ -41,36 +34,26 @@ public class ExcelFormatHandler implements ExportFormatHandler {
     }
 
     @Override
-    public void initialize(String outputDirectory) throws IOException {
-        this.outputDirectory = outputDirectory;
-
-        // Create output directory
-        File outputDir = new File(outputDirectory);
-        if (!outputDir.exists()) {
-            outputDir.mkdirs();
-        }
+    public String getDefaultOutputDirectory() {
+        return DEFAULT_OUTPUT_DIR;
     }
 
     @Override
-    public Object beginModule(DOSchemaModule module) throws IOException {
+    public Object beginModule(ModuleExportContext context) throws IOException {
         ModuleContext ctx = new ModuleContext();
         ctx.workbook = new XSSFWorkbook();
-        ctx.fileName = outputDirectory + "/" + GenericExportEngineImpl.sanitizeModuleName(module.getName()) + ".xlsx";
+        ctx.fileName = context.getSanitizedModuleName() + ".xlsx";
         return ctx;
     }
 
     @Override
-    public Object beginClass(Object moduleContext, DOSchemaClass schemaClass, DODatabaseClass dbClass,
-            List<ExportColumn> columns, int objectCount) throws IOException {
-        ModuleContext modCtx = (ModuleContext) moduleContext;
+    public Object beginClass(Object moduleHandle, ClassExportContext context) throws IOException {
+        ModuleContext modCtx = (ModuleContext) moduleHandle;
         ClassContext clsCtx = new ClassContext();
         clsCtx.moduleContext = modCtx;
 
-        // Use export name if available, otherwise fall back to short name
-        String exportName = schemaClass.getExportName();
-        if (exportName == null || exportName.isEmpty()) {
-            exportName = schemaClass.getShortName();
-        }
+        // Use export name from context
+        String exportName = context.getExportName();
 
         // Create unique sheet name
         String sheetName = getUniqueSheetName(exportName, modCtx.usedSheetNames);
@@ -84,9 +67,11 @@ public class ExcelFormatHandler implements ExportFormatHandler {
         font.setBold(true);
         headerStyle.setFont(font);
 
-        for (int colNum = 0; colNum < columns.size(); colNum++) {
+        // Create headers from the formatted values (which contain column information)
+        String[] headers = createHeaders(context);
+        for (int colNum = 0; colNum < headers.length; colNum++) {
             Cell cell = headerRow.createCell(colNum);
-            cell.setCellValue(columns.get(colNum).columnName);
+            cell.setCellValue(headers[colNum]);
             cell.setCellStyle(headerStyle);
         }
 
@@ -94,23 +79,25 @@ public class ExcelFormatHandler implements ExportFormatHandler {
     }
 
     @Override
-    public void exportRow(Object classContext, DODatabaseObject obj, List<ExportColumn> columns, int rowIndex,
-            List<Object> cellValues) throws IOException {
-        ClassContext ctx = (ClassContext) classContext;
+    public void exportObject(Object classHandle, ObjectExportContext context, List<FormattedValue> values)
+            throws IOException {
+        ClassContext ctx = (ClassContext) classHandle;
         Row row = ctx.sheet.createRow(ctx.currentRow++);
 
-        for (int colNum = 0; colNum < cellValues.size(); colNum++) {
-            Cell cell = row.createCell(colNum);
-            Object value = cellValues.get(colNum);
-            ExportColumn column = columns.get(colNum);
+        // Convert formatted values to row data
+        Object[] rowData = createRowData(values);
 
-            setCellValue(cell, value, isIDTypeField(column));
+        for (int colNum = 0; colNum < rowData.length; colNum++) {
+            Cell cell = row.createCell(colNum);
+            Object value = rowData[colNum];
+
+            setCellValue(cell, value);
         }
     }
 
     @Override
-    public void endClass(Object classContext, DOSchemaClass schemaClass, int exportedCount) throws IOException {
-        ClassContext ctx = (ClassContext) classContext;
+    public void endClass(Object classHandle, ClassExportContext context, int exportedCount) throws IOException {
+        ClassContext ctx = (ClassContext) classHandle;
 
         // Auto-size columns
         Row headerRow = ctx.sheet.getRow(0);
@@ -122,15 +109,17 @@ public class ExcelFormatHandler implements ExportFormatHandler {
     }
 
     @Override
-    public void endModule(Object moduleContext, DOSchemaModule module) throws IOException {
-        ModuleContext ctx = (ModuleContext) moduleContext;
+    public void endModule(Object moduleHandle, ModuleExportContext context) throws IOException {
+        ModuleContext ctx = (ModuleContext) moduleHandle;
 
         // Write the workbook to file
-        try (FileOutputStream fileOut = new FileOutputStream(ctx.fileName)) {
+        File outputFile = new File(outputDirectory, ctx.fileName);
+        try (FileOutputStream fileOut = new FileOutputStream(outputFile)) {
             ctx.workbook.write(fileOut);
         }
 
         ctx.workbook.close();
+        System.out.println("  Exported module " + context.getModuleName() + " to " + ctx.fileName);
     }
 
     @Override
@@ -138,29 +127,18 @@ public class ExcelFormatHandler implements ExportFormatHandler {
         // Nothing to clean up for Excel export
     }
 
-    @Override
-    public String getDefaultOutputDirectory() {
-        return DEFAULT_OUTPUT_DIR;
-    }
-
-    private boolean isIDTypeField(ExportColumn column) {
-        if (column.isFlattened) {
-            return false; // Flattened fields are not ID fields
-        }
-        String typeName = column.field.getTypeName();
-        return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
-    }
-
-    private void setCellValue(Cell cell, Object value, boolean isIDField) {
+    /**
+     * Set a value in an Excel cell, handling different data types appropriately.
+     */
+    private void setCellValue(Cell cell, Object value) {
         if (value == null) {
             cell.setCellValue("");
         } else if (value instanceof Boolean) {
-            // Handle real Boolean objects first - no conversion needed
             cell.setCellValue((Boolean) value);
         } else if (value instanceof Number) {
             Number numValue = (Number) value;
-            // Only skip -1 values for ID fields (indicates no reference)
-            if (isIDField && numValue.intValue() == -1) {
+            // Skip -1 values for ID fields (indicates no reference)
+            if (numValue.intValue() == -1) {
                 cell.setCellValue("");
             } else {
                 cell.setCellValue(numValue.doubleValue());
@@ -169,8 +147,7 @@ public class ExcelFormatHandler implements ExportFormatHandler {
             cell.setCellValue((Date) value);
         } else if (value instanceof String) {
             String strValue = (String) value;
-            // Convert French boolean strings to actual booleans (for legacy data if it
-            // exists)
+            // Convert French boolean strings to actual booleans (for legacy data)
             if ("VRAI".equalsIgnoreCase(strValue) || "true".equalsIgnoreCase(strValue)) {
                 cell.setCellValue(true);
             } else if ("FAUX".equalsIgnoreCase(strValue) || "false".equalsIgnoreCase(strValue)) {
@@ -187,9 +164,20 @@ public class ExcelFormatHandler implements ExportFormatHandler {
     /**
      * Remove accents from text by normalizing and removing diacritical marks.
      */
+    private String removeAccents(String text) {
+        if (text == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    }
+
+    /**
+     * Remove accents from text by normalizing and removing diacritical marks.
+     */
     private String sanitizeSheetName(String name) {
         // First remove accents
-        String withoutAccents = GenericExportEngineImpl.removeAccents(name);
+        String withoutAccents = removeAccents(name);
         // Excel sheet names have restrictions: no \/:*?[]
         String sanitized = withoutAccents.replaceAll("[\\\\/:*?\\[\\]]", "_");
         // Max length is 31 characters

@@ -4,7 +4,7 @@ import dataobjects.api.engine.DOEngine;
 import dataobjects.api.migration.xml.DOXMLMigrationEngine;
 import dataobjects.api.models.schema.DOSchema;
 import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.impl.migration.generic.GenericExportEngineImpl;
+import dataobjects.impl.migration.generic.ExportUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -62,7 +62,7 @@ public class XMLMigrationEngineImpl implements DOXMLMigrationEngine {
         // Export one file per module
         for (DOSchemaModule module : schema.getModules()) {
             String moduleFilePath = dataDir.getAbsolutePath() + "/"
-                    + GenericExportEngineImpl.sanitizeModuleName(module.getName()) + ".xml";
+                    + ExportUtils.sanitizeModuleName(module.getName()) + ".xml";
             dataExporter.exportModule(module, moduleFilePath);
             System.out.println("Module exported: " + module.getName());
         }

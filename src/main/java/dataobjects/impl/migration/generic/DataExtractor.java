@@ -1,4 +1,4 @@
-package dataobjects.impl.migration.generic.v2;
+package dataobjects.impl.migration.generic;
 
 import dataobjects.api.engine.DOEngine;
 import dataobjects.api.models.database.DODatabaseObject;
@@ -73,7 +73,7 @@ public class DataExtractor {
             return null;
         }
 
-        Object idFieldObj = ObjectResolverUtil.getFieldValue(container, actualObj, column.flattenedParentField);
+        Object idFieldObj = ObjectResolverUtil.getFieldValue(container, actualObj, column.parentField);
         if (idFieldObj == null) {
             return null;
         }

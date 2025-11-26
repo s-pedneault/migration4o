@@ -5,13 +5,11 @@ import dataobjects.api.report.DOObjectTreeReportGenerator;
 import dataobjects.api.report.DOReachabilityReportGenerator;
 import dataobjects.api.migration.excel.DOExcelExportEngine;
 import dataobjects.api.migration.xml.DOXMLMigrationEngine;
-import dataobjects.api.migration.generic.DOGenericExportEngine;
 import dataobjects.impl.report.DOStructureReportGeneratorImpl;
 import dataobjects.impl.report.DOObjectTreeReportGeneratorImpl;
 import dataobjects.impl.report.reachability.ReachabilityReportGenerator;
 import dataobjects.impl.migration.excel.ExcelExportEngineImpl;
 import dataobjects.impl.migration.xml.XMLMigrationEngineImpl;
-import dataobjects.impl.migration.generic.GenericExportEngineImpl;
 
 /**
  * Factory class for creating instances of DataObject components.
@@ -63,12 +61,5 @@ public class DOFactory {
         return new XMLMigrationEngineImpl();
     }
 
-    /**
-     * Create a new instance of DOGenericExportEngine.
-     * 
-     * @return A new DOGenericExportEngine instance
-     */
-    public static DOGenericExportEngine createGenericExportEngine() {
-        return new GenericExportEngineImpl();
-    }
+    // Note: DOGenericExportEngine uses static methods, no factory method needed
 }

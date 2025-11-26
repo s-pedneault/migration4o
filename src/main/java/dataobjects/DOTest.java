@@ -62,8 +62,8 @@ public class DOTest {
             // System.out.println("Excel export completed successfully!");
 
             // Export database to XML files with schema and report
-            System.out.println("\n=== EXPORTING TO XML (V2) ===");
-            DataObjectAPI.exportToXMLV2(engine);
+            System.out.println("\n=== EXPORTING TO XML ===");
+            DataObjectAPI.exportToXML(engine);
             System.out.println("XML migration export completed successfully!");
 
         } catch (Exception e) {
