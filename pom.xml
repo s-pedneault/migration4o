@@ -20,146 +20,62 @@
         <main.class>ui.assistant.AssistantLauncher</main.class>
     </properties>
     
+    <!-- Dependencies for IDE reference only - actual JARs are in lib/ directory -->
     <dependencies>
-        <!-- DB4O Dependencies - keeping as system scope if JARs exist -->
+        <!-- DB4O Dependencies (local JARs) -->
         <dependency>
             <groupId>com.db4o</groupId>
-            <artifactId>db4o-java5</artifactId>
+            <artifactId>db4o-core</artifactId>
             <version>7.4.106</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-java5.jar</systemPath>
         </dependency>
         
-        <dependency>
-            <groupId>com.db4o</groupId>
-            <artifactId>db4o-taj</artifactId>
-            <version>7.4.106</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-taj.jar</systemPath>
-        </dependency>
-        
-        <dependency>
-            <groupId>com.db4o</groupId>
-            <artifactId>db4o-instrumentation</artifactId>
-            <version>7.4.106</version>
-            <scope>system</scope>
-            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-instrumentation.jar</systemPath>
-        </dependency>
-        
-        <!-- Apache Commons - Updated to managed dependencies for Java 21 -->
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-collections4</artifactId>
-            <version>4.4</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.26.0</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>commons-io</groupId>
-            <artifactId>commons-io</artifactId>
-            <version>2.16.1</version>
-        </dependency>
-        
-        <!-- Apache POI - Updated for Java 21 -->
+        <!-- Apache POI Dependencies (local JARs) -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
-            <version>5.2.5</version>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-5.2.4.jar</systemPath>
         </dependency>
         
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>5.2.5</version>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-ooxml-5.2.4.jar</systemPath>
+        </dependency>
+        
+        <!-- Other local dependencies -->
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-collections4</artifactId>
+            <version>4.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-collections4-4.4.jar</systemPath>
         </dependency>
         
         <dependency>
-            <groupId>org.apache.poi</groupId>
-            <artifactId>poi-ooxml-lite</artifactId>
-            <version>5.2.5</version>
+            <groupId>commons-io</groupId>
+            <artifactId>commons-io</artifactId>
+            <version>2.15.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-io-2.15.1.jar</systemPath>
         </dependency>
         
-        <!-- Log4j - Updated for Java 21 -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
-            <version>2.22.1</version>
-        </dependency>
-        
-        <dependency>
-            <groupId>org.apache.logging.log4j</groupId>
-            <artifactId>log4j-core</artifactId>
-            <version>2.22.1</version>
-        </dependency>
-        
-        <!-- XMLBeans - Updated for Java 21 -->
-        <dependency>
-            <groupId>org.apache.xmlbeans</groupId>
-            <artifactId>xmlbeans</artifactId>
-            <version>5.2.0</version>
+            <version>2.20.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/log4j-api-2.20.0.jar</systemPath>
         </dependency>
     </dependencies>
     
-    <build>
-        <sourceDirectory>src/main/java</sourceDirectory>
-        <testSourceDirectory>src/test/java</testSourceDirectory>
-        
-        <plugins>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.11.0</version>
-                <configuration>
-                    <source>21</source>
-                    <target>21</target>
-                    <encoding>UTF-8</encoding>
-                </configuration>
-            </plugin>
-            
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-jar-plugin</artifactId>
-                <version>3.3.0</version>
-                <configuration>
-                    <archive>
-                        <manifest>
-                            <mainClass>${main.class}</mainClass>
-                            <addClasspath>true</addClasspath>
-                            <classpathPrefix>lib/</classpathPrefix>
-                        </manifest>
-                    </archive>
-                </configuration>
-            </plugin>
-            
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.6.0</version>
-                <configuration>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
-                    <archive>
-                        <manifest>
-                            <mainClass>${main.class}</mainClass>
-                        </manifest>
-                    </archive>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin>
-        </plugins>
-    </build>
+    <!-- Note: This project uses a custom build script (build.sh) instead of Maven -->
+    <!-- Dependencies are managed via lib/ directory -->
+    <!-- This pom.xml is kept minimal for IDE compatibility -->
+    
 </project>

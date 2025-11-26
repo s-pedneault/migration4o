@@ -204,38 +204,8 @@ public class DataObjectAPI {
     }
 
     /**
-     * Export database contents to XML files organized by module.
-     * Creates one XML data file per schema module in the "output/migration/data"
-     * directory.
-     * Each file contains all objects for classes in that module with proper field
-     * flattening.
-     * 
-     * @param engine The fully-loaded DOEngine instance
-     * @throws IOException if there's an error writing the XML files
-     */
-    /*
-     * public static void exportToXML(DOEngine engine) throws IOException {
-     * DOGenericExportEngine exporter = DOFactory.createGenericExportEngine();
-     * exporter.export(engine, new XMLFormatHandler());
-     * }
-     */
-
-    /**
-     * Export database contents to XML files organized by module.
-     * Creates one XML data file per schema module in the specified directory.
-     * Each file contains all objects for classes in that module with proper field
-     * flattening.
-     * 
-     * @param engine          The fully-loaded DOEngine instance
-     * @param outputDirectory The directory where XML files should be created
-     * @throws IOException if there's an error writing the XML files
-     */
-    /*
-     * public static void exportToXML(DOEngine engine, String outputDirectory)
-     * throws IOException {
-     * DOGenericExportEngine exporter = DOFactory.createGenericExportEngine();
-     * exporter.export(engine, new XMLFormatHandler(), outputDirectory);
-     * }
+     * Note: The old v1 XML export methods have been deprecated and removed.
+     * Use exportToXMLV2() methods instead for better performance and reliability.
      */
 
 }
