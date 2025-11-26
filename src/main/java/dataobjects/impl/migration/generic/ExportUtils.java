@@ -14,26 +14,68 @@ public class ExportUtils {
 
     /**
      * Priority fields to export first (in this order) if they exist.
+     * Note: mID is excluded from field export since it's used as the id attribute.
      */
     public static final String[] PRIORITY_FIELDS = {
-            "mID",
             "mIDSSI",
             "mIDSSIConso",
     };
 
     /**
+     * Fields to exclude from export (internal/technical fields).
+     * mID, iD, ID are excluded because they're used as the id attribute on the
+     * element.
+     */
+    public static final String[] EXCLUDED_FIELDS = {
+            "mID",
+            "iD",
+            "ID",
+            "mIDJPA",
+            "idJPA",
+            "iDJPA",
+            "mINDEX_toString",
+            "iNDEX_toString",
+            "INDEX_toString",
+    };
+
+    /**
+     * Check if a field should be excluded from export.
+     */
+    public static boolean shouldExcludeField(DOField field) {
+        if (field == null) {
+            return true;
+        }
+        String fieldName = field.getName();
+        if (fieldName == null) {
+            return true;
+        }
+        for (String excluded : EXCLUDED_FIELDS) {
+            if (excluded.equals(fieldName)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Sort fields according to export priority:
-     * 1. Priority fields (as defined in PRIORITY_FIELDS)
-     * 2. Non-collection fields
-     * 3. Collection fields
+     * 1. Priority fields (ID fields as defined in PRIORITY_FIELDS)
+     * 2. Non-collection fields (alphabetically sorted)
+     * 3. Collection fields (alphabetically sorted)
+     * Excludes fields in EXCLUDED_FIELDS list.
      */
     public static List<DOField> sortFieldsForExport(List<DOField> fields) {
         List<DOField> priorityFields = new ArrayList<>();
         List<DOField> nonCollectionFields = new ArrayList<>();
         List<DOField> collectionFields = new ArrayList<>();
 
-        // Categorize fields
+        // Categorize fields (excluding those in exclusion list)
         for (DOField field : fields) {
+            // Skip excluded fields
+            if (shouldExcludeField(field)) {
+                continue;
+            }
+
             boolean isPriority = false;
             for (String priorityName : PRIORITY_FIELDS) {
                 if (priorityName.equals(field.getName())) {
@@ -65,6 +107,12 @@ public class ExportUtils {
             }
             return Integer.compare(index1, index2);
         });
+
+        // Sort non-collection fields alphabetically by field name
+        nonCollectionFields.sort((f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
+
+        // Sort collection fields alphabetically by field name
+        collectionFields.sort((f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
 
         // Combine: priority fields first, then non-collection, then collection
         List<DOField> sortedFields = new ArrayList<>();

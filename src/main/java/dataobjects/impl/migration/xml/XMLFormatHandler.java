@@ -2,8 +2,11 @@ package dataobjects.impl.migration.xml;
 
 import dataobjects.api.engine.DOEngine;
 import dataobjects.api.migration.generic.*;
+import dataobjects.api.models.DOClass;
+import dataobjects.api.models.DOField;
 import dataobjects.api.models.schema.DOSchemaClass;
 import dataobjects.api.models.schema.DOSchemaModule;
+import dataobjects.impl.migration.generic.ExportUtils;
 import dataobjects.util.ObjectResolverUtil;
 
 import javax.xml.stream.XMLOutputFactory;
@@ -44,6 +47,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         List<TypeInfo> moduleTypes = new ArrayList<>();
         DOEngine engine; // Store engine reference for object resolution
         Map<String, String> classToModuleMap; // Maps full class name to module name
+        Set<Long> exportedObjectIds = new HashSet<>(); // IDs of top-level exported objects (not embedded)
 
         void close() throws IOException {
             try {
@@ -132,12 +136,10 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             xmlContext.writer.writeAttribute("xsi:schemaLocation", NAMESPACE + " migration-schema.xsd");
             xmlContext.writer.writeCharacters("\n\n");
 
-            // Collect type information from module
+            // Collect type information from module (needed for XSD generation)
             collectModuleTypes(context, xmlContext);
 
-            // Write types section
-            writeTypesSection(xmlContext);
-
+            // V2: No types section - go directly to modules
             // Write modules section start
             xmlContext.writer.writeCharacters("    ");
             xmlContext.writer.writeStartElement("modules");
@@ -185,29 +187,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
     }
 
-    /**
-     * Write the types section.
-     */
-    private void writeTypesSection(XMLModuleContext xmlContext) throws XMLStreamException {
-        xmlContext.writer.writeCharacters("    ");
-        xmlContext.writer.writeStartElement("types");
-        xmlContext.writer.writeCharacters("\n");
-
-        for (TypeInfo typeInfo : xmlContext.moduleTypes) {
-            xmlContext.writer.writeCharacters("        ");
-            xmlContext.writer.writeStartElement("type");
-            xmlContext.writer.writeAttribute("name", typeInfo.simpleName);
-            xmlContext.writer.writeAttribute("class", typeInfo.fullClassName);
-            xmlContext.writer.writeAttribute("module", typeInfo.moduleName);
-            xmlContext.writer.writeEndElement(); // type
-            xmlContext.writer.writeCharacters("\n");
-        }
-
-        xmlContext.writer.writeCharacters("    ");
-        xmlContext.writer.writeEndElement(); // types
-        xmlContext.writer.writeCharacters("\n\n");
-    }
-
     @Override
     public Object beginClass(Object moduleHandle, ClassExportContext context) throws IOException {
         XMLModuleContext moduleCtx = (XMLModuleContext) moduleHandle;
@@ -216,7 +195,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
         // We don't write a class element - objects go directly into the <objects>
         // container
-        // with type attributes on each object
 
         return classCtx;
     }
@@ -229,11 +207,30 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         XMLStreamWriter writer = classCtx.moduleContext.writer;
 
         try {
-            // Write object start element
+            // Track this object ID as a top-level exported object (not embedded)
+            long objectId = context.getObjectId();
+            classCtx.moduleContext.exportedObjectIds.add(objectId);
+
+            // Find the mID field value to use as the business ID in the XML
+            String businessId = String.valueOf(objectId); // Default to db4o ID
+            for (FormattedValue value : values) {
+                if (value.isIDField() && value.getRawValue() != null) {
+                    // Found the mID field - extract its numeric value
+                    Object idValue = value.getRawValue();
+                    if (idValue instanceof Number) {
+                        businessId = String.valueOf(((Number) idValue).longValue());
+                    } else {
+                        businessId = String.valueOf(idValue);
+                    }
+                    break;
+                }
+            }
+
+            // Write object-specific element (v2 format: <PersonneRess> instead of <object
+            // type="PersonneRess">)
             writer.writeCharacters("                ");
-            writer.writeStartElement("object");
-            writer.writeAttribute("type", context.getClassContext().getExportName());
-            writer.writeAttribute("id", String.valueOf(context.getObjectId()));
+            writer.writeStartElement(context.getClassContext().getExportName());
+            writer.writeAttribute("id", businessId);
             writer.writeCharacters("\n");
 
             // Write all non-empty field values
@@ -244,7 +241,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
             // Write object end element
             writer.writeCharacters("                ");
-            writer.writeEndElement(); // object
+            writer.writeEndElement(); // object-specific element (e.g., </PersonneRess>)
             writer.writeCharacters("\n");
 
         } catch (XMLStreamException e) {
@@ -300,47 +297,35 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     /**
      * Generate XSD schema file for the exported XML data.
      */
+    /**
+     * Generate XSD schema for v2 format with object-specific complex types,
+     * field-specific elements in camelCase, and reference elements with id
+     * attributes.
+     */
     private void generateXSDSchema() throws IOException {
         File xsdFile = new File(structureDirectory, "migration-schema.xsd");
 
         try (FileOutputStream fos = new FileOutputStream(xsdFile);
                 java.io.OutputStreamWriter writer = new java.io.OutputStreamWriter(fos, "UTF-8")) {
 
+            // Write XSD header
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             writer.write("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\"\n");
             writer.write("           targetNamespace=\"" + NAMESPACE + "\"\n");
             writer.write("           xmlns:m4o=\"" + NAMESPACE + "\"\n");
             writer.write("           elementFormDefault=\"qualified\">\n\n");
 
-            // Root element
-            writer.write("    <!-- Root element: migration -->\n");
+            // Root element - v2 format (no types section)
+            writer.write("    <!-- Root element: migration (v2 format) -->\n");
             writer.write("    <xs:element name=\"migration\">\n");
             writer.write("        <xs:complexType>\n");
             writer.write("            <xs:sequence>\n");
-            writer.write("                <xs:element name=\"types\" type=\"m4o:TypesType\"/>\n");
             writer.write("                <xs:element name=\"modules\" type=\"m4o:ModulesType\"/>\n");
             writer.write("            </xs:sequence>\n");
             writer.write("        </xs:complexType>\n");
             writer.write("    </xs:element>\n\n");
 
-            // Types section
-            writer.write("    <!-- Types section -->\n");
-            writer.write("    <xs:complexType name=\"TypesType\">\n");
-            writer.write("        <xs:sequence>\n");
-            writer.write(
-                    "            <xs:element name=\"type\" type=\"m4o:TypeDefinitionType\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            writer.write("        </xs:sequence>\n");
-            writer.write("    </xs:complexType>\n\n");
-
-            // Type definition
-            writer.write("    <!-- Type definition -->\n");
-            writer.write("    <xs:complexType name=\"TypeDefinitionType\">\n");
-            writer.write("        <xs:attribute name=\"name\" type=\"xs:string\" use=\"required\"/>\n");
-            writer.write("        <xs:attribute name=\"class\" type=\"xs:string\" use=\"required\"/>\n");
-            writer.write("        <xs:attribute name=\"module\" type=\"xs:string\" use=\"required\"/>\n");
-            writer.write("    </xs:complexType>\n\n");
-
-            // Modules section
+            // Modules container
             writer.write("    <!-- Modules section -->\n");
             writer.write("    <xs:complexType name=\"ModulesType\">\n");
             writer.write("        <xs:sequence>\n");
@@ -358,94 +343,51 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             writer.write("        <xs:attribute name=\"name\" type=\"xs:string\" use=\"required\"/>\n");
             writer.write("    </xs:complexType>\n\n");
 
-            // Objects container
-            writer.write("    <!-- Objects container -->\n");
+            // Objects container - v2 uses xs:choice to allow any object type
+            writer.write("    <!-- Objects container - allows any object type -->\n");
             writer.write("    <xs:complexType name=\"ObjectsType\">\n");
-            writer.write("        <xs:sequence>\n");
-            writer.write(
-                    "            <xs:element name=\"object\" type=\"m4o:ObjectType\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            writer.write("        </xs:sequence>\n");
-            writer.write("    </xs:complexType>\n\n");
-
-            // Object
-            writer.write("    <!-- Object -->\n");
-            writer.write("    <xs:complexType name=\"ObjectType\">\n");
-            writer.write("        <xs:sequence>\n");
-            writer.write(
-                    "            <xs:element name=\"field\" type=\"m4o:FieldType\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            writer.write("        </xs:sequence>\n");
-            writer.write("        <xs:attribute name=\"type\" type=\"m4o:ObjectTypeEnum\" use=\"required\"/>\n");
-            writer.write("        <xs:attribute name=\"id\" type=\"xs:string\" use=\"required\"/>\n");
-            writer.write("    </xs:complexType>\n\n");
-
-            // Field type
-            writer.write("    <!-- Field - can contain simple value, collection, reference, or embedded object -->\n");
-            writer.write("    <xs:complexType name=\"FieldType\" mixed=\"true\">\n");
             writer.write("        <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
-            writer.write("            <!-- For collections: value elements or embedded objects -->\n");
-            writer.write("            <xs:element name=\"value\" type=\"xs:string\"/>\n");
-            writer.write("            <xs:element name=\"object\" type=\"m4o:ObjectType\"/>\n");
+
+            // Add reference to each object type
+            Set<String> sortedTypes = new TreeSet<>();
+            for (TypeInfo type : allTypes) {
+                sortedTypes.add(type.simpleName);
+            }
+            for (String typeName : sortedTypes) {
+                writer.write("            <xs:element ref=\"m4o:" + typeName + "\"/>\n");
+            }
+
             writer.write("        </xs:choice>\n");
-            writer.write("        <xs:attribute name=\"name\" type=\"xs:string\" use=\"required\"/>\n");
-            writer.write("        <xs:attribute name=\"type\" type=\"m4o:FieldTypeEnum\" use=\"required\"/>\n");
-            writer.write("        \n");
-            writer.write("        <!-- For reference fields -->\n");
-            writer.write("        <xs:attribute name=\"targetType\" type=\"m4o:ObjectTypeEnum\" use=\"optional\"/>\n");
-            writer.write("        <xs:attribute name=\"targetModule\" type=\"xs:string\" use=\"optional\"/>\n");
-            writer.write("        \n");
-            writer.write("        <!-- For collection fields -->\n");
-            writer.write("        <xs:attribute name=\"elementType\" type=\"xs:string\" use=\"optional\"/>\n");
-            writer.write(
-                    "        <xs:attribute name=\"elementClass\" type=\"m4o:ObjectTypeEnum\" use=\"optional\"/>\n");
-            writer.write("        <xs:attribute name=\"elementModule\" type=\"xs:string\" use=\"optional\"/>\n");
             writer.write("    </xs:complexType>\n\n");
 
-            // Field type enumeration
-            writer.write("    <!-- Field type enumeration -->\n");
-            writer.write("    <xs:simpleType name=\"FieldTypeEnum\">\n");
-            writer.write("        <xs:restriction base=\"xs:string\">\n");
-            writer.write("            <xs:enumeration value=\"string\"/>\n");
-            writer.write("            <xs:enumeration value=\"integer\"/>\n");
-            writer.write("            <xs:enumeration value=\"double\"/>\n");
-            writer.write("            <xs:enumeration value=\"boolean\"/>\n");
-            writer.write("            <xs:enumeration value=\"date\"/>\n");
-            writer.write("            <xs:enumeration value=\"reference\"/>\n");
-            writer.write("            <xs:enumeration value=\"embedded\"/>\n");
-            writer.write("            <xs:enumeration value=\"collection\"/>\n");
-            writer.write("            <xs:enumeration value=\"empty\"/>\n");
-            writer.write("        </xs:restriction>\n");
-            writer.write("    </xs:simpleType>\n\n");
-
-            // Object type enumeration (all types found during export)
-            writer.write("    <!-- Object type enumeration (all types in database) -->\n");
-            writer.write("    <xs:simpleType name=\"ObjectTypeEnum\">\n");
-            writer.write("        <xs:restriction base=\"xs:string\">\n");
-
-            // Add all collected types
-            Set<String> uniqueTypes = new TreeSet<>(); // Use TreeSet for sorted output
-            for (TypeInfo type : allTypes) {
-                uniqueTypes.add(type.simpleName);
-            }
-            for (String typeName : uniqueTypes) {
-                writer.write("            <xs:enumeration value=\"" + escapeXml(typeName) + "\"/>\n");
-            }
-
-            writer.write("        </xs:restriction>\n");
-            writer.write("    </xs:simpleType>\n\n");
-
-            // Generate specific complex types for each object type with their actual fields
+            // Generate object-specific complex type definitions
             writer.write("    <!-- ========================================== -->\n");
-            writer.write("    <!-- Specific object type definitions with actual fields -->\n");
+            writer.write("    <!-- Object Type Definitions (PascalCase)      -->\n");
             writer.write("    <!-- ========================================== -->\n\n");
 
             for (TypeInfo type : allTypes) {
-                generateObjectTypeDefinition(writer, type);
+                generateObjectTypeDefinitionV2(writer, type);
+            }
+
+            // Generate reference element types (e.g., SpecialiteRef, VilleGeoRef)
+            writer.write("    <!-- ========================================== -->\n");
+            writer.write("    <!-- Reference Element Types (PascalCase+Ref)  -->\n");
+            writer.write("    <!-- ========================================== -->\n\n");
+
+            for (String typeName : sortedTypes) {
+                writer.write("    <!-- Reference to " + typeName + " object -->\n");
+                writer.write("    <xs:element name=\"" + typeName + "Ref\">\n");
+                writer.write("        <xs:complexType>\n");
+                writer.write("            <xs:attribute name=\"id\" type=\"xs:string\" use=\"required\"/>\n");
+                writer.write("        </xs:complexType>\n");
+                writer.write("    </xs:element>\n\n");
             }
 
             writer.write("</xs:schema>\n");
 
-            System.out.println("Generated XSD schema: " + xsdFile.getAbsolutePath());
-            System.out.println("  Total types defined: " + uniqueTypes.size());
+            System.out.println("Generated v2 XSD schema: " + xsdFile.getAbsolutePath());
+            System.out.println("  Total object types defined: " + sortedTypes.size());
+            System.out.println("  Total reference types defined: " + sortedTypes.size());
 
         } catch (IOException e) {
             throw new IOException("Failed to generate XSD schema: " + e.getMessage(), e);
@@ -454,9 +396,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
     /**
      * Generate a specific XSD complex type definition for an object type with its
-     * actual fields.
+     * actual fields in v2 format (field-specific elements in camelCase).
      */
-    private void generateObjectTypeDefinition(java.io.OutputStreamWriter writer, TypeInfo type) throws IOException {
+    private void generateObjectTypeDefinitionV2(java.io.OutputStreamWriter writer, TypeInfo type) throws IOException {
         if (type.schemaClass == null || type.schemaClass.getDatabaseClass() == null) {
             return;
         }
@@ -472,20 +414,120 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         List<dataobjects.api.models.DOField> sortedFields = dataobjects.impl.migration.generic.ExportUtils
                 .sortFieldsForExport(allFields);
 
-        // Generate field elements
+        // Generate field-specific elements with proper XSD types
         for (dataobjects.api.models.DOField field : sortedFields) {
-            String cleanedFieldName = cleanFieldName(field.getName());
+            String xmlFieldName = toXmlFieldName(field.getName());
             String fieldTypeName = field.getTypeName();
-            String xsdType = mapFieldTypeToXSDType(fieldTypeName);
 
-            writer.write("                <xs:element name=\"" + cleanedFieldName + "\" type=\"" + xsdType
-                    + "\" minOccurs=\"0\"/>\n");
+            if (field.isArray()) {
+                // Collection field: wrapper element containing sequence of items
+                String contentTypeName = field.getContentTypeName();
+                boolean isReferenceCollection = isReferenceType(contentTypeName);
+
+                writer.write("                <xs:element name=\"" + xmlFieldName + "\" minOccurs=\"0\">\n");
+                writer.write("                    <xs:complexType>\n");
+                writer.write("                        <xs:sequence>\n");
+
+                if (isReferenceCollection) {
+                    // Collection of references: <TypeRef id="..."/> elements
+                    String refElementName = getSimpleClassNameFromTypeName(contentTypeName) + "Ref";
+                    writer.write("                            <xs:element ref=\"" + refElementName
+                            + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                } else if (isPrimitiveTypeName(contentTypeName)) {
+                    // Collection of primitives: <item> elements with primitive type
+                    String xsdType = mapJavaTypeToXSD(contentTypeName);
+                    writer.write("                            <xs:element name=\"item\" type=\"" + xsdType
+                            + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                } else {
+                    // Collection of embedded objects: reference to object element
+                    String embeddedTypeName = getSimpleClassNameFromTypeName(contentTypeName);
+                    writer.write("                            <xs:element ref=\"" + embeddedTypeName
+                            + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                }
+
+                writer.write("                        </xs:sequence>\n");
+                writer.write("                    </xs:complexType>\n");
+                writer.write("                </xs:element>\n");
+
+            } else if (isReferenceType(fieldTypeName)) {
+                // Reference field: string containing ID
+                writer.write("                <xs:element name=\"" + xmlFieldName
+                        + "\" type=\"xs:string\" minOccurs=\"0\"/>\n");
+
+            } else if (field.isPrimitive() || isPrimitiveTypeName(fieldTypeName)) {
+                // Primitive field: map to appropriate XSD type
+                String xsdType = mapJavaTypeToXSD(fieldTypeName);
+                writer.write("                <xs:element name=\"" + xmlFieldName + "\" type=\"" + xsdType
+                        + "\" minOccurs=\"0\"/>\n");
+
+            } else {
+                // Embedded object field: reference to embedded object element
+                String embeddedTypeName = getSimpleClassNameFromTypeName(fieldTypeName);
+                writer.write("                <xs:element ref=\"" + embeddedTypeName + "\" minOccurs=\"0\"/>\n");
+            }
         }
 
         writer.write("            </xs:sequence>\n");
         writer.write("            <xs:attribute name=\"id\" type=\"xs:string\" use=\"required\"/>\n");
         writer.write("        </xs:complexType>\n");
         writer.write("    </xs:element>\n\n");
+    }
+
+    /**
+     * Check if a type name represents a reference (ID) type.
+     */
+    private boolean isReferenceType(String typeName) {
+        return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
+    }
+
+    /**
+     * Check if a type name represents a primitive type.
+     */
+    private boolean isPrimitiveTypeName(String typeName) {
+        if (typeName == null) {
+            return false;
+        }
+        return typeName.equals("java.lang.String") ||
+                typeName.equals("java.lang.Integer") || typeName.equals("int") ||
+                typeName.equals("java.lang.Long") || typeName.equals("long") ||
+                typeName.equals("java.lang.Double") || typeName.equals("double") ||
+                typeName.equals("java.lang.Float") || typeName.equals("float") ||
+                typeName.equals("java.lang.Boolean") || typeName.equals("boolean") ||
+                typeName.equals("java.util.Date");
+    }
+
+    /**
+     * Map Java type name to XSD type.
+     */
+    private String mapJavaTypeToXSD(String javaType) {
+        if (javaType == null) {
+            return "xs:string";
+        }
+
+        switch (javaType) {
+            case "java.lang.String":
+                return "xs:string";
+            case "java.lang.Integer":
+            case "int":
+                return "xs:int";
+            case "java.lang.Long":
+            case "long":
+                return "xs:long";
+            case "java.lang.Double":
+            case "double":
+                return "xs:double";
+            case "java.lang.Float":
+            case "float":
+                return "xs:float";
+            case "java.lang.Boolean":
+            case "boolean":
+                return "xs:boolean";
+            case "java.util.Date":
+                return "xs:dateTime";
+            default:
+                // For unknown types, default to string
+                return "xs:string";
+        }
     }
 
     /**
@@ -510,41 +552,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     }
 
     /**
-     * Map a Java type name to an XSD type.
-     */
-    private String mapFieldTypeToXSDType(String javaType) {
-        if (javaType == null) {
-            return "xs:string";
-        }
-
-        // Primitive types
-        if (javaType.equals("java.lang.String") || javaType.equals("String")) {
-            return "xs:string";
-        } else if (javaType.equals("int") || javaType.equals("java.lang.Integer") || javaType.equals("Integer")) {
-            return "xs:int";
-        } else if (javaType.equals("long") || javaType.equals("java.lang.Long") || javaType.equals("Long")) {
-            return "xs:long";
-        } else if (javaType.equals("double") || javaType.equals("java.lang.Double") || javaType.equals("Double")) {
-            return "xs:double";
-        } else if (javaType.equals("float") || javaType.equals("java.lang.Float") || javaType.equals("Float")) {
-            return "xs:float";
-        } else if (javaType.equals("boolean") || javaType.equals("java.lang.Boolean") || javaType.equals("Boolean")) {
-            return "xs:boolean";
-        } else if (javaType.equals("java.util.Date") || javaType.equals("Date")) {
-            return "xs:dateTime";
-        }
-
-        // Collections
-        if (javaType.contains("Vector") || javaType.contains("ArrayList") || javaType.contains("List")
-                || javaType.contains("Collection")) {
-            return "xs:string"; // Collections will be comma-separated strings or have complex structure
-        }
-
-        // Default for complex objects
-        return "xs:string";
-    }
-
-    /**
      * Escape XML special characters for XSD.
      */
     private String escapeXml(String text) {
@@ -559,116 +566,100 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     }
 
     /**
-     * Write a field element to XML.
+     * Write a field element to XML (v2 format: field-specific elements).
      */
     private void writeFieldElement(XMLStreamWriter writer, FormattedValue value, XMLModuleContext moduleContext)
             throws XMLStreamException {
         writer.writeCharacters("                    ");
-        writer.writeStartElement("field");
 
-        // Write name attribute - use cleaned field name
-        writer.writeAttribute("name", value.getColumnName());
+        // V2: Write field-specific element (e.g., <nom> instead of <field name="nom">)
+        // Convert Java field name to XML field name (camelCase)
+        String fieldName = toXmlFieldName(value.getColumnName());
+        writer.writeStartElement(fieldName);
 
-        // Handle different value types
+        // Handle different value types - check rawValue to properly detect complex
+        // objects
+        Object rawValue = value.getRawValue();
+
         if (value.isCollection()) {
+            // Collection: write wrapper with children
             writeCollectionField(writer, value, moduleContext);
-        } else if (value.isComplexObject()) {
+        } else if (rawValue != null && !isPrimitiveType(rawValue)) {
+            // Complex object: reference ID or embedded object (check rawValue, not type)
             writeComplexObjectField(writer, value, moduleContext);
         } else {
-            // Simple field - write type and value
-            writer.writeAttribute("type", value.getType().toString().toLowerCase());
+            // Simple field: write text content directly
             String textContent = formatTextContent(value);
             if (!textContent.isEmpty()) {
                 writer.writeCharacters(textContent);
             }
         }
 
-        writer.writeEndElement(); // field
+        writer.writeEndElement(); // field-specific element (e.g., </nom>)
         writer.writeCharacters("\n");
     }
 
     /**
-     * Write a collection field with proper structure.
+     * Write collection children (v2 format: wrapper element already written by
+     * caller).
+     * Called when we're already inside the collection wrapper element (e.g.,
+     * <vectSpecialite>).
      */
     private void writeCollectionField(XMLStreamWriter writer, FormattedValue value, XMLModuleContext moduleContext)
             throws XMLStreamException {
         Collection<?> collection = value.getCollection();
         if (collection == null || collection.isEmpty()) {
-            // Empty collection
-            writer.writeAttribute("type", "collection");
-            writer.writeAttribute("elementType", "unknown");
+            // Empty collection - wrapper element is empty
             return;
         }
 
         // Determine element type from first element
         Object firstElement = collection.iterator().next();
-        String elementType;
-        String elementClass = null;
-        String elementModule = null;
-
         if (firstElement == null) {
-            elementType = "unknown";
-        } else if (isPrimitiveType(firstElement)) {
-            elementType = getPrimitiveTypeName(firstElement);
-        } else {
-            // Complex object - determine if it's a reference or embedded
-            String fullClassName = getFullClassName(firstElement, moduleContext.engine);
-            elementClass = getSimpleClassNameFromFull(fullClassName);
-
-            if (fullClassName.startsWith("gest.")) {
-                // Reference to database object
-                elementType = "reference";
-                elementModule = getModuleForClass(fullClassName, moduleContext.classToModuleMap);
-            } else {
-                // Embedded object
-                elementType = "embedded";
-            }
+            return; // Skip null elements
         }
 
-        writer.writeAttribute("type", "collection");
-        writer.writeAttribute("elementType", elementType);
-        if (elementClass != null) {
-            writer.writeAttribute("elementClass", elementClass);
-        }
-        if (elementModule != null) {
-            writer.writeAttribute("elementModule", elementModule);
-        }
         writer.writeCharacters("\n");
 
-        // Write collection elements
-        for (Object element : collection) {
-            if (element == null) {
-                continue;
-            }
-
-            if (isPrimitiveType(element)) {
-                // Primitive value
+        if (isPrimitiveType(firstElement)) {
+            // Collection of primitives - write with generic element name
+            String elementName = getPrimitiveCollectionElementName(value.getColumnName());
+            for (Object element : collection) {
+                if (element == null)
+                    continue;
                 writer.writeCharacters("                        ");
-                writer.writeStartElement("value");
+                writer.writeStartElement(elementName);
                 writer.writeCharacters(formatPrimitiveValue(element));
                 writer.writeEndElement();
                 writer.writeCharacters("\n");
+            }
+        } else {
+            // Complex objects - check if references or embedded
+            String fullClassName = getFullClassName(firstElement, moduleContext.engine);
+
+            if (fullClassName.startsWith("gest.")) {
+                // Collection of references - use {type}Ref pattern with id attribute
+                String elementClass = getSimpleClassNameFromFull(fullClassName);
+                String refElementName = elementClass + "Ref";
+
+                for (Object element : collection) {
+                    if (element == null)
+                        continue;
+                    writer.writeCharacters("                        ");
+                    writer.writeStartElement(refElementName);
+                    long objectId = getObjectId(element, moduleContext.engine);
+                    writer.writeAttribute("id", String.valueOf(objectId));
+                    writer.writeEndElement();
+                    writer.writeCharacters("\n");
+                }
             } else {
-                // Complex object - write full object with all fields (both references and
-                // embedded)
-                String fullClassName = getFullClassName(element, moduleContext.engine);
-                String simpleClassName = getSimpleClassNameFromFull(fullClassName);
-                long objectId = getObjectId(element, moduleContext.engine);
-
-                // Write object start
-                writer.writeCharacters("                        ");
-                writer.writeStartElement("object");
-                writer.writeAttribute("type", simpleClassName);
-                writer.writeAttribute("id", String.valueOf(objectId));
-                writer.writeCharacters("\n");
-
-                // Write all fields of the object
-                writeObjectFields(writer, element, moduleContext, fullClassName);
-
-                // Write object end
-                writer.writeCharacters("                        ");
-                writer.writeEndElement(); // object
-                writer.writeCharacters("\n");
+                // Collection of embedded objects - write full objects
+                for (Object element : collection) {
+                    if (element == null)
+                        continue;
+                    writer.writeCharacters("                        ");
+                    writeEmbeddedObject(writer, element, moduleContext);
+                }
             }
         }
 
@@ -676,37 +667,45 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     }
 
     /**
-     * Write a complex object field (reference or embedded).
+     * Get element name for primitive collection items.
+     * Tries to singularize the collection name or use a generic name.
+     */
+    private String getPrimitiveCollectionElementName(String collectionName) {
+        // Simple singularization: remove common suffixes
+        if (collectionName.startsWith("vect")) {
+            // vectIDSousSSI -> sousSSI
+            String rest = collectionName.substring(4);
+            if (rest.startsWith("ID")) {
+                rest = "id" + rest.substring(2, 3).toLowerCase() + rest.substring(3);
+            }
+            return Character.toLowerCase(rest.charAt(0)) + rest.substring(1);
+        }
+        // Default: use "item"
+        return "item";
+    }
+
+    /**
+     * Write a complex object field (reference or embedded) - v2 format.
+     * For top-level exported objects (tracked in exportedObjectIds), writes an ID
+     * reference.
+     * For embedded objects (composition relationships), writes the full nested
+     * object structure.
      */
     private void writeComplexObjectField(XMLStreamWriter writer, FormattedValue value, XMLModuleContext moduleContext)
             throws XMLStreamException {
         Object obj = value.getRawValue();
         if (obj == null) {
-            writer.writeAttribute("type", "reference");
+            // Null reference - write nothing (element is empty)
             return;
         }
 
-        String fullClassName = getFullClassName(obj, moduleContext.engine);
-        String className = getSimpleClassNameFromFull(fullClassName);
-
-        // Check if this is a database object (starts with "gest.")
-        if (fullClassName.startsWith("gest.")) {
-            // This is a reference to another database object
-            writer.writeAttribute("type", "reference");
-            writer.writeAttribute("targetType", className);
-
-            // Get the target module from our map
-            String targetModule = getModuleForClass(fullClassName, moduleContext.classToModuleMap);
-            writer.writeAttribute("targetModule", targetModule);
-
-            // Get the object ID
-            long objectId = getObjectId(obj, moduleContext.engine);
-            if (objectId > 0) {
-                writer.writeCharacters(String.valueOf(objectId));
-            }
+        // Check if this object is a top-level exported object
+        long objectId = getObjectId(obj, moduleContext.engine);
+        if (objectId > 0 && moduleContext.exportedObjectIds.contains(objectId)) {
+            // Top-level object: write ID reference only
+            writer.writeCharacters(String.valueOf(objectId));
         } else {
-            // Not a gest. object - treat as embedded
-            writer.writeAttribute("type", "embedded");
+            // Embedded object (composition): write full nested structure
             writer.writeCharacters("\n");
             writer.writeCharacters("                        ");
             writeEmbeddedObject(writer, obj, moduleContext);
@@ -717,50 +716,87 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     /**
      * Write all fields of an object (shared by both embedded objects and collection
      * elements).
+     * Uses DOEngine's schema and ObjectResolverUtil for proper field traversal.
      */
     private void writeObjectFields(XMLStreamWriter writer, Object obj, XMLModuleContext moduleContext,
             String fullClassName)
             throws XMLStreamException {
         long objectId = getObjectId(obj, moduleContext.engine);
 
-        // Export the object's fields using reflection
-        try {
-            com.db4o.ext.ExtObjectContainer container = moduleContext.engine.getDatabase().getContainer();
-            ObjectResolverUtil.activateObject(container, obj, objectId);
+        // Get the class definition from schema or database
+        DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+                moduleContext.engine.getSchema(),
+                moduleContext.engine.getDatabase());
 
-            // Get all fields from the object
-            java.lang.reflect.Field[] fields = obj.getClass().getDeclaredFields();
-            for (java.lang.reflect.Field field : fields) {
-                try {
-                    field.setAccessible(true);
-                    Object fieldValue = field.get(obj);
+        if (doClass == null) {
+            // Class not found in schema, skip field export
+            return;
+        }
 
-                    // Skip null, empty, or static fields
-                    if (fieldValue == null || java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
-                        continue;
-                    }
+        // Get all DOFields from the class definition
+        DOField[] doFields = doClass.getFields();
+        if (doFields == null || doFields.length == 0) {
+            return;
+        }
 
-                    // Write the field
-                    writeEmbeddedObjectField(writer, field.getName(), fieldValue, moduleContext);
+        // Sort fields using ExportUtils for consistent ordering and exclusions
+        List<DOField> sortedFields = ExportUtils.sortFieldsForExport(Arrays.asList(doFields));
 
-                } catch (IllegalAccessException e) {
-                    // Skip fields we can't access
+        // Get container for field value extraction
+        com.db4o.ext.ExtObjectContainer container = moduleContext.engine.getDatabase().getContainer();
+        ObjectResolverUtil.activateObject(container, obj, objectId);
+
+        // Export each field using ObjectResolverUtil
+        for (DOField doField : sortedFields) {
+            try {
+                // Use ObjectResolverUtil to get field value properly from db4o object
+                Object fieldValue = ObjectResolverUtil.getFieldValue(container, obj, doField);
+
+                // Skip empty values (null, empty strings, -1 for ID fields)
+                if (isEmptyFieldValue(fieldValue, doField)) {
+                    continue;
                 }
+
+                // Write the field
+                writeEmbeddedObjectField(writer, doField.getName(), fieldValue, moduleContext);
+
+            } catch (Exception e) {
+                // Skip fields we can't access
+                System.err.println("Warning: Could not export field " + doField.getName() +
+                        " for embedded object: " + e.getMessage());
             }
-        } catch (Exception e) {
-            // If we can't export fields, write placeholder
-            writer.writeCharacters("                            ");
-            writer.writeStartElement("field");
-            writer.writeAttribute("name", "error");
-            writer.writeAttribute("type", "string");
-            writer.writeCharacters("Could not export object fields");
-            writer.writeEndElement();
-            writer.writeCharacters("\n");
         }
     }
 
     /**
-     * Write an embedded object with all its fields.
+     * Check if a field value should be considered empty and not exported.
+     */
+    private boolean isEmptyFieldValue(Object value, DOField field) {
+        if (value == null) {
+            return true;
+        }
+
+        // Empty strings
+        if (value instanceof String && ((String) value).trim().isEmpty()) {
+            return true;
+        }
+
+        // For ID fields, -1 typically means "no reference"
+        if (value instanceof Number) {
+            String typeName = field != null ? field.getTypeName() : null;
+            if (typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"))) {
+                if (((Number) value).intValue() == -1) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Write an embedded object with all its fields (v2 format: object-specific
+     * element).
      */
     private void writeEmbeddedObject(XMLStreamWriter writer, Object obj, XMLModuleContext moduleContext)
             throws XMLStreamException {
@@ -768,94 +804,169 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         String className = getSimpleClassNameFromFull(fullClassName);
         long objectId = getObjectId(obj, moduleContext.engine);
 
-        writer.writeStartElement("object");
-        writer.writeAttribute("type", className);
-        writer.writeAttribute("id", String.valueOf(objectId));
+        // Find the mID field value to use as the business ID
+        String businessId = String.valueOf(objectId); // Default to db4o ID
+        DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+                moduleContext.engine.getSchema(),
+                moduleContext.engine.getDatabase());
+
+        if (doClass != null) {
+            DOField[] doFields = doClass.getFields();
+            if (doFields != null) {
+                com.db4o.ext.ExtObjectContainer container = moduleContext.engine.getDatabase().getContainer();
+                for (DOField field : doFields) {
+                    // Look for the mID field (ID type field)
+                    String typeName = field.getTypeName();
+                    if (typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"))) {
+                        try {
+                            Object idValue = ObjectResolverUtil.getFieldValue(container, obj, field);
+                            if (idValue instanceof Number) {
+                                businessId = String.valueOf(((Number) idValue).longValue());
+                            } else if (idValue != null) {
+                                businessId = String.valueOf(idValue);
+                            }
+                            break;
+                        } catch (Exception e) {
+                            // Continue with default ID if we can't get the mID field
+                        }
+                    }
+                }
+            }
+        }
+
+        // V2: Write object-specific element (e.g., <Adresse> instead of <object
+        // type="Adresse">)
+        writer.writeStartElement(className);
+        writer.writeAttribute("id", businessId);
         writer.writeCharacters("\n");
 
         // Write all fields
         writeObjectFields(writer, obj, moduleContext, fullClassName);
 
         writer.writeCharacters("                        ");
-        writer.writeEndElement(); // object
+        writer.writeEndElement(); // object-specific element (e.g., </Adresse>)
         writer.writeCharacters("\n");
     }
 
     /**
-     * Write a field for an embedded object.
+     * Write a field for an embedded object (v2 format: field-specific elements).
      */
     private void writeEmbeddedObjectField(XMLStreamWriter writer, String fieldName, Object fieldValue,
             XMLModuleContext moduleContext) throws XMLStreamException {
         writer.writeCharacters("                            ");
-        writer.writeStartElement("field");
 
-        // Clean the field name (remove 'm' prefix, etc.)
-        String cleanedName = cleanFieldName(fieldName);
-        writer.writeAttribute("name", cleanedName);
+        // V2: Write field-specific element (e.g., <nom> instead of <field name="nom">)
+        String xmlFieldName = toXmlFieldName(fieldName);
+        writer.writeStartElement(xmlFieldName);
 
         // Determine field type and write value
         if (fieldValue instanceof String) {
-            writer.writeAttribute("type", "string");
             writer.writeCharacters(escapeText((String) fieldValue));
         } else if (fieldValue instanceof Integer || fieldValue instanceof Long) {
-            writer.writeAttribute("type", "integer");
             writer.writeCharacters(String.valueOf(fieldValue));
         } else if (fieldValue instanceof Double || fieldValue instanceof Float) {
-            writer.writeAttribute("type", "double");
             writer.writeCharacters(String.valueOf(fieldValue));
         } else if (fieldValue instanceof Boolean) {
-            writer.writeAttribute("type", "boolean");
             writer.writeCharacters(String.valueOf(fieldValue));
         } else if (fieldValue instanceof Date) {
-            writer.writeAttribute("type", "date");
             writer.writeCharacters(formatPrimitiveValue(fieldValue));
         } else {
-            // Complex type - just write string representation for now
-            writer.writeAttribute("type", "string");
+            // Complex type - just write string representation
             writer.writeCharacters(escapeText(String.valueOf(fieldValue)));
         }
 
-        writer.writeEndElement(); // field
+        writer.writeEndElement(); // field-specific element
         writer.writeCharacters("\n");
     }
 
     /**
-     * Clean field name (remove 'm' prefix, handle ID fields).
+     * Convert database field name to XML field name.
+     * Handles all field name transformations:
+     * - m prefix: mAfficherSuite -> afficherSuite, mID -> id
+     * - Uppercase first char: Adresse -> adresse (when m was already stripped)
+     * - ID prefix: ID -> id, IDSSI -> idSSI, IDDBConso -> idDBConso
+     * - iD prefix: iD -> id, idSSI -> idssi, idDossPrev -> idDossPrev
+     * - iXXX patterns: iNDEX_toString -> index_toString
      */
-    private String cleanFieldName(String fieldName) {
+    private String toXmlFieldName(String fieldName) {
         if (fieldName == null || fieldName.isEmpty()) {
             return fieldName;
         }
 
-        // Handle mID and mIDXxx pattern - lowercase entire ID part
-        if (fieldName.startsWith("mID")) {
-            if (fieldName.length() == 3) {
-                return "id"; // mID -> id
-            }
-            // mIDSSI -> idssi, mIDDossPrev -> idDossPrev
-            String rest = fieldName.substring(3);
-            if (rest.length() > 0 && Character.isUpperCase(rest.charAt(0))) {
-                return "id" + rest.toLowerCase();
-            }
-        }
-
-        // Handle IDXxx at start (not preceded by m)
-        if (fieldName.startsWith("ID") && fieldName.length() > 2 && Character.isUpperCase(fieldName.charAt(2))) {
-            String rest = fieldName.substring(2);
-            return "id" + Character.toLowerCase(rest.charAt(0)) + rest.substring(1);
-        }
-
-        // Handle mXxx pattern - remove m and lowercase first letter
+        // Remove 'm' prefix if present and lowercase the next character
         if (fieldName.startsWith("m") && fieldName.length() > 1 && Character.isUpperCase(fieldName.charAt(1))) {
-            return Character.toLowerCase(fieldName.charAt(1)) + fieldName.substring(2);
+            fieldName = Character.toLowerCase(fieldName.charAt(1)) + fieldName.substring(2);
         }
 
-        // No m prefix - just lowercase first letter
+        // Handle iD -> id or ID -> id
+        if (fieldName.equals("iD") || fieldName.equals("ID") || fieldName.equals("id")) {
+            return "id";
+        }
+
+        // Handle uppercase ID prefix: IDSSI -> idSSI, IDDBConso -> idDBConso
+        if (fieldName.startsWith("ID") && fieldName.length() > 2 && Character.isUpperCase(fieldName.charAt(2))) {
+            // Change ID to id, keep rest as-is
+            return "id" + fieldName.substring(2);
+        }
+
+        // Handle idXxx -> idXxx or idxxx pattern
+        if (fieldName.startsWith("id") && fieldName.length() > 2 && Character.isUpperCase(fieldName.charAt(2))) {
+            String afterId = fieldName.substring(2);
+
+            // Check if everything after "id" is uppercase (acronym)
+            boolean isAllCaps = true;
+            for (char c : afterId.toCharArray()) {
+                if (Character.isLowerCase(c)) {
+                    isAllCaps = false;
+                    break;
+                }
+            }
+
+            if (isAllCaps) {
+                // idSSI -> idssi, idJPA -> idjpa
+                return "id" + afterId.toLowerCase();
+            } else {
+                // idDossPrev stays idDossPrev
+                return fieldName;
+            }
+        }
+
+        // Handle iXXX patterns (like iNDEX_toString -> index_toString)
+
+        // If first character is uppercase (m was already stripped by ColumnBuilder),
+        // lowercase it
+        // This handles: Adresse -> adresse, Energie -> energie
         if (Character.isUpperCase(fieldName.charAt(0))) {
             return Character.toLowerCase(fieldName.charAt(0)) + fieldName.substring(1);
         }
 
+        // Already properly formatted - return as-is
         return fieldName;
+    }
+
+    /**
+     * Override parent's sanitizeElementName to preserve PascalCase for v2 format.
+     * Object type names should be in PascalCase (PersonneRess, VilleGeo).
+     * This differs from the parent implementation which converts to lowercase.
+     */
+    @Override
+    protected String sanitizeElementName(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return "unnamed";
+        }
+
+        // Replace spaces and special characters with underscores, but preserve case
+        String sanitized = name.trim()
+                .replaceAll("[\\s\\-\\.]", "_")
+                .replaceAll("[^a-zA-Z0-9_$]", ""); // Allow $ for inner classes
+
+        // Ensure it starts with a letter or underscore
+        if (sanitized.isEmpty() || Character.isDigit(sanitized.charAt(0))) {
+            sanitized = "Item_" + sanitized;
+        }
+
+        // V2: Preserve PascalCase (don't convert to lowercase)
+        return sanitized;
     }
 
     /**
@@ -901,10 +1012,22 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      * Uses db4o's StoredClass to get the actual database class name, not the proxy
      * class.
      */
-    private String getSimpleClassName(Object obj) {
+    private String getSimpleClassNameFromObject(Object obj) {
         String fullName = obj.getClass().getName();
         int lastDot = fullName.lastIndexOf('.');
         return lastDot >= 0 ? fullName.substring(lastDot + 1) : fullName;
+    }
+
+    /**
+     * Get the simple class name from a fully qualified type name string.
+     * For example: "gest.employe.Employe" -> "Employe"
+     */
+    private String getSimpleClassNameFromTypeName(String fullTypeName) {
+        if (fullTypeName == null) {
+            return "UnknownType";
+        }
+        int lastDot = fullTypeName.lastIndexOf('.');
+        return lastDot >= 0 ? fullTypeName.substring(lastDot + 1) : fullTypeName;
     }
 
     /**
