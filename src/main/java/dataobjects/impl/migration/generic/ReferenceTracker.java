@@ -19,7 +19,7 @@ public class ReferenceTracker {
 
     // Map: object ID -> database class definition (strongly-typed)
     private final Map<Long, DODatabaseClass> objectClasses = new HashMap<>();
-    
+
     // Map: object ID -> actual object reference (for unexported objects)
     private final Map<Long, Object> referencedObjects = new HashMap<>();
 
@@ -35,14 +35,15 @@ public class ReferenceTracker {
      * Record that an object is referenced by a specific module.
      * Now uses strongly-typed DODatabaseClass instead of string class names.
      */
-    public void recordReference(long referencedId, String referencingModule, DODatabaseClass databaseClass, Object referencedObject) {
+    public void recordReference(long referencedId, String referencingModule, DODatabaseClass databaseClass,
+            Object referencedObject) {
         objectReferences.computeIfAbsent(referencedId, k -> new HashSet<>()).add(referencingModule);
 
         // Also track the class if not already known
         if (!objectClasses.containsKey(referencedId) && databaseClass != null) {
             objectClasses.put(referencedId, databaseClass);
         }
-        
+
         // Store the actual object reference if not already exported
         if (!exportedObjects.containsKey(referencedId) && referencedObject != null) {
             referencedObjects.put(referencedId, referencedObject);
@@ -61,7 +62,7 @@ public class ReferenceTracker {
         }
         return unexported;
     }
-    
+
     /**
      * Get unexported referenced objects grouped by database class.
      * Returns a map of DODatabaseClass -> list of actual object references.
@@ -69,18 +70,18 @@ public class ReferenceTracker {
      */
     public Map<DODatabaseClass, List<Object>> getUnexportedObjectsByClass() {
         Map<DODatabaseClass, List<Object>> objectsByClass = new HashMap<>();
-        
+
         for (Long objectId : objectReferences.keySet()) {
             if (!exportedObjects.containsKey(objectId)) {
                 DODatabaseClass dbClass = objectClasses.get(objectId);
                 Object obj = referencedObjects.get(objectId);
-                
+
                 if (dbClass != null && obj != null) {
                     objectsByClass.computeIfAbsent(dbClass, k -> new ArrayList<>()).add(obj);
                 }
             }
         }
-        
+
         return objectsByClass;
     }
 

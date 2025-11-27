@@ -5,7 +5,7 @@ public interface DOSchema {
     public DOSchemaClass[] getClasses();
 
     public DOSchemaModule[] getModules();
-    
+
     public DOSchemaClass[] getFoundationClasses();
 
 }

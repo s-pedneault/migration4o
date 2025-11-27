@@ -63,8 +63,10 @@ public class ExportOrchestrator {
         // Finalize the export
         handler.cleanup();
     }
+
     /**
-     * Export the General module containing foundation classes (shared across modules).
+     * Export the General module containing foundation classes (shared across
+     * modules).
      * Foundation classes are defined in the schema's <foundation> section.
      */
     private void exportGeneralModule(ExportFormatHandler handler, ReferenceTracker tracker, String outputDirectory)
@@ -92,7 +94,8 @@ public class ExportOrchestrator {
             for (DOSchemaClass foundationClass : foundationClasses) {
                 DODatabaseClass dbClass = foundationClass.getDatabaseClass();
                 if (dbClass == null) {
-                    System.out.println("  Skipping foundation class with no database class: " + foundationClass.getShortName());
+                    System.out.println(
+                            "  Skipping foundation class with no database class: " + foundationClass.getShortName());
                     continue;
                 }
 
@@ -156,7 +159,8 @@ public class ExportOrchestrator {
      * Export a single class.
      */
     private void exportClass(Object moduleHandle, ModuleExportContext moduleContext,
-            DOSchemaClass schemaClass, ExportFormatHandler handler, ReferenceTracker tracker, String moduleName) throws IOException {
+            DOSchemaClass schemaClass, ExportFormatHandler handler, ReferenceTracker tracker, String moduleName)
+            throws IOException {
 
         DODatabaseClass dbClass = schemaClass.getDatabaseClass();
         if (dbClass == null) {
@@ -201,10 +205,10 @@ public class ExportOrchestrator {
         for (DODatabaseObject obj : objects) {
             try {
                 exportObject(classHandle, classContext, obj, exportedCount, handler);
-                
+
                 // Record this object as exported in this module
                 tracker.recordExportedObject(obj.getObjectId(), moduleName, classContext.getDatabaseClass());
-                
+
                 exportedCount++;
             } catch (Exception e) {
                 System.err.println("Error exporting object " + obj.getObjectId() +
