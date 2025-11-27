@@ -184,6 +184,11 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      * Collect type definitions from the module's classes.
      */
     private void collectModuleTypes(ModuleExportContext context, XMLModuleContext xmlContext) {
+        // Skip type collection for synthetic modules (e.g., General) that have no DOSchemaModule
+        if (context.getModule() == null) {
+            return;
+        }
+        
         if (context.getModule().getClasses() != null) {
             for (DOSchemaClass schemaClass : context.getModule().getClasses()) {
                 String simpleName = schemaClass.getExportName();
@@ -230,13 +235,13 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             long objectId = context.getObjectId();
             classCtx.moduleContext.exportedObjectIds.add(objectId);
 
-            // Record this export in the tracker
+            // Record this export in the tracker using strongly-typed DODatabaseClass
             if (tracker != null) {
                 String moduleName = context.getClassContext().getModuleContext().getModule() != null
                         ? context.getClassContext().getModuleContext().getModule().getName()
                         : "General";
-                String objectType = context.getClassContext().getExportName();
-                tracker.recordExportedObject(objectId, moduleName, objectType);
+                dataobjects.api.models.database.DODatabaseClass databaseClass = context.getClassContext().getDatabaseClass();
+                tracker.recordExportedObject(objectId, moduleName, databaseClass);
             }
 
             // Find the mID field value to use as the business ID in the XML
@@ -681,6 +686,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 String elementClass = getSimpleClassNameFromFull(fullClassName);
                 String refElementName = elementClass + "Ref";
 
+                // Look up the database class once for this collection (all elements have same type)
+                dataobjects.api.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName, moduleContext.engine);
+
                 for (Object element : collection) {
                     if (element == null)
                         continue;
@@ -689,9 +697,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                     long objectId = getObjectId(element, moduleContext.engine);
                     writer.writeAttribute("id", String.valueOf(objectId));
 
-                    // Track this reference in the tracker and add module attribute if cross-module
-                    if (tracker != null) {
-                        tracker.recordReference(objectId, moduleContext.moduleName, elementClass);
+                    // Track this reference using strongly-typed DODatabaseClass
+                    if (tracker != null && dbClass != null) {
+                        tracker.recordReference(objectId, moduleContext.moduleName, dbClass, element);
 
                         // Add module attribute for cross-module references
                         String targetModule = tracker.getTargetModule(objectId, moduleContext.moduleName);
@@ -765,9 +773,10 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             writer.writeStartElement(refElementName);
             writer.writeAttribute("id", String.valueOf(objectId));
 
-            // Track this reference and add module attribute if cross-module
-            if (tracker != null) {
-                tracker.recordReference(objectId, moduleContext.moduleName, elementClass);
+            // Track this reference using strongly-typed DODatabaseClass
+            dataobjects.api.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName, moduleContext.engine);
+            if (tracker != null && dbClass != null) {
+                tracker.recordReference(objectId, moduleContext.moduleName, dbClass, obj);
 
                 // Add module attribute for cross-module references
                 String targetModule = tracker.getTargetModule(objectId, moduleContext.moduleName);
@@ -1181,6 +1190,26 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     private String getFullClassName(Object obj, DOEngine engine) {
         com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
         return ObjectResolverUtil.getObjectClassName(container, obj);
+    }
+    
+    /**
+     * Find the DODatabaseClass for a given full class name.
+     * This is used when recording references to get strongly-typed class definitions.
+     */
+    private dataobjects.api.models.database.DODatabaseClass findDatabaseClass(String fullClassName, DOEngine engine) {
+        // Look up the class definition in schema or database
+        dataobjects.api.models.DOClass doClass = ObjectResolverUtil.findClassDefinition(
+            fullClassName, 
+            engine.getSchema(), 
+            engine.getDatabase()
+        );
+        
+        // Return as DODatabaseClass if it's a database class
+        if (doClass instanceof dataobjects.api.models.database.DODatabaseClass) {
+            return (dataobjects.api.models.database.DODatabaseClass) doClass;
+        }
+        
+        return null;
     }
 
     /**

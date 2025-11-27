@@ -1,5 +1,6 @@
 package dataobjects.impl.migration.generic;
 
+import dataobjects.api.models.database.DODatabaseClass;
 import java.util.*;
 
 /**
@@ -16,26 +17,35 @@ public class ReferenceTracker {
     // Map: object ID -> module name where object was exported
     private final Map<Long, String> exportedObjects = new HashMap<>();
 
-    // Map: object ID -> object type (class name)
-    private final Map<Long, String> objectTypes = new HashMap<>();
+    // Map: object ID -> database class definition (strongly-typed)
+    private final Map<Long, DODatabaseClass> objectClasses = new HashMap<>();
+    
+    // Map: object ID -> actual object reference (for unexported objects)
+    private final Map<Long, Object> referencedObjects = new HashMap<>();
 
     /**
      * Record that an object was exported in a specific module.
      */
-    public void recordExportedObject(long objectId, String moduleName, String objectType) {
+    public void recordExportedObject(long objectId, String moduleName, DODatabaseClass databaseClass) {
         exportedObjects.put(objectId, moduleName);
-        objectTypes.put(objectId, objectType);
+        objectClasses.put(objectId, databaseClass);
     }
 
     /**
      * Record that an object is referenced by a specific module.
+     * Now uses strongly-typed DODatabaseClass instead of string class names.
      */
-    public void recordReference(long referencedId, String referencingModule, String referencedType) {
+    public void recordReference(long referencedId, String referencingModule, DODatabaseClass databaseClass, Object referencedObject) {
         objectReferences.computeIfAbsent(referencedId, k -> new HashSet<>()).add(referencingModule);
 
-        // Also track the type if not already known
-        if (!objectTypes.containsKey(referencedId) && referencedType != null) {
-            objectTypes.put(referencedId, referencedType);
+        // Also track the class if not already known
+        if (!objectClasses.containsKey(referencedId) && databaseClass != null) {
+            objectClasses.put(referencedId, databaseClass);
+        }
+        
+        // Store the actual object reference if not already exported
+        if (!exportedObjects.containsKey(referencedId) && referencedObject != null) {
+            referencedObjects.put(referencedId, referencedObject);
         }
     }
 
@@ -50,6 +60,28 @@ public class ReferenceTracker {
             }
         }
         return unexported;
+    }
+    
+    /**
+     * Get unexported referenced objects grouped by database class.
+     * Returns a map of DODatabaseClass -> list of actual object references.
+     * This is strongly-typed - we pass actual DODatabaseClass objects, not strings.
+     */
+    public Map<DODatabaseClass, List<Object>> getUnexportedObjectsByClass() {
+        Map<DODatabaseClass, List<Object>> objectsByClass = new HashMap<>();
+        
+        for (Long objectId : objectReferences.keySet()) {
+            if (!exportedObjects.containsKey(objectId)) {
+                DODatabaseClass dbClass = objectClasses.get(objectId);
+                Object obj = referencedObjects.get(objectId);
+                
+                if (dbClass != null && obj != null) {
+                    objectsByClass.computeIfAbsent(dbClass, k -> new ArrayList<>()).add(obj);
+                }
+            }
+        }
+        
+        return objectsByClass;
     }
 
     /**
@@ -75,10 +107,10 @@ public class ReferenceTracker {
     }
 
     /**
-     * Get the type (class name) of an object.
+     * Get the database class definition of an object.
      */
-    public String getObjectType(long objectId) {
-        return objectTypes.get(objectId);
+    public DODatabaseClass getObjectClass(long objectId) {
+        return objectClasses.get(objectId);
     }
 
     /**

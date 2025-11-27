@@ -446,7 +446,13 @@
                 <field name="mMotPasseDSI2003" type="java.lang.String"/>
                 <!-- <field name="mPreferences" type="java.util.Hashtable"/> -->
                 <field name="mTypeLicence" type="int"/>
-                <field name="mUtilCarto" type="gest.cartographie.ParamUtilisateurCartographie"/>
+                <field name="mUtilCarto" type="gest.cartographie.ParamUtilisateurCartographie">
+                    <class name="gest.cartographie.ParamUtilisateurCartographie" simpleName="ParamUtilisateurCartographie" parentClass="gest.gen.Entite" objects="14" references="1">
+                        <reference class="gest.utilGroupe.Utilisateur" field="mUtilCarto"/>
+                        <field name="mCodeUtilisateur" type="java.lang.String"/>
+                        <field name="mMotDePasse" type="java.lang.String"/>
+                    </class>
+                </field>
                 <field name="mVectIDGroupeParents" type="java.util.Vector" children="gest.utilGroupe.IDGroupe"/>
                 <field name="mVectIDSSSI" type="java.util.Vector" children="int"/>
                 <field name="mVectLicConcur" type="java.util.Vector" children="int"/>
@@ -2173,7 +2179,13 @@
         <module name="Sécurité civile">
             <class name="gest.docum.Docum" simpleName="Docum" parentClass="gest.gen.EntiteContientID">
                 <field name="mID" type="int"/>
-                <field name="mEtatDoc" type="gest.docum.EtatDoc"/>
+                <field name="mEtatDoc" type="gest.docum.EtatDoc">
+                    <class name="gest.docum.EtatDoc" simpleName="EtatDoc" parentClass="gest.gen.Entite" objects="1" references="1">
+                        <reference class="gest.docum.Docum" field="mEtatDoc"/>
+                        <field name="mEtat" type="int"/>
+                        <field name="mNote" type="java.lang.String"/>
+                    </class>
+                </field>
                 <field name="mNom" type="java.lang.String"/>
                 <field name="mTexte" type="java.lang.String"/>
                 <field name="mVectDroitAccesRessSecCiv" type="gen.util.VectRechID" children="gest.secCiv.DroitAccesRessSecCiv"/>
@@ -2185,7 +2197,18 @@
             <class name="gest.secCiv.LogSinistre" simpleName="LogSinistre" parentClass="gest.gen.EntiteContientID">
                 <field name="mID" type="int"/>
                 <field name="mAction" type="int"/>
-                <field name="mAlarme" type="gest.secCiv.Alarme"/>
+                <field name="mAlarme" type="gest.secCiv.Alarme">
+                    <class name="gest.secCiv.Alarme" simpleName="Alarme" parentClass="gest.gen.Entite" objects="0" references="1">
+                        <reference class="gest.secCiv.LogSinistre" field="mAlarme"/>
+                        <field name="mID" type="int"/>
+                        <field name="mDateAlarme" type="java.util.Date"/>
+                        <field name="mDateDebut" type="java.util.Date"/>
+                        <field name="mDelaiMillis" type="long"/>
+                        <field name="mMessage" type="java.lang.String"/>
+                        <field name="mNbrRepetition" type="int"/>
+                        <field name="mTypeDeclench" type="int"/>
+                    </class>
+                </field>
                 <field name="mCP" type="gest.champPerso.ChampPerso"/>
                 <field name="mDate" type="java.util.Date"/>
                 <field name="mDetail" type="java.lang.String"/>
@@ -2796,11 +2819,6 @@
             <field name="mVectInfoEmploye" type="gen.util.VectRechID" children="gest.activite.InfoEmploye"/>
             <field name="mIDHistoActivite" type="gest.activite.IDHistoActivite"/>
         </class>
-        <class name="gest.cartographie.ParamUtilisateurCartographie" simpleName="ParamUtilisateurCartographie" parentClass="gest.gen.Entite" objects="14" references="1">
-            <reference class="gest.utilGroupe.Utilisateur" field="mUtilCarto"/>
-            <field name="mCodeUtilisateur" type="java.lang.String"/>
-            <field name="mMotDePasse" type="java.lang.String"/>
-        </class>
         <class name="gest.champPerso.ChampPerso" simpleName="ChampPerso" parentClass="gest.gen.Entite" objects="440644" references="2">
             <reference class="gest.champPerso.TypeChampPerso" field="mValDefaut"/>
             <reference class="gest.secCiv.LogSinistre" field="mCP"/>
@@ -2850,11 +2868,6 @@
             <field name="mDroitAcces" type="gest.utilGroupe.DroitAcces"/>
             <field name="mInclureComplete" type="boolean"/>
             <field name="mInclureEnCours" type="boolean"/>
-        </class>
-        <class name="gest.docum.EtatDoc" simpleName="EtatDoc" parentClass="gest.gen.Entite" objects="1" references="1">
-            <reference class="gest.docum.Docum" field="mEtatDoc"/>
-            <field name="mEtat" type="int"/>
-            <field name="mNote" type="java.lang.String"/>
         </class>
         <class name="gest.formElec.FormElec" simpleName="FormElec" parentClass="gest.gen.EntiteContientID" objects="52" references="2">
             <reference class="gest.typePrev.TypePrev" field="mFormElec"/>
@@ -3063,17 +3076,7 @@
             <field name="mTraceFormattage" type="java.lang.String"/>
             <field name="mValeurParDefaut" type="java.lang.Object" primitive="true"/>
         </class>
-        <class name="gest.secCiv.Alarme" simpleName="Alarme" parentClass="gest.gen.Entite" objects="0" references="1">
-            <reference class="gest.secCiv.LogSinistre" field="mAlarme"/>
-            <field name="mID" type="int"/>
-            <field name="mDateAlarme" type="java.util.Date"/>
-            <field name="mDateDebut" type="java.util.Date"/>
-            <field name="mDelaiMillis" type="long"/>
-            <field name="mMessage" type="java.lang.String"/>
-            <field name="mNbrRepetition" type="int"/>
-            <field name="mTypeDeclench" type="int"/>
-        </class>
-        <class name="gest.typeAssistanceParticuliere.AssistanceParticuliere" simpleName="AssistanceParticuliere" parentClass="gest.gen.Entite" objects="12478" references="1">
+       <class name="gest.typeAssistanceParticuliere.AssistanceParticuliere" simpleName="AssistanceParticuliere" parentClass="gest.gen.Entite" objects="12478" references="1">
             <reference class="gest.dossPrev.PersonneRess" field="mAssistanceParticuliere"/>
             <field name="mInformationsAdditionnelles" type="java.lang.String"/>
             <field name="mIDTypeAssistanceParticuliere" type="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere"/>

@@ -22,6 +22,18 @@ public class ModuleExportContext extends ExportContext {
         this.sanitizedModuleName = sanitizedModuleName;
     }
 
+    /**
+     * Constructor for synthetic modules (e.g., General) that don't have a
+     * DOSchemaModule.
+     */
+    public ModuleExportContext(String outputDirectory, DOEngine engine, String moduleName) {
+        super(outputDirectory);
+        this.engine = engine;
+        this.module = null;
+        this.moduleName = moduleName;
+        this.sanitizedModuleName = moduleName;
+    }
+
     public DOEngine getEngine() {
         return engine;
     }

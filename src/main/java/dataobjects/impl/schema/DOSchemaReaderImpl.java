@@ -35,7 +35,7 @@ public class DOSchemaReaderImpl implements DOSchemaReader {
             DOSchemaClass[] foundationClasses = parseFoundationClasses(root);
             DOSchemaClass[] allClasses = extractAllClasses(modules, foundationClasses);
 
-            return new DOSchemaImpl(allClasses, modules);
+            return new DOSchemaImpl(allClasses, modules, foundationClasses);
         } catch (Exception e) {
             throw new RuntimeException("Failed to read schema from " + filePath, e);
         }

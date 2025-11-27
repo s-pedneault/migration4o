@@ -46,7 +46,7 @@ public class ExportOrchestrator {
     public void export(ExportFormatHandler handler, String outputDirectory) throws IOException {
         validateSchema();
 
-        // Create reference tracker for cross-module reference detection
+        // Create reference tracker
         ReferenceTracker tracker = new ReferenceTracker();
 
         // Initialize the format handler with the tracker
@@ -54,60 +54,50 @@ public class ExportOrchestrator {
 
         // Process each module
         for (DOSchemaModule module : engine.getSchema().getModules()) {
-            exportModule(module, handler, outputDirectory);
+            exportModule(module, handler, outputDirectory, tracker);
         }
 
-        // Export General.xml with multi-module referenced objects
+        // Export General.xml with foundation classes
         exportGeneralModule(handler, tracker, outputDirectory);
 
         // Finalize the export
         handler.cleanup();
     }
-
     /**
-     * Export the General module containing objects referenced by multiple modules.
+     * Export the General module containing foundation classes (shared across modules).
+     * Foundation classes are defined in the schema's <foundation> section.
      */
     private void exportGeneralModule(ExportFormatHandler handler, ReferenceTracker tracker, String outputDirectory)
             throws IOException {
 
-        // Get objects that were referenced but never exported
-        Set<Long> unexportedRefs = tracker.getUnexportedReferences();
+        // Get foundation classes from schema
+        DOSchemaClass[] foundationClasses = engine.getSchema().getFoundationClasses();
 
-        if (unexportedRefs.isEmpty()) {
-            System.out.println("No unexported referenced objects found - skipping General.xml");
+        if (foundationClasses == null || foundationClasses.length == 0) {
+            System.out.println("No foundation classes defined - skipping General.xml");
             return;
         }
 
-        // Group unexported references by object type
-        Map<String, Set<Long>> objectsByType = new HashMap<>();
-        for (Long objectId : unexportedRefs) {
-            String objectType = tracker.getObjectType(objectId);
-            if (objectType != null) {
-                objectsByType.computeIfAbsent(objectType, k -> new HashSet<>()).add(objectId);
-            } else {
-                System.err.println("Warning: Referenced object " + objectId + " has no type information");
-            }
-        }
-
-        System.out.println("Exporting General module with unexported referenced objects:");
-        for (Map.Entry<String, Set<Long>> entry : objectsByType.entrySet()) {
-            System.out.println("  " + entry.getKey() + ": " + entry.getValue().size() + " objects");
-        }
+        System.out.println("Exporting General module with " + foundationClasses.length + " foundation classes");
 
         // Create a synthetic module context for General
         ModuleExportContext generalContext = new ModuleExportContext(
-                outputDirectory, engine, null, "General");
+                outputDirectory, engine, "General");
 
         // Begin General module
         Object moduleHandle = handler.beginModule(generalContext);
 
         try {
-            // Export each object type
-            for (Map.Entry<String, Set<Long>> entry : objectsByType.entrySet()) {
-                String objectType = entry.getKey();
-                Set<Long> objectIds = entry.getValue();
+            // Export each foundation class
+            for (DOSchemaClass foundationClass : foundationClasses) {
+                DODatabaseClass dbClass = foundationClass.getDatabaseClass();
+                if (dbClass == null) {
+                    System.out.println("  Skipping foundation class with no database class: " + foundationClass.getShortName());
+                    continue;
+                }
 
-                exportGeneralClass(moduleHandle, generalContext, objectType, objectIds, handler);
+                // Track exports for this class
+                exportClass(moduleHandle, generalContext, foundationClass, handler, tracker, "General");
             }
         } finally {
             handler.endModule(moduleHandle, generalContext);
@@ -116,75 +106,10 @@ public class ExportOrchestrator {
     }
 
     /**
-     * Export a single class in the General module.
-     */
-    private void exportGeneralClass(Object moduleHandle, ModuleExportContext moduleContext,
-            String objectType, Set<Long> objectIds, ExportFormatHandler handler) throws IOException {
-
-        System.out.println("  Exporting General class: " + objectType + " (" + objectIds.size() + " objects)");
-
-        // Find the database class for this object type
-        DODatabaseClass dbClass = findDatabaseClass(objectType);
-        if (dbClass == null) {
-            System.err.println("    Could not find database class for type: " + objectType);
-            return;
-        }
-
-        // Build columns
-        List<ExportColumn> columns = columnBuilder.buildColumns(dbClass);
-
-        // Create class context
-        ClassExportContext classContext = new ClassExportContext(
-                moduleContext, null, dbClass, columns, objectType, objectIds.size());
-
-        // Begin class
-        Object classHandle = handler.beginClass(moduleHandle, classContext);
-        int exportedCount = 0;
-
-        try {
-            // Get all objects from this database class and filter by ID
-            DODatabaseObject[] allObjects = dbClass.getResolvedObjects();
-            if (allObjects != null) {
-                for (DODatabaseObject obj : allObjects) {
-                    if (objectIds.contains(obj.getObjectId())) {
-                        try {
-                            exportObject(classHandle, classContext, obj, exportedCount, handler);
-                            exportedCount++;
-                        } catch (Exception e) {
-                            System.err
-                                    .println("    Error exporting object " + obj.getObjectId() + ": " + e.getMessage());
-                        }
-                    }
-                }
-            }
-        } finally {
-            handler.endClass(classHandle, classContext, exportedCount);
-            System.out.println("    Exported " + exportedCount + " objects for " + objectType);
-        }
-    }
-
-    /**
-     * Find the database class for a given object type name.
-     */
-    private DODatabaseClass findDatabaseClass(String objectType) {
-        for (DOSchemaModule module : engine.getSchema().getModules()) {
-            if (module.getClasses() != null) {
-                for (DOSchemaClass schemaClass : module.getClasses()) {
-                    String exportName = getClassExportName(schemaClass);
-                    if (exportName.equals(objectType)) {
-                        return schemaClass.getDatabaseClass();
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    /**
      * Export a single module.
      */
-    private void exportModule(DOSchemaModule module, ExportFormatHandler handler, String outputDirectory)
-            throws IOException {
+    private void exportModule(DOSchemaModule module, ExportFormatHandler handler, String outputDirectory,
+            ReferenceTracker tracker) throws IOException {
         System.out.println("Exporting module: " + module.getName());
 
         // Create module context with engine reference
@@ -196,7 +121,7 @@ public class ExportOrchestrator {
 
         try {
             // Export all classes in the module
-            exportModuleClasses(module, moduleHandle, moduleContext, handler);
+            exportModuleClasses(module, moduleHandle, moduleContext, handler, tracker);
         } finally {
             // Always end module, even if there's an error
             handler.endModule(moduleHandle, moduleContext);
@@ -208,7 +133,7 @@ public class ExportOrchestrator {
      * Export all classes within a module.
      */
     private void exportModuleClasses(DOSchemaModule module, Object moduleHandle,
-            ModuleExportContext moduleContext, ExportFormatHandler handler)
+            ModuleExportContext moduleContext, ExportFormatHandler handler, ReferenceTracker tracker)
             throws IOException {
 
         Set<DODatabaseClass> exportedDbClasses = new HashSet<>();
@@ -219,7 +144,7 @@ public class ExportOrchestrator {
 
                 if (shouldExportClass(dbClass, exportedDbClasses)) {
                     exportedDbClasses.add(dbClass);
-                    exportClass(moduleHandle, moduleContext, schemaClass, handler);
+                    exportClass(moduleHandle, moduleContext, schemaClass, handler, tracker, module.getName());
                 } else if (dbClass != null) {
                     System.out.println("Skipping duplicate database class: " + schemaClass.getShortName());
                 }
@@ -231,7 +156,7 @@ public class ExportOrchestrator {
      * Export a single class.
      */
     private void exportClass(Object moduleHandle, ModuleExportContext moduleContext,
-            DOSchemaClass schemaClass, ExportFormatHandler handler) throws IOException {
+            DOSchemaClass schemaClass, ExportFormatHandler handler, ReferenceTracker tracker, String moduleName) throws IOException {
 
         DODatabaseClass dbClass = schemaClass.getDatabaseClass();
         if (dbClass == null) {
@@ -257,7 +182,7 @@ public class ExportOrchestrator {
 
         try {
             // Export all objects
-            exportedCount = exportClassObjects(classHandle, classContext, objects, handler);
+            exportedCount = exportClassObjects(classHandle, classContext, objects, handler, tracker, moduleName);
         } finally {
             // Always end class
             handler.endClass(classHandle, classContext, exportedCount);
@@ -269,13 +194,17 @@ public class ExportOrchestrator {
      * Export all objects for a class.
      */
     private int exportClassObjects(Object classHandle, ClassExportContext classContext,
-            List<DODatabaseObject> objects, ExportFormatHandler handler)
+            List<DODatabaseObject> objects, ExportFormatHandler handler, ReferenceTracker tracker, String moduleName)
             throws IOException {
         int exportedCount = 0;
 
         for (DODatabaseObject obj : objects) {
             try {
                 exportObject(classHandle, classContext, obj, exportedCount, handler);
+                
+                // Record this object as exported in this module
+                tracker.recordExportedObject(obj.getObjectId(), moduleName, classContext.getDatabaseClass());
+                
                 exportedCount++;
             } catch (Exception e) {
                 System.err.println("Error exporting object " + obj.getObjectId() +
