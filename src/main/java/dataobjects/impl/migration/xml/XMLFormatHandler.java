@@ -44,10 +44,12 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         XMLStreamWriter writer;
         FileOutputStream outputStream;
         String fileName;
+        String moduleName; // Name of the module being exported
         List<TypeInfo> moduleTypes = new ArrayList<>();
         DOEngine engine; // Store engine reference for object resolution
         Map<String, String> classToModuleMap; // Maps full class name to module name
         Set<Long> exportedObjectIds = new HashSet<>(); // IDs of top-level exported objects (not embedded)
+        int indentLevel = 0; // Current indentation level for proper XML formatting
 
         void close() throws IOException {
             try {
@@ -61,6 +63,17 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                     outputStream.close();
                 }
             }
+        }
+
+        /**
+         * Get indentation string for current level.
+         */
+        String indent() {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < indentLevel; i++) {
+                sb.append("    "); // 4 spaces per level
+            }
+            return sb.toString();
         }
     }
 
@@ -115,6 +128,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             // Store engine reference and build class-to-module map
             xmlContext.engine = context.getEngine();
             xmlContext.classToModuleMap = buildClassToModuleMap(context.getEngine());
+            xmlContext.moduleName = context.getModuleName(); // Store module name for reference tracking
 
             // Create output file
             xmlContext.fileName = context.getSanitizedModuleName() + ".xml";
@@ -148,11 +162,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             // Write this module start
             xmlContext.writer.writeStartElement("module");
             xmlContext.writer.writeAttribute("name", context.getModuleName());
-            xmlContext.writer.writeCharacters("\n            ");
-
-            // Write objects container
-            xmlContext.writer.writeStartElement("objects");
             xmlContext.writer.writeCharacters("\n");
+
+            // No <objects> wrapper - collections will be written per class type
 
             return xmlContext;
 
@@ -193,8 +205,15 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         XMLClassContext classCtx = new XMLClassContext();
         classCtx.moduleContext = moduleCtx;
 
-        // We don't write a class element - objects go directly into the <objects>
-        // container
+        try {
+            // Write collection element with type attribute
+            moduleCtx.writer.writeCharacters("            ");
+            moduleCtx.writer.writeStartElement("collection");
+            moduleCtx.writer.writeAttribute("type", context.getExportName());
+            moduleCtx.writer.writeCharacters("\n");
+        } catch (XMLStreamException e) {
+            throw new IOException("Failed to begin class collection: " + e.getMessage(), e);
+        }
 
         return classCtx;
     }
@@ -211,6 +230,15 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             long objectId = context.getObjectId();
             classCtx.moduleContext.exportedObjectIds.add(objectId);
 
+            // Record this export in the tracker
+            if (tracker != null) {
+                String moduleName = context.getClassContext().getModuleContext().getModule() != null
+                        ? context.getClassContext().getModuleContext().getModule().getName()
+                        : "General";
+                String objectType = context.getClassContext().getExportName();
+                tracker.recordExportedObject(objectId, moduleName, objectType);
+            }
+
             // Find the mID field value to use as the business ID in the XML
             String businessId = String.valueOf(objectId); // Default to db4o ID
             for (FormattedValue value : values) {
@@ -226,21 +254,26 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 }
             }
 
+            // Set indentation level for top-level objects
+            classCtx.moduleContext.indentLevel = 4; // Starting at 4 levels deep (inside <module><objects>)
+
             // Write object-specific element (v2 format: <PersonneRess> instead of <object
             // type="PersonneRess">)
-            writer.writeCharacters("                ");
+            writer.writeCharacters(classCtx.moduleContext.indent());
             writer.writeStartElement(context.getClassContext().getExportName());
             writer.writeAttribute("id", businessId);
             writer.writeCharacters("\n");
 
             // Write all non-empty field values
+            classCtx.moduleContext.indentLevel++; // Fields are one level deeper
             List<FormattedValue> nonEmptyValues = getNonEmptyValues(values);
             for (FormattedValue value : nonEmptyValues) {
                 writeFieldElement(writer, value, classCtx.moduleContext);
             }
+            classCtx.moduleContext.indentLevel--; // Back to object level
 
             // Write object end element
-            writer.writeCharacters("                ");
+            writer.writeCharacters(classCtx.moduleContext.indent());
             writer.writeEndElement(); // object-specific element (e.g., </PersonneRess>)
             writer.writeCharacters("\n");
 
@@ -251,7 +284,16 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
     @Override
     public void endClass(Object classHandle, ClassExportContext context, int exportedCount) throws IOException {
-        // Nothing to do - we don't write class elements
+        XMLClassContext classCtx = (XMLClassContext) classHandle;
+
+        try {
+            // Close collection element
+            classCtx.moduleContext.writer.writeCharacters("            ");
+            classCtx.moduleContext.writer.writeEndElement(); // collection
+            classCtx.moduleContext.writer.writeCharacters("\n");
+        } catch (XMLStreamException e) {
+            throw new IOException("Failed to end class collection: " + e.getMessage(), e);
+        }
     }
 
     @Override
@@ -259,12 +301,8 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         XMLModuleContext moduleCtx = (XMLModuleContext) moduleHandle;
 
         try {
-            // Close objects
-            moduleCtx.writer.writeCharacters("            ");
-            moduleCtx.writer.writeEndElement(); // objects
-            moduleCtx.writer.writeCharacters("\n        ");
-
-            // Close module
+            // Close module (no <objects> wrapper anymore - collections closed per class)
+            moduleCtx.writer.writeCharacters("        ");
             moduleCtx.writer.writeEndElement(); // module
             moduleCtx.writer.writeCharacters("\n    ");
 
@@ -570,7 +608,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      */
     private void writeFieldElement(XMLStreamWriter writer, FormattedValue value, XMLModuleContext moduleContext)
             throws XMLStreamException {
-        writer.writeCharacters("                    ");
+        writer.writeCharacters(moduleContext.indent());
 
         // V2: Write field-specific element (e.g., <nom> instead of <field name="nom">)
         // Convert Java field name to XML field name (camelCase)
@@ -620,6 +658,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
 
         writer.writeCharacters("\n");
+        moduleContext.indentLevel++; // Collection items are one level deeper
 
         if (isPrimitiveType(firstElement)) {
             // Collection of primitives - write with generic element name
@@ -627,7 +666,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             for (Object element : collection) {
                 if (element == null)
                     continue;
-                writer.writeCharacters("                        ");
+                writer.writeCharacters(moduleContext.indent());
                 writer.writeStartElement(elementName);
                 writer.writeCharacters(formatPrimitiveValue(element));
                 writer.writeEndElement();
@@ -645,10 +684,22 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 for (Object element : collection) {
                     if (element == null)
                         continue;
-                    writer.writeCharacters("                        ");
+                    writer.writeCharacters(moduleContext.indent());
                     writer.writeStartElement(refElementName);
                     long objectId = getObjectId(element, moduleContext.engine);
                     writer.writeAttribute("id", String.valueOf(objectId));
+
+                    // Track this reference in the tracker and add module attribute if cross-module
+                    if (tracker != null) {
+                        tracker.recordReference(objectId, moduleContext.moduleName, elementClass);
+
+                        // Add module attribute for cross-module references
+                        String targetModule = tracker.getTargetModule(objectId, moduleContext.moduleName);
+                        if (targetModule != null) {
+                            writer.writeAttribute("module", targetModule);
+                        }
+                    }
+
                     writer.writeEndElement();
                     writer.writeCharacters("\n");
                 }
@@ -657,13 +708,13 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 for (Object element : collection) {
                     if (element == null)
                         continue;
-                    writer.writeCharacters("                        ");
                     writeEmbeddedObject(writer, element, moduleContext);
                 }
             }
         }
 
-        writer.writeCharacters("                    ");
+        moduleContext.indentLevel--; // Back to field level
+        writer.writeCharacters(moduleContext.indent());
     }
 
     /**
@@ -702,14 +753,40 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         // Check if this object is a top-level exported object
         long objectId = getObjectId(obj, moduleContext.engine);
         if (objectId > 0 && moduleContext.exportedObjectIds.contains(objectId)) {
-            // Top-level object: write ID reference only
-            writer.writeCharacters(String.valueOf(objectId));
+            // Top-level object: write TypeRef element with id attribute (same as collection
+            // references)
+            String fullClassName = getFullClassName(obj, moduleContext.engine);
+            String elementClass = getSimpleClassNameFromFull(fullClassName);
+            String refElementName = elementClass + "Ref";
+
+            writer.writeCharacters("\n");
+            moduleContext.indentLevel++; // References are one level deeper
+            writer.writeCharacters(moduleContext.indent());
+            writer.writeStartElement(refElementName);
+            writer.writeAttribute("id", String.valueOf(objectId));
+
+            // Track this reference and add module attribute if cross-module
+            if (tracker != null) {
+                tracker.recordReference(objectId, moduleContext.moduleName, elementClass);
+
+                // Add module attribute for cross-module references
+                String targetModule = tracker.getTargetModule(objectId, moduleContext.moduleName);
+                if (targetModule != null) {
+                    writer.writeAttribute("module", targetModule);
+                }
+            }
+
+            writer.writeEndElement();
+            writer.writeCharacters("\n");
+            moduleContext.indentLevel--; // Back to field level
+            writer.writeCharacters(moduleContext.indent());
         } else {
             // Embedded object (composition): write full nested structure
             writer.writeCharacters("\n");
-            writer.writeCharacters("                        ");
+            moduleContext.indentLevel++; // Embedded object is one level deeper
             writeEmbeddedObject(writer, obj, moduleContext);
-            writer.writeCharacters("                    ");
+            moduleContext.indentLevel--; // Back to field level
+            writer.writeCharacters(moduleContext.indent());
         }
     }
 
@@ -757,8 +834,13 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                     continue;
                 }
 
-                // Write the field
-                writeEmbeddedObjectField(writer, doField.getName(), fieldValue, moduleContext);
+                // Create an ExportColumn and FormattedValue to use the same export logic as
+                // top-level objects
+                ExportColumn column = new ExportColumn(doField, doField.getName());
+                FormattedValue formattedValue = new FormattedValue(fieldValue, column);
+
+                // Use the same writeFieldElement method as top-level objects for consistency
+                writeFieldElement(writer, formattedValue, moduleContext);
 
             } catch (Exception e) {
                 // Skip fields we can't access
@@ -802,10 +884,10 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             throws XMLStreamException {
         String fullClassName = getFullClassName(obj, moduleContext.engine);
         String className = getSimpleClassNameFromFull(fullClassName);
-        long objectId = getObjectId(obj, moduleContext.engine);
 
-        // Find the mID field value to use as the business ID
-        String businessId = String.valueOf(objectId); // Default to db4o ID
+        // Find the mID field value to use as the business ID (optional for embedded
+        // objects)
+        String businessId = null;
         DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
                 moduleContext.engine.getSchema(),
                 moduleContext.engine.getDatabase());
@@ -823,11 +905,16 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                             if (idValue instanceof Number) {
                                 businessId = String.valueOf(((Number) idValue).longValue());
                             } else if (idValue != null) {
-                                businessId = String.valueOf(idValue);
+                                // ID-type object - extract the numeric mValeur field
+                                Long numericId = extractNumericIdFromIdObject(idValue, container);
+                                if (numericId != null) {
+                                    businessId = String.valueOf(numericId);
+                                }
+                                // If extraction fails, leave businessId as null (no id attribute)
                             }
                             break;
                         } catch (Exception e) {
-                            // Continue with default ID if we can't get the mID field
+                            // Continue without ID if we can't get the mID field
                         }
                     }
                 }
@@ -836,16 +923,74 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
         // V2: Write object-specific element (e.g., <Adresse> instead of <object
         // type="Adresse">)
+        writer.writeCharacters(moduleContext.indent());
         writer.writeStartElement(className);
-        writer.writeAttribute("id", businessId);
+
+        // Only write id attribute if we found a valid business ID
+        if (businessId != null) {
+            writer.writeAttribute("id", businessId);
+        }
+
         writer.writeCharacters("\n");
 
-        // Write all fields
+        // Write all fields (increment indent level for fields inside embedded object)
+        moduleContext.indentLevel++;
         writeObjectFields(writer, obj, moduleContext, fullClassName);
+        moduleContext.indentLevel--;
 
-        writer.writeCharacters("                        ");
+        writer.writeCharacters(moduleContext.indent());
         writer.writeEndElement(); // object-specific element (e.g., </Adresse>)
         writer.writeCharacters("\n");
+    }
+
+    /**
+     * Extract the numeric value from an ID-type object (e.g., IDTypeChauffage).
+     * ID objects have a mValeur field containing the actual numeric ID.
+     */
+    private Long extractNumericIdFromIdObject(Object idObject, com.db4o.ext.ExtObjectContainer container) {
+        if (idObject == null) {
+            return null;
+        }
+
+        try {
+            // ID objects have a mValeur field containing the numeric value
+            String fullClassName = idObject.getClass().getName();
+            DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+                    null, // schema not needed for this lookup
+                    null); // database not needed for this lookup
+
+            if (doClass == null) {
+                // Try to find the field directly using reflection
+                try {
+                    java.lang.reflect.Field valeurField = idObject.getClass().getDeclaredField("mValeur");
+                    valeurField.setAccessible(true);
+                    Object valeur = valeurField.get(idObject);
+                    if (valeur instanceof Number) {
+                        return ((Number) valeur).longValue();
+                    }
+                } catch (Exception e) {
+                    // Field not found or not accessible
+                }
+                return null;
+            }
+
+            // Find the mValeur field in the class definition
+            DOField[] fields = doClass.getFields();
+            if (fields != null) {
+                for (DOField field : fields) {
+                    if ("mValeur".equals(field.getName())) {
+                        Object valeur = ObjectResolverUtil.getFieldValue(container, idObject, field);
+                        if (valeur instanceof Number) {
+                            return ((Number) valeur).longValue();
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // Failed to extract numeric ID
+        }
+
+        return null;
     }
 
     /**

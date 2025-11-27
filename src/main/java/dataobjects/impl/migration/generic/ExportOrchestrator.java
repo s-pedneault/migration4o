@@ -46,16 +46,138 @@ public class ExportOrchestrator {
     public void export(ExportFormatHandler handler, String outputDirectory) throws IOException {
         validateSchema();
 
-        // Initialize the format handler
-        handler.initialize(outputDirectory);
+        // Create reference tracker for cross-module reference detection
+        ReferenceTracker tracker = new ReferenceTracker();
+
+        // Initialize the format handler with the tracker
+        handler.initialize(outputDirectory, tracker);
 
         // Process each module
         for (DOSchemaModule module : engine.getSchema().getModules()) {
             exportModule(module, handler, outputDirectory);
         }
 
+        // Export General.xml with multi-module referenced objects
+        exportGeneralModule(handler, tracker, outputDirectory);
+
         // Finalize the export
         handler.cleanup();
+    }
+
+    /**
+     * Export the General module containing objects referenced by multiple modules.
+     */
+    private void exportGeneralModule(ExportFormatHandler handler, ReferenceTracker tracker, String outputDirectory)
+            throws IOException {
+
+        // Get objects that were referenced but never exported
+        Set<Long> unexportedRefs = tracker.getUnexportedReferences();
+
+        if (unexportedRefs.isEmpty()) {
+            System.out.println("No unexported referenced objects found - skipping General.xml");
+            return;
+        }
+
+        // Group unexported references by object type
+        Map<String, Set<Long>> objectsByType = new HashMap<>();
+        for (Long objectId : unexportedRefs) {
+            String objectType = tracker.getObjectType(objectId);
+            if (objectType != null) {
+                objectsByType.computeIfAbsent(objectType, k -> new HashSet<>()).add(objectId);
+            } else {
+                System.err.println("Warning: Referenced object " + objectId + " has no type information");
+            }
+        }
+
+        System.out.println("Exporting General module with unexported referenced objects:");
+        for (Map.Entry<String, Set<Long>> entry : objectsByType.entrySet()) {
+            System.out.println("  " + entry.getKey() + ": " + entry.getValue().size() + " objects");
+        }
+
+        // Create a synthetic module context for General
+        ModuleExportContext generalContext = new ModuleExportContext(
+                outputDirectory, engine, null, "General");
+
+        // Begin General module
+        Object moduleHandle = handler.beginModule(generalContext);
+
+        try {
+            // Export each object type
+            for (Map.Entry<String, Set<Long>> entry : objectsByType.entrySet()) {
+                String objectType = entry.getKey();
+                Set<Long> objectIds = entry.getValue();
+
+                exportGeneralClass(moduleHandle, generalContext, objectType, objectIds, handler);
+            }
+        } finally {
+            handler.endModule(moduleHandle, generalContext);
+            System.out.println("General module exported successfully");
+        }
+    }
+
+    /**
+     * Export a single class in the General module.
+     */
+    private void exportGeneralClass(Object moduleHandle, ModuleExportContext moduleContext,
+            String objectType, Set<Long> objectIds, ExportFormatHandler handler) throws IOException {
+
+        System.out.println("  Exporting General class: " + objectType + " (" + objectIds.size() + " objects)");
+
+        // Find the database class for this object type
+        DODatabaseClass dbClass = findDatabaseClass(objectType);
+        if (dbClass == null) {
+            System.err.println("    Could not find database class for type: " + objectType);
+            return;
+        }
+
+        // Build columns
+        List<ExportColumn> columns = columnBuilder.buildColumns(dbClass);
+
+        // Create class context
+        ClassExportContext classContext = new ClassExportContext(
+                moduleContext, null, dbClass, columns, objectType, objectIds.size());
+
+        // Begin class
+        Object classHandle = handler.beginClass(moduleHandle, classContext);
+        int exportedCount = 0;
+
+        try {
+            // Get all objects from this database class and filter by ID
+            DODatabaseObject[] allObjects = dbClass.getResolvedObjects();
+            if (allObjects != null) {
+                for (DODatabaseObject obj : allObjects) {
+                    if (objectIds.contains(obj.getObjectId())) {
+                        try {
+                            exportObject(classHandle, classContext, obj, exportedCount, handler);
+                            exportedCount++;
+                        } catch (Exception e) {
+                            System.err
+                                    .println("    Error exporting object " + obj.getObjectId() + ": " + e.getMessage());
+                        }
+                    }
+                }
+            }
+        } finally {
+            handler.endClass(classHandle, classContext, exportedCount);
+            System.out.println("    Exported " + exportedCount + " objects for " + objectType);
+        }
+    }
+
+    /**
+     * Find the database class for a given object type name.
+     */
+    private DODatabaseClass findDatabaseClass(String objectType) {
+        for (DOSchemaModule module : engine.getSchema().getModules()) {
+            if (module.getClasses() != null) {
+                for (DOSchemaClass schemaClass : module.getClasses()) {
+                    String exportName = getClassExportName(schemaClass);
+                    if (exportName.equals(objectType)) {
+                        return schemaClass.getDatabaseClass();
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     /**

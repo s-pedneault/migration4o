@@ -1,5 +1,6 @@
 package dataobjects.api.migration.generic;
 
+import dataobjects.impl.migration.generic.ReferenceTracker;
 import java.io.IOException;
 import java.util.List;
 
@@ -29,7 +30,21 @@ public interface ExportFormatHandler {
      * @param outputDirectory The directory where output files will be created
      * @throws IOException if initialization fails
      */
-    void initialize(String outputDirectory) throws IOException;
+    default void initialize(String outputDirectory) throws IOException {
+        // Default implementation for backwards compatibility
+        initialize(outputDirectory, null);
+    }
+
+    /**
+     * Initialize the format handler with the output directory and reference
+     * tracker.
+     * 
+     * @param outputDirectory The directory where output files will be created
+     * @param tracker         The reference tracker for cross-module reference
+     *                        detection (may be null)
+     * @throws IOException if initialization fails
+     */
+    void initialize(String outputDirectory, ReferenceTracker tracker) throws IOException;
 
     /**
      * Begin processing a module.

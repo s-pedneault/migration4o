@@ -1,5 +1,6 @@
 package dataobjects.api.migration.generic;
 
+import dataobjects.impl.migration.generic.ReferenceTracker;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.List;
 public abstract class TabularFormatHandler implements ExportFormatHandler {
 
     protected String outputDirectory;
+    protected ReferenceTracker tracker;
 
     @Override
     public final OutputStructure getPreferredStructure() {
@@ -19,8 +21,9 @@ public abstract class TabularFormatHandler implements ExportFormatHandler {
     }
 
     @Override
-    public void initialize(String outputDirectory) throws IOException {
+    public void initialize(String outputDirectory, ReferenceTracker tracker) throws IOException {
         this.outputDirectory = outputDirectory;
+        this.tracker = tracker;
 
         // Create output directory
         File outputDir = new File(outputDirectory);

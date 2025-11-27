@@ -4,9 +4,29 @@ This document describes the XML export format for Migration4O database content, 
 
 ## Overview
 
-The export generates one XML file per module containing strongly-typed data using object-specific elements with precise XSD validation.
+The export generates multiple XML files:
+- One XML file per module for module-specific objects
+- A `General.xml` file for shared objects referenced across multiple modules
 
 This approach provides **complete schema validation** with precise field-level type checking, while maintaining readability and schema compliance. The XSD defines all object types and their structures, eliminating the need for separate type mappings.
+
+## File Structure
+
+The export creates the following files:
+
+```
+output/migration/data/
+├── General.xml              # Shared objects referenced by multiple modules
+├── Dossier_adresse.xml      # Dossier adresse module objects
+├── Prevention.xml           # Prevention module objects
+├── Intervention.xml         # Intervention module objects
+├── Parametres.xml          # Parametres module objects
+└── ...
+```
+
+**General.xml**: Contains objects that are referenced by multiple modules (e.g., VilleGeo, Langue, CodeRef). These are shared reference data used across the application.
+
+**Module-specific XML files**: Contain objects that belong primarily to that module and are only referenced within that module.
 
 ## XML Structure
 
@@ -21,18 +41,26 @@ This approach provides **complete schema validation** with precise field-level t
     <!-- Strongly-typed data modules -->
     <modules>
         <module name="Dossier adresse">
-            <objects>
-                <!-- Strongly-typed objects using object-specific elements -->
-                <PersonneRess id="12345">
+            <!-- Objects grouped by type for easier navigation and processing -->
+            <collection type="DossierAdresse">
+                <DossierAdresse id="12345">
+                    <!-- ... -->
+                </DossierAdresse>
+                <DossierAdresse id="12346">
+                    <!-- ... -->
+                </DossierAdresse>
+            </collection>
+            <collection type="PersonneRess">
+                <PersonneRess id="54321">
                     <!-- ... -->
                 </PersonneRess>
-            </objects>
+            </collection>
         </module>
     </modules>
 </migration>
 ```
 
-**Note:** The XSD schema fully defines all object types and their structures, eliminating the need for a separate type definitions section.
+**Note:** The XSD schema fully defines all object types and their structures, eliminating the need for a separate type definitions section. Objects are grouped by type within each module using `<collection type="...">` elements for easier navigation and processing.
 
 ## Naming Conventions
 
@@ -42,6 +70,7 @@ The v2 format uses consistent naming conventions to distinguish between differen
 - Object type names: `<PersonneRess>`, `<DossierAdresse>`, `<VilleGeo>`
 - Reference elements: `<SpecialiteRef id="10"/>`, `<VilleGeoRef id="123"/>`
 - Embedded object elements: `<Adresse>`, `<Periodicite>`
+- Collection type attribute: `type="PersonneRess"`, `type="DossierAdresse"`
 
 **camelCase (First letter lowercase):**
 - Field names: `<nom>`, `<dateCreation>`, `<personneRessource>`
@@ -52,8 +81,21 @@ The v2 format uses consistent naming conventions to distinguish between differen
 Reference elements use the pattern `<{ObjectType}Ref id="123"/>`:
 - Element name: PascalCase object type + "Ref" suffix
 - `id` attribute: Contains the referenced object's ID
-- Self-closing: `<VilleGeoRef id="26502107"/>`
+- `module` attribute (optional): Specifies which module/file contains the referenced object
+  - Omitted for references within the same module
+  - Required for cross-module references (e.g., `module="General"` for shared objects)
+- Self-closing: `<VilleGeoRef id="26502107" module="General"/>`
 - Makes the reference relationship explicit and matches the actual object's `id` attribute
+
+**Examples:**
+```xml
+<!-- Same-module reference (no module attribute needed) -->
+<PersonneRessRef id="12345"/>
+
+<!-- Cross-module reference to shared object -->
+<VilleGeoRef id="26502107" module="General"/>
+<LangueRef id="1" module="General"/>
+```
 
 This convention makes it immediately clear:
 - PascalCase = Types (objects and their references)
@@ -61,19 +103,33 @@ This convention makes it immediately clear:
 
 ### Data Modules
 
-Each `<module>` contains objects organized by their logical grouping:
+Each `<module>` contains objects organized by type within `<collection>` elements:
 
 ```xml
 <modules>
     <module name="Dossier adresse">
-        <objects>
-            <PersonneRess id="12345">
+        <collection type="DossierAdresse">
+            <DossierAdresse id="12345">
                 <!-- Strongly-typed fields as child elements -->
+            </DossierAdresse>
+            <DossierAdresse id="12346">
+                <!-- ... -->
+            </DossierAdresse>
+        </collection>
+        <collection type="PersonneRess">
+            <PersonneRess id="54321">
+                <!-- ... -->
             </PersonneRess>
-        </objects>
+        </collection>
     </module>
 </modules>
 ```
+
+**Collection Grouping Benefits:**
+- Objects of the same type are grouped together for easier navigation
+- The `type` attribute explicitly identifies the object type in the collection
+- Simplifies processing and validation (all objects in a collection have the same structure)
+- Makes it easier to locate and reference specific object types
 
 ## Object Structure
 
@@ -99,21 +155,28 @@ Each `<module>` contains objects organized by their logical grouping:
 
 ### Object with References
 
-References to other objects contain the object ID as text content:
+References to other objects use the `<TypeRef>` element format with `id` and optional `module` attributes:
 
 ```xml
 <PersonneRess id="12345">
     <nom>Jean Dupont</nom>
     <couriel>jean.dupont@example.com</couriel>
     
-    <!-- Reference fields contain the target object ID -->
-    <idDossPrev>54321</idDossPrev>
-    <idLangue>1</idLangue>
+    <!-- Reference fields use TypeRef elements (same format as collection references) -->
+    <dossPrev>
+        <DossPrevRef id="54321"/>
+    </dossPrev>
+    <langue>
+        <LangueRef id="1" module="General"/>
+    </langue>
 </PersonneRess>
 ```
 
-**Reference Field Attributes:**
-In the XSD, reference fields are defined with annotations or specific types that indicate they reference another object type.
+**Reference Field Format:**
+- All references use the `<TypeRef id="..." module="..."/>` format for consistency
+- Single object references and collection references use the same syntax
+- The `module` attribute is included for cross-module references
+- The `module` attribute is omitted for same-module references
 
 ### Object with Embedded Objects
 
@@ -145,10 +208,28 @@ Collections are handled as wrapper elements containing either values or nested o
 <ParamConfigSSI id="100">
     <prefixe>SSI01</prefixe>
     
-    <!-- Collection of references to Specialite objects -->
+    <!-- Collection of references to Specialite objects in the same module -->
     <vectSpecialite>
         <SpecialiteRef id="10"/>
         <SpecialiteRef id="15"/>
+        <SpecialiteRef id="20"/>
+    </vectSpecialite>
+    
+    <!-- Collection of references to VilleGeo objects in General module -->
+    <vectVilleEntraide>
+        <VilleGeoRef id="26502107" module="General"/>
+        <VilleGeoRef id="27416350" module="General"/>
+        <VilleGeoRef id="7106389" module="General"/>
+    </vectVilleEntraide>
+</ParamConfigSSI>
+```
+
+**Collection of References Structure:**
+- Collection field becomes a wrapper element (e.g., `<vectSpecialite>`)
+- Each reference is a `{Type}Ref` element with `id` attribute
+- `module` attribute added for cross-module references
+- References to objects in the same module omit the `module` attribute
+- References to objects in General.xml or other modules include `module="ModuleName"`
         <SpecialiteRef id="22"/>
     </vectSpecialite>
 </ParamConfigSSI>
@@ -281,32 +362,58 @@ Here's an example showing complex intervention data with multiple collections an
 </Intervention>
 ```
 
-## Unreached Objects
+## Shared Objects (General Module)
 
-Objects not reachable from module roots are exported separately in their own module:
+Objects referenced by multiple modules are exported to `General.xml` to avoid duplication and maintain single source of truth:
 
 ```xml
-<module name="Unreached">
-    <objects>
-        <!-- Orphaned objects grouped by type -->
-        <VilleGeo id="90001">
-            <nom>Ville Abandonnée</nom>
-            <codeGeo>99999</codeGeo>
+<!-- General.xml -->
+<module name="General">
+    <!-- VilleGeo objects referenced across multiple modules -->
+    <collection type="VilleGeo">
+        <VilleGeo id="26502107">
+            <nom>Saint-Dominique</nom>
+            <codeGeo>54060</codeGeo>
             <province>QC</province>
         </VilleGeo>
-        <VilleGeo id="90002">
-            <nom>Ancienne Municipalité</nom>
-            <codeGeo>99998</codeGeo>
+        <VilleGeo id="27416350">
+            <nom>Montreal</nom>
+            <codeGeo>66023</codeGeo>
             <province>QC</province>
         </VilleGeo>
-        <PhotoFich id="90100">
-            <nom>obsolete_image.png</nom>
-            <cheminFichier>/temp/obsolete_image.png</cheminFichier>
-            <taille>12800</taille>
-            <dateModification>2020-03-15T09:20:00</dateModification>
-        </PhotoFich>
-    </objects>
+    </collection>
+    
+    <!-- Langue objects referenced across multiple modules -->
+    <collection type="Langue">
+        <Langue id="1">
+            <nom>Français</nom>
+            <code>fr</code>
+        </Langue>
+        <Langue id="2">
+            <nom>English</nom>
+            <code>en</code>
+        </Langue>
+    </collection>
 </module>
+```
+
+**General Module Criteria:**
+- Objects referenced by 2+ different modules
+- Common reference data (codes, lookups, shared entities)
+- Objects with no clear "owner" module
+
+**Cross-Module References:**
+When referencing objects in General.xml, include the `module` attribute:
+```xml
+<!-- In Parametres.xml -->
+<vectVilleEntraide>
+    <VilleGeoRef id="26502107" module="General"/>
+</vectVilleEntraide>
+
+<!-- In Intervention.xml -->
+<villeIntervention>
+    <VilleGeoRef id="26502107" module="General"/>
+</villeIntervention>
 ```
 
 ## Field Name Processing
