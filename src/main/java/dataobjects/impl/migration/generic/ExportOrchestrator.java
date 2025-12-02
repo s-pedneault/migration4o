@@ -46,6 +46,12 @@ public class ExportOrchestrator {
     public void export(ExportFormatHandler handler, String outputDirectory) throws IOException {
         validateSchema();
 
+        // Log development mode configuration
+        System.out.println("=== Export Configuration ===");
+        System.out.println(DevelopmentConfig.getConfigDescription());
+        System.out.println("===========================");
+        System.out.println();
+
         // Create reference tracker
         ReferenceTracker tracker = new ReferenceTracker();
 
@@ -54,7 +60,12 @@ public class ExportOrchestrator {
 
         // Process each module
         for (DOSchemaModule module : engine.getSchema().getModules()) {
-            exportModule(module, handler, outputDirectory, tracker);
+            // Check if we should export this module based on development config
+            if (DevelopmentConfig.shouldExportModule(module.getName())) {
+                exportModule(module, handler, outputDirectory, tracker);
+            } else {
+                System.out.println("Skipping module (development mode): " + module.getName());
+            }
         }
 
         // Export General.xml with foundation classes
@@ -68,6 +79,8 @@ public class ExportOrchestrator {
      * Export the General module containing foundation classes (shared across
      * modules).
      * Foundation classes are defined in the schema's <foundation> section.
+     * In development mode, only exports foundation classes that are actually used
+     * by the target module.
      */
     private void exportGeneralModule(ExportFormatHandler handler, ReferenceTracker tracker, String outputDirectory)
             throws IOException {
@@ -80,7 +93,43 @@ public class ExportOrchestrator {
             return;
         }
 
-        System.out.println("Exporting General module with " + foundationClasses.length + " foundation classes");
+        // In development mode, filter to only classes that have exported objects
+        List<DOSchemaClass> classesToExport = new ArrayList<>();
+        if (DevelopmentConfig.DEVELOPMENT_MODE) {
+            // Build a set of database classes that were actually exported
+            Set<DODatabaseClass> exportedDbClasses = new HashSet<>();
+            for (DOSchemaModule module : engine.getSchema().getModules()) {
+                if (DevelopmentConfig.shouldExportModule(module.getName()) && module.getClasses() != null) {
+                    for (DOSchemaClass schemaClass : module.getClasses()) {
+                        if (schemaClass.getDatabaseClass() != null) {
+                            exportedDbClasses.add(schemaClass.getDatabaseClass());
+                        }
+                    }
+                }
+            }
+
+            // Filter foundation classes to only those with resolved objects
+            for (DOSchemaClass foundationClass : foundationClasses) {
+                DODatabaseClass dbClass = foundationClass.getDatabaseClass();
+                if (dbClass != null && dbClass.getResolvedObjects() != null
+                        && dbClass.getResolvedObjects().length > 0) {
+                    classesToExport.add(foundationClass);
+                }
+            }
+
+            System.out.println(
+                    "Exporting General module with " + classesToExport.size() + " foundation classes (filtered from "
+                            + foundationClasses.length + " total)");
+        } else {
+            // Production mode: export all foundation classes
+            classesToExport = Arrays.asList(foundationClasses);
+            System.out.println("Exporting General module with " + foundationClasses.length + " foundation classes");
+        }
+
+        if (classesToExport.isEmpty()) {
+            System.out.println("No foundation classes to export - skipping General.xml");
+            return;
+        }
 
         // Create a synthetic module context for General
         ModuleExportContext generalContext = new ModuleExportContext(
@@ -91,7 +140,7 @@ public class ExportOrchestrator {
 
         try {
             // Export each foundation class
-            for (DOSchemaClass foundationClass : foundationClasses) {
+            for (DOSchemaClass foundationClass : classesToExport) {
                 DODatabaseClass dbClass = foundationClass.getDatabaseClass();
                 if (dbClass == null) {
                     System.out.println(
