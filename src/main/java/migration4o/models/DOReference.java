@@ -1,9 +1,5 @@
 package migration4o.models;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
-import migration4o.models.DOReference;
-
 public class DOReference {
     private final DOClass referencedClass;
     private final DOField referencedField;

@@ -1,28 +1,32 @@
 package migration4o.engine.resolvers;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.resolvers.DOObjectReachabilityTracker;
-import migration4o.engine.resolvers.DOObjectResolver;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
-import migration4o.models.database.DODatabase;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.database.DOObjectReference;
-import migration4o.models.database.DOReferenceType;
-import migration4o.models.database.DOCollectionReference;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.DOField;
-import migration4o.models.database.DOObjectReference;
-import migration4o.models.database.DOCollectionReference;
-import migration4o.util.CollectionTypeUtil;
-import migration4o.util.ObjectResolverUtil;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Vector;
+
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
-import java.util.*;
+import migration4o.engine.DOEngine;
+import migration4o.models.DOClass;
+import migration4o.models.DOField;
+import migration4o.models.database.DOCollectionReference;
+import migration4o.models.database.DODatabase;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseObject;
+import migration4o.models.database.DOObjectReference;
+import migration4o.models.database.DOReferenceType;
+import migration4o.models.schema.DOSchema;
+import migration4o.util.CollectionTypeUtil;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * Object resolver implementation following the database processing recipe.

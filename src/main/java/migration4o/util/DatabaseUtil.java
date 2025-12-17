@@ -1,18 +1,17 @@
 package migration4o.util;
 
-import migration4o.models.DOField;
+import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+
 import migration4o.database.DODatabaseEncoding;
 import migration4o.models.DOClass;
+import migration4o.models.DOField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseObject;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.DOField;
-
-import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
 
 /**
  * Utility class for database-related operations and conversions.

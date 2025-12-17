@@ -1,10 +1,6 @@
 
 package migration4o.models.schema;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaModule;
-
 public class DOSchema {
     private final DOSchemaClass[] classes;
     private final DOSchemaModule[] modules;

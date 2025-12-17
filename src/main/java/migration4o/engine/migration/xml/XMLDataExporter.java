@@ -1,23 +1,28 @@
 package migration4o.engine.migration.xml;
 
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
 import migration4o.engine.DOEngine;
 import migration4o.models.DOClass;
 import migration4o.models.DOField;
 import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
-import migration4o.models.database.DOObjectReference;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.util.ObjectResolverUtil;
-
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 /**
  * Exports database objects to schema-compliant XML files using our new format.
@@ -578,83 +583,86 @@ public class XMLDataExporter {
         writer.writeCharacters("\n");
     }
 
-    /**
-     * Export an object as a nested element.
-     */
-    private void exportNestedObject(XMLStreamWriter writer, Object obj, Long objectId, String elementName)
-            throws XMLStreamException {
+    // /**
+    // * Export an object as a nested element.
+    // */
+    // private void exportNestedObject(XMLStreamWriter writer, Object obj, Long
+    // objectId, String elementName)
+    // throws XMLStreamException {
 
-        writer.writeStartElement(sanitizeName(elementName));
-        writer.writeAttribute("id", String.valueOf(objectId));
+    // writer.writeStartElement(sanitizeName(elementName));
+    // writer.writeAttribute("id", String.valueOf(objectId));
 
-        // Mark as exported
-        exportedObjectIds.add(objectId);
+    // // Mark as exported
+    // exportedObjectIds.add(objectId);
 
-        // Export fields of the nested object
-        com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
-        ObjectResolverUtil.activateObject(container, obj, objectId);
+    // // Export fields of the nested object
+    // com.db4o.ext.ExtObjectContainer container =
+    // engine.getDatabase().getContainer();
+    // ObjectResolverUtil.activateObject(container, obj, objectId);
 
-        // Get the class and export its fields
-        // For now, we'll use a simplified approach
-        writer.writeCharacters("<!-- Nested object: " + obj.getClass().getName() + " -->");
+    // // Get the class and export its fields
+    // // For now, we'll use a simplified approach
+    // writer.writeCharacters("<!-- Nested object: " + obj.getClass().getName() + "
+    // -->");
 
-        writer.writeEndElement();
-    }
+    // writer.writeEndElement();
+    // }
 
-    /**
-     * Determine if an object should be nested or referenced by ID.
-     * Objects referenced by multiple parents should use ID/IDREF.
-     * Objects referenced by only one parent can be nested.
-     */
-    private boolean shouldNestObject(Long objectId) {
-        // Count how many times this object is referenced
-        int referenceCount = countReferencesToObject(objectId);
-        return referenceCount <= 1;
-    }
+    // /**
+    // * Determine if an object should be nested or referenced by ID.
+    // * Objects referenced by multiple parents should use ID/IDREF.
+    // * Objects referenced by only one parent can be nested.
+    // */
+    // private boolean shouldNestObject(Long objectId) {
+    // // Count how many times this object is referenced
+    // int referenceCount = countReferencesToObject(objectId);
+    // return referenceCount <= 1;
+    // }
 
-    /**
-     * Count how many objects reference the given object ID.
-     */
-    private int countReferencesToObject(Long targetObjectId) {
-        int count = 0;
+    // /**
+    // * Count how many objects reference the given object ID.
+    // */
+    // private int countReferencesToObject(Long targetObjectId) {
+    // int count = 0;
 
-        // Scan all resolved objects to count references
-        for (DODatabaseClass dbClass : engine.getDatabase().getClasses()) {
-            DODatabaseObject[] objects = dbClass.getResolvedObjects();
-            if (objects == null) {
-                continue;
-            }
+    // // Scan all resolved objects to count references
+    // for (DODatabaseClass dbClass : engine.getDatabase().getClasses()) {
+    // DODatabaseObject[] objects = dbClass.getResolvedObjects();
+    // if (objects == null) {
+    // continue;
+    // }
 
-            for (DODatabaseObject obj : objects) {
-                // Check direct references
-                DOObjectReference[] refs = obj.getReferences();
-                if (refs != null) {
-                    for (DOObjectReference ref : refs) {
-                        if (ref.getTargetObjectId().equals(targetObjectId)) {
-                            count++;
-                        }
-                    }
-                }
+    // for (DODatabaseObject obj : objects) {
+    // // Check direct references
+    // DOObjectReference[] refs = obj.getReferences();
+    // if (refs != null) {
+    // for (DOObjectReference ref : refs) {
+    // if (ref.getTargetObjectId().equals(targetObjectId)) {
+    // count++;
+    // }
+    // }
+    // }
 
-                // Check collection references
-                DOCollectionReference[] collections = obj.getCollections();
-                if (collections != null) {
-                    for (DOCollectionReference collection : collections) {
-                        Long[] containedIds = collection.getContainedObjectIds();
-                        if (containedIds != null) {
-                            for (Long id : containedIds) {
-                                if (id.equals(targetObjectId)) {
-                                    count++;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
+    // // Check collection references
+    // DOCollectionReference[] collections = obj.getCollections();
+    // if (collections != null) {
+    // for (DOCollectionReference collection : collections) {
+    // Long[] containedIds = collection.getContainedObjectIds();
+    // if (containedIds != null) {
+    // for (Long id : containedIds) {
+    // if (id.equals(targetObjectId)) {
+    // count++;
+    // }
+    // }
+    // }
+    // }
+    // }
+    // }
+    // }
 
-        return count;
-    }
+    // return count;
+    // }
 
     /**
      * Find a collection reference for a specific field in an object.

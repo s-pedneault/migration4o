@@ -4,8 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
-import migration4o.engine.migration.generic.ReferenceTracker;
-
 /**
  * Base class for tabular format handlers (Excel, CSV, etc.).
  * Provides common functionality for formats that organize data in rows and

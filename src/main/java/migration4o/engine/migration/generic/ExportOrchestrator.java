@@ -1,16 +1,19 @@
 package migration4o.engine.migration.generic;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.*;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.database.DODatabaseClass;
-
 import java.io.IOException;
 import java.text.Normalizer;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import migration4o.engine.DOEngine;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseObject;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
 
 /**
  * Orchestrates the entire export process by coordinating between specialized

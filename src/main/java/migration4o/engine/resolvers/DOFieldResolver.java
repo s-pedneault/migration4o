@@ -1,18 +1,16 @@
 package migration4o.engine.resolvers;
 
+import java.util.HashMap;
+import java.util.Map;
+
+import migration4o.engine.DOEngine;
 import migration4o.models.DOClass;
 import migration4o.models.DOField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
-import migration4o.engine.DOEngine;
-import migration4o.engine.resolvers.DOFieldResolver;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.DOField;
 import migration4o.util.CollectionTypeUtil;
-
-import java.util.HashMap;
-import java.util.Map;
 
 public class DOFieldResolver {
 

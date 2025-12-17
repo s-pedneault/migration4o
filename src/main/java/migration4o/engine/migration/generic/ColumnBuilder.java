@@ -1,14 +1,13 @@
 package migration4o.engine.migration.generic;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.ExportColumn;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.DOField;
-
 import java.util.ArrayList;
 import java.util.List;
+
+import migration4o.engine.DOEngine;
+import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
 
 /**
  * Responsible for building the list of columns to export.

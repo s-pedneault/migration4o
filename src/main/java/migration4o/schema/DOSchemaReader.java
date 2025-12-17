@@ -1,20 +1,22 @@
 package migration4o.schema;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.schema.DOSchemaReader;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+
 import migration4o.models.DOField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
-
-import org.w3c.dom.*;
-import javax.xml.parsers.*;
-import java.io.*;
-import java.util.*;
 
 public class DOSchemaReader {
 

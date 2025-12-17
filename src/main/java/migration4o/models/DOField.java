@@ -1,9 +1,6 @@
 
 package migration4o.models;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
-
 public class DOField {
 
     private String name;

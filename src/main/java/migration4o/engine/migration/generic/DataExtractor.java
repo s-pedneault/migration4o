@@ -1,14 +1,13 @@
 package migration4o.engine.migration.generic;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.ExportColumn;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.DOField;
-import migration4o.util.ObjectResolverUtil;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
+import migration4o.engine.DOEngine;
+import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseObject;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * Responsible for extracting raw data from database objects.

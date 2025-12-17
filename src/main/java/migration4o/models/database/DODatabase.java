@@ -1,9 +1,8 @@
 package migration4o.models.database;
 
-import migration4o.models.database.DODatabase;
-import migration4o.database.DODatabaseEncoding;
 import com.db4o.ext.ExtObjectContainer;
-import migration4o.models.database.DODatabaseClass;
+
+import migration4o.database.DODatabaseEncoding;
 
 public class DODatabase {
     private final ExtObjectContainer container;

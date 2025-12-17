@@ -1,9 +1,8 @@
 package migration4o.engine.migration.generic;
 
-import migration4o.engine.migration.generic.ExportColumn;
-import migration4o.models.database.DODatabaseObject;
-
 import java.util.List;
+
+import migration4o.models.database.DODatabaseObject;
 
 /**
  * Context for object-level export operations.

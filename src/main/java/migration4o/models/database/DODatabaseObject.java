@@ -1,6 +1,5 @@
 package migration4o.models.database;
 
-import migration4o.models.database.*;
 import migration4o.models.DOClass;
 
 public class DODatabaseObject {

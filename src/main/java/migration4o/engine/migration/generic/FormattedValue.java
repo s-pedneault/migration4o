@@ -4,8 +4,6 @@ import java.text.SimpleDateFormat;
 import java.util.Collection;
 import java.util.Date;
 
-import migration4o.engine.migration.generic.ExportColumn;
-
 /**
  * A formatted value ready for export.
  * Encapsulates the original raw value, its type, and pre-formatted string
@@ -114,10 +112,6 @@ public class FormattedValue {
         return true;
     }
 
-    /**
-     * Get the collection as an iterable (if it is a collection).
-     */
-    @SuppressWarnings("unchecked")
     public Collection<?> getCollection() {
         if (rawValue instanceof Collection) {
             return (Collection<?>) rawValue;

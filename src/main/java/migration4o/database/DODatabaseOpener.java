@@ -1,17 +1,14 @@
 package migration4o.database;
 
-import migration4o.database.DODatabaseOpener;
-import migration4o.database.DODatabaseEncoding;
+import java.io.File;
 
 import com.db4o.Db4o;
 import com.db4o.ObjectContainer;
 import com.db4o.config.Configuration;
+import com.db4o.config.DotnetSupport;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.reflect.jdk.JdkReflector;
 import com.db4o.ta.TransparentActivationSupport;
-import com.db4o.config.DotnetSupport;
-
-import java.io.File;
 
 /**
  * DB4O database opener with support for multiple encodings.

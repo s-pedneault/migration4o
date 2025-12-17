@@ -1,8 +1,5 @@
 package migration4o.models;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
-import migration4o.models.DOReference;
 import java.util.ArrayList;
 import java.util.List;
 

@@ -1,11 +1,17 @@
 package migration4o.engine.resolvers;
 
-import migration4o.engine.resolvers.DOModuleReachabilityResolver;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabaseObject;
 import migration4o.models.database.DOObjectReference;
-import migration4o.models.schema.*;
-import java.util.*;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
 
 /**
  * Implementation of module reachability resolver that handles determining
@@ -146,49 +152,51 @@ public class DOModuleReachabilityResolver {
         // reachableObjectIds.length) + " objects are orphaned");
     }
 
-    /**
-     * Find all objects referenced by a specific resolved object.
-     * This combines both direct references and collection references.
-     */
-    private Set<Long> findObjectsReferencedByObject(Long objectId, DODatabaseObject[] resolvedObjects) {
-        Set<Long> referencedObjects = new HashSet<>();
+    // /**
+    // * Find all objects referenced by a specific resolved object.
+    // * This combines both direct references and collection references.
+    // */
+    // private Set<Long> findObjectsReferencedByObject(Long objectId,
+    // DODatabaseObject[] resolvedObjects) {
+    // Set<Long> referencedObjects = new HashSet<>();
 
-        // Find the resolved object with this ID
-        for (DODatabaseObject obj : resolvedObjects) {
-            if (obj.getObjectId().equals(objectId)) {
-                // Add all direct references
-                for (DOObjectReference ref : obj.getReferences()) {
-                    referencedObjects.add(ref.getTargetObjectId());
-                }
+    // // Find the resolved object with this ID
+    // for (DODatabaseObject obj : resolvedObjects) {
+    // if (obj.getObjectId().equals(objectId)) {
+    // // Add all direct references
+    // for (DOObjectReference ref : obj.getReferences()) {
+    // referencedObjects.add(ref.getTargetObjectId());
+    // }
 
-                // Add all collection references
-                for (DOCollectionReference collRef : obj.getCollections()) {
-                    Long[] containedIds = collRef.getContainedObjectIds();
-                    if (containedIds != null && containedIds.length > 0) {
-                        // System.out.println("DEBUG: Object " + objectId + " contains collection '"
-                        // + collRef.getField().getName() + " with " + containedIds.length + "
-                        // objects");
-                        for (Long containedId : containedIds) {
-                            referencedObjects.add(containedId);
-                        }
-                    } else {
-                        // System.out.println("DEBUG: Object " + objectId + " has empty collection '"
-                        // + collRef.getField().getName() + "'");
-                    }
-                }
+    // // Add all collection references
+    // for (DOCollectionReference collRef : obj.getCollections()) {
+    // Long[] containedIds = collRef.getContainedObjectIds();
+    // if (containedIds != null && containedIds.length > 0) {
+    // // System.out.println("DEBUG: Object " + objectId + " contains collection '"
+    // // + collRef.getField().getName() + " with " + containedIds.length + "
+    // // objects");
+    // for (Long containedId : containedIds) {
+    // referencedObjects.add(containedId);
+    // }
+    // } else {
+    // // System.out.println("DEBUG: Object " + objectId + " has empty collection '"
+    // // + collRef.getField().getName() + "'");
+    // }
+    // }
 
-                break;
-            }
-        }
+    // break;
+    // }
+    // }
 
-        if (referencedObjects.size() > 0) {
-            // System.out.println(
-            // "DEBUG: Object " + objectId + " references " + referencedObjects.size() + "
-            // other objects");
-        }
+    // if (referencedObjects.size() > 0) {
+    // // System.out.println(
+    // // "DEBUG: Object " + objectId + " references " + referencedObjects.size() +
+    // "
+    // // other objects");
+    // }
 
-        return referencedObjects;
-    }
+    // return referencedObjects;
+    // }
 
     /**
      * OPTIMIZED VERSION: Find all objects referenced by a specific resolved object

@@ -3,9 +3,6 @@ package migration4o.engine.migration.generic;
 import java.util.ArrayList;
 import java.util.List;
 
-import migration4o.engine.migration.generic.ExportColumn;
-import migration4o.engine.migration.generic.FormattedValue;
-
 /**
  * Responsible for converting raw extracted values into formatted values.
  * This centralizes all value formatting logic that was previously duplicated

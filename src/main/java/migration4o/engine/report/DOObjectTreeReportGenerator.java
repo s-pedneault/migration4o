@@ -1,27 +1,30 @@
 package migration4o.engine.report;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.report.DOObjectTreeReportGenerator;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.database.DODatabase;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.database.DOObjectReference;
-import migration4o.models.database.DOCollectionReference;
-import migration4o.util.HtmlBuilder;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
-
-import java.io.*;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.Set;
+
+import migration4o.engine.DOEngine;
+import migration4o.models.database.DOCollectionReference;
+import migration4o.models.database.DODatabase;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseObject;
+import migration4o.models.database.DOObjectReference;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
+import migration4o.util.HtmlBuilder;
 
 /**
  * Implementation of DOObjectTreeReportGenerator that creates an interactive

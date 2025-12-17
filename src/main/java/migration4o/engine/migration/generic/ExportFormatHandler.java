@@ -3,8 +3,6 @@ package migration4o.engine.migration.generic;
 import java.io.IOException;
 import java.util.List;
 
-import migration4o.engine.migration.generic.ReferenceTracker;
-
 /**
  * Base class for export format handlers in the generic export system.
  * Defines the contract that all format handlers must implement.

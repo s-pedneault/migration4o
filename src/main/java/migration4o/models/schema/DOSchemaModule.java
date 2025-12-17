@@ -1,8 +1,5 @@
 package migration4o.models.schema;
 
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaModule;
-
 public class DOSchemaModule {
     private final String name;
     private final DOSchemaClass[] classes;

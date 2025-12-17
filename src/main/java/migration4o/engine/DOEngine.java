@@ -1,28 +1,21 @@
 package migration4o.engine;
 
-import migration4o.models.database.DODatabase;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.DOField;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+
 import migration4o.database.DODatabaseBuilder;
-import migration4o.engine.DOEngine;
-import migration4o.engine.DOEngineMonitoring;
-import migration4o.models.schema.DOSchema;
-import migration4o.schema.DOSchemaReader;
 import migration4o.engine.resolvers.DOFieldResolver;
 import migration4o.engine.resolvers.DOObjectReachabilityTracker;
 import migration4o.engine.resolvers.DOObjectResolver;
 import migration4o.engine.resolvers.DOReferenceResolver;
 import migration4o.engine.resolvers.DOSchemaToDatabaseClassResolver;
-import migration4o.database.DODatabaseBuilder;
+import migration4o.models.DOField;
+import migration4o.models.database.DODatabase;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.schema.DOSchemaReader;
-import migration4o.engine.resolvers.DOFieldResolver;
-import migration4o.engine.resolvers.DOReferenceResolver;
-import migration4o.engine.resolvers.DOSchemaToDatabaseClassResolver;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 
 public class DOEngine {
 

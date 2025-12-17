@@ -5,8 +5,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import migration4o.engine.migration.generic.ReferenceTracker;
-
 /**
  * Base class for hierarchical format handlers (XML, JSON, etc.).
  * Provides common functionality for formats that organize data in nested
