@@ -14,9 +14,9 @@ import com.db4o.config.DotnetSupport;
 import java.io.File;
 
 /**
- * Robust implementation for opening DB4O databases with multiple encoding
- * strategies.
- * Based on the proven approach from DatabaseInstance.java.
+ * DB4O database opener with support for multiple encodings.
+ * This should be the only mechanism used to open DB4O databases in this
+ * platform.
  */
 public class DODatabaseOpenerImpl implements DODatabaseOpener {
 

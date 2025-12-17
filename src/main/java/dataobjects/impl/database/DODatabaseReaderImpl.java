@@ -30,18 +30,18 @@ import java.util.HashMap;
  */
 public class DODatabaseReaderImpl implements DODatabaseReader {
 
-    private final DOObjectResolver objectResolver;
+    // private final DOObjectResolver objectResolver;
     private final DOInheritanceResolver inheritanceResolver;
-    private final DOModuleReachabilityResolver reachabilityResolver;
+    // private final DOModuleReachabilityResolver reachabilityResolver;
 
     public DODatabaseReaderImpl() {
-        this.objectResolver = new DOObjectResolverImpl();
+        // this.objectResolver = new DOObjectResolverImpl();
         this.inheritanceResolver = new DOInheritanceResolverImpl();
-        this.reachabilityResolver = new DOModuleReachabilityResolverImpl();
+        // this.reachabilityResolver = new DOModuleReachabilityResolverImpl();
     }
 
     @Override
-    public DODatabase readDatabaseInformation(ExtObjectContainer container, DODatabaseEncoding encoding,
+    public DODatabase readDatabaseMeta(ExtObjectContainer container, DODatabaseEncoding encoding,
             String databaseSize, DOSchema schema) {
         try {
             StoredClass[] storedClasses = DatabaseUtil.getStoredClassesSafely(container);
@@ -61,7 +61,7 @@ public class DODatabaseReaderImpl implements DODatabaseReader {
     }
 
     @Override
-    public DODatabase readDatabaseWithFullResolution(ExtObjectContainer container, DODatabaseEncoding encoding,
+    public DODatabase readDatabase(ExtObjectContainer container, DODatabaseEncoding encoding,
             String databaseSize, DOSchema schema) {
 
         // NOTE: Full object resolution now happens in DOEngineImpl after database
@@ -70,7 +70,7 @@ public class DODatabaseReaderImpl implements DODatabaseReader {
         // database info
         System.out.println("Note: Full object resolution now happens in DOEngineImpl");
 
-        DODatabase basicDatabase = readDatabaseInformation(container, encoding, databaseSize, schema);
+        DODatabase basicDatabase = readDatabaseMeta(container, encoding, databaseSize, schema);
 
         // Resolve inheritance relationships (still needed here)
         inheritanceResolver.resolveInheritance(basicDatabase, schema);
@@ -94,46 +94,49 @@ public class DODatabaseReaderImpl implements DODatabaseReader {
         return classList.toArray(new DODatabaseClass[classList.size()]);
     }
 
-    private DODatabaseClass[] enhanceClassesWithResolvedObjects(DODatabaseClass[] basicClasses,
-            DODatabaseObject[] resolvedObjects) {
-        // Group resolved objects by class name for efficient lookup
-        Map<String, List<DODatabaseObject>> classToObjects = new HashMap<>();
+    // private DODatabaseClass[] enhanceClassesWithResolvedObjects(DODatabaseClass[]
+    // basicClasses,
+    // DODatabaseObject[] resolvedObjects) {
+    // // Group resolved objects by class name for efficient lookup
+    // Map<String, List<DODatabaseObject>> classToObjects = new HashMap<>();
 
-        for (DODatabaseObject obj : resolvedObjects) {
-            String className = DatabaseUtil.getClassNameFromObject(obj);
-            if (className != null) {
-                classToObjects.computeIfAbsent(className, k -> new ArrayList<>()).add(obj);
-            }
-        }
+    // for (DODatabaseObject obj : resolvedObjects) {
+    // String className = DatabaseUtil.getClassNameFromObject(obj);
+    // if (className != null) {
+    // classToObjects.computeIfAbsent(className, k -> new ArrayList<>()).add(obj);
+    // }
+    // }
 
-        List<DODatabaseClass> result = new ArrayList<>();
+    // List<DODatabaseClass> result = new ArrayList<>();
 
-        for (DODatabaseClass basicClass : basicClasses) {
-            if (basicClass instanceof DODatabaseClassImpl) {
-                DODatabaseClassImpl impl = (DODatabaseClassImpl) basicClass;
+    // for (DODatabaseClass basicClass : basicClasses) {
+    // if (basicClass instanceof DODatabaseClassImpl) {
+    // DODatabaseClassImpl impl = (DODatabaseClassImpl) basicClass;
 
-                // Find matching resolved objects using utility method
-                List<DODatabaseObject> classObjects = DatabaseUtil.findResolvedObjectsForClass(basicClass,
-                        classToObjects);
+    // // Find matching resolved objects using utility method
+    // List<DODatabaseObject> classObjects =
+    // DatabaseUtil.findResolvedObjectsForClass(basicClass,
+    // classToObjects);
 
-                if (!classObjects.isEmpty()) {
-                    impl.setResolvedObjects(classObjects.toArray(new DODatabaseObject[0]));
-                } else {
-                    impl.setResolvedObjects(new DODatabaseObject[0]);
-                    if (basicClass.getTotalObjectCount() > 0) {
-                        System.out.println(
-                                "DEBUG: No resolved objects found for database class: " + basicClass.getAbsoluteName()
-                                        + " (has " + basicClass.getTotalObjectCount() + " objects)");
-                    }
-                }
+    // if (!classObjects.isEmpty()) {
+    // impl.setResolvedObjects(classObjects.toArray(new DODatabaseObject[0]));
+    // } else {
+    // impl.setResolvedObjects(new DODatabaseObject[0]);
+    // if (basicClass.getTotalObjectCount() > 0) {
+    // System.out.println(
+    // "DEBUG: No resolved objects found for database class: " +
+    // basicClass.getAbsoluteName()
+    // + " (has " + basicClass.getTotalObjectCount() + " objects)");
+    // }
+    // }
 
-                result.add(impl);
-            } else {
-                result.add(basicClass);
-            }
-        }
+    // result.add(impl);
+    // } else {
+    // result.add(basicClass);
+    // }
+    // }
 
-        return result.toArray(new DODatabaseClass[0]);
-    }
+    // return result.toArray(new DODatabaseClass[0]);
+    // }
 
 }

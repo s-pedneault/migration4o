@@ -23,7 +23,7 @@ public interface DODatabaseReader {
          * @return A complete DODatabase instance with all information
          * @throws Exception if reading database information fails
          */
-        DODatabase readDatabaseInformation(ExtObjectContainer container, DODatabaseEncoding encoding,
+        DODatabase readDatabaseMeta(ExtObjectContainer container, DODatabaseEncoding encoding,
                         String databaseSize,
                         DOSchema schema);
 
@@ -40,7 +40,7 @@ public interface DODatabaseReader {
          * @return A complete DODatabase instance with fully resolved objects
          * @throws Exception if reading database information fails
          */
-        DODatabase readDatabaseWithFullResolution(ExtObjectContainer container, DODatabaseEncoding encoding,
+        DODatabase readDatabase(ExtObjectContainer container, DODatabaseEncoding encoding,
                         String databaseSize, DOSchema schema);
 
 }

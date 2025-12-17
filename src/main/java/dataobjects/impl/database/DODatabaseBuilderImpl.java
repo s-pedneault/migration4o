@@ -6,6 +6,8 @@ import dataobjects.api.database.DODatabaseEncoding;
 import dataobjects.api.database.DODatabaseOpener;
 import dataobjects.api.database.DODatabaseReader;
 import dataobjects.api.models.schema.DOSchema;
+import dataobjects.api.resolution.DOInheritanceResolver;
+import dataobjects.impl.resolution.DOInheritanceResolverImpl;
 import dataobjects.util.FileUtil;
 
 import com.db4o.ext.ExtObjectContainer;
@@ -21,16 +23,12 @@ public class DODatabaseBuilderImpl implements DODatabaseBuilder {
 
     private final DODatabaseOpener databaseOpener;
     private final DODatabaseReader databaseReader;
+    private final DOInheritanceResolver inheritanceResolver;
 
     public DODatabaseBuilderImpl() {
         this.databaseOpener = new DODatabaseOpenerImpl();
         this.databaseReader = new DODatabaseReaderImpl();
-    }
-
-    // Constructor for dependency injection (useful for testing)
-    public DODatabaseBuilderImpl(DODatabaseOpener databaseOpener, DODatabaseReader databaseReader) {
-        this.databaseOpener = databaseOpener;
-        this.databaseReader = databaseReader;
+        this.inheritanceResolver = new DOInheritanceResolverImpl();
     }
 
     @Override
@@ -55,10 +53,9 @@ public class DODatabaseBuilderImpl implements DODatabaseBuilder {
 
         // Step 4: Read database information (without full resolution)
         // Note: Object resolution now happens in DOEngineImpl after initialization
-        DODatabase database = databaseReader.readDatabaseInformation(container, encoding, databaseSize, schema);
+        DODatabase database = databaseReader.readDatabaseMeta(container, encoding, databaseSize, schema);
 
         // Resolve inheritance relationships here (needed before object resolution)
-        dataobjects.api.resolution.DOInheritanceResolver inheritanceResolver = new dataobjects.impl.resolution.DOInheritanceResolverImpl();
         inheritanceResolver.resolveInheritance(database, schema);
 
         return database;

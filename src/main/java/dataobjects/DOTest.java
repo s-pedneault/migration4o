@@ -1,12 +1,9 @@
 package dataobjects;
 
-import dataobjects.api.analysis.DOObjectAnalysis;
 import dataobjects.api.engine.DOEngine;
 import dataobjects.api.models.database.*;
 import dataobjects.api.models.DOClass;
 import dataobjects.api.models.DOField;
-import dataobjects.api.analysis.*;
-import dataobjects.impl.analysis.*;
 
 public class DOTest {
     public static void main(String[] args) {
