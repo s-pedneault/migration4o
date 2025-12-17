@@ -67,4 +67,4 @@ echo ""
 
 echo "🚀 Launching Migration Assistant..."
 # Execute Migration Assistant
-exec java "${JAVA_MEM_OPTS[@]}" "${JVM_ARGS[@]}" -cp "$BASE_DIR/classes:$BASE_DIR/lib/*" dataobjects/DOTest "$@"
+exec java "${JAVA_MEM_OPTS[@]}" "${JVM_ARGS[@]}" -cp "$BASE_DIR/classes:$BASE_DIR/lib/*" migration4o.Migration4o "$@"
