@@ -1,6 +1,6 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.models.database.DODatabaseClass;
+import dataobjects.impl.models.database.DODatabaseClass;
 import java.util.*;
 
 /**

@@ -1,13 +1,13 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.migration.generic.ExportColumn;
-import dataobjects.api.migration.generic.*;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.api.models.database.DODatabaseClass;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.migration.generic.ExportColumn;
+import dataobjects.impl.migration.generic.*;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaModule;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.database.DODatabaseClass;
 
 import java.io.IOException;
 import java.text.Normalizer;

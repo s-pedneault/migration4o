@@ -1,7 +1,7 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.migration.generic.ExportColumn;
-import dataobjects.api.migration.generic.FormattedValue;
+import dataobjects.impl.migration.generic.ExportColumn;
+import dataobjects.impl.migration.generic.FormattedValue;
 
 import java.util.ArrayList;
 import java.util.List;

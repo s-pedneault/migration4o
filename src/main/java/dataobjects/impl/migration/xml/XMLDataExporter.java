@@ -1,14 +1,14 @@
 package dataobjects.impl.migration.xml;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.database.DOCollectionReference;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.api.models.database.DOObjectReference;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaModule;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.database.DOCollectionReference;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.database.DOObjectReference;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaModule;
 import dataobjects.util.ObjectResolverUtil;
 
 import javax.xml.stream.XMLOutputFactory;

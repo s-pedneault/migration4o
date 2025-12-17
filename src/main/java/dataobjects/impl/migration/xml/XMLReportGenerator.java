@@ -1,14 +1,14 @@
 package dataobjects.impl.migration.xml;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.database.DODatabase;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.api.resolution.DOObjectReachabilityTracker;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.database.DODatabase;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaModule;
+import dataobjects.impl.resolution.DOObjectReachabilityTracker;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;

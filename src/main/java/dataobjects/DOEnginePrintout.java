@@ -1,13 +1,13 @@
 package dataobjects;
 
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.DOReference;
-import dataobjects.api.models.database.DODatabase;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.DOReference;
+import dataobjects.impl.models.database.DODatabase;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
 import dataobjects.util.CollectionTypeUtil;
 import dataobjects.util.TypeUtil;
 
@@ -282,7 +282,7 @@ public class DOEnginePrintout {
         System.out.println(indent + "  Export Name: " + schemaClass.getExportName());
 
         // Check if database class is resolved
-        dataobjects.api.models.database.DODatabaseClass databaseClass = schemaClass.getDatabaseClass();
+        dataobjects.impl.models.database.DODatabaseClass databaseClass = schemaClass.getDatabaseClass();
         if (databaseClass != null) {
             System.out.println(indent + "  ✅ Database Class Resolved: " + databaseClass.getAbsoluteName());
             System.out.println(indent + "    Database Objects: " + databaseClass.getTotalObjectCount());

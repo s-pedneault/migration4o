@@ -1,6 +1,6 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.models.DOField;
+import dataobjects.impl.models.DOField;
 
 import java.text.Normalizer;
 import java.util.ArrayList;

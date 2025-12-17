@@ -1,10 +1,10 @@
 package dataobjects.util;
 
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.database.DODatabase;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.schema.DOSchema;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.database.DODatabase;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.schema.DOSchema;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;

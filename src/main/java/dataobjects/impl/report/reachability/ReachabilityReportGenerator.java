@@ -1,15 +1,15 @@
 package dataobjects.impl.report.reachability;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.report.DOReachabilityReportGenerator;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.api.models.database.DOObjectReference;
-import dataobjects.api.models.database.DOCollectionReference;
-import dataobjects.api.models.DOField;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.report.reachability.ReachabilityReportGenerator;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaModule;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.database.DOObjectReference;
+import dataobjects.impl.models.database.DOCollectionReference;
+import dataobjects.impl.models.DOField;
 import dataobjects.impl.report.reachability.html.HTMLWriter;
 import dataobjects.impl.report.reachability.html.CSSStylesWriter;
 import dataobjects.impl.report.reachability.html.JavaScriptWriter;
@@ -30,7 +30,7 @@ import java.util.Set;
  * Enhanced reachability report with executive summary and tab-based sections
  * for reached/unreached objects and diagnostics
  */
-public class ReachabilityReportGenerator implements DOReachabilityReportGenerator {
+public class ReachabilityReportGenerator {
 
     private DOEngine engine;
     private BufferedWriter writer;
@@ -40,7 +40,6 @@ public class ReachabilityReportGenerator implements DOReachabilityReportGenerato
     private SchemaAnalyzer schemaAnalyzer;
     private DatabaseAnalyzer databaseAnalyzer;
 
-    @Override
     public void generateDefaultReport(DOEngine engine) throws IOException {
         generateReport(engine, "output/Reachability Analysis.html");
     }

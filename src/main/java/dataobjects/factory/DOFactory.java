@@ -1,15 +1,10 @@
 package dataobjects.factory;
 
-import dataobjects.api.report.DOStructureReportGenerator;
-import dataobjects.api.report.DOObjectTreeReportGenerator;
-import dataobjects.api.report.DOReachabilityReportGenerator;
-import dataobjects.api.migration.excel.DOExcelExportEngine;
-import dataobjects.api.migration.xml.DOXMLMigrationEngine;
-import dataobjects.impl.report.DOStructureReportGeneratorImpl;
-import dataobjects.impl.report.DOObjectTreeReportGeneratorImpl;
+import dataobjects.impl.report.DOStructureReportGenerator;
+import dataobjects.impl.report.DOObjectTreeReportGenerator;
 import dataobjects.impl.report.reachability.ReachabilityReportGenerator;
-import dataobjects.impl.migration.excel.ExcelExportEngineImpl;
-import dataobjects.impl.migration.xml.XMLMigrationEngineImpl;
+import dataobjects.impl.migration.excel.ExcelExportEngine;
+import dataobjects.impl.migration.xml.XMLMigrationEngine;
 
 /**
  * Factory class for creating instances of DataObject components.
@@ -22,7 +17,7 @@ public class DOFactory {
      * @return A new DOStructureReportGenerator instance
      */
     public static DOStructureReportGenerator createReportGenerator() {
-        return new DOStructureReportGeneratorImpl();
+        return new DOStructureReportGenerator();
     }
 
     /**
@@ -31,34 +26,34 @@ public class DOFactory {
      * @return A new DOObjectTreeReportGenerator instance
      */
     public static DOObjectTreeReportGenerator createTreeReportGenerator() {
-        return new DOObjectTreeReportGeneratorImpl();
+        return new DOObjectTreeReportGenerator();
     }
 
     /**
-     * Create a new instance of DOReachabilityReportGenerator.
+     * Create a new instance of ReachabilityReportGenerator.
      * 
-     * @return A new DOReachabilityReportGenerator instance
+     * @return A new ReachabilityReportGenerator instance
      */
-    public static DOReachabilityReportGenerator createReachabilityReportGenerator() {
+    public static ReachabilityReportGenerator createReachabilityReportGenerator() {
         return new ReachabilityReportGenerator();
     }
 
     /**
-     * Create a new instance of DOExcelExportEngine.
+     * Create a new instance of ExcelExportEngine.
      * 
-     * @return A new DOExcelExportEngine instance
+     * @return A new ExcelExportEngine instance
      */
-    public static DOExcelExportEngine createExcelExportEngine() {
-        return new ExcelExportEngineImpl();
+    public static ExcelExportEngine createExcelExportEngine() {
+        return new ExcelExportEngine();
     }
 
     /**
-     * Create a new instance of DOXMLMigrationEngine.
+     * Create a new instance of XMLMigrationEngine.
      * 
-     * @return A new DOXMLMigrationEngine instance
+     * @return A new XMLMigrationEngine instance
      */
-    public static DOXMLMigrationEngine createXMLMigrationEngine() {
-        return new XMLMigrationEngineImpl();
+    public static XMLMigrationEngine createXMLMigrationEngine() {
+        return new XMLMigrationEngine();
     }
 
     // Note: DOGenericExportEngine uses static methods, no factory method needed

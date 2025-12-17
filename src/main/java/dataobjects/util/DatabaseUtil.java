@@ -1,14 +1,14 @@
 package dataobjects.util;
 
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.database.DODatabase;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaField;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.impl.models.DOFieldImpl;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.database.DODatabase;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaField;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.DOField;
 
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
@@ -96,7 +96,7 @@ public class DatabaseUtil {
             }
         }
 
-        return new DOFieldImpl(fieldName, description, typeName, null, isPrimitive, isCollection, contentTypeName,
+        return new DOField(fieldName, description, typeName, null, isPrimitive, isCollection, contentTypeName,
                 null);
     }
 
@@ -161,7 +161,7 @@ public class DatabaseUtil {
         DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
         DOField[] fields = extractFieldsFromStoredClass(storedClass, matchingSchemaClass);
 
-        return new dataobjects.impl.models.database.DODatabaseClassImpl(
+        return new dataobjects.impl.models.database.DODatabaseClass(
                 className,
                 getSimpleClassName(className),
                 "Class from database",
@@ -219,9 +219,9 @@ public class DatabaseUtil {
      * Creates a fallback empty database when there are errors.
      */
     public static DODatabase createEmptyDatabase(com.db4o.ext.ExtObjectContainer container,
-            dataobjects.api.database.DODatabaseEncoding encoding,
+            dataobjects.impl.database.DODatabaseEncoding encoding,
             String databaseSize) {
-        return new dataobjects.impl.models.database.DODatabaseImpl(container, encoding, 0, 0, databaseSize,
+        return new dataobjects.impl.models.database.DODatabase(container, encoding, 0, 0, databaseSize,
                 new DODatabaseClass[0]);
     }
 }

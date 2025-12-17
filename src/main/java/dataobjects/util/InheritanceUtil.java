@@ -1,7 +1,7 @@
 package dataobjects.util;
 
-import dataobjects.api.models.database.*;
-import dataobjects.api.models.schema.*;
+import dataobjects.impl.models.database.*;
+import dataobjects.impl.models.schema.*;
 import java.util.*;
 
 /**

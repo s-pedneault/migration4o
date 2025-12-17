@@ -1,9 +1,9 @@
 package dataobjects;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.database.*;
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.database.*;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
 
 public class DOTest {
     public static void main(String[] args) {
@@ -35,7 +35,7 @@ public class DOTest {
             // System.out.println("\n=== ANALYZING DossPrev OBJECTS ===");
             // analyzeDossPrevResolvability(engine);
 
-            // DOObjectAnalysis analysis = new DOObjectAnalysisNewImpl();
+            // DOObjectAnalysis analysis = new DOObjectAnalysisNew();
             // analysis.analyze(engine);
 
             // Generate comprehensive HTML structure report

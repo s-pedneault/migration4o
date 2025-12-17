@@ -1,11 +1,11 @@
 package dataobjects.impl.migration.xml;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaModule;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaModule;
 
 import javax.xml.stream.XMLOutputFactory;
 import javax.xml.stream.XMLStreamException;

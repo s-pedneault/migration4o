@@ -1,10 +1,10 @@
 package dataobjects.impl.report.reachability.data;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaModule;
-import dataobjects.api.models.DOField;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaModule;
+import dataobjects.impl.models.DOField;
 
 import java.util.ArrayList;
 import java.util.HashMap;

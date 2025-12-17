@@ -1,9 +1,9 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.database.DODatabaseObject;
-import dataobjects.api.models.DOField;
-import dataobjects.api.migration.generic.ExportColumn;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.database.DODatabaseObject;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.migration.generic.ExportColumn;
 import dataobjects.util.ObjectResolverUtil;
 
 import java.util.ArrayList;

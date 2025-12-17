@@ -3,24 +3,22 @@ package dataobjects;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 
-import dataobjects.api.engine.DOEngine;
+import dataobjects.impl.engine.DOEngine;
 // Deprecated migration analysis - moved to deprecated package
-// import dataobjects.api.deprecated.migration.DOPreAnalysis;
-import dataobjects.api.report.DOStructureReportGenerator;
-import dataobjects.api.report.DOObjectTreeReportGenerator;
-import dataobjects.api.report.DOReachabilityReportGenerator;
-import dataobjects.api.migration.excel.DOExcelExportEngine;
-import dataobjects.api.migration.xml.DOXMLMigrationEngine;
-import dataobjects.api.migration.generic.DOGenericExportEngine;
-import dataobjects.impl.engine.DOEngineImpl;
-// import dataobjects.impl.deprecated.migration.DOPreAnalysisImpl;
+// import dataobjects.impl.deprecated.migration.DOPreAnalysis;
+import dataobjects.impl.report.DOStructureReportGenerator;
+import dataobjects.impl.report.DOObjectTreeReportGenerator;
+import dataobjects.impl.report.reachability.ReachabilityReportGenerator;
+import dataobjects.impl.migration.excel.ExcelExportEngine;
+import dataobjects.impl.migration.xml.XMLMigrationEngine;
+import dataobjects.impl.migration.generic.DOGenericExportEngine;
 import dataobjects.impl.migration.excel.ExcelFormatHandler;
 import dataobjects.factory.DOFactory;
 
 public class DataObjectAPI {
 
     public static DOEngine newEngine(String schemaPath, String databasePath) throws IOException {
-        return new DOEngineImpl(schemaPath, databasePath);
+        return new DOEngine(schemaPath, databasePath);
     }
 
     /**
@@ -48,7 +46,7 @@ public class DataObjectAPI {
      *
      * @Deprecated
      * public static DOPreAnalysis createPreAnalysis(DOEngine engine) {
-     * return new DOPreAnalysisImpl(engine);
+     * return new DOPreAnalysis(engine);
      * }
      * 
      * /**
@@ -122,7 +120,7 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the report file
      */
     public static void generateReachabilityReport(DOEngine engine) throws IOException {
-        DOReachabilityReportGenerator generator = DOFactory.createReachabilityReportGenerator();
+        ReachabilityReportGenerator generator = DOFactory.createReachabilityReportGenerator();
         generator.generateDefaultReport(engine);
     }
 
@@ -134,7 +132,7 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the report file
      */
     public static void generateReachabilityReport(DOEngine engine, String outputPath) throws IOException {
-        DOReachabilityReportGenerator generator = DOFactory.createReachabilityReportGenerator();
+        ReachabilityReportGenerator generator = DOFactory.createReachabilityReportGenerator();
         generator.generateReport(engine, outputPath);
     }
 
@@ -177,7 +175,7 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the XML files
      */
     public static void exportToXML(DOEngine engine) throws IOException {
-        dataobjects.api.migration.generic.DOGenericExportEngine.export(
+        dataobjects.impl.migration.generic.DOGenericExportEngine.export(
                 engine, new dataobjects.impl.migration.xml.XMLFormatHandler());
     }
 
@@ -193,7 +191,7 @@ public class DataObjectAPI {
      * @throws IOException if there's an error writing the XML files
      */
     public static void exportToXML(DOEngine engine, String outputDirectory) throws IOException {
-        dataobjects.api.migration.generic.DOGenericExportEngine.export(
+        dataobjects.impl.migration.generic.DOGenericExportEngine.export(
                 engine, new dataobjects.impl.migration.xml.XMLFormatHandler(), outputDirectory);
     } /**
        * Note: This is the main XML export functionality.

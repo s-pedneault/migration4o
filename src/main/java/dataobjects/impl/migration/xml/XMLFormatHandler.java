@@ -1,11 +1,11 @@
 package dataobjects.impl.migration.xml;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.migration.generic.*;
-import dataobjects.api.models.DOClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.schema.DOSchemaModule;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.migration.generic.*;
+import dataobjects.impl.models.DOClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaModule;
 import dataobjects.impl.migration.generic.ExportUtils;
 import dataobjects.util.ObjectResolverUtil;
 
@@ -101,12 +101,10 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         XMLModuleContext moduleContext;
     }
 
-    @Override
     public String getDefaultOutputDirectory() {
         return DEFAULT_OUTPUT_DIR;
     }
 
-    @Override
     protected void initializeFormat(String outputDirectory) throws IOException {
         // Create structure directory for XSD files
         File baseDir = new File(outputDirectory).getParentFile();
@@ -120,7 +118,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         allTypes.clear();
     }
 
-    @Override
     public Object beginModule(ModuleExportContext context) throws IOException {
         XMLModuleContext xmlContext = new XMLModuleContext();
 
@@ -205,7 +202,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
     }
 
-    @Override
     public Object beginClass(Object moduleHandle, ClassExportContext context) throws IOException {
         XMLModuleContext moduleCtx = (XMLModuleContext) moduleHandle;
         XMLClassContext classCtx = new XMLClassContext();
@@ -224,7 +220,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         return classCtx;
     }
 
-    @Override
     public void exportObject(Object classHandle, ObjectExportContext context, List<FormattedValue> values)
             throws IOException {
 
@@ -241,7 +236,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 String moduleName = context.getClassContext().getModuleContext().getModule() != null
                         ? context.getClassContext().getModuleContext().getModule().getName()
                         : "General";
-                dataobjects.api.models.database.DODatabaseClass databaseClass = context.getClassContext()
+                dataobjects.impl.models.database.DODatabaseClass databaseClass = context.getClassContext()
                         .getDatabaseClass();
                 tracker.recordExportedObject(objectId, moduleName, databaseClass);
             }
@@ -289,7 +284,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
     }
 
-    @Override
     public void endClass(Object classHandle, ClassExportContext context, int exportedCount) throws IOException {
         XMLClassContext classCtx = (XMLClassContext) classHandle;
 
@@ -303,7 +297,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
     }
 
-    @Override
     public void endModule(Object moduleHandle, ModuleExportContext context) throws IOException {
         XMLModuleContext moduleCtx = (XMLModuleContext) moduleHandle;
 
@@ -333,7 +326,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
     }
 
-    @Override
     public void cleanup() throws IOException {
         // Generate XSD schema file based on all collected types
         generateXSDSchema();
@@ -454,13 +446,13 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         writer.write("            <xs:sequence>\n");
 
         // Get all fields from the database class using the same logic as export
-        List<dataobjects.api.models.DOField> allFields = getAllFieldsFromDatabaseClass(
+        List<dataobjects.impl.models.DOField> allFields = getAllFieldsFromDatabaseClass(
                 type.schemaClass.getDatabaseClass());
-        List<dataobjects.api.models.DOField> sortedFields = dataobjects.impl.migration.generic.ExportUtils
+        List<dataobjects.impl.models.DOField> sortedFields = dataobjects.impl.migration.generic.ExportUtils
                 .sortFieldsForExport(allFields);
 
         // Generate field-specific elements with proper XSD types
-        for (dataobjects.api.models.DOField field : sortedFields) {
+        for (dataobjects.impl.models.DOField field : sortedFields) {
             String xmlFieldName = toXmlFieldName(field.getName());
             String fieldTypeName = field.getTypeName();
 
@@ -578,12 +570,12 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     /**
      * Get all fields from a database class including inherited fields.
      */
-    private List<dataobjects.api.models.DOField> getAllFieldsFromDatabaseClass(
-            dataobjects.api.models.database.DODatabaseClass dbClass) {
-        List<dataobjects.api.models.DOField> allFields = new ArrayList<>();
+    private List<dataobjects.impl.models.DOField> getAllFieldsFromDatabaseClass(
+            dataobjects.impl.models.database.DODatabaseClass dbClass) {
+        List<dataobjects.impl.models.DOField> allFields = new ArrayList<>();
 
         if (dbClass.getFields() != null) {
-            for (dataobjects.api.models.DOField field : dbClass.getFields()) {
+            for (dataobjects.impl.models.DOField field : dbClass.getFields()) {
                 allFields.add(field);
             }
         }
@@ -690,7 +682,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
                 // Look up the database class once for this collection (all elements have same
                 // type)
-                dataobjects.api.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName,
+                dataobjects.impl.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName,
                         moduleContext.engine);
 
                 for (Object element : collection) {
@@ -778,7 +770,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             writer.writeAttribute("id", String.valueOf(objectId));
 
             // Track this reference using strongly-typed DODatabaseClass
-            dataobjects.api.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName,
+            dataobjects.impl.models.database.DODatabaseClass dbClass = findDatabaseClass(fullClassName,
                     moduleContext.engine);
             if (tracker != null && dbClass != null) {
                 tracker.recordReference(objectId, moduleContext.moduleName, dbClass, obj);
@@ -1108,7 +1100,6 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      * Object type names should be in PascalCase (PersonneRess, VilleGeo).
      * This differs from the parent implementation which converts to lowercase.
      */
-    @Override
     protected String sanitizeElementName(String name) {
         if (name == null || name.trim().isEmpty()) {
             return "unnamed";
@@ -1202,16 +1193,16 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      * This is used when recording references to get strongly-typed class
      * definitions.
      */
-    private dataobjects.api.models.database.DODatabaseClass findDatabaseClass(String fullClassName, DOEngine engine) {
+    private dataobjects.impl.models.database.DODatabaseClass findDatabaseClass(String fullClassName, DOEngine engine) {
         // Look up the class definition in schema or database
-        dataobjects.api.models.DOClass doClass = ObjectResolverUtil.findClassDefinition(
+        dataobjects.impl.models.DOClass doClass = ObjectResolverUtil.findClassDefinition(
                 fullClassName,
                 engine.getSchema(),
                 engine.getDatabase());
 
         // Return as DODatabaseClass if it's a database class
-        if (doClass instanceof dataobjects.api.models.database.DODatabaseClass) {
-            return (dataobjects.api.models.database.DODatabaseClass) doClass;
+        if (doClass instanceof dataobjects.impl.models.database.DODatabaseClass) {
+            return (dataobjects.impl.models.database.DODatabaseClass) doClass;
         }
 
         return null;

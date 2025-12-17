@@ -1,11 +1,11 @@
 package dataobjects.impl.report.reachability.data;
 
-import dataobjects.api.models.database.DODatabase;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.engine.DOEngine;
+import dataobjects.impl.models.database.DODatabase;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.engine.DOEngine;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -61,7 +61,7 @@ public class DatabaseAnalyzer {
     public Map<String, DatabaseClassSummary> analyzeDatabaseContent() {
         Map<String, DatabaseClassSummary> classSummaries = new HashMap<>();
         DODatabase database = engine.getDatabase();
-        dataobjects.api.resolution.DOObjectReachabilityTracker tracker = engine.getReachabilityTracker();
+        dataobjects.impl.resolution.DOObjectReachabilityTracker tracker = engine.getReachabilityTracker();
 
         DODatabaseClass[] classes = database.getClasses();
         for (DODatabaseClass dbClass : classes) {

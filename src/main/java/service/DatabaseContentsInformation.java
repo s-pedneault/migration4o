@@ -2,9 +2,9 @@ package service;
 
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
-import dataobjects.api.models.schema.DOSchema;
-import dataobjects.api.models.schema.DOSchemaClass;
-import dataobjects.impl.models.schema.DOSchemaClassImpl;
+import dataobjects.impl.models.schema.DOSchema;
+import dataobjects.impl.models.schema.DOSchemaClass;
+import dataobjects.impl.models.schema.DOSchemaClass;
 import java.util.*;
 
 /**
@@ -54,7 +54,7 @@ public class DatabaseContentsInformation {
                                 " (db: " + instanceCount + " objects) - using database count for migration");
                         // Create a new DOSchemaClass with the same metadata for migration
                         // Note: Object counts are now handled separately via DODatabaseClass
-                        schemaClass = new DOSchemaClassImpl(
+                        schemaClass = new DOSchemaClass(
                                 schemaClass.getAbsoluteName(),
                                 schemaClass.getShortName(),
                                 schemaClass.getDescription(),
@@ -64,8 +64,8 @@ public class DatabaseContentsInformation {
                                 schemaClass.getExportName());
                     } else {
                         // Create new DOSchemaClass for database-discovered class
-                        schemaClass = new DOSchemaClassImpl(className, className, "", className, null,
-                                new dataobjects.api.models.DOField[0], className);
+                        schemaClass = new DOSchemaClass(className, className, "", className, null,
+                                new dataobjects.impl.models.DOField[0], className);
                         System.out.println(
                                 "DatabaseContentsInformation: Created new SchemaClass for database-discovered class "
                                         + className +

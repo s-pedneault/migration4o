@@ -1,6 +1,6 @@
 package dataobjects.util;
 
-import dataobjects.api.models.DOField;
+import dataobjects.impl.models.DOField;
 
 /**
  * Utility class for detecting and working with collection types.

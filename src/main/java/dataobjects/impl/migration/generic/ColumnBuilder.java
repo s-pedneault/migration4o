@@ -1,9 +1,9 @@
 package dataobjects.impl.migration.generic;
 
-import dataobjects.api.engine.DOEngine;
-import dataobjects.api.models.database.DODatabaseClass;
-import dataobjects.api.models.DOField;
-import dataobjects.api.migration.generic.ExportColumn;
+import dataobjects.impl.engine.DOEngine;
+import dataobjects.impl.models.database.DODatabaseClass;
+import dataobjects.impl.models.DOField;
+import dataobjects.impl.migration.generic.ExportColumn;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -165,9 +165,9 @@ public class ColumnBuilder {
     private String getExportNameForClass(DODatabaseClass dbClass) {
         // Try to find the module containing this class
         if (engine.getSchema() != null && engine.getSchema().getModules() != null) {
-            for (dataobjects.api.models.schema.DOSchemaModule module : engine.getSchema().getModules()) {
+            for (dataobjects.impl.models.schema.DOSchemaModule module : engine.getSchema().getModules()) {
                 if (module.getClasses() != null) {
-                    for (dataobjects.api.models.schema.DOSchemaClass schemaClass : module.getClasses()) {
+                    for (dataobjects.impl.models.schema.DOSchemaClass schemaClass : module.getClasses()) {
                         if (schemaClass.getDatabaseClass() == dbClass) {
                             return module.getName();
                         }
