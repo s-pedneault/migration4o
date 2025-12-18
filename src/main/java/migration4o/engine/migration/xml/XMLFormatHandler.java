@@ -134,7 +134,8 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             xmlContext.isGeneralModule = "General".equals(context.getModuleName());
 
             if (xmlContext.isGeneralModule) {
-                // For General module, create a subdirectory and defer file creation to beginClass
+                // For General module, create a subdirectory and defer file creation to
+                // beginClass
                 xmlContext.generalDirectory = new File(outputDirectory, "General").getAbsolutePath();
                 File generalDir = new File(xmlContext.generalDirectory);
                 if (!generalDir.exists()) {
@@ -360,7 +361,8 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
                 moduleCtx.writer.flush();
                 moduleCtx.close();
 
-                System.out.println("    Exported " + exportedCount + " " + context.getExportName() + " objects to General/" + moduleCtx.currentClassName + ".xml");
+                System.out.println("    Exported " + exportedCount + " " + context.getExportName()
+                        + " objects to General/" + moduleCtx.currentClassName + ".xml");
             }
         } catch (XMLStreamException e) {
             throw new IOException("Failed to end class collection: " + e.getMessage(), e);
