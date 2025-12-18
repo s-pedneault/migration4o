@@ -1,0 +1,480 @@
+Analyzing migration-schema.xml for classes that should be embedded...
+
+================================================================================
+
+Found 47 classes in foundation that are used by exactly ONE field:
+
+1. gest.DSI2003.IDDsi2003G6
+   Simple Name: IDDsi2003G6
+   Parent Class: gest.DSI2003.IDDSI2003
+   Objects: 1725
+   References: 1
+   Currently in: foundation
+   Used by: gest.intervention.IntervCauseIncendie
+   Field: mAmpleurIncendie
+   → SHOULD BE EMBEDDED in gest.intervention.IntervCauseIncendie.mAmpleurIncendie
+
+2. gest.DSI2003.IDDsi2003G8
+   Simple Name: IDDsi2003G8
+   Parent Class: gest.DSI2003.IDDSI2003
+   Objects: 1725
+   References: 1
+   Currently in: foundation
+   Used by: gest.intervention.IntervCauseIncendie
+   Field: mDommage
+   → SHOULD BE EMBEDDED in gest.intervention.IntervCauseIncendie.mDommage
+
+3. gest.actionCondition.IDGroupeActionCondition
+   Simple Name: IDGroupeActionCondition
+   Parent Class: gest.gen.IDEntite
+   Objects: 11
+   References: 1
+   Currently in: foundation
+   Used by: gest.activite.ActionCondition
+   Field: mIDGroupeAction
+   → SHOULD BE EMBEDDED in gest.activite.ActionCondition.mIDGroupeAction
+
+4. gest.activite.ActionCondition
+   Simple Name: ActionCondition
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.activite.TypeActivite
+   Field: mVectActionCondition[collection]
+   → SHOULD BE EMBEDDED in gest.activite.TypeActivite.mVectActionCondition[collection]
+
+5. gest.activite.IDActe
+   Simple Name: IDActe
+   Parent Class: gest.gen.IDEntite
+   Objects: 1188
+   References: 0
+   Currently in: foundation
+   Used by: gest.activite.InfoEmploye
+   Field: mVectIDActe[collection]
+   → SHOULD BE EMBEDDED in gest.activite.InfoEmploye.mVectIDActe[collection]
+
+6. gest.activite.IDHistoActivite
+   Simple Name: IDHistoActivite
+   Parent Class: gest.gen.IDEntite
+   Objects: 7316
+   References: 1
+   Currently in: foundation
+   Used by: gest.activite.InfoHistoEmploye
+   Field: mIDHistoActivite
+   → SHOULD BE EMBEDDED in gest.activite.InfoHistoEmploye.mIDHistoActivite
+
+7. gest.activite.IDInfoEmploye
+   Simple Name: IDInfoEmploye
+   Parent Class: gest.gen.IDEntite
+   Objects: 1
+   References: 1
+   Currently in: foundation
+   Used by: gest.feuilleTemps.TempsPaye
+   Field: mIDInfoEmploye
+   → SHOULD BE EMBEDDED in gest.feuilleTemps.TempsPaye.mIDInfoEmploye
+
+8. gest.activite.InfoEmploye
+   Simple Name: InfoEmploye
+   Parent Class: gest.gen.EntiteContientID
+   Objects: 28947
+   References: 0
+   Currently in: foundation
+   Used by: gest.activite.InfoHistoEmploye
+   Field: mVectInfoEmploye[collection]
+   → SHOULD BE EMBEDDED in gest.activite.InfoHistoEmploye.mVectInfoEmploye[collection]
+
+9. gest.borne.IDNivPriorite
+   Simple Name: IDNivPriorite
+   Parent Class: gest.gen.IDEntite
+   Objects: 39
+   References: 1
+   Currently in: foundation
+   Used by: gest.borne.AnomBorne
+   Field: mIDNivPriorite
+   → SHOULD BE EMBEDDED in gest.borne.AnomBorne.mIDNivPriorite
+
+10. gest.canutec.IDPageJaune
+   Simple Name: IDPageJaune
+   Parent Class: gest.gen.IDEntite
+   Objects: 2568
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.ProdDang
+   Field: mIDPageJaune
+   → SHOULD BE EMBEDDED in gest.dossPrev.ProdDang.mIDPageJaune
+
+11. gest.centreDesRapports.IDRapportCentral
+   Simple Name: IDRapportCentral
+   Parent Class: gest.gen.IDEntite
+   Objects: 0
+   References: 1
+   Currently in: foundation
+   Used by: gest.centreDesRapports.RapportCentral
+   Field: mIDRapportCentral
+   → SHOULD BE EMBEDDED in gest.centreDesRapports.RapportCentral.mIDRapportCentral
+
+12. gest.champPerso.ChampPersoChoix
+   Simple Name: ChampPersoChoix
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.champPerso.TypeChampPerso
+   Field: mVectChoix[collection]
+   → SHOULD BE EMBEDDED in gest.champPerso.TypeChampPerso.mVectChoix[collection]
+
+13. gest.classif.IDClassif
+   Simple Name: IDClassif
+   Parent Class: gest.gen.IDEntite
+   Objects: 6599
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.DossPrev
+   Field: mIDClassif
+   → SHOULD BE EMBEDDED in gest.dossPrev.DossPrev.mIDClassif
+
+14. gest.consolide.ParamSSI$NModuleDetail
+   Simple Name: ParamSSI$NModuleDetail
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.consolide.ParamSSI
+   Field: mVectNModuleDetail[collection]
+   → SHOULD BE EMBEDDED in gest.consolide.ParamSSI.mVectNModuleDetail[collection]
+
+15. gest.docum.IDDossierDocum
+   Simple Name: IDDossierDocum
+   Parent Class: gest.gen.IDEntite
+   Objects: 1
+   References: 1
+   Currently in: foundation
+   Used by: gest.docum.Docum
+   Field: mIDDossierParent
+   → SHOULD BE EMBEDDED in gest.docum.Docum.mIDDossierParent
+
+16. gest.dossPrev.IDPersonneRess
+   Simple Name: IDPersonneRess
+   Parent Class: gest.gen.IDEntite
+   Objects: 2
+   References: 1
+   Currently in: foundation
+   Used by: gest.planInterv.PlanContact
+   Field: mIDPersonneRess
+   → SHOULD BE EMBEDDED in gest.planInterv.PlanContact.mIDPersonneRess
+
+17. gest.equipe.IDEquipeOuIDEmploye
+   Simple Name: IDEquipeOuIDEmploye
+   Parent Class: gest.gen.Entite
+   Objects: 79
+   References: 0
+   Currently in: foundation
+   Used by: gest.equipe.Equipe
+   Field: mVectIDEquipeOuIDEmpl[collection]
+   → SHOULD BE EMBEDDED in gest.equipe.Equipe.mVectIDEquipeOuIDEmpl[collection]
+
+18. gest.formElec.ParamFigureSaisie
+   Simple Name: ParamFigureSaisie
+   Parent Class: gest.gen.EntiteContientID
+   Objects: 120
+   References: 0
+   Currently in: foundation
+   Used by: gest.formElec.Section
+   Field: mVectParam[collection]
+   → SHOULD BE EMBEDDED in gest.formElec.Section.mVectParam[collection]
+
+19. gest.formElec.Section
+   Simple Name: Section
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.formElec.FormElec
+   Field: mVectSection[collection]
+   → SHOULD BE EMBEDDED in gest.formElec.FormElec.mVectSection[collection]
+
+20. gest.gen.InfosAuthAurora
+   Simple Name: InfosAuthAurora
+   Parent Class: gest.gen.EntiteParam
+   Objects: 0
+   References: 1
+   Currently in: foundation
+   Used by: gest.feuilleTemps.ParamFeuilleTemps
+   Field: mInfosAuthAurora
+   → SHOULD BE EMBEDDED in gest.feuilleTemps.ParamFeuilleTemps.mInfosAuthAurora
+
+21. gest.gen.IntervalleHeure
+   Simple Name: IntervalleHeure
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.plageHoraire.PlageHoraire
+   Field: mVectIntervalleHeure[collection]
+   → SHOULD BE EMBEDDED in gest.plageHoraire.PlageHoraire.mVectIntervalleHeure[collection]
+
+22. gest.gen.Message
+   Simple Name: Message
+   Parent Class: gest.gen.Entite
+   Objects: 32933
+   References: 1
+   Currently in: foundation
+   Used by: gest.processus.Etape
+   Field: mNote
+   → SHOULD BE EMBEDDED in gest.processus.Etape.mNote
+
+23. gest.gen.ParamPropCouleur$NEntreeDeLegende
+   Simple Name: ParamPropCouleur$NEntreeDeLegende
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.gen.ParamPropCouleur
+   Field: mLegende[collection]
+   → SHOULD BE EMBEDDED in gest.gen.ParamPropCouleur.mLegende[collection]
+
+24. gest.graph.IDGraphLib
+   Simple Name: IDGraphLib
+   Parent Class: gest.gen.IDEntite
+   Objects: 9
+   References: 0
+   Currently in: foundation
+   Used by: gest.graph.TypeGraph
+   Field: mVectIDGraphLib[collection]
+   → SHOULD BE EMBEDDED in gest.graph.TypeGraph.mVectIDGraphLib[collection]
+
+25. gest.graph.IDTypeGraph
+   Simple Name: IDTypeGraph
+   Parent Class: gest.gen.IDEntite
+   Objects: 1372
+   References: 1
+   Currently in: foundation
+   Used by: gest.graph.Graph
+   Field: mIDTypeGraph
+   → SHOULD BE EMBEDDED in gest.graph.Graph.mIDTypeGraph
+
+26. gest.horaire.IDHoraire
+   Simple Name: IDHoraire
+   Parent Class: gest.gen.IDEntite
+   Objects: 4
+   References: 1
+   Currently in: foundation
+   Used by: gest.horaire.HorQuart
+   Field: mIDHoraire
+   → SHOULD BE EMBEDDED in gest.horaire.HorQuart.mIDHoraire
+
+27. gest.horaire.IDModeleHorQuart
+   Simple Name: IDModeleHorQuart
+   Parent Class: gest.gen.IDEntite
+   Objects: 4
+   References: 1
+   Currently in: foundation
+   Used by: gest.horaire.HorQuart
+   Field: mIDModeleHorQuart
+   → SHOULD BE EMBEDDED in gest.horaire.HorQuart.mIDModeleHorQuart
+
+28. gest.intervention.IDFournSAAQ
+   Simple Name: IDFournSAAQ
+   Parent Class: gest.gen.IDEntite
+   Objects: 189
+   References: 1
+   Currently in: foundation
+   Used by: gest.intervention.IntervVehAccident
+   Field: mIDFournSAAQ
+   → SHOULD BE EMBEDDED in gest.intervention.IntervVehAccident.mIDFournSAAQ
+
+29. gest.listePerso.FormatDonnee
+   Simple Name: FormatDonnee
+   Parent Class: (none)
+   Objects: 615
+   References: 1
+   Currently in: foundation
+   Used by: gest.listePerso.ListePerso$NCol
+   Field: iFormatDonnee
+   → SHOULD BE EMBEDDED in gest.listePerso.ListePerso$NCol.iFormatDonnee
+
+30. gest.listePerso.ListePerso$NCol
+   Simple Name: ListePerso$NCol
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.centreDesRapports.RapportCentral
+   Field: mVectNCol[collection]
+   → SHOULD BE EMBEDDED in gest.centreDesRapports.RapportCentral.mVectNCol[collection]
+
+31. gest.listePerso.ListePerso$NGroupe
+   Simple Name: ListePerso$NGroupe
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.centreDesRapports.RapportCentral
+   Field: mVectNGroupe[collection]
+   → SHOULD BE EMBEDDED in gest.centreDesRapports.RapportCentral.mVectNGroupe[collection]
+
+32. gest.listePerso.ListePerso$NTri
+   Simple Name: ListePerso$NTri
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.centreDesRapports.RapportCentral
+   Field: mVectNTri[collection]
+   → SHOULD BE EMBEDDED in gest.centreDesRapports.RapportCentral.mVectNTri[collection]
+
+33. gest.maintEquip.IDEtatEquipement
+   Simple Name: IDEtatEquipement
+   Parent Class: gest.gen.IDEntite
+   Objects: 2
+   References: 1
+   Currently in: foundation
+   Used by: gest.maintenance.TypeMaint
+   Field: mNouvEtatParDefaut
+   → SHOULD BE EMBEDDED in gest.maintenance.TypeMaint.mNouvEtatParDefaut
+
+34. gest.maintEquip.IDMaintEquip
+   Simple Name: IDMaintEquip
+   Parent Class: gest.gen.IDEntite
+   Objects: 5
+   References: 1
+   Currently in: foundation
+   Used by: gest.maintEquip.MaintEquipHisto
+   Field: mIDMaintEquip
+   → SHOULD BE EMBEDDED in gest.maintEquip.MaintEquipHisto.mIDMaintEquip
+
+35. gest.maintenance.IDMaintenance
+   Simple Name: IDMaintenance
+   Parent Class: gest.gen.IDEntite
+   Objects: 5
+   References: 1
+   Currently in: foundation
+   Used by: gest.maintEquip.MaintEquip
+   Field: mIDMaintenance
+   → SHOULD BE EMBEDDED in gest.maintEquip.MaintEquip.mIDMaintenance
+
+36. gest.parement.IDParement
+   Simple Name: IDParement
+   Parent Class: gest.gen.IDEntite
+   Objects: 6599
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.DossPrev
+   Field: mIDParementExt
+   → SHOULD BE EMBEDDED in gest.dossPrev.DossPrev.mIDParementExt
+
+37. gest.plancher.IDPlancher
+   Simple Name: IDPlancher
+   Parent Class: gest.gen.IDEntite
+   Objects: 6599
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.DossPrev
+   Field: mIDPlancher
+   → SHOULD BE EMBEDDED in gest.dossPrev.DossPrev.mIDPlancher
+
+38. gest.rapport.SousRapport
+   Simple Name: SousRapport
+   Parent Class: gest.rapport.Rapport
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.rapport.Rapport
+   Field: mVectSousRapport[collection]
+   → SHOULD BE EMBEDDED in gest.rapport.Rapport.mVectSousRapport[collection]
+
+39. gest.rapport.SousRapportPageSupp
+   Simple Name: SousRapportPageSupp
+   Parent Class: gest.rapport.SousRapport
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.rapport.Rapport
+   Field: mVectPageSupp[collection]
+   → SHOULD BE EMBEDDED in gest.rapport.Rapport.mVectPageSupp[collection]
+
+40. gest.schema.ForceFrappe
+   Simple Name: ForceFrappe
+   Parent Class: gest.gen.Entite
+   Objects: 0
+   References: 0
+   Currently in: foundation
+   Used by: gest.schema.ParamSchema
+   Field: mVectForceFrappe[collection]
+   → SHOULD BE EMBEDDED in gest.schema.ParamSchema.mVectForceFrappe[collection]
+
+41. gest.secCiv.IDSinistre
+   Simple Name: IDSinistre
+   Parent Class: gest.gen.IDEntite
+   Objects: 4
+   References: 1
+   Currently in: foundation
+   Used by: gest.secCiv.LogSinistre
+   Field: mIDSinistre
+   → SHOULD BE EMBEDDED in gest.secCiv.LogSinistre.mIDSinistre
+
+42. gest.typeAssistanceParticuliere.AssistanceParticuliere
+   Simple Name: AssistanceParticuliere
+   Parent Class: gest.gen.Entite
+   Objects: 12478
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.PersonneRess
+   Field: mAssistanceParticuliere
+   → SHOULD BE EMBEDDED in gest.dossPrev.PersonneRess.mAssistanceParticuliere
+
+43. gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere
+   Simple Name: IDTypeAssistanceParticuliere
+   Parent Class: gest.gen.IDEntite
+   Objects: 13301
+   References: 1
+   Currently in: foundation
+   Used by: gest.typeAssistanceParticuliere.AssistanceParticuliere
+   Field: mIDTypeAssistanceParticuliere
+   → SHOULD BE EMBEDDED in gest.typeAssistanceParticuliere.AssistanceParticuliere.mIDTypeAssistanceParticuliere
+
+44. gest.typeBatiment.IDTypeBatiment
+   Simple Name: IDTypeBatiment
+   Parent Class: gest.gen.IDEntite
+   Objects: 7168
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.DossPrev
+   Field: mIDTypeBatiment
+   → SHOULD BE EMBEDDED in gest.dossPrev.DossPrev.mIDTypeBatiment
+
+45. gest.typeChauffage.IDTypeChauffage
+   Simple Name: IDTypeChauffage
+   Parent Class: gest.gen.IDEntite
+   Objects: 15906
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.Chauffage
+   Field: mIDTypeChauffage
+   → SHOULD BE EMBEDDED in gest.dossPrev.Chauffage.mIDTypeChauffage
+
+46. gest.typeCheminee.IDTypeCheminee
+   Simple Name: IDTypeCheminee
+   Parent Class: gest.gen.IDEntite
+   Objects: 15906
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.Chauffage
+   Field: mIDTypeCheminee
+   → SHOULD BE EMBEDDED in gest.dossPrev.Chauffage.mIDTypeCheminee
+
+47. gest.typeToit.IDTypeToit
+   Simple Name: IDTypeToit
+   Parent Class: gest.gen.IDEntite
+   Objects: 6599
+   References: 1
+   Currently in: foundation
+   Used by: gest.dossPrev.DossPrev
+   Field: mIDTypeToit
+   → SHOULD BE EMBEDDED in gest.dossPrev.DossPrev.mIDTypeToit
+
+================================================================================
+
+Summary: 47 classes should be moved from foundation
+         and embedded within their single-use field definitions.

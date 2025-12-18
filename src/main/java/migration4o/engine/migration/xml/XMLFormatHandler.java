@@ -50,6 +50,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         Map<String, String> classToModuleMap; // Maps full class name to module name
         Set<Long> exportedObjectIds = new HashSet<>(); // IDs of top-level exported objects (not embedded)
         int indentLevel = 0; // Current indentation level for proper XML formatting
+        boolean isGeneralModule = false; // True if this is the General module (multi-file export)
+        String generalDirectory; // Directory for General module class files
+        String currentClassName; // Current class being exported (for General module)
 
         void close() throws IOException {
             try {
@@ -127,6 +130,22 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             xmlContext.classToModuleMap = buildClassToModuleMap(context.getEngine());
             xmlContext.moduleName = context.getModuleName(); // Store module name for reference tracking
 
+            // Check if this is the General module
+            xmlContext.isGeneralModule = "General".equals(context.getModuleName());
+
+            if (xmlContext.isGeneralModule) {
+                // For General module, create a subdirectory and defer file creation to beginClass
+                xmlContext.generalDirectory = new File(outputDirectory, "General").getAbsolutePath();
+                File generalDir = new File(xmlContext.generalDirectory);
+                if (!generalDir.exists()) {
+                    generalDir.mkdirs();
+                }
+                System.out.println("  Creating General module directory: " + xmlContext.generalDirectory);
+                // Don't create writer yet - will be created per class
+                return xmlContext;
+            }
+
+            // For regular modules, create single XML file
             // Create output file
             xmlContext.fileName = context.getSanitizedModuleName() + ".xml";
             File outputFile = new File(outputDirectory, xmlContext.fileName);
@@ -208,6 +227,39 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         classCtx.moduleContext = moduleCtx;
 
         try {
+            if (moduleCtx.isGeneralModule) {
+                // For General module, create a new file for this class
+                moduleCtx.currentClassName = context.getExportName();
+                String classFileName = context.getExportName() + ".xml";
+                File classFile = new File(moduleCtx.generalDirectory, classFileName);
+                moduleCtx.outputStream = new FileOutputStream(classFile);
+
+                // Create XML writer for this class
+                XMLOutputFactory factory = XMLOutputFactory.newInstance();
+                moduleCtx.writer = factory.createXMLStreamWriter(moduleCtx.outputStream, "UTF-8");
+
+                // Write XML declaration
+                moduleCtx.writer.writeStartDocument("UTF-8", "1.0");
+                moduleCtx.writer.writeCharacters("\n");
+
+                // Write migration root element
+                moduleCtx.writer.writeStartElement("migration");
+                moduleCtx.writer.writeAttribute("xmlns", NAMESPACE);
+                moduleCtx.writer.writeAttribute("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance");
+                moduleCtx.writer.writeAttribute("xsi:schemaLocation", NAMESPACE + " migration-schema.xsd");
+                moduleCtx.writer.writeCharacters("\n\n");
+
+                // Write modules section
+                moduleCtx.writer.writeCharacters("    ");
+                moduleCtx.writer.writeStartElement("modules");
+                moduleCtx.writer.writeCharacters("\n        ");
+
+                // Write General module
+                moduleCtx.writer.writeStartElement("module");
+                moduleCtx.writer.writeAttribute("name", "General");
+                moduleCtx.writer.writeCharacters("\n");
+            }
+
             // Write collection element with type attribute
             moduleCtx.writer.writeCharacters("            ");
             moduleCtx.writer.writeStartElement("collection");
@@ -286,12 +338,30 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
     public void endClass(Object classHandle, ClassExportContext context, int exportedCount) throws IOException {
         XMLClassContext classCtx = (XMLClassContext) classHandle;
+        XMLModuleContext moduleCtx = classCtx.moduleContext;
 
         try {
             // Close collection element
-            classCtx.moduleContext.writer.writeCharacters("            ");
-            classCtx.moduleContext.writer.writeEndElement(); // collection
-            classCtx.moduleContext.writer.writeCharacters("\n");
+            moduleCtx.writer.writeCharacters("            ");
+            moduleCtx.writer.writeEndElement(); // collection
+            moduleCtx.writer.writeCharacters("\n");
+
+            if (moduleCtx.isGeneralModule) {
+                // For General module, close the file for this class
+                moduleCtx.writer.writeCharacters("        ");
+                moduleCtx.writer.writeEndElement(); // module
+                moduleCtx.writer.writeCharacters("\n    ");
+                moduleCtx.writer.writeEndElement(); // modules
+                moduleCtx.writer.writeCharacters("\n");
+                moduleCtx.writer.writeEndElement(); // migration
+                moduleCtx.writer.writeCharacters("\n");
+
+                moduleCtx.writer.writeEndDocument();
+                moduleCtx.writer.flush();
+                moduleCtx.close();
+
+                System.out.println("    Exported " + exportedCount + " " + context.getExportName() + " objects to General/" + moduleCtx.currentClassName + ".xml");
+            }
         } catch (XMLStreamException e) {
             throw new IOException("Failed to end class collection: " + e.getMessage(), e);
         }
@@ -299,6 +369,12 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
 
     public void endModule(Object moduleHandle, ModuleExportContext context) throws IOException {
         XMLModuleContext moduleCtx = (XMLModuleContext) moduleHandle;
+
+        if (moduleCtx.isGeneralModule) {
+            // For General module, files are already closed in endClass
+            System.out.println("  General module exported successfully (multiple files in General/ directory)");
+            return;
+        }
 
         try {
             // Close module (no <objects> wrapper anymore - collections closed per class)

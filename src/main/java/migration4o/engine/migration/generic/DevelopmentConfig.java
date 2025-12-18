@@ -20,7 +20,7 @@ public class DevelopmentConfig {
      * Enable/disable development mode.
      * Set to true to export only the target module
      */
-    public static final boolean DEVELOPMENT_MODE = true;
+    public static final boolean DEVELOPMENT_MODE = false;
 
     /**
      * The module to export when in development mode.
