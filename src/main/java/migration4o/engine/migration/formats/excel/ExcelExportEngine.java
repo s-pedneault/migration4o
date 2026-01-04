@@ -1,25 +1,35 @@
-package migration4o.engine.migration.excel;
-
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.excel.ExcelExportEngine;
-import migration4o.engine.migration.generic.ExportUtils;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.database.DODatabaseObject;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.database.DODatabase;
-import migration4o.models.DOField;
-import migration4o.models.DOClass;
-import migration4o.util.ObjectResolverUtil;
-
-import org.apache.poi.ss.usermodel.*;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+package migration4o.engine.migration.formats.excel;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellStyle;
+import org.apache.poi.ss.usermodel.Font;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+
+import migration4o.engine.DOEngine;
+import migration4o.engine.migration.engine.ExportUtils;
+import migration4o.models.DOClass;
+import migration4o.models.DOField;
+import migration4o.models.database.DODatabase;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseObject;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * Implementation of Excel export engine.

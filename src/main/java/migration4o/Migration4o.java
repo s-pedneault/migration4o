@@ -1,8 +1,8 @@
 package migration4o;
 
 import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.DOGenericExportEngine;
-import migration4o.engine.migration.xml.XMLFormatHandler;
+import migration4o.engine.migration.engine.DOGenericExportEngine;
+import migration4o.engine.migration.formats.xml.XMLFormatHandler;
 
 public class Migration4o {
     public static void main(String[] args) {

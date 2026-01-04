@@ -1,7 +1,7 @@
 package migration4o.engine;
 
-import migration4o.engine.migration.excel.ExcelExportEngine;
-import migration4o.engine.migration.xml.XMLMigrationEngine;
+import migration4o.engine.migration.formats.excel.ExcelExportEngine;
+import migration4o.engine.migration.formats.xml.XMLMigrationEngine;
 import migration4o.engine.report.DOObjectTreeReportGenerator;
 import migration4o.engine.report.DOStructureReportGenerator;
 import migration4o.engine.report.reachability.ReachabilityReportGenerator;

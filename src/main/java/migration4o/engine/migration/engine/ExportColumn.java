@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 import migration4o.models.DOField;
 import migration4o.models.database.DODatabaseClass;

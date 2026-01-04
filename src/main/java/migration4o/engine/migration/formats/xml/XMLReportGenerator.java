@@ -1,4 +1,15 @@
-package migration4o.engine.migration.xml;
+package migration4o.engine.migration.formats.xml;
+
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
 
 import migration4o.engine.DOEngine;
 import migration4o.engine.resolvers.DOObjectReachabilityTracker;
@@ -9,16 +20,6 @@ import migration4o.models.database.DODatabaseObject;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
-
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamException;
-import javax.xml.stream.XMLStreamWriter;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Generates a comprehensive migration report in XML format.

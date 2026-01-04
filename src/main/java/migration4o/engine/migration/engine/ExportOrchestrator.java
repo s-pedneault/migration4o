@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 import java.io.IOException;
 import java.text.Normalizer;

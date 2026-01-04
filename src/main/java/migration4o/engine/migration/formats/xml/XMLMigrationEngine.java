@@ -1,15 +1,14 @@
-package migration4o.engine.migration.xml;
-
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.ExportUtils;
-import migration4o.engine.migration.xml.XMLMigrationEngine;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaModule;
+package migration4o.engine.migration.formats.xml;
 
 import java.io.File;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+
+import migration4o.engine.DOEngine;
+import migration4o.engine.migration.engine.ExportUtils;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaModule;
 
 /**
  * Implementation of XML migration engine.

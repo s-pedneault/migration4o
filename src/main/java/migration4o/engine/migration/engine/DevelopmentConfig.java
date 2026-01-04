@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 /**
  * Development configuration for testing exports with specific modules.

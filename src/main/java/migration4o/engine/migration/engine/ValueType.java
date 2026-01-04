@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 /**
  * Represents the type of a formatted value for export.

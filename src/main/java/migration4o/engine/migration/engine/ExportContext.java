@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 /**
  * Base class for all export contexts, providing common functionality.

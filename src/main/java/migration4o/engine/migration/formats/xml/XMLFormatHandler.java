@@ -1,21 +1,37 @@
-package migration4o.engine.migration.xml;
+package migration4o.engine.migration.formats.xml;
 
-import migration4o.engine.DOEngine;
-import migration4o.engine.migration.generic.*;
-import migration4o.models.DOClass;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.DOField;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaModule;
-import migration4o.util.ObjectResolverUtil;
-
-import javax.xml.stream.XMLOutputFactory;
-import javax.xml.stream.XMLStreamWriter;
-import javax.xml.stream.XMLStreamException;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.TreeSet;
+
+import javax.xml.stream.XMLOutputFactory;
+import javax.xml.stream.XMLStreamException;
+import javax.xml.stream.XMLStreamWriter;
+
+import migration4o.engine.DOEngine;
+import migration4o.engine.migration.engine.ClassExportContext;
+import migration4o.engine.migration.engine.ExportColumn;
+import migration4o.engine.migration.engine.ExportUtils;
+import migration4o.engine.migration.engine.FormattedValue;
+import migration4o.engine.migration.engine.HierarchicalFormatHandler;
+import migration4o.engine.migration.engine.ModuleExportContext;
+import migration4o.engine.migration.engine.ObjectExportContext;
+import migration4o.models.DOClass;
+import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * XML format handler that generates files following the documented structure:

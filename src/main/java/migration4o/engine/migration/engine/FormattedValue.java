@@ -1,4 +1,4 @@
-package migration4o.engine.migration.generic;
+package migration4o.engine.migration.engine;
 
 import java.text.SimpleDateFormat;
 import java.util.Collection;
