@@ -4,7 +4,8 @@ import migration4o.engine.DOEngine;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseField;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -131,9 +132,10 @@ public class SchemaAnalyzer {
         classInfo.superClass = schemaClass.getSuperClassAbsoluteName();
 
         // Analyze fields
-        DOField[] fields = schemaClass.getFields();
+        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+        DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
         if (fields != null) {
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 FieldInfo fieldInfo = new FieldInfo(field.getName(), field.getTypeName());
                 classInfo.fields.add(fieldInfo);
             }

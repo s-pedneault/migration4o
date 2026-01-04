@@ -12,7 +12,7 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import migration4o.models.DOField;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -111,11 +111,8 @@ public class DOSchemaReader {
         }
 
         DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
-        // Convert DOSchemaField[] to DOField[] for the parent constructor
-        DOField[] doFields = new DOField[fields.length];
-        System.arraycopy(fields, 0, doFields, 0, fields.length);
 
-        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClass, doFields,
+        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClass, fields,
                 exportName);
     }
 

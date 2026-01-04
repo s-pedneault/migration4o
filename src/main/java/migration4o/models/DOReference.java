@@ -1,19 +1,22 @@
 package migration4o.models;
 
-public class DOReference {
-    private final DOClass referencedClass;
-    private final DOField referencedField;
+import migration4o.models.database.DODatabaseClass;
+import migration4o.models.database.DODatabaseField;
 
-    public DOReference(DOClass referencedClass, DOField referencedField) {
+public class DOReference {
+    private final DODatabaseClass referencedClass;
+    private final DODatabaseField referencedField;
+
+    public DOReference(DODatabaseClass referencedClass, DODatabaseField referencedField) {
         this.referencedClass = referencedClass;
         this.referencedField = referencedField;
     }
 
-    public DOClass getReferencedClass() {
+    public DODatabaseClass getReferencedClass() {
         return referencedClass;
     }
 
-    public DOField getReferencedField() {
+    public DODatabaseField getReferencedField() {
         return referencedField;
     }
 }

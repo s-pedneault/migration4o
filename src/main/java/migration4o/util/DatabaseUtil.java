@@ -4,8 +4,7 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 
 import migration4o.database.DODatabaseEncoding;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
@@ -67,18 +66,18 @@ public class DatabaseUtil {
             return null;
         }
 
-        for (DOField field : schemaClass.getFields()) {
-            if (fieldName.equals(field.getName()) && field instanceof DOSchemaField) {
-                return (DOSchemaField) field;
+        for (DOSchemaField field : schemaClass.getFields()) {
+            if (fieldName.equals(field.getName())) {
+                return field;
             }
         }
         return null;
     }
 
     /**
-     * Converts a StoredField to a DOField with schema enhancement.
+     * Converts a StoredField to a DODatabaseField with schema enhancement.
      */
-    public static DOField convertStoredFieldToDOField(StoredField storedField, DOSchemaField schemaField) {
+    public static DODatabaseField convertStoredFieldToDOField(StoredField storedField, DOSchemaField schemaField) {
         String fieldName = storedField.getName();
         String typeName = storedField.getStoredType().getName();
         String description = "";
@@ -96,7 +95,7 @@ public class DatabaseUtil {
             }
         }
 
-        return new DOField(fieldName, description, typeName, null, isPrimitive, isCollection, contentTypeName,
+        return new DODatabaseField(fieldName, description, typeName, null, isPrimitive, isCollection, contentTypeName,
                 null);
     }
 
@@ -108,7 +107,7 @@ public class DatabaseUtil {
             return obj.getMostSpecificClass().getAbsoluteName();
         }
 
-        DOClass[] allClasses = obj.getAllClasses();
+        DODatabaseClass[] allClasses = obj.getAllClasses();
         if (allClasses != null && allClasses.length > 0) {
             return allClasses[0].getAbsoluteName();
         }
@@ -159,7 +158,7 @@ public class DatabaseUtil {
         }
 
         DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
-        DOField[] fields = extractFieldsFromStoredClass(storedClass, matchingSchemaClass);
+        DODatabaseField[] fields = extractFieldsFromStoredClass(storedClass, matchingSchemaClass);
 
         return new DODatabaseClass(
                 className,
@@ -175,10 +174,10 @@ public class DatabaseUtil {
     /**
      * Extracts fields from a stored class with schema enhancement.
      */
-    public static DOField[] extractFieldsFromStoredClass(StoredClass storedClass, DOSchemaClass schemaClass) {
+    public static DODatabaseField[] extractFieldsFromStoredClass(StoredClass storedClass, DOSchemaClass schemaClass) {
         try {
             StoredField[] storedFields = storedClass.getStoredFields();
-            DOField[] fields = new DOField[storedFields.length];
+            DODatabaseField[] fields = new DODatabaseField[storedFields.length];
 
             for (int i = 0; i < storedFields.length; i++) {
                 DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass, storedFields[i].getName());
@@ -189,7 +188,7 @@ public class DatabaseUtil {
         } catch (Exception e) {
             System.out.println(
                     "Warning: Could not extract fields for class " + storedClass.getName() + ": " + e.getMessage());
-            return new DOField[0];
+            return new DODatabaseField[0];
         }
     }
 

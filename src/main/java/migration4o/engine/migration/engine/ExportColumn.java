@@ -1,6 +1,6 @@
 package migration4o.engine.migration.engine;
 
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabaseClass;
 
 /**
@@ -13,7 +13,7 @@ public class ExportColumn {
     /**
      * The field from the schema/database that this column represents.
      */
-    public final DOField field;
+    public final DODatabaseField field;
 
     /**
      * The name to use for this column in the export output.
@@ -29,7 +29,7 @@ public class ExportColumn {
      * If this is a flattened field, this is the parent field that contains the
      * reference.
      */
-    public final DOField parentField;
+    public final DODatabaseField parentField;
 
     /**
      * If this is a flattened field, this is the class that contains the flattened
@@ -40,7 +40,7 @@ public class ExportColumn {
     /**
      * Create a regular export column.
      */
-    public ExportColumn(DOField field, String columnName) {
+    public ExportColumn(DODatabaseField field, String columnName) {
         this.field = field;
         this.columnName = columnName;
         this.isFlattened = false;
@@ -51,7 +51,7 @@ public class ExportColumn {
     /**
      * Create a flattened export column.
      */
-    public ExportColumn(DOField field, String columnName, DOField parentField, DODatabaseClass flattenedFromClass) {
+    public ExportColumn(DODatabaseField field, String columnName, DODatabaseField parentField, DODatabaseClass flattenedFromClass) {
         this.field = field;
         this.columnName = columnName;
         this.isFlattened = true;

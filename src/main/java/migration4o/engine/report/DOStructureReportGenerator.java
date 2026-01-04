@@ -17,8 +17,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.DOReference;
 import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabase;
@@ -813,10 +812,14 @@ public class DOStructureReportGenerator {
         html.append("                    </div>\n");
 
         // Fields information
-        generateFieldsTable(html, clazz, schema);
+        if (clazz.getDatabaseClass() != null) {
+            generateFieldsTable(html, clazz.getDatabaseClass(), schema);
+        }
 
         // References information
-        generateReferencesTable(html, clazz);
+        if (clazz.getDatabaseClass() != null) {
+            generateReferencesTable(html, clazz.getDatabaseClass());
+        }
 
         // Database class information (objects)
         if (clazz.getDatabaseClass() != null) {
@@ -827,8 +830,8 @@ public class DOStructureReportGenerator {
                 .append("            </div>\n");
     }
 
-    private void generateFieldsTable(StringBuilder html, DOClass clazz, DOSchema schema) {
-        DOField[] fields = clazz.getFields();
+    private void generateFieldsTable(StringBuilder html, DODatabaseClass clazz, DOSchema schema) {
+        DODatabaseField[] fields = clazz.getFields();
         if (fields == null || fields.length == 0) {
             html.append("                    <h3>Fields</h3>\n")
                     .append("                    <p>No fields defined.</p>\n");
@@ -847,7 +850,7 @@ public class DOStructureReportGenerator {
                 .append("                        </thead>\n")
                 .append("                        <tbody>\n");
 
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             html.append("                            <tr>\n")
                     .append("                                <td><strong>").append(escapeHtml(field.getName()))
                     .append("</strong></td>\n")
@@ -892,7 +895,7 @@ public class DOStructureReportGenerator {
                 .append("                    </table>\n");
     }
 
-    private void generateReferencesTable(StringBuilder html, DOClass clazz) {
+    private void generateReferencesTable(StringBuilder html, DODatabaseClass clazz) {
         DOReference[] references = clazz.getReferences();
         if (references == null || references.length == 0) {
             return; // Don't show empty references section
@@ -1094,14 +1097,17 @@ public class DOStructureReportGenerator {
                 }
 
                 // Check for collection fields
-                for (DOField field : clazz.getFields()) {
-                    if (field.isArray()) {
-                        classesWithCollections++;
-                        if (field.getContentTypeName() == null
-                                || field.getContentTypeName().equals("java.lang.Object")) {
-                            unresolvedCollections++;
+                DODatabaseClass dbClass = clazz.getDatabaseClass();
+                if (dbClass != null) {
+                    for (DODatabaseField field : dbClass.getFields()) {
+                        if (field.isArray()) {
+                            classesWithCollections++;
+                            if (field.getContentTypeName() == null
+                                    || field.getContentTypeName().equals("java.lang.Object")) {
+                                unresolvedCollections++;
+                            }
+                            break; // Count class only once
                         }
-                        break; // Count class only once
                     }
                 }
             }
@@ -1374,7 +1380,7 @@ public class DOStructureReportGenerator {
 
         // Collect all orphaned classes from both schema classes and database-only
         // classes
-        List<DOClass> orphanClasses = new ArrayList<>();
+        List<DODatabaseClass> orphanClasses = new ArrayList<>();
         int totalOrphanObjects = 0;
 
         // System.out.println("DEBUG: Starting orphan analysis...");
@@ -1487,7 +1493,7 @@ public class DOStructureReportGenerator {
                         "This could indicate issues with schema mapping, missing references, or data integrity problems.");
 
         // Generate each orphan class section
-        for (DOClass clazz : orphanClasses) {
+        for (DODatabaseClass clazz : orphanClasses) {
             if (clazz instanceof DODatabaseClass) {
                 generateOrphanDatabaseClassSection(builder, (DODatabaseClass) clazz, schema);
             } else {
@@ -1508,7 +1514,7 @@ public class DOStructureReportGenerator {
     /**
      * Find the schema class that corresponds to a database class
      */
-    private DOSchemaClass findSchemaClassForDatabaseClass(DOSchema schema, DOClass dbClass) {
+    private DOSchemaClass findSchemaClassForDatabaseClass(DOSchema schema, DODatabaseClass dbClass) {
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (schemaClass.getDatabaseClass() == dbClass) {
                 return schemaClass;
@@ -1567,7 +1573,8 @@ public class DOStructureReportGenerator {
     /**
      * Generate standard orphan objects list for non-collection classes
      */
-    private void generateStandardOrphanObjectsList(HtmlBuilder builder, DODatabaseObject[] objects, DOClass clazz,
+    private void generateStandardOrphanObjectsList(HtmlBuilder builder, DODatabaseObject[] objects,
+            DODatabaseClass clazz,
             DOSchema schema) {
         builder.openTag("div", "class", "object-instances-table");
 
@@ -1594,7 +1601,7 @@ public class DOStructureReportGenerator {
                         .openTag("div", "class", "reference-list");
 
                 for (DOObjectReference ref : directRefs) {
-                    DOField field = ref.getField();
+                    DODatabaseField field = ref.getField();
                     String fieldName = field != null ? field.getName() : "unknown";
                     String fieldType = field != null ? field.getTypeName() : "unknown";
                     String fieldTypeStyle = getClassTypeStyleClass(fieldType, schema);
@@ -1699,8 +1706,8 @@ public class DOStructureReportGenerator {
                     .append("                            <div class=\"reference-details\">\n");
 
             for (DOReference reference : references) {
-                DOClass referencedClass = reference.getReferencedClass();
-                DOField referencedField = reference.getReferencedField();
+                DODatabaseClass referencedClass = reference.getReferencedClass();
+                DODatabaseField referencedField = reference.getReferencedField();
 
                 if (referencedClass != null && referencedField != null) {
                     String referencingClassStyle = getClassTypeStyleClass(referencedClass.getAbsoluteName(), schema);
@@ -1756,7 +1763,7 @@ public class DOStructureReportGenerator {
                             .append("                                            <div class=\"reference-list\">\n");
 
                     for (DOObjectReference ref : directRefs) {
-                        DOField field = ref.getField();
+                        DODatabaseField field = ref.getField();
                         String fieldName = field != null ? field.getName() : "unknown";
 
                         html.append("                                                <div class=\"reference-item\">\n")
@@ -1780,7 +1787,7 @@ public class DOStructureReportGenerator {
                     for (DOCollectionReference collRef : collectionRefs) {
                         Long[] targetIds = collRef.getContainedObjectIds();
                         int targetCount = targetIds != null ? targetIds.length : 0;
-                        DOField field = collRef.getField();
+                        DODatabaseField field = collRef.getField();
                         String fieldName = field != null ? field.getName() : "unknown";
 
                         html.append("                                                <div class=\"collection-item\">\n")
@@ -1861,9 +1868,10 @@ public class DOStructureReportGenerator {
         }
 
         // Check if the class has collection fields
-        DOField[] fields = clazz.getFields();
+        DODatabaseClass dbClass = clazz.getDatabaseClass();
+        DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
         if (fields != null) {
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 if (field.isArray() || (field.getTypeName() != null &&
                         (field.getTypeName().contains("Collection") || field.getTypeName().contains("Vector") ||
                                 field.getTypeName().contains("List") || field.getTypeName().contains("Set") ||
@@ -1879,7 +1887,7 @@ public class DOStructureReportGenerator {
     /**
      * Helper method to determine if a database class represents a collection type
      */
-    private boolean isCollectionClass(DOClass clazz) {
+    private boolean isCollectionClass(DODatabaseClass clazz) {
         if (clazz == null) {
             return false;
         }
@@ -1903,9 +1911,9 @@ public class DOStructureReportGenerator {
         }
 
         // Check if the class has collection fields
-        DOField[] fields = clazz.getFields();
+        DODatabaseField[] fields = clazz.getFields();
         if (fields != null) {
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 if (field.isArray() || (field.getTypeName() != null &&
                         (field.getTypeName().contains("Collection") || field.getTypeName().contains("Vector") ||
                                 field.getTypeName().contains("List") || field.getTypeName().contains("Set") ||
@@ -1971,7 +1979,7 @@ public class DOStructureReportGenerator {
                         .append("                                            <div class=\"reference-list\">\n");
 
                 for (DOObjectReference ref : directRefs) {
-                    DOField field = ref.getField();
+                    DODatabaseField field = ref.getField();
                     String fieldName = field != null ? field.getName() : "unknown";
                     String fieldType = field != null ? field.getTypeName() : "unknown";
                     String fieldTypeStyle = getClassTypeStyleClass(fieldType, schema);
@@ -2009,7 +2017,7 @@ public class DOStructureReportGenerator {
     private void generateDetailedCollectionAnalysis(StringBuilder html, DOCollectionReference collRef,
             DOSchema schema) {
         Long[] containedIds = collRef.getContainedObjectIds();
-        DOField field = collRef.getField();
+        DODatabaseField field = collRef.getField();
         String fieldName = field != null ? field.getName() : "unknown";
         String fieldType = field != null ? field.getTypeName() : "unknown";
         String contentType = collRef.getResolvedContentType();
@@ -2092,9 +2100,10 @@ public class DOStructureReportGenerator {
 
     /**
      * Generate enhanced orphan objects list for collection classes (overload for
-     * DOClass)
+     * DODatabaseClass)
      */
-    private void generateCollectionOrphanObjectsList(StringBuilder html, DODatabaseObject[] objects, DOClass clazz,
+    private void generateCollectionOrphanObjectsList(StringBuilder html, DODatabaseObject[] objects,
+            DODatabaseClass clazz,
             DOSchema schema) {
         html.append("                            <div class=\"object-instances-table\">\n");
 
@@ -2143,7 +2152,7 @@ public class DOStructureReportGenerator {
                         .append("                                            <div class=\"reference-list\">\n");
 
                 for (DOObjectReference ref : directRefs) {
-                    DOField field = ref.getField();
+                    DODatabaseField field = ref.getField();
                     String fieldName = field != null ? field.getName() : "unknown";
                     String fieldType = field != null ? field.getTypeName() : "unknown";
                     String fieldTypeStyle = getClassTypeStyleClass(fieldType, schema);

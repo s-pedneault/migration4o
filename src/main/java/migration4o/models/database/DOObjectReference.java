@@ -1,16 +1,16 @@
 package migration4o.models.database;
 
 import migration4o.models.database.DOObjectReference;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 public class DOObjectReference {
     private final Long sourceObjectId;
     private final Long targetObjectId;
-    private final DOField field;
+    private final DODatabaseField field;
     private final DOReferenceType referenceType;
 
     public DOObjectReference(Long sourceObjectId, Long targetObjectId,
-            DOField field, DOReferenceType referenceType) {
+            DODatabaseField field, DOReferenceType referenceType) {
         this.sourceObjectId = sourceObjectId;
         this.targetObjectId = targetObjectId;
         this.field = field;
@@ -25,7 +25,7 @@ public class DOObjectReference {
         return targetObjectId;
     }
 
-    public DOField getField() {
+    public DODatabaseField getField() {
         return field;
     }
 

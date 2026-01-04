@@ -13,7 +13,7 @@ import javax.xml.stream.XMLStreamWriter;
 
 import migration4o.engine.DOEngine;
 import migration4o.engine.resolvers.DOObjectReachabilityTracker;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
@@ -164,13 +164,14 @@ public class XMLReportGenerator {
         writer.writeCharacters("\n");
 
         // Write fields
-        DOField[] fields = schemaClass.getFields();
+        DODatabaseField[] fields = schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getFields()
+                : null;
         if (fields != null && fields.length > 0) {
             writer.writeCharacters("        ");
             writer.writeStartElement("fields");
             writer.writeCharacters("\n");
 
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 writeField(writer, field);
             }
 
@@ -187,7 +188,7 @@ public class XMLReportGenerator {
     /**
      * Write a field definition.
      */
-    private void writeField(XMLStreamWriter writer, DOField field) throws XMLStreamException {
+    private void writeField(XMLStreamWriter writer, DODatabaseField field) throws XMLStreamException {
         writer.writeCharacters("          ");
         writer.writeStartElement("field");
         writer.writeAttribute("name", field.getName());

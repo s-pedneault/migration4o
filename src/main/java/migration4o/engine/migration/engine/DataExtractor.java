@@ -5,7 +5,7 @@ import java.util.List;
 import java.util.Map;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabaseObject;
 import migration4o.util.ObjectResolverUtil;
 
@@ -97,7 +97,7 @@ public class DataExtractor {
         ObjectResolverUtil.activateObject(container, idFieldObj, -1L);
 
         // Get the mID field from the ID object
-        DOField mIDField = findFieldByName(idFieldObj.getClass(), "mID");
+        DODatabaseField mIDField = findFieldByName(idFieldObj.getClass(), "mID");
         if (mIDField != null) {
             return ObjectResolverUtil.getFieldValue(container, idFieldObj, mIDField);
         }
@@ -155,7 +155,7 @@ public class DataExtractor {
     /**
      * Check if a field is an ID-type field.
      */
-    private boolean isIDTypeField(DOField field) {
+    private boolean isIDTypeField(DODatabaseField field) {
         String typeName = field.getTypeName();
         return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
     }
@@ -163,8 +163,8 @@ public class DataExtractor {
     /**
      * Find a field by name using reflection (helper method).
      */
-    private DOField findFieldByName(Class<?> clazz, String fieldName) {
-        // This would need proper implementation based on your DOField structure
+    private DODatabaseField findFieldByName(Class<?> clazz, String fieldName) {
+        // This would need proper implementation based on your DODatabaseField structure
         // For now, returning null as placeholder
         return null;
     }

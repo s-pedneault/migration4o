@@ -1,7 +1,6 @@
 package migration4o.engine.resolvers;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.engine.DOEngine;
@@ -13,7 +12,7 @@ import migration4o.util.CollectionTypeUtil;
 
 public class DOReferenceResolver {
 
-    public void resolveReferences(DOClass targetClass, DOEngine engine) {
+    public void resolveReferences(DODatabaseClass targetClass, DOEngine engine) {
         if (targetClass == null || engine == null) {
             return;
         }
@@ -32,7 +31,9 @@ public class DOReferenceResolver {
             DOSchemaClass[] schemaClasses = schema.getClasses();
             if (schemaClasses != null) {
                 for (DOSchemaClass schemaClass : schemaClasses) {
-                    checkClassForReferences(targetClass, targetClassName, schemaClass);
+                    if (schemaClass.getDatabaseClass() != null) {
+                        checkClassForReferences(targetClass, targetClassName, schemaClass.getDatabaseClass());
+                    }
                 }
             }
         }
@@ -49,21 +50,23 @@ public class DOReferenceResolver {
         }
     }
 
-    private void checkClassForReferences(DOClass targetClass, String targetClassName, DOClass sourceClass) {
+    private void checkClassForReferences(DODatabaseClass targetClass, String targetClassName,
+            DODatabaseClass sourceClass) {
         if (sourceClass == null) {
             return;
         }
 
-        DOField[] fields = sourceClass.getFields();
+        DODatabaseField[] fields = sourceClass.getFields();
         if (fields != null) {
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 checkFieldForReference(targetClass, targetClassName, sourceClass, field);
             }
         }
     }
 
-    private void checkFieldForReference(DOClass targetClass, String targetClassName, DOClass sourceClass,
-            DOField field) {
+    private void checkFieldForReference(DODatabaseClass targetClass, String targetClassName,
+            DODatabaseClass sourceClass,
+            DODatabaseField field) {
         if (field == null) {
             return;
         }

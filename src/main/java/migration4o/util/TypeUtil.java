@@ -1,10 +1,10 @@
 package migration4o.util;
 
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 public class TypeUtil {
 
-    public static boolean isPrimitiveType(DOField field) {
+    public static boolean isPrimitiveType(DODatabaseField field) {
         if (field.isPrimitive())
             return true;
         String typeName = field.getTypeName();

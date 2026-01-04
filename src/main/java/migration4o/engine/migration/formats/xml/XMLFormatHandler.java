@@ -26,8 +26,7 @@ import migration4o.engine.migration.engine.FormattedValue;
 import migration4o.engine.migration.engine.HierarchicalFormatHandler;
 import migration4o.engine.migration.engine.ModuleExportContext;
 import migration4o.engine.migration.engine.ObjectExportContext;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -540,13 +539,13 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         writer.write("            <xs:sequence>\n");
 
         // Get all fields from the database class using the same logic as export
-        List<DOField> allFields = getAllFieldsFromDatabaseClass(
+        List<DODatabaseField> allFields = getAllFieldsFromDatabaseClass(
                 type.schemaClass.getDatabaseClass());
-        List<DOField> sortedFields = ExportUtils
+        List<DODatabaseField> sortedFields = ExportUtils
                 .sortFieldsForExport(allFields);
 
         // Generate field-specific elements with proper XSD types
-        for (DOField field : sortedFields) {
+        for (DODatabaseField field : sortedFields) {
             String xmlFieldName = toXmlFieldName(field.getName());
             String fieldTypeName = field.getTypeName();
 
@@ -664,12 +663,12 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     /**
      * Get all fields from a database class including inherited fields.
      */
-    private List<DOField> getAllFieldsFromDatabaseClass(
+    private List<DODatabaseField> getAllFieldsFromDatabaseClass(
             DODatabaseClass dbClass) {
-        List<DOField> allFields = new ArrayList<>();
+        List<DODatabaseField> allFields = new ArrayList<>();
 
         if (dbClass.getFields() != null) {
-            for (DOField field : dbClass.getFields()) {
+            for (DODatabaseField field : dbClass.getFields()) {
                 allFields.add(field);
             }
         }
@@ -901,7 +900,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         long objectId = getObjectId(obj, moduleContext.engine);
 
         // Get the class definition from schema or database
-        DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+        DODatabaseClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
                 moduleContext.engine.getSchema(),
                 moduleContext.engine.getDatabase());
 
@@ -911,20 +910,20 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         }
 
         // Get all DOFields from the class definition
-        DOField[] doFields = doClass.getFields();
+        DODatabaseField[] doFields = doClass.getFields();
         if (doFields == null || doFields.length == 0) {
             return;
         }
 
         // Sort fields using ExportUtils for consistent ordering and exclusions
-        List<DOField> sortedFields = ExportUtils.sortFieldsForExport(Arrays.asList(doFields));
+        List<DODatabaseField> sortedFields = ExportUtils.sortFieldsForExport(Arrays.asList(doFields));
 
         // Get container for field value extraction
         com.db4o.ext.ExtObjectContainer container = moduleContext.engine.getDatabase().getContainer();
         ObjectResolverUtil.activateObject(container, obj, objectId);
 
         // Export each field using ObjectResolverUtil
-        for (DOField doField : sortedFields) {
+        for (DODatabaseField doField : sortedFields) {
             try {
                 // Use ObjectResolverUtil to get field value properly from db4o object
                 Object fieldValue = ObjectResolverUtil.getFieldValue(container, obj, doField);
@@ -953,7 +952,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
     /**
      * Check if a field value should be considered empty and not exported.
      */
-    private boolean isEmptyFieldValue(Object value, DOField field) {
+    private boolean isEmptyFieldValue(Object value, DODatabaseField field) {
         if (value == null) {
             return true;
         }
@@ -988,15 +987,15 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         // Find the mID field value to use as the business ID (optional for embedded
         // objects)
         String businessId = null;
-        DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+        DODatabaseClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
                 moduleContext.engine.getSchema(),
                 moduleContext.engine.getDatabase());
 
         if (doClass != null) {
-            DOField[] doFields = doClass.getFields();
+            DODatabaseField[] doFields = doClass.getFields();
             if (doFields != null) {
                 com.db4o.ext.ExtObjectContainer container = moduleContext.engine.getDatabase().getContainer();
-                for (DOField field : doFields) {
+                for (DODatabaseField field : doFields) {
                     // Look for the mID field (ID type field)
                     String typeName = field.getTypeName();
                     if (typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"))) {
@@ -1055,7 +1054,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
         try {
             // ID objects have a mValeur field containing the numeric value
             String fullClassName = idObject.getClass().getName();
-            DOClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
+            DODatabaseClass doClass = ObjectResolverUtil.findClassDefinition(fullClassName,
                     null, // schema not needed for this lookup
                     null); // database not needed for this lookup
 
@@ -1075,9 +1074,9 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
             }
 
             // Find the mValeur field in the class definition
-            DOField[] fields = doClass.getFields();
+            DODatabaseField[] fields = doClass.getFields();
             if (fields != null) {
-                for (DOField field : fields) {
+                for (DODatabaseField field : fields) {
                     if ("mValeur".equals(field.getName())) {
                         Object valeur = ObjectResolverUtil.getFieldValue(container, idObject, field);
                         if (valeur instanceof Number) {
@@ -1289,7 +1288,7 @@ public class XMLFormatHandler extends HierarchicalFormatHandler {
      */
     private DODatabaseClass findDatabaseClass(String fullClassName, DOEngine engine) {
         // Look up the class definition in schema or database
-        DOClass doClass = ObjectResolverUtil.findClassDefinition(
+        DODatabaseClass doClass = ObjectResolverUtil.findClassDefinition(
                 fullClassName,
                 engine.getSchema(),
                 engine.getDatabase());

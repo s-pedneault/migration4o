@@ -15,8 +15,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
@@ -273,7 +272,7 @@ public class XMLDataExporter {
         writer.writeCharacters("\n");
 
         // Get the most specific class
-        DOClass mostSpecificClass = obj.getMostSpecificClass();
+        DODatabaseClass mostSpecificClass = obj.getMostSpecificClass();
 
         // Export all fields from the inheritance chain
         exportObjectFields(writer, obj, mostSpecificClass);
@@ -315,14 +314,14 @@ public class XMLDataExporter {
     /**
      * Export fields from a resolved DODatabaseObject.
      */
-    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DOClass clazz)
+    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DODatabaseClass clazz)
             throws XMLStreamException {
 
         if (clazz == null) {
             return;
         }
 
-        DOField[] fields = clazz.getFields();
+        DODatabaseField[] fields = clazz.getFields();
         if (fields == null) {
             return;
         }
@@ -337,7 +336,7 @@ public class XMLDataExporter {
         Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues = ObjectResolverUtil
                 .extractPrimitiveFieldValues(container, obj.getObjectId(), obj.getAllClasses());
 
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             exportField(writer, field, obj, actualObj, primitiveValues);
         }
 
@@ -345,7 +344,7 @@ public class XMLDataExporter {
         String superClassName = clazz.getSuperClassAbsoluteName();
         if (superClassName != null && !superClassName.equals("java.lang.Object")) {
             // Find parent class and export its fields
-            DOClass parentClass = findClassByName(superClassName);
+            DODatabaseClass parentClass = findClassByName(superClassName);
             if (parentClass != null) {
                 exportObjectFields(writer, obj, parentClass);
             }
@@ -358,14 +357,14 @@ public class XMLDataExporter {
     private void exportFieldsFromActualObject(XMLStreamWriter writer, Object actualObj,
             DODatabaseClass dbClass, Long objectId) throws XMLStreamException {
 
-        DOField[] fields = dbClass.getFields();
+        DODatabaseField[] fields = dbClass.getFields();
         if (fields == null) {
             return;
         }
 
         com.db4o.ext.ExtObjectContainer container = engine.getDatabase().getContainer();
 
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             Object fieldValue = ObjectResolverUtil.getFieldValue(container, actualObj, field);
             exportFieldValue(writer, field, fieldValue);
         }
@@ -374,7 +373,7 @@ public class XMLDataExporter {
     /**
      * Export a single field using schema-compliant format with field name cleaning.
      */
-    private void exportField(XMLStreamWriter writer, DOField field, DODatabaseObject obj, Object actualObj,
+    private void exportField(XMLStreamWriter writer, DODatabaseField field, DODatabaseObject obj, Object actualObj,
             Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues) throws XMLStreamException {
 
         String cleanedFieldName = cleanFieldName(field.getName());
@@ -425,7 +424,7 @@ public class XMLDataExporter {
     /**
      * Export a field value (for unreached objects).
      */
-    private void exportFieldValue(XMLStreamWriter writer, DOField field, Object value) throws XMLStreamException {
+    private void exportFieldValue(XMLStreamWriter writer, DODatabaseField field, Object value) throws XMLStreamException {
         if (value == null || isEmptyValue(value, field)) {
             return;
         }
@@ -453,7 +452,7 @@ public class XMLDataExporter {
      * optimization.
      * This helps reduce XML file size by omitting meaningless values.
      */
-    private boolean isEmptyValue(Object value, DOField field) {
+    private boolean isEmptyValue(Object value, DODatabaseField field) {
         if (value == null) {
             return true;
         }
@@ -505,7 +504,7 @@ public class XMLDataExporter {
     /**
      * Check if this is an ID-type field.
      */
-    private boolean isIDTypeField(DOField field) {
+    private boolean isIDTypeField(DODatabaseField field) {
         String typeName = field.getTypeName();
         return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
     }
@@ -513,7 +512,7 @@ public class XMLDataExporter {
     /**
      * Determine if zero values for this field are likely meaningless.
      */
-    private boolean isZeroMeaninglessField(DOField field) {
+    private boolean isZeroMeaninglessField(DODatabaseField field) {
         String fieldName = field.getName().toLowerCase();
         return fieldName.contains("annee") || // Year fields
                 fieldName.contains("year") ||
@@ -534,7 +533,7 @@ public class XMLDataExporter {
     /**
      * Export a collection field using schema-compliant format.
      */
-    private void exportCollection(XMLStreamWriter writer, DOField field, DODatabaseObject obj, Object actualObj,
+    private void exportCollection(XMLStreamWriter writer, DODatabaseField field, DODatabaseObject obj, Object actualObj,
             String cleanedFieldName)
             throws XMLStreamException {
 
@@ -667,7 +666,7 @@ public class XMLDataExporter {
     /**
      * Find a collection reference for a specific field in an object.
      */
-    private DOCollectionReference findCollectionReference(DODatabaseObject obj, DOField field) {
+    private DOCollectionReference findCollectionReference(DODatabaseObject obj, DODatabaseField field) {
         DOCollectionReference[] collections = obj.getCollections();
         if (collections == null) {
             return null;
@@ -685,7 +684,7 @@ public class XMLDataExporter {
     /**
      * Find a class by its absolute name.
      */
-    private DOClass findClassByName(String absoluteName) {
+    private DODatabaseClass findClassByName(String absoluteName) {
         for (DODatabaseClass dbClass : engine.getDatabase().getClasses()) {
             if (dbClass.getAbsoluteName().equals(absoluteName)) {
                 return dbClass;
@@ -743,7 +742,7 @@ public class XMLDataExporter {
     /**
      * Get the XML type for a field.
      */
-    private String getFieldType(DOField field) {
+    private String getFieldType(DODatabaseField field) {
         if (field.isPrimitive()) {
             String typeName = field.getTypeName();
             if (typeName == null)
@@ -768,7 +767,7 @@ public class XMLDataExporter {
     /**
      * Format field value for XML output.
      */
-    private String formatFieldValue(Object value, DOField field) {
+    private String formatFieldValue(Object value, DODatabaseField field) {
         if (value == null)
             return "";
 

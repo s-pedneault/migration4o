@@ -1,10 +1,10 @@
 package migration4o.util;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
@@ -87,19 +87,19 @@ public class ObjectResolverUtil {
     /**
      * Find class definition by name in schema or database
      */
-    public static DOClass findClassDefinition(String className, DOSchema schema, DODatabase database) {
+    public static DODatabaseClass findClassDefinition(String className, DOSchema schema, DODatabase database) {
         // Try schema first
         if (schema != null) {
-            for (DOClass schemaClass : schema.getClasses()) {
+            for (DOSchemaClass schemaClass : schema.getClasses()) {
                 if (className.equals(schemaClass.getAbsoluteName())) {
-                    return schemaClass;
+                    return schemaClass.getDatabaseClass();
                 }
             }
         }
 
         // Try database
         if (database != null) {
-            for (DOClass databaseClass : database.getClasses()) {
+            for (DODatabaseClass databaseClass : database.getClasses()) {
                 if (className.equals(databaseClass.getAbsoluteName())) {
                     return databaseClass;
                 }
@@ -165,9 +165,10 @@ public class ObjectResolverUtil {
     /**
      * Build complete inheritance chain for an object
      */
-    public static DOClass[] buildInheritanceChain(DOClass mostSpecificClass, DODatabaseClass databaseClass,
+    public static DODatabaseClass[] buildInheritanceChain(DODatabaseClass mostSpecificClass,
+            DODatabaseClass databaseClass,
             DOSchema schema, DODatabase database) {
-        List<DOClass> inheritanceChain = new ArrayList<>();
+        List<DODatabaseClass> inheritanceChain = new ArrayList<>();
 
         // Always include the most specific class first
         inheritanceChain.add(mostSpecificClass);
@@ -175,14 +176,15 @@ public class ObjectResolverUtil {
         if (databaseClass != null && !databaseClass.getInheritanceChain().isEmpty()) {
             // Add parent classes from inheritance chain
             for (DODatabaseClass parentDatabaseClass : databaseClass.getInheritanceChain()) {
-                DOClass parentClass = findClassDefinition(parentDatabaseClass.getAbsoluteName(), schema, database);
+                DODatabaseClass parentClass = findClassDefinition(parentDatabaseClass.getAbsoluteName(), schema,
+                        database);
                 if (parentClass != null) {
                     inheritanceChain.add(parentClass);
                 }
             }
         }
 
-        return inheritanceChain.toArray(new DOClass[0]);
+        return inheritanceChain.toArray(new DODatabaseClass[0]);
     }
 
     /**
@@ -262,7 +264,7 @@ public class ObjectResolverUtil {
     /**
      * Get field value using db4o APIs
      */
-    public static Object getFieldValue(ExtObjectContainer container, Object obj, DOField field) {
+    public static Object getFieldValue(ExtObjectContainer container, Object obj, DODatabaseField field) {
         try {
             String className = getObjectClassName(container, obj);
             StoredClass storedClass = container.ext().storedClass(className);
@@ -283,7 +285,7 @@ public class ObjectResolverUtil {
      * (Vector, ArrayList, Arrays, etc.)
      */
     public static CollectionExtractionResult extractUniversalCollectionContents(
-            ExtObjectContainer container, Object collectionObj, Long objectId, DOField field) {
+            ExtObjectContainer container, Object collectionObj, Long objectId, DODatabaseField field) {
         try {
             List<Long> containedIds = new ArrayList<>();
             String contentType = determineContentType(field, collectionObj);
@@ -356,7 +358,7 @@ public class ObjectResolverUtil {
     /**
      * Determine the content type of a collection
      */
-    private static String determineContentType(DOField field, Object collectionObj) {
+    private static String determineContentType(DODatabaseField field, Object collectionObj) {
         // First try to get from field definition
         if (field != null && field.getContentTypeName() != null) {
             return field.getContentTypeName();
@@ -394,10 +396,10 @@ public class ObjectResolverUtil {
      * Result of primitive field extraction
      */
     public static class PrimitiveFieldValue {
-        public final DOField field;
+        public final DODatabaseField field;
         public final Object value;
 
-        public PrimitiveFieldValue(DOField field, Object value) {
+        public PrimitiveFieldValue(DODatabaseField field, Object value) {
             this.field = field;
             this.value = value;
         }
@@ -416,7 +418,7 @@ public class ObjectResolverUtil {
     public static Map<String, PrimitiveFieldValue> extractPrimitiveFieldValues(
             ExtObjectContainer container,
             Long objectId,
-            DOClass[] allClasses) {
+            DODatabaseClass[] allClasses) {
         Map<String, PrimitiveFieldValue> fieldValues = new LinkedHashMap<>();
 
         try {
@@ -431,10 +433,10 @@ public class ObjectResolverUtil {
 
             // Collect primitive fields from the entire class hierarchy
             if (allClasses != null) {
-                for (DOClass dbClass : allClasses) {
-                    DOField[] fields = dbClass.getFields();
+                for (DODatabaseClass dbClass : allClasses) {
+                    DODatabaseField[] fields = dbClass.getFields();
                     if (fields != null) {
-                        for (DOField field : fields) {
+                        for (DODatabaseField field : fields) {
                             // Only include primitive types
                             if (TypeUtil.isPrimitiveType(field)) {
                                 try {

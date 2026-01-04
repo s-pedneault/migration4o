@@ -21,8 +21,7 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 import migration4o.engine.DOEngine;
 import migration4o.engine.migration.engine.ExportUtils;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
@@ -46,14 +45,14 @@ public class ExcelExportEngine {
      * or a flattened field from an ID-type object.
      */
     private static class ExportColumn {
-        final DOField field;
+        final DODatabaseField field;
         final String columnName;
         final boolean isFlattened;
-        final DOField flattenedParentField; // The ID-type field that contains this flattened field
+        final DODatabaseField flattenedParentField; // The ID-type field that contains this flattened field
         final DODatabaseClass flattenedSourceClass; // The class this flattened field comes from
 
         // Constructor for regular (non-flattened) fields
-        ExportColumn(DOField field, String columnName) {
+        ExportColumn(DODatabaseField field, String columnName) {
             this.field = field;
             this.columnName = columnName;
             this.isFlattened = false;
@@ -62,7 +61,7 @@ public class ExcelExportEngine {
         }
 
         // Constructor for flattened fields
-        ExportColumn(DOField field, String columnName, DOField parentField, DODatabaseClass sourceClass) {
+        ExportColumn(DODatabaseField field, String columnName, DODatabaseField parentField, DODatabaseClass sourceClass) {
             this.field = field;
             this.columnName = columnName;
             this.isFlattened = true;
@@ -192,10 +191,10 @@ public class ExcelExportEngine {
      * single-reference ID objects.
      */
     private List<ExportColumn> buildExportColumns(DODatabaseClass dbClass) {
-        List<DOField> allFields = getSortedFields(dbClass);
+        List<DODatabaseField> allFields = getSortedFields(dbClass);
         List<ExportColumn> columns = new ArrayList<>();
 
-        for (DOField field : allFields) {
+        for (DODatabaseField field : allFields) {
             if (isIDTypeField(field)) {
                 // Check if this ID type should be flattened
                 DODatabaseClass idTypeClass = findDatabaseClassByName(field.getTypeName());
@@ -210,9 +209,9 @@ public class ExcelExportEngine {
                     if (targetClass != null && !isClassExportedInSchema(targetClass)) {
                         // Flatten: Add all fields from the TARGET object (not the ID object)
                         String targetClassExportName = getExportNameForClass(targetClass);
-                        List<DOField> targetFields = getAllFields(targetClass);
+                        List<DODatabaseField> targetFields = getAllFields(targetClass);
 
-                        for (DOField targetField : targetFields) {
+                        for (DODatabaseField targetField : targetFields) {
                             // Skip ID-type fields within the flattened object to avoid infinite recursion
                             if (!isIDTypeField(targetField)) {
                                 String cleanedFieldName = cleanFieldName(targetField.getName());
@@ -358,7 +357,7 @@ public class ExcelExportEngine {
         }
     }
 
-    private boolean isIDTypeField(DOField field) {
+    private boolean isIDTypeField(DODatabaseField field) {
         String typeName = field.getTypeName();
         return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
     }
@@ -382,10 +381,10 @@ public class ExcelExportEngine {
     /**
      * Extract the mID value from an ID-type object.
      */
-    private Object extractMIdFromIDObject(com.db4o.ext.ExtObjectContainer container, Long idObjectId, DOClass idClass) {
+    private Object extractMIdFromIDObject(com.db4o.ext.ExtObjectContainer container, Long idObjectId, DODatabaseClass idClass) {
         try {
             if (idClass != null) {
-                DOClass[] idClasses = new DOClass[] { idClass };
+                DODatabaseClass[] idClasses = new DODatabaseClass[] { idClass };
                 Map<String, ObjectResolverUtil.PrimitiveFieldValue> idFieldValues = ObjectResolverUtil
                         .extractPrimitiveFieldValues(container, idObjectId, idClasses);
 
@@ -439,7 +438,7 @@ public class ExcelExportEngine {
      * For collections of primitives, exports the values directly.
      */
     private String formatCollectionForExport(com.db4o.ext.ExtObjectContainer container, Object collectionObj,
-            DOField field) {
+            DODatabaseField field) {
         try {
             StringBuilder result = new StringBuilder();
             int count = 0;
@@ -477,9 +476,9 @@ public class ExcelExportEngine {
                         ObjectResolverUtil.activateObject(container, item, itemId);
 
                         // Try to find the mID field
-                        DOClass itemClass = field.getContentTypeClass();
+                        DODatabaseClass itemClass = field.getContentTypeClass();
                         if (itemClass != null) {
-                            DOField mIdField = findMIdField(itemClass);
+                            DODatabaseField mIdField = findMIdField(itemClass);
                             if (mIdField != null) {
                                 Object mIdValue = ObjectResolverUtil.getFieldValue(container, item, mIdField);
                                 if (mIdValue != null && !"-1".equals(mIdValue.toString())) {
@@ -507,18 +506,18 @@ public class ExcelExportEngine {
      * Get all fields sorted with priority fields first, then non-collection fields,
      * then collection fields.
      */
-    private List<DOField> getSortedFields(DODatabaseClass dbClass) {
-        List<DOField> allFields = getAllFields(dbClass);
+    private List<DODatabaseField> getSortedFields(DODatabaseClass dbClass) {
+        List<DODatabaseField> allFields = getAllFields(dbClass);
         return ExportUtils.sortFieldsForExport(allFields);
     }
 
-    private List<DOField> getAllFields(DODatabaseClass dbClass) {
-        List<DOField> allFields = new ArrayList<>();
+    private List<DODatabaseField> getAllFields(DODatabaseClass dbClass) {
+        List<DODatabaseField> allFields = new ArrayList<>();
 
         // Traverse the class hierarchy manually using getParentClass()
         DODatabaseClass currentClass = dbClass;
         while (currentClass != null) {
-            DOField[] fields = currentClass.getFields();
+            DODatabaseField[] fields = currentClass.getFields();
             if (fields != null) {
                 allFields.addAll(Arrays.asList(fields));
             }
@@ -645,18 +644,18 @@ public class ExcelExportEngine {
     /**
      * Finds the mID field in an ID-type class.
      */
-    private DOField findMIdField(DOClass idClass) {
+    private DODatabaseField findMIdField(DODatabaseClass idClass) {
         if (idClass == null) {
             return null;
         }
 
-        DOField[] fields = idClass.getFields();
+        DODatabaseField[] fields = idClass.getFields();
         if (fields == null) {
             return null;
         }
 
         // Look for common ID field names
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             String fieldName = field.getName();
             if ("mID".equals(fieldName) || "mId".equals(fieldName) || "id".equals(fieldName)) {
                 return field;

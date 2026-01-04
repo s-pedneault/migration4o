@@ -1,7 +1,6 @@
 package migration4o.engine.report;
 
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.DOReference;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
@@ -87,7 +86,9 @@ public class DOEnginePrintout {
         for (int i = 0; i < classes.length; i++) {
             DOSchemaClass schemaClass = classes[i];
             System.out.println("[" + (i + 1) + "/" + classes.length + "] Schema Class:");
-            printClass(schemaClass, "  ");
+            if (schemaClass.getDatabaseClass() != null) {
+                printClass(schemaClass.getDatabaseClass(), "  ");
+            }
 
             // Print schema-specific information
             printSchemaClassInfo(schemaClass, "  ");
@@ -128,7 +129,7 @@ public class DOEnginePrintout {
         }
     }
 
-    private void printClass(DOClass clazz, String indent) {
+    private void printClass(DODatabaseClass clazz, String indent) {
         if (clazz == null) {
             System.out.println(indent + "Class is null");
             return;
@@ -143,10 +144,10 @@ public class DOEnginePrintout {
                 + (clazz.getSuperClassAbsoluteName() != null ? clazz.getSuperClassAbsoluteName() : "N/A"));
 
         // Print fields
-        DOField[] fields = clazz.getFields();
+        DODatabaseField[] fields = clazz.getFields();
         if (fields != null && fields.length > 0) {
             System.out.println(indent + "  Fields (" + fields.length + "):");
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 printField(field, clazz.getAbsoluteName(), indent + "    ");
             }
         } else {
@@ -167,7 +168,7 @@ public class DOEnginePrintout {
         System.out.println();
     }
 
-    private void printField(DOField field, String className, String indent) {
+    private void printField(DODatabaseField field, String className, String indent) {
         if (field == null) {
             System.out.println(indent + "Field is null");
             return;
@@ -189,7 +190,7 @@ public class DOEnginePrintout {
         }
 
         // Add type resolution status with appropriate emoji
-        DOClass typeClass = field.getTypeClass();
+        DODatabaseClass typeClass = field.getTypeClass();
         if (TypeUtil.isPrimitiveType(field)) {
             fieldInfo.append(" 🔧"); // Wrench emoji for primitive/supported types
         } else if (typeClass != null) {
@@ -207,7 +208,7 @@ public class DOEnginePrintout {
                     fieldInfo.append(" 📦🔧 ").append(contentTypeName); // Box + wrench for collection of primitives
                 } else {
                     // Content type is known and specific - consider it resolved regardless of
-                    // DOClass
+                    // DODatabaseClass
                     if (isContentTypeFullyResolved(contentTypeName)) {
                         fieldInfo.append(" 📦✅ ").append(contentTypeName); // Box + check for collection of resolved
                                                                            // types
@@ -259,8 +260,8 @@ public class DOEnginePrintout {
             return;
         }
 
-        DOClass referencedClass = reference.getReferencedClass();
-        DOField referencedField = reference.getReferencedField();
+        DODatabaseClass referencedClass = reference.getReferencedClass();
+        DODatabaseField referencedField = reference.getReferencedField();
 
         if (referencedClass != null && referencedField != null) {
             System.out.println(indent + "✅ " + referencedClass.getAbsoluteName() +

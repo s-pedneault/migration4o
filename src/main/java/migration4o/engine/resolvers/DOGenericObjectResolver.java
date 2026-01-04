@@ -1,6 +1,5 @@
 package migration4o.engine.resolvers;
 
-import migration4o.models.DOClass;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.engine.DOEngine;
@@ -53,7 +52,7 @@ public class DOGenericObjectResolver {
         return null;
     }
 
-    public DOClass resolveClass(GenericObject genericObject, DOEngine engine) {
+    public DODatabaseClass resolveClass(GenericObject genericObject, DOEngine engine) {
         if (genericObject == null || engine == null) {
             return null;
         }
@@ -62,8 +61,8 @@ public class DOGenericObjectResolver {
         DOSchema schema = engine.getSchema();
         if (schema != null) {
             DOSchemaClass schemaClass = resolveClass(genericObject, schema);
-            if (schemaClass != null) {
-                return schemaClass;
+            if (schemaClass != null && schemaClass.getDatabaseClass() != null) {
+                return schemaClass.getDatabaseClass();
             }
         }
 

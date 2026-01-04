@@ -1,5 +1,6 @@
 package migration4o.engine.migration.formats.xml;
 
+import migration4o.models.database.DODatabaseClass;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.HashSet;
@@ -10,8 +11,7 @@ import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamWriter;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -132,7 +132,7 @@ public class XMLSchemaGenerator {
                 writer.writeCharacters("\n        ");
                 writer.writeStartElement(XS_PREFIX, "element", XSD_NAMESPACE);
                 writer.writeAttribute("name", sanitizeName(className));
-                writer.writeAttribute("type", getTypeNameForClass(schemaClass));
+                writer.writeAttribute("type", getTypeNameForClass(schemaClass.getDatabaseClass()));
                 writer.writeAttribute("minOccurs", "0");
                 writer.writeAttribute("maxOccurs", "unbounded");
                 writer.writeCharacters("\n        ");
@@ -164,7 +164,7 @@ public class XMLSchemaGenerator {
         writer.writeComment(" Type for class: " + schemaClass.getAbsoluteName() + " ");
         writer.writeCharacters("\n  ");
         writer.writeStartElement(XS_PREFIX, "complexType", XSD_NAMESPACE);
-        writer.writeAttribute("name", getTypeNameForClass(schemaClass));
+        writer.writeAttribute("name", getTypeNameForClass(schemaClass.getDatabaseClass()));
 
         // Handle inheritance with extension
         String superClassName = schemaClass.getSuperClassAbsoluteName();
@@ -202,7 +202,8 @@ public class XMLSchemaGenerator {
      * Write the field sequence for a class.
      */
     private void writeFieldSequence(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
-        DOField[] fields = schemaClass.getFields();
+        DODatabaseField[] fields = schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getFields()
+                : null;
         if (fields == null || fields.length == 0) {
             return;
         }
@@ -210,7 +211,7 @@ public class XMLSchemaGenerator {
         writer.writeCharacters("\n        ");
         writer.writeStartElement(XS_PREFIX, "sequence", XSD_NAMESPACE);
 
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             generateFieldElement(writer, field);
         }
 
@@ -221,7 +222,7 @@ public class XMLSchemaGenerator {
     /**
      * Generate an element for a field.
      */
-    private void generateFieldElement(XMLStreamWriter writer, DOField field) throws XMLStreamException {
+    private void generateFieldElement(XMLStreamWriter writer, DODatabaseField field) throws XMLStreamException {
         writer.writeCharacters("\n          ");
         writer.writeStartElement(XS_PREFIX, "element", XSD_NAMESPACE);
         writer.writeAttribute("name", sanitizeName(field.getName()));
@@ -285,9 +286,9 @@ public class XMLSchemaGenerator {
     }
 
     /**
-     * Map a DOField to an XSD type.
+     * Map a DODatabaseField to an XSD type.
      */
-    private String mapToXsdType(DOField field) {
+    private String mapToXsdType(DODatabaseField field) {
         if (field.isPrimitive()) {
             return mapPrimitiveToXsd(field.getTypeName());
         }
@@ -297,7 +298,7 @@ public class XMLSchemaGenerator {
             // Array of objects - use object reference type
             String contentType = field.getContentTypeName();
             if (contentType != null) {
-                DOClass contentClass = field.getContentTypeClass();
+                DODatabaseClass contentClass = field.getContentTypeClass();
                 if (contentClass != null) {
                     return getTypeNameForClass(contentClass);
                 }
@@ -307,7 +308,7 @@ public class XMLSchemaGenerator {
         }
 
         // Single object reference
-        DOClass typeClass = field.getTypeClass();
+        DODatabaseClass typeClass = field.getTypeClass();
         if (typeClass != null) {
             return getTypeNameForClass(typeClass);
         }
@@ -366,7 +367,7 @@ public class XMLSchemaGenerator {
     /**
      * Get the XSD type name for a class.
      */
-    private String getTypeNameForClass(DOClass clazz) {
+    private String getTypeNameForClass(DODatabaseClass clazz) {
         return sanitizeName(clazz.getShortName()) + "Type";
     }
 

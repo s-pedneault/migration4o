@@ -1,6 +1,6 @@
 package migration4o.engine.migration.engine;
 
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 import java.text.Normalizer;
 import java.util.ArrayList;
@@ -41,7 +41,7 @@ public class ExportUtils {
     /**
      * Check if a field should be excluded from export.
      */
-    public static boolean shouldExcludeField(DOField field) {
+    public static boolean shouldExcludeField(DODatabaseField field) {
         if (field == null) {
             return true;
         }
@@ -64,13 +64,13 @@ public class ExportUtils {
      * 3. Collection fields (alphabetically sorted)
      * Excludes fields in EXCLUDED_FIELDS list.
      */
-    public static List<DOField> sortFieldsForExport(List<DOField> fields) {
-        List<DOField> priorityFields = new ArrayList<>();
-        List<DOField> nonCollectionFields = new ArrayList<>();
-        List<DOField> collectionFields = new ArrayList<>();
+    public static List<DODatabaseField> sortFieldsForExport(List<DODatabaseField> fields) {
+        List<DODatabaseField> priorityFields = new ArrayList<>();
+        List<DODatabaseField> nonCollectionFields = new ArrayList<>();
+        List<DODatabaseField> collectionFields = new ArrayList<>();
 
         // Categorize fields (excluding those in exclusion list)
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             // Skip excluded fields
             if (shouldExcludeField(field)) {
                 continue;
@@ -115,7 +115,7 @@ public class ExportUtils {
         collectionFields.sort((f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
 
         // Combine: priority fields first, then non-collection, then collection
-        List<DOField> sortedFields = new ArrayList<>();
+        List<DODatabaseField> sortedFields = new ArrayList<>();
         sortedFields.addAll(priorityFields);
         sortedFields.addAll(nonCollectionFields);
         sortedFields.addAll(collectionFields);
@@ -126,7 +126,7 @@ public class ExportUtils {
     /**
      * Check if a field is a collection type.
      */
-    private static boolean isCollectionField(DOField field) {
+    private static boolean isCollectionField(DODatabaseField field) {
         if (field == null) {
             return false;
         }

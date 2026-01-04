@@ -4,7 +4,7 @@ import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.engine.DOEngine;
 import migration4o.engine.resolvers.DOObjectReachabilityTracker;
 
@@ -113,10 +113,11 @@ public class DatabaseAnalyzer {
         }
 
         List<String> references = new ArrayList<>();
-        DOField[] fields = schemaClass.getFields();
+        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+        DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
 
         if (fields != null) {
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 String fieldType = field.getTypeName();
 
                 if (isReferenceType(fieldType)) {

@@ -1,6 +1,6 @@
 package migration4o.util;
 
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 /**
  * Utility class for detecting and working with collection types.
@@ -15,7 +15,7 @@ public class CollectionTypeUtil {
      * @param field The field to check
      * @return true if the field is a collection type
      */
-    public static boolean isCollection(DOField field) {
+    public static boolean isCollection(DODatabaseField field) {
         if (field == null) {
             return false;
         }
@@ -61,7 +61,7 @@ public class CollectionTypeUtil {
      * @param field The collection field
      * @return The content type name, or null if it cannot be determined
      */
-    public static String getCollectionContentType(DOField field) {
+    public static String getCollectionContentType(DODatabaseField field) {
         if (field == null || !isCollection(field)) {
             return null;
         }

@@ -1,16 +1,16 @@
 package migration4o.models.database;
 
 import migration4o.models.database.DOCollectionReference;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 public class DOCollectionReference {
     private final Long sourceObjectId;
-    private final DOField field;
+    private final DODatabaseField field;
     private final Long[] containedObjectIds;
     private final String resolvedContentType;
     private final int size;
 
-    public DOCollectionReference(Long sourceObjectId, DOField field,
+    public DOCollectionReference(Long sourceObjectId, DODatabaseField field,
             Long[] containedObjectIds, String resolvedContentType, int size) {
         this.sourceObjectId = sourceObjectId;
         this.field = field;
@@ -23,7 +23,7 @@ public class DOCollectionReference {
         return sourceObjectId;
     }
 
-    public DOField getField() {
+    public DODatabaseField getField() {
         return field;
     }
 

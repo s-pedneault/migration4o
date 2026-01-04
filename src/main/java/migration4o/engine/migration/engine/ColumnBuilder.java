@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -26,10 +26,10 @@ public class ColumnBuilder {
      * This includes regular fields, ID fields, and flattened fields.
      */
     public List<ExportColumn> buildColumns(DODatabaseClass dbClass) {
-        List<DOField> sortedFields = getSortedFields(dbClass);
+        List<DODatabaseField> sortedFields = getSortedFields(dbClass);
         List<ExportColumn> columns = new ArrayList<>();
 
-        for (DOField field : sortedFields) {
+        for (DODatabaseField field : sortedFields) {
             if (isIDTypeField(field)) {
                 addIDFieldColumns(columns, field, dbClass);
             } else {
@@ -43,7 +43,7 @@ public class ColumnBuilder {
     /**
      * Add columns for an ID-type field (may create multiple flattened columns).
      */
-    private void addIDFieldColumns(List<ExportColumn> columns, DOField field, DODatabaseClass dbClass) {
+    private void addIDFieldColumns(List<ExportColumn> columns, DODatabaseField field, DODatabaseClass dbClass) {
         // Check if this ID type should be flattened
         DODatabaseClass idTypeClass = findDatabaseClassByName(field.getTypeName());
 
@@ -57,7 +57,7 @@ public class ColumnBuilder {
     /**
      * Add a regular non-ID field column.
      */
-    private void addRegularFieldColumn(List<ExportColumn> columns, DOField field) {
+    private void addRegularFieldColumn(List<ExportColumn> columns, DODatabaseField field) {
         String cleanedFieldName = cleanFieldName(field.getName());
         columns.add(new ExportColumn(field, cleanedFieldName));
     }
@@ -65,7 +65,7 @@ public class ColumnBuilder {
     /**
      * Add an ID field as a simple reference (mID value).
      */
-    private void addIDReferenceColumn(List<ExportColumn> columns, DOField field) {
+    private void addIDReferenceColumn(List<ExportColumn> columns, DODatabaseField field) {
         String cleanedFieldName = cleanFieldName(field.getName());
         columns.add(new ExportColumn(field, cleanedFieldName));
     }
@@ -73,7 +73,7 @@ public class ColumnBuilder {
     /**
      * Add flattened columns for fields from the target object.
      */
-    private void addFlattenedColumns(List<ExportColumn> columns, DOField parentField, DODatabaseClass idTypeClass) {
+    private void addFlattenedColumns(List<ExportColumn> columns, DODatabaseField parentField, DODatabaseClass idTypeClass) {
         DODatabaseClass targetClass = findTargetClassForIDType(idTypeClass);
 
         if (targetClass == null) {
@@ -83,9 +83,9 @@ public class ColumnBuilder {
         }
 
         String targetClassExportName = getExportNameForClass(targetClass);
-        List<DOField> targetFields = getAllFields(targetClass);
+        List<DODatabaseField> targetFields = getAllFields(targetClass);
 
-        for (DOField targetField : targetFields) {
+        for (DODatabaseField targetField : targetFields) {
             // Skip ID-type fields within the flattened object to avoid infinite recursion
             if (!isIDTypeField(targetField)) {
                 String cleanedFieldName = cleanFieldName(targetField.getName());
@@ -111,19 +111,19 @@ public class ColumnBuilder {
      * Get all fields sorted with priority fields first, then non-collection fields,
      * then collection fields.
      */
-    private List<DOField> getSortedFields(DODatabaseClass dbClass) {
-        List<DOField> allFields = getAllFields(dbClass);
+    private List<DODatabaseField> getSortedFields(DODatabaseClass dbClass) {
+        List<DODatabaseField> allFields = getAllFields(dbClass);
         return ExportUtils.sortFieldsForExport(allFields);
     }
 
     /**
      * Get all fields for a database class (including inherited fields).
      */
-    private List<DOField> getAllFields(DODatabaseClass dbClass) {
-        List<DOField> allFields = new ArrayList<>();
+    private List<DODatabaseField> getAllFields(DODatabaseClass dbClass) {
+        List<DODatabaseField> allFields = new ArrayList<>();
 
         if (dbClass.getFields() != null) {
-            for (DOField field : dbClass.getFields()) {
+            for (DODatabaseField field : dbClass.getFields()) {
                 allFields.add(field);
             }
         }
@@ -139,7 +139,7 @@ public class ColumnBuilder {
     /**
      * Check if a field is an ID-type field.
      */
-    private boolean isIDTypeField(DOField field) {
+    private boolean isIDTypeField(DODatabaseField field) {
         String typeName = field.getTypeName();
         return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
     }

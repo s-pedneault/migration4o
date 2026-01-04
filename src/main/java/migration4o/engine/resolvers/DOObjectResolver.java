@@ -16,14 +16,14 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
 import migration4o.models.database.DOObjectReference;
 import migration4o.models.database.DOReferenceType;
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.util.CollectionTypeUtil;
 import migration4o.util.ObjectResolverUtil;
@@ -281,7 +281,7 @@ public class DOObjectResolver {
         result.add(startClass);
 
         // Add all parent classes (walk up the inheritance chain)
-        DOClass parent = startClass;
+        DODatabaseClass parent = startClass;
         while (parent != null && parent.getSuperClassAbsoluteName() != null &&
                 !parent.getSuperClassAbsoluteName().isEmpty()) {
             // Find the parent class in the database
@@ -311,7 +311,7 @@ public class DOObjectResolver {
             return false;
         }
 
-        DOClass current = testClass;
+        DODatabaseClass current = testClass;
         while (current != null && current.getSuperClassAbsoluteName() != null &&
                 !current.getSuperClassAbsoluteName().isEmpty()) {
             if (current.getSuperClassAbsoluteName().equals(potentialParent.getAbsoluteName())) {
@@ -536,10 +536,11 @@ public class DOObjectResolver {
             }
 
             // Use dbClass directly as the classDefinition to maintain object identity
-            DOClass classDefinition = dbClass;
+            DODatabaseClass classDefinition = dbClass;
 
             // Build complete inheritance chain for this object
-            DOClass[] allClasses = ObjectResolverUtil.buildInheritanceChain(classDefinition, dbClass, schema, database);
+            DODatabaseClass[] allClasses = ObjectResolverUtil.buildInheritanceChain(classDefinition, dbClass, schema,
+                    database);
 
             // Extract direct object references (pass database for ID-type handling)
             DOObjectReference[] directRefs = extractDirectReferences(container, resolvedObj, objectId, classDefinition,
@@ -579,7 +580,11 @@ public class DOObjectResolver {
         GenericObject genericObj = (GenericObject) obj;
 
         // Use the existing GenericObjectResolver to get class information
-        DOClass resolvedClass = genericObjectResolver.resolveClass(genericObj, schema);
+        DODatabaseClass resolvedClass = null;
+        DOSchemaClass schemaClass = genericObjectResolver.resolveClass(genericObj, schema);
+        if (schemaClass != null) {
+            resolvedClass = schemaClass.getDatabaseClass();
+        }
         if (resolvedClass == null) {
             resolvedClass = genericObjectResolver.resolveClass(genericObj, database);
         }
@@ -676,7 +681,7 @@ public class DOObjectResolver {
                 Long referencedId = ref.getTargetObjectId();
                 if (referencedId != null && !processedObjectIds.contains(referencedId)) {
                     // Get the database class from the field type (may be null for synthetic refs)
-                    DOClass fieldTypeClass = ref.getField() != null ? ref.getField().getTypeClass() : null;
+                    DODatabaseClass fieldTypeClass = ref.getField() != null ? ref.getField().getTypeClass() : null;
                     DODatabaseClass referencedClass = (fieldTypeClass instanceof DODatabaseClass)
                             ? (DODatabaseClass) fieldTypeClass
                             : null;
@@ -715,7 +720,7 @@ public class DOObjectResolver {
                 Long[] containedIds = collRef.getContainedObjectIds();
                 if (containedIds != null) {
                     // Get the database class from the collection's content type (may be null)
-                    DOClass contentTypeClass = collRef.getField().getContentTypeClass();
+                    DODatabaseClass contentTypeClass = collRef.getField().getContentTypeClass();
                     DODatabaseClass containedClass = (contentTypeClass instanceof DODatabaseClass)
                             ? (DODatabaseClass) contentTypeClass
                             : null;
@@ -781,7 +786,7 @@ public class DOObjectResolver {
         Map<DODatabaseClass, List<DODatabaseObject>> objectsByClass = new HashMap<>();
 
         for (DODatabaseObject obj : allResolvedObjects) {
-            DOClass mostSpecificClass = obj.getMostSpecificClass();
+            DODatabaseClass mostSpecificClass = obj.getMostSpecificClass();
             // Most specific class should always be a DODatabaseClass for resolved objects
             if (mostSpecificClass instanceof DODatabaseClass) {
                 DODatabaseClass dbClass = (DODatabaseClass) mostSpecificClass;
@@ -812,7 +817,7 @@ public class DOObjectResolver {
      * Extract direct object references from an object
      */
     private DOObjectReference[] extractDirectReferences(ExtObjectContainer container, Object obj,
-            Long objectId, DOClass classDefinition, DODatabase database) {
+            Long objectId, DODatabaseClass classDefinition, DODatabase database) {
         List<DOObjectReference> references = new ArrayList<>();
 
         try {
@@ -821,9 +826,9 @@ public class DOObjectResolver {
             String shortClassName = classDefinition.getShortName();
             if (shortClassName != null && shortClassName.startsWith("ID") && shortClassName.length() > 2) {
                 // This IS an ID-type object - find its mID field and create reference to target
-                DOField[] fields = classDefinition.getFields();
+                DODatabaseField[] fields = classDefinition.getFields();
                 if (fields != null) {
-                    for (DOField field : fields) {
+                    for (DODatabaseField field : fields) {
                         // Match field names: mID, mId, or anything starting with "mID" (like
                         // mIDClassif, mIDUsagePrincipal)
                         String fieldName = field.getName();
@@ -856,12 +861,12 @@ public class DOObjectResolver {
             }
 
             // Normal processing for non-ID objects
-            DOField[] fields = classDefinition.getFields();
+            DODatabaseField[] fields = classDefinition.getFields();
             if (fields == null) {
                 return new DOObjectReference[0];
             }
 
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 if (CollectionTypeUtil.isCollection(field)) {
                     continue; // Skip collections, they're handled separately
                 }
@@ -894,7 +899,7 @@ public class DOObjectResolver {
      * handling
      */
     private DOCollectionReference[] extractCollectionReferences(ExtObjectContainer container, Object obj,
-            Long objectId, DOClass classDefinition) {
+            Long objectId, DODatabaseClass classDefinition) {
         List<DOCollectionReference> references = new ArrayList<>();
 
         try {
@@ -905,7 +910,7 @@ public class DOObjectResolver {
                 if (result != null) {
                     // Create field for standalone collection objects
                     String collectionType = ObjectResolverUtil.getObjectClassName(container, obj);
-                    DOField collectionField = new DOField("collection_elements", "Collection elements",
+                    DODatabaseField collectionField = new DODatabaseField("collection_elements", "Collection elements",
                             collectionType, null, false, true, result.contentType, null);
 
                     DOCollectionReference collectionRef = new DOCollectionReference(
@@ -917,12 +922,12 @@ public class DOObjectResolver {
             }
 
             // Extract collection references from fields
-            DOField[] fields = classDefinition.getFields();
+            DODatabaseField[] fields = classDefinition.getFields();
             if (fields == null) {
                 return new DOCollectionReference[0];
             }
 
-            for (DOField field : fields) {
+            for (DODatabaseField field : fields) {
                 if (!CollectionTypeUtil.isCollection(field)) {
                     continue; // Only process collection fields
                 }
@@ -1058,7 +1063,7 @@ public class DOObjectResolver {
             }
 
             // Find the mID field (could be "mID", "mId", or similar)
-            DOField mIdField = findMIdField(idObject.getMostSpecificClass());
+            DODatabaseField mIdField = findMIdField(idObject.getMostSpecificClass());
             if (mIdField == null) {
                 return;
             }
@@ -1105,18 +1110,18 @@ public class DOObjectResolver {
     /**
      * Finds the mID field in an ID-type class.
      */
-    private DOField findMIdField(DOClass idClass) {
+    private DODatabaseField findMIdField(DODatabaseClass idClass) {
         if (idClass == null) {
             return null;
         }
 
-        DOField[] fields = idClass.getFields();
+        DODatabaseField[] fields = idClass.getFields();
         if (fields == null) {
             return null;
         }
 
         // Look for common ID field names
-        for (DOField field : fields) {
+        for (DODatabaseField field : fields) {
             String fieldName = field.getName();
             if ("mID".equals(fieldName) || "mId".equals(fieldName) || "id".equals(fieldName)) {
                 return field;
@@ -1130,7 +1135,7 @@ public class DOObjectResolver {
      * Determines the target entity class for an ID-type class.
      * E.g., IDEmploye -> Employe, IDEntite -> Entite
      */
-    private DODatabaseClass findTargetClassForIDType(DOClass idClass, DODatabase database) {
+    private DODatabaseClass findTargetClassForIDType(DODatabaseClass idClass, DODatabase database) {
         if (idClass == null || database == null) {
             return null;
         }

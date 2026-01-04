@@ -4,8 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import migration4o.engine.DOEngine;
-import migration4o.models.DOClass;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
@@ -20,14 +19,15 @@ public class DOFieldResolver {
         }
 
         // Build a map of class name to class object for quick lookup
-        Map<String, DOClass> classMap = new HashMap<>();
+        Map<String, DODatabaseClass> classMap = new HashMap<>();
 
         // Add schema classes to the map
         DOSchema schema = engine.getSchema();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass != null && schemaClass.getAbsoluteName() != null) {
-                    classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+                if (schemaClass != null && schemaClass.getAbsoluteName() != null
+                        && schemaClass.getDatabaseClass() != null) {
+                    classMap.put(schemaClass.getAbsoluteName(), schemaClass.getDatabaseClass());
                 }
             }
         }
@@ -46,7 +46,9 @@ public class DOFieldResolver {
         // Resolve field types for schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                resolveFieldTypesForClass(schemaClass, classMap);
+                if (schemaClass.getDatabaseClass() != null) {
+                    resolveFieldTypesForClass(schemaClass.getDatabaseClass(), classMap);
+                }
             }
         }
 
@@ -58,19 +60,19 @@ public class DOFieldResolver {
         }
     }
 
-    private void resolveFieldTypesForClass(DOClass clazz, Map<String, DOClass> classMap) {
+    private void resolveFieldTypesForClass(DODatabaseClass clazz, Map<String, DODatabaseClass> classMap) {
         if (clazz == null || clazz.getFields() == null) {
             return;
         }
 
-        for (DOField field : clazz.getFields()) {
-            if (field instanceof DOField) {
-                DOField fieldImpl = (DOField) field;
+        for (DODatabaseField field : clazz.getFields()) {
+            if (field instanceof DODatabaseField) {
+                DODatabaseField fieldImpl = (DODatabaseField) field;
 
                 // Resolve the main field type
                 String typeName = field.getTypeName();
                 if (typeName != null && !typeName.isEmpty()) {
-                    DOClass typeClass = classMap.get(typeName);
+                    DODatabaseClass typeClass = classMap.get(typeName);
                     if (typeClass != null) {
                         fieldImpl.setTypeClass(typeClass);
                     }
@@ -80,7 +82,7 @@ public class DOFieldResolver {
                 if (CollectionTypeUtil.isCollection(field)) {
                     String contentTypeName = CollectionTypeUtil.getCollectionContentType(field);
                     if (contentTypeName != null && !contentTypeName.isEmpty()) {
-                        DOClass contentTypeClass = classMap.get(contentTypeName);
+                        DODatabaseClass contentTypeClass = classMap.get(contentTypeName);
                         if (contentTypeClass != null) {
                             fieldImpl.setContentTypeClass(contentTypeClass);
                             // System.out.println("DEBUG: Resolved content type class for " +

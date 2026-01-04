@@ -1,12 +1,22 @@
 package migration4o.models.database;
 
-import migration4o.models.DOField;
-import migration4o.models.DOClass;
+import migration4o.models.database.DODatabaseField;
+import migration4o.models.DOReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
 
-public class DODatabaseClass extends DOClass {
+public class DODatabaseClass {
+    // Base class attributes
+    private final String absoluteName;
+    private final String shortName;
+    private final String description;
+    private final String title;
+    private final String superClassAbsoluteName;
+    private final DODatabaseField[] fields;
+    private final List<DOReference> referenceList;
+
+    // Database-specific attributes
     private int totalObjectCount;
     private int migratedObjectCount;
     private DODatabaseObject[] resolvedObjects;
@@ -22,8 +32,15 @@ public class DODatabaseClass extends DOClass {
 
     public DODatabaseClass(String absoluteName, String shortName, String description, String title,
             String superClassAbsoluteName,
-            DOField[] fields, int totalObjectCount, int migratedObjectCount) {
-        super(absoluteName, shortName, description, title, superClassAbsoluteName, fields);
+            DODatabaseField[] fields, int totalObjectCount, int migratedObjectCount) {
+        this.absoluteName = absoluteName;
+        this.shortName = shortName;
+        this.description = description;
+        this.title = title;
+        this.superClassAbsoluteName = superClassAbsoluteName;
+        this.fields = fields != null ? fields : new DODatabaseField[0];
+        this.referenceList = new ArrayList<>();
+
         this.totalObjectCount = totalObjectCount;
         this.migratedObjectCount = migratedObjectCount;
         this.resolvedObjects = new DODatabaseObject[0];
@@ -34,6 +51,53 @@ public class DODatabaseClass extends DOClass {
         this.inheritanceChain = new Vector<DODatabaseClass>();
     }
 
+    // Base class getters
+    public String getAbsoluteName() {
+        return absoluteName;
+    }
+
+    public String getShortName() {
+        return shortName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getSuperClassAbsoluteName() {
+        return superClassAbsoluteName;
+    }
+
+    public DODatabaseField[] getFields() {
+        return fields;
+    }
+
+    public DOReference[] getReferences() {
+        return referenceList.toArray(new DOReference[0]);
+    }
+
+    public void setReferences(DOReference[] references) {
+        referenceList.clear();
+        if (references != null) {
+            for (DOReference ref : references) {
+                if (ref != null) {
+                    referenceList.add(ref);
+                }
+            }
+        }
+    }
+
+    public void addReference(DOReference reference) {
+        if (reference != null) {
+            referenceList.add(reference);
+        }
+    }
+
+    // Database-specific getters and setters
     public int getTotalObjectCount() {
         return totalObjectCount;
     }

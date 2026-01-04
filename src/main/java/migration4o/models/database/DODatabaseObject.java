@@ -1,20 +1,18 @@
 package migration4o.models.database;
 
-import migration4o.models.DOClass;
-
 public class DODatabaseObject {
     private final Long objectId;
-    private final DOClass mostSpecificClass;
-    private final DOClass[] allClasses;
+    private final DODatabaseClass mostSpecificClass;
+    private final DODatabaseClass[] allClasses;
     private final DOObjectReference[] references;
     private final DOCollectionReference[] collections;
     private boolean reachable;
 
-    public DODatabaseObject(Long objectId, DOClass mostSpecificClass, DOClass[] allClasses,
+    public DODatabaseObject(Long objectId, DODatabaseClass mostSpecificClass, DODatabaseClass[] allClasses,
             DOObjectReference[] references, DOCollectionReference[] collections) {
         this.objectId = objectId;
         this.mostSpecificClass = mostSpecificClass;
-        this.allClasses = allClasses != null ? allClasses : new DOClass[0];
+        this.allClasses = allClasses != null ? allClasses : new DODatabaseClass[0];
         this.references = references != null ? references : new DOObjectReference[0];
         this.collections = collections != null ? collections : new DOCollectionReference[0];
         this.reachable = false;
@@ -24,11 +22,11 @@ public class DODatabaseObject {
         return objectId;
     }
 
-    public DOClass getMostSpecificClass() {
+    public DODatabaseClass getMostSpecificClass() {
         return mostSpecificClass;
     }
 
-    public DOClass[] getAllClasses() {
+    public DODatabaseClass[] getAllClasses() {
         return allClasses;
     }
 

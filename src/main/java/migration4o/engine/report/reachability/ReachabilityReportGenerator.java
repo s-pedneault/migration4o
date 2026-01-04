@@ -15,7 +15,7 @@ import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
 import migration4o.models.database.DOObjectReference;
 import migration4o.models.database.DOCollectionReference;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;
@@ -368,7 +368,7 @@ public class ReachabilityReportGenerator {
             htmlWriter.openTag("div", "class='reference-list'");
 
             for (DOObjectReference ref : references) {
-                DOField field = ref.getField();
+                DODatabaseField field = ref.getField();
                 Long targetId = ref.getTargetObjectId();
 
                 if (targetId != null) {
@@ -476,7 +476,7 @@ public class ReachabilityReportGenerator {
             htmlWriter.openTag("div", "class='reference-list'");
 
             for (DOCollectionReference collRef : collections) {
-                DOField field = collRef.getField();
+                DODatabaseField field = collRef.getField();
                 Long[] containedIds = collRef.getContainedObjectIds();
 
                 if (field != null && containedIds != null && containedIds.length > 0) {
@@ -567,7 +567,7 @@ public class ReachabilityReportGenerator {
 
                 for (java.util.Map.Entry<String, ObjectResolverUtil.PrimitiveFieldValue> entry : fieldValues
                         .entrySet()) {
-                    DOField field = entry.getValue().field;
+                    DODatabaseField field = entry.getValue().field;
                     Object value = entry.getValue().value;
 
                     // Format the value for display

@@ -10,7 +10,7 @@ import migration4o.engine.resolvers.DOObjectReachabilityTracker;
 import migration4o.engine.resolvers.DOObjectResolver;
 import migration4o.engine.resolvers.DOReferenceResolver;
 import migration4o.engine.resolvers.DOSchemaToDatabaseClassResolver;
-import migration4o.models.DOField;
+import migration4o.models.database.DODatabaseField;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
@@ -110,10 +110,12 @@ public class DOEngine {
         // Step 3: Resolve references between classes
         DOReferenceResolver referenceResolver = new DOReferenceResolver();
 
-        // Resolve references for all schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                referenceResolver.resolveReferences(schemaClass, this);
+                DODatabaseClass databaseClass = schemaClass.getDatabaseClass();
+                if (databaseClass != null) {
+                    referenceResolver.resolveReferences(databaseClass, this);
+                }
             }
         }
 
@@ -174,9 +176,9 @@ public class DOEngine {
             java.util.Set<String> referencedTypesInThisClass = new java.util.HashSet<>();
 
             // Get all fields including inherited ones
-            java.util.List<DOField> allFields = getAllFieldsForClass(dbClass);
+            java.util.List<DODatabaseField> allFields = getAllFieldsForClass(dbClass);
 
-            for (DOField field : allFields) {
+            for (DODatabaseField field : allFields) {
                 String typeName = field.getTypeName();
                 // Check if this is an ID-type field
                 if (typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"))) {
@@ -216,14 +218,14 @@ public class DOEngine {
     /**
      * Helper method to get all fields for a class including inherited fields.
      */
-    private java.util.List<DOField> getAllFieldsForClass(
+    private java.util.List<DODatabaseField> getAllFieldsForClass(
             DODatabaseClass dbClass) {
-        java.util.List<DOField> allFields = new java.util.ArrayList<>();
+        java.util.List<DODatabaseField> allFields = new java.util.ArrayList<>();
 
         // Traverse the class hierarchy
         DODatabaseClass currentClass = dbClass;
         while (currentClass != null) {
-            DOField[] fields = currentClass.getFields();
+            DODatabaseField[] fields = currentClass.getFields();
             if (fields != null) {
                 allFields.addAll(java.util.Arrays.asList(fields));
             }
