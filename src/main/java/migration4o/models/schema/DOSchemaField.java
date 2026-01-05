@@ -2,94 +2,79 @@
 package migration4o.models.schema;
 
 import migration4o.models.database.DODatabaseClass;
+import migration4o.util.TypeUtil;
 
 public class DOSchemaField {
-    private String name;
-    private String description;
-    private String typeName;
-    private DODatabaseClass typeClass;
-    private boolean isArray;
-    private boolean isPrimitive;
-    private String contentTypeName;
-    private DODatabaseClass contentTypeClass;
-    private final String exportName;
+    private final String source;
+    private final String destinationName;
+    private final boolean isExported;
+    private final boolean skipIfEmpty;
+    private final boolean isCollection;
+    private final boolean embedContents;
+    private final String childrenClassName;
 
-    public DOSchemaField(String name, String description, String typeName, DODatabaseClass typeClass,
-            boolean isPrimitive,
-            boolean isArray,
-            String contentTypeName, DODatabaseClass contentTypeClass, String exportName) {
-        this.name = name;
-        this.description = description;
-        this.typeName = typeName;
-        this.typeClass = typeClass;
-        this.isPrimitive = isPrimitive;
-        this.isArray = isArray;
-        this.contentTypeName = contentTypeName;
-        this.contentTypeClass = contentTypeClass;
-        this.exportName = exportName;
+    private DODatabaseClass databaseClass;
+    private DOSchemaClass childrenSchemaClass;
+
+    public DOSchemaField(String source, String destinationName, boolean isExported, boolean skipIfEmpty,
+            boolean isCollection, boolean embedContents,
+            String childrenClassName, DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
+        this.source = source;
+        this.destinationName = destinationName;
+        this.isExported = isExported;
+        this.skipIfEmpty = skipIfEmpty;
+        this.isCollection = isCollection;
+        this.embedContents = embedContents;
+        this.childrenClassName = childrenClassName;
+        this.databaseClass = databaseClass;
+        this.childrenSchemaClass = childrenSchemaClass;
     }
 
-    public String getName() {
-        return name;
+    public String getSource() {
+        return source;
     }
 
-    public void setName(String name) {
-        this.name = name;
+    public String getDestinationName() {
+        return destinationName;
     }
 
-    public String getDescription() {
-        return description;
+    public boolean isExported() {
+        return isExported;
     }
 
-    public void setDescription(String description) {
-        this.description = description;
+    public boolean isSkipIfEmpty() {
+        return skipIfEmpty;
     }
 
-    public String getTypeName() {
-        return typeName;
+    public boolean isCollection() {
+        return isCollection;
     }
 
-    public void setTypeName(String typeName) {
-        this.typeName = typeName;
+    public boolean isEmbedContents() {
+        return embedContents;
     }
 
-    public DODatabaseClass getTypeClass() {
-        return typeClass;
+    public String getChildrenClassName() {
+        return childrenClassName;
     }
 
-    public void setTypeClass(DODatabaseClass typeClass) {
-        this.typeClass = typeClass;
+    public DODatabaseClass getDatabaseClass() {
+        return databaseClass;
+    }
+
+    public void setDatabaseClass(DODatabaseClass databaseClass) {
+        this.databaseClass = databaseClass;
+    }
+
+    public DOSchemaClass getChildrenSchemaClass() {
+        return childrenSchemaClass;
+    }
+
+    public void setChildrenSchemaClass(DOSchemaClass childrenSchemaClass) {
+        this.childrenSchemaClass = childrenSchemaClass;
     }
 
     public boolean isPrimitive() {
-        return isPrimitive;
-    }
-
-    public boolean isArray() {
-        return isArray;
-    }
-
-    public void setArray(boolean array) {
-        isArray = array;
-    }
-
-    public String getContentTypeName() {
-        return contentTypeName;
-    }
-
-    public void setContentTypeName(String contentTypeName) {
-        this.contentTypeName = contentTypeName;
-    }
-
-    public DODatabaseClass getContentTypeClass() {
-        return contentTypeClass;
-    }
-
-    public void setContentTypeClass(DODatabaseClass contentTypeClass) {
-        this.contentTypeClass = contentTypeClass;
-    }
-
-    public String getExportName() {
-        return exportName;
+        return TypeUtil.isPrimitiveType(source);
     }
 }

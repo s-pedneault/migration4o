@@ -1,17 +1,16 @@
 
 package migration4o.models.schema;
 
-import migration4o.models.schema.DOSchemaField;
-import migration4o.models.DOReference;
-import migration4o.models.database.DODatabaseClass;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import migration4o.models.DOReference;
+import migration4o.models.database.DODatabaseClass;
+
 public class DOSchemaClass {
-    private final String sourceName;
+    private final String source;
     private final String destinationName;
-    private final String parentClass;
+    private final String parentClassName;
     private final boolean migrate;
     private final String title;
     private final String description;
@@ -19,24 +18,24 @@ public class DOSchemaClass {
     private final List<DOReference> referenceList;
     private DODatabaseClass databaseClass;
 
-    public DOSchemaClass(String sourceName, String destinationName, String parentClass,
+    public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {
-        this(sourceName, destinationName, null, title, parentClass, fields, migrate);
+        this(source, destinationName, null, title, parentClassName, fields, migrate);
     }
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
-            String superClassAbsoluteName,
+            String parentClassName,
             DOSchemaField[] fields, String exportName) {
         this(absoluteName, exportName != null ? exportName : simpleName, description, title,
-                superClassAbsoluteName, fields, true);
+                parentClassName, fields, true);
     }
 
-    private DOSchemaClass(String sourceName, String destinationName, String description, String title,
-            String parentClass, DOSchemaField[] fields, boolean migrate) {
-        this.sourceName = sourceName;
+    private DOSchemaClass(String source, String destinationName, String description, String title,
+            String parentClassName, DOSchemaField[] fields, boolean migrate) {
+        this.source = source;
         this.destinationName = destinationName;
         this.description = description;
-        this.parentClass = parentClass;
+        this.parentClassName = parentClassName;
         this.migrate = migrate;
         this.title = title;
         this.fields = fields != null ? fields : new DOSchemaField[0];
@@ -44,7 +43,7 @@ public class DOSchemaClass {
     }
 
     public String getSourceName() {
-        return sourceName;
+        return source;
     }
 
     public String getDestinationName() {
@@ -52,7 +51,7 @@ public class DOSchemaClass {
     }
 
     public String getParentClass() {
-        return parentClass;
+        return parentClassName;
     }
 
     public boolean isMigrate() {
@@ -60,7 +59,7 @@ public class DOSchemaClass {
     }
 
     public String getAbsoluteName() {
-        return sourceName;
+        return source;
     }
 
     public String getShortName() {
@@ -68,7 +67,7 @@ public class DOSchemaClass {
     }
 
     public String getSuperClassAbsoluteName() {
-        return parentClass;
+        return parentClassName;
     }
 
     public String getTitle() {

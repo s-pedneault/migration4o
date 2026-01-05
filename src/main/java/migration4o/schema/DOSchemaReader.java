@@ -95,7 +95,7 @@ public class DOSchemaReader {
     private DOSchemaClass parseClass(Element classElement) {
         String absoluteName = classElement.getAttribute("name");
         String simpleName = classElement.getAttribute("simpleName");
-        String parentClass = classElement.getAttribute("parentClass");
+        String parentClassName = classElement.getAttribute("parentClass");
         String description = classElement.getAttribute("description");
         String title = classElement.getAttribute("title");
         String exportName = simpleName.isEmpty() ? getSimpleClassName(absoluteName) : simpleName;
@@ -112,24 +112,36 @@ public class DOSchemaReader {
 
         DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
 
-        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClass, fields,
+        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClassName, fields,
                 exportName);
     }
 
     private DOSchemaField parseField(Element fieldElement) {
+        String source = fieldElement.getAttribute("sourceName");
+        String destinationName = fieldElement.getAttribute("destinationName");
+        String migrate = fieldElement.getAttribute("migrate");
+        String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
+        String collection = fieldElement.getAttribute("collection");
+        String embedContents = fieldElement.getAttribute("embedContents");
+
         String name = fieldElement.getAttribute("name");
-        String type = fieldElement.getAttribute("type");
+        String childrenClass = fieldElement.getAttribute("childrenClass");
         String children = fieldElement.getAttribute("children");
-        String description = fieldElement.getAttribute("description");
-        String primitive = fieldElement.getAttribute("primitive");
-        String exportName = name;
 
-        boolean isArray = !children.isEmpty();
-        boolean isPrimitive = "true".equalsIgnoreCase(primitive);
-        String contentTypeName = isArray ? children : null;
+        if (source.isEmpty())
+            source = name;
+        if (destinationName.isEmpty())
+            destinationName = name;
 
-        return new DOSchemaField(name, description, type, null, isPrimitive, isArray, contentTypeName, null,
-                exportName);
+        boolean isExported = "true".equalsIgnoreCase(migrate);
+        boolean isSkipIfEmpty = "true".equalsIgnoreCase(skipIfEmpty);
+        boolean isCollection = "true".equalsIgnoreCase(collection);
+        boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
+
+        String childrenClassName = !childrenClass.isEmpty() ? childrenClass : (!children.isEmpty() ? children : null);
+
+        return new DOSchemaField(source, destinationName, isExported, isSkipIfEmpty,
+                isCollection, isEmbedContents, childrenClassName, null, null);
     }
 
     private DOSchemaClass[] extractAllClasses(DOSchemaModule[] modules, DOSchemaClass[] foundationClasses) {

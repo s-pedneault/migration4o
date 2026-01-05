@@ -67,7 +67,7 @@ public class DatabaseUtil {
         }
 
         for (DOSchemaField field : schemaClass.getFields()) {
-            if (fieldName.equals(field.getName())) {
+            if (fieldName.equals(field.getSource())) {
                 return field;
             }
         }
@@ -87,8 +87,8 @@ public class DatabaseUtil {
 
         String contentTypeName = null;
         if (isCollection) {
-            if (schemaField != null && schemaField.getContentTypeName() != null) {
-                contentTypeName = schemaField.getContentTypeName();
+            if (schemaField != null && schemaField.getChildrenClassName() != null) {
+                contentTypeName = schemaField.getChildrenClassName();
                 System.out.println("Enhanced field " + fieldName + " with schema content type: " + contentTypeName);
             } else {
                 contentTypeName = CollectionTypeUtil.extractContentTypeFromTypeName(typeName, isArray);

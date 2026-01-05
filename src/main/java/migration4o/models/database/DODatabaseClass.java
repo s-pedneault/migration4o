@@ -1,10 +1,10 @@
 package migration4o.models.database;
 
-import migration4o.models.database.DODatabaseField;
-import migration4o.models.DOReference;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Vector;
+
+import migration4o.models.DOReference;
 
 public class DODatabaseClass {
     // Base class attributes
