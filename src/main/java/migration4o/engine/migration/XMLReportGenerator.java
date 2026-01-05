@@ -1,4 +1,4 @@
-package migration4o.engine.migration.formats.xml;
+package migration4o.engine.migration;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

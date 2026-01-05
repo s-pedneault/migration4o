@@ -1,4 +1,4 @@
-package migration4o.engine.migration.formats.xml;
+package migration4o.engine.migration;
 
 import migration4o.models.database.DODatabaseClass;
 import java.io.FileOutputStream;

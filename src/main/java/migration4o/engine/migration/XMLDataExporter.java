@@ -1,10 +1,7 @@
-package migration4o.engine.migration.formats.xml;
+package migration4o.engine.migration;
 
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -20,6 +17,7 @@ import migration4o.models.database.DOCollectionReference;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseObject;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.util.ObjectResolverUtil;
 
@@ -33,7 +31,6 @@ public class XMLDataExporter {
     private final String namespace;
     private final String targetNamespace = "http://migration4o/schema";
     private final Set<Long> exportedObjectIds = new HashSet<>();
-    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
 
     public XMLDataExporter(DOEngine engine, String namespace) {
         this.engine = engine;
@@ -68,13 +65,17 @@ public class XMLDataExporter {
 
             if (module.getClasses() != null) {
                 for (DOSchemaClass schemaClass : module.getClasses()) {
+                    // Only export classes that are marked for migration
+                    if (!schemaClass.isMigrate()) {
+                        continue;
+                    }
                     writer.writeCharacters("    ");
                     writer.writeStartElement("type");
                     writer.writeAttribute("name", schemaClass.getShortName());
                     writer.writeAttribute("class",
                             schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getAbsoluteName()
                                     : schemaClass.getShortName());
-                    writer.writeAttribute("module", sanitizeName(module.getName()));
+                    writer.writeAttribute("module", XMLExportUtils.sanitizeName(module.getName()));
                     writer.writeEndElement();
                     writer.writeCharacters("\n");
                 }
@@ -91,7 +92,7 @@ public class XMLDataExporter {
 
             writer.writeCharacters("    ");
             writer.writeStartElement("module");
-            writer.writeAttribute("name", sanitizeName(module.getName()));
+            writer.writeAttribute("name", XMLExportUtils.sanitizeName(module.getName()));
             writer.writeCharacters("\n");
 
             writer.writeCharacters("      ");
@@ -101,7 +102,10 @@ public class XMLDataExporter {
             // Export objects for each class in the module
             if (module.getClasses() != null) {
                 for (DOSchemaClass schemaClass : module.getClasses()) {
-                    exportClassObjects(writer, schemaClass);
+                    // Only export classes that are marked for migration
+                    if (schemaClass.isMigrate()) {
+                        exportClassObjects(writer, schemaClass);
+                    }
                 }
             }
 
@@ -238,7 +242,7 @@ public class XMLDataExporter {
         // Export ALL objects from this class using new format
         for (DODatabaseObject obj : objects) {
             if (obj.isReachable()) { // Only export reachable objects in module sections
-                exportObject(writer, obj, typeName, true);
+                exportObject(writer, obj, typeName, schemaClass, true);
             }
         }
     }
@@ -249,9 +253,11 @@ public class XMLDataExporter {
      * @param writer        The XML writer
      * @param obj           The object to export
      * @param typeName      The type name to use
+     * @param schemaClass   The schema class (for field filtering)
      * @param trackExported Whether to track this as exported (to avoid duplicates)
      */
-    private void exportObject(XMLStreamWriter writer, DODatabaseObject obj, String typeName, boolean trackExported)
+    private void exportObject(XMLStreamWriter writer, DODatabaseObject obj, String typeName, DOSchemaClass schemaClass,
+            boolean trackExported)
             throws XMLStreamException {
 
         Long objectId = obj.getObjectId();
@@ -275,7 +281,7 @@ public class XMLDataExporter {
         DODatabaseClass mostSpecificClass = obj.getMostSpecificClass();
 
         // Export all fields from the inheritance chain
-        exportObjectFields(writer, obj, mostSpecificClass);
+        exportObjectFields(writer, obj, mostSpecificClass, schemaClass);
 
         writer.writeCharacters("        ");
         writer.writeEndElement(); // object
@@ -314,7 +320,8 @@ public class XMLDataExporter {
     /**
      * Export fields from a resolved DODatabaseObject.
      */
-    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DODatabaseClass clazz)
+    private void exportObjectFields(XMLStreamWriter writer, DODatabaseObject obj, DODatabaseClass clazz,
+            DOSchemaClass schemaClass)
             throws XMLStreamException {
 
         if (clazz == null) {
@@ -337,6 +344,10 @@ public class XMLDataExporter {
                 .extractPrimitiveFieldValues(container, obj.getObjectId(), obj.getAllClasses());
 
         for (DODatabaseField field : fields) {
+            // Check if this field should be exported according to schema
+            if (schemaClass != null && !shouldExportField(field, schemaClass)) {
+                continue;
+            }
             exportField(writer, field, obj, actualObj, primitiveValues);
         }
 
@@ -346,7 +357,9 @@ public class XMLDataExporter {
             // Find parent class and export its fields
             DODatabaseClass parentClass = findClassByName(superClassName);
             if (parentClass != null) {
-                exportObjectFields(writer, obj, parentClass);
+                // Note: We pass null for schemaClass in parent to avoid double-filtering
+                // The schema should define fields at the appropriate level
+                exportObjectFields(writer, obj, parentClass, null);
             }
         }
     }
@@ -376,18 +389,19 @@ public class XMLDataExporter {
     private void exportField(XMLStreamWriter writer, DODatabaseField field, DODatabaseObject obj, Object actualObj,
             Map<String, ObjectResolverUtil.PrimitiveFieldValue> primitiveValues) throws XMLStreamException {
 
-        String cleanedFieldName = cleanFieldName(field.getName());
+        String cleanedFieldName = XMLExportUtils.cleanFieldName(field.getName());
 
         // Check if it's in primitive values
         ObjectResolverUtil.PrimitiveFieldValue primitiveValue = primitiveValues.get(field.getName());
 
-        if (primitiveValue != null && primitiveValue.value != null && !isEmptyValue(primitiveValue.value, field)) {
+        if (primitiveValue != null && primitiveValue.value != null
+                && !XMLExportUtils.isEmptyValue(primitiveValue.value, field)) {
             // Export primitive value with schema-compliant format
             writer.writeCharacters("          ");
             writer.writeStartElement("field");
             writer.writeAttribute("name", cleanedFieldName);
-            writer.writeAttribute("type", getFieldType(field));
-            writer.writeCharacters(formatFieldValue(primitiveValue.value, field));
+            writer.writeAttribute("type", XMLExportUtils.getFieldType(field));
+            writer.writeCharacters(XMLExportUtils.formatFieldValue(primitiveValue.value, field));
             writer.writeEndElement();
             writer.writeCharacters("\n");
             return;
@@ -412,7 +426,8 @@ public class XMLDataExporter {
                     writer.writeStartElement("field");
                     writer.writeAttribute("name", cleanedFieldName);
                     writer.writeAttribute("type", "reference");
-                    writer.writeAttribute("targetType", getSimpleTypeName(fieldValue.getClass().getName()));
+                    writer.writeAttribute("targetType",
+                            XMLExportUtils.getSimpleTypeName(fieldValue.getClass().getName()));
                     writer.writeCharacters(String.valueOf(refObjectId));
                     writer.writeEndElement();
                     writer.writeCharacters("\n");
@@ -424,13 +439,14 @@ public class XMLDataExporter {
     /**
      * Export a field value (for unreached objects).
      */
-    private void exportFieldValue(XMLStreamWriter writer, DODatabaseField field, Object value) throws XMLStreamException {
-        if (value == null || isEmptyValue(value, field)) {
+    private void exportFieldValue(XMLStreamWriter writer, DODatabaseField field, Object value)
+            throws XMLStreamException {
+        if (value == null || XMLExportUtils.isEmptyValue(value, field)) {
             return;
         }
 
         writer.writeCharacters("    ");
-        writer.writeStartElement(sanitizeName(field.getName()));
+        writer.writeStartElement(XMLExportUtils.sanitizeName(field.getName()));
 
         if (field.isPrimitive() || value instanceof String || value instanceof Number || value instanceof Boolean) {
             writer.writeCharacters(String.valueOf(value));
@@ -445,89 +461,6 @@ public class XMLDataExporter {
 
         writer.writeEndElement();
         writer.writeCharacters("\n");
-    }
-
-    /**
-     * Check if a value should be considered empty and skipped for XML export
-     * optimization.
-     * This helps reduce XML file size by omitting meaningless values.
-     */
-    private boolean isEmptyValue(Object value, DODatabaseField field) {
-        if (value == null) {
-            return true;
-        }
-
-        if (value instanceof String) {
-            String strValue = ((String) value).trim();
-            return strValue.isEmpty();
-        }
-
-        if (value instanceof Number) {
-            Number numValue = (Number) value;
-            double doubleValue = numValue.doubleValue();
-
-            // Skip -1 values for ID fields (indicates no reference)
-            if (isIDTypeField(field) && numValue.intValue() == -1) {
-                return true;
-            }
-
-            // Skip 0 values for specific field types that are likely meaningless when zero
-            if (isZeroMeaninglessField(field) && doubleValue == 0.0) {
-                return true;
-            }
-
-            // Skip SSI fields with -1 (they indicate no reference)
-            String fieldName = field.getName().toLowerCase();
-            if (fieldName.contains("ssi") && numValue.intValue() == -1) {
-                return true;
-            }
-        }
-
-        if (value instanceof Date) {
-            Date dateValue = (Date) value;
-            // Skip default dates like 1900-01-01 which are often placeholders
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(dateValue);
-            if (cal.get(Calendar.YEAR) <= 1900) {
-                return true;
-            }
-        }
-
-        if (value instanceof Boolean) {
-            // Keep all boolean values as they are meaningful
-            return false;
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if this is an ID-type field.
-     */
-    private boolean isIDTypeField(DODatabaseField field) {
-        String typeName = field.getTypeName();
-        return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
-    }
-
-    /**
-     * Determine if zero values for this field are likely meaningless.
-     */
-    private boolean isZeroMeaninglessField(DODatabaseField field) {
-        String fieldName = field.getName().toLowerCase();
-        return fieldName.contains("annee") || // Year fields
-                fieldName.contains("year") ||
-                fieldName.contains("nbr") || // Count fields
-                fieldName.contains("count") ||
-                fieldName.contains("aire") || // Area fields
-                fieldName.contains("area") ||
-                fieldName.contains("valeur") || // Value fields
-                fieldName.contains("value") ||
-                fieldName.contains("idetage") || // ID fields that are zero
-                fieldName.contains("idauteur") ||
-                fieldName.contains("idexterne") ||
-                fieldName.contains("entite") || // Entity fusion fields
-                fieldName.contains("fusion") ||
-                fieldName.contains("jpa"); // JPA ID fields
     }
 
     /**
@@ -664,6 +597,29 @@ public class XMLDataExporter {
     // }
 
     /**
+     * Check if a database field should be exported according to the schema.
+     * Matches the database field to its corresponding schema field and checks the
+     * isExported flag.
+     */
+    private boolean shouldExportField(DODatabaseField dbField, DOSchemaClass schemaClass) {
+        if (schemaClass == null || schemaClass.getFields() == null) {
+            return true; // Export all fields if no schema filtering available
+        }
+
+        // Try to match database field to schema field by name
+        String dbFieldName = dbField.getName();
+        for (DOSchemaField schemaField : schemaClass.getFields()) {
+            // Match by source name (the database field name)
+            if (schemaField.getSource().equals(dbFieldName)) {
+                return schemaField.isExported();
+            }
+        }
+
+        // If no schema field found, default to exporting
+        return true;
+    }
+
+    /**
      * Find a collection reference for a specific field in an object.
      */
     private DOCollectionReference findCollectionReference(DODatabaseObject obj, DODatabaseField field) {
@@ -691,101 +647,5 @@ public class XMLDataExporter {
             }
         }
         return null;
-    }
-
-    /**
-     * Sanitize a name for XML.
-     */
-    private String sanitizeName(String name) {
-        if (name == null) {
-            return "unnamed";
-        }
-        return name.replaceAll("[^a-zA-Z0-9_.-]", "_");
-    }
-
-    /**
-     * Clean field names by removing 'm' prefix and converting to camelCase.
-     */
-    private String cleanFieldName(String fieldName) {
-        if (fieldName == null) {
-            return fieldName;
-        }
-
-        String cleaned = fieldName;
-
-        // Remove leading 'm' from mXxx pattern
-        if (cleaned.length() > 1 && cleaned.startsWith("m") && Character.isUpperCase(cleaned.charAt(1))) {
-            cleaned = cleaned.substring(1);
-        }
-
-        // Special handling for ID fields
-        if (cleaned.equals("ID")) {
-            return "id";
-        }
-        if (cleaned.equals("IDSSI")) {
-            return "idssi";
-        }
-
-        // Handle IDPrefix patterns (e.g., IDDossPrev -> idDossPrev)
-        if (cleaned.startsWith("ID") && cleaned.length() > 2 && Character.isUpperCase(cleaned.charAt(2))) {
-            cleaned = "id" + cleaned.substring(2);
-        }
-
-        // Convert to camelCase (first letter lowercase)
-        if (cleaned.length() > 0) {
-            cleaned = Character.toLowerCase(cleaned.charAt(0)) + cleaned.substring(1);
-        }
-
-        return cleaned;
-    }
-
-    /**
-     * Get the XML type for a field.
-     */
-    private String getFieldType(DODatabaseField field) {
-        if (field.isPrimitive()) {
-            String typeName = field.getTypeName();
-            if (typeName == null)
-                return "string";
-
-            if (typeName.equals("int") || typeName.equals("java.lang.Integer"))
-                return "int";
-            if (typeName.equals("long") || typeName.equals("java.lang.Long"))
-                return "long";
-            if (typeName.equals("double") || typeName.equals("java.lang.Double"))
-                return "double";
-            if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean"))
-                return "boolean";
-            if (typeName.equals("java.util.Date"))
-                return "date";
-
-            return "string";
-        }
-        return "reference";
-    }
-
-    /**
-     * Format field value for XML output.
-     */
-    private String formatFieldValue(Object value, DODatabaseField field) {
-        if (value == null)
-            return "";
-
-        if (value instanceof Date && getFieldType(field).equals("date")) {
-            return dateFormat.format((Date) value);
-        }
-
-        return String.valueOf(value);
-    }
-
-    /**
-     * Get simple type name from full class name.
-     */
-    private String getSimpleTypeName(String className) {
-        if (className == null)
-            return "Unknown";
-
-        int lastDot = className.lastIndexOf('.');
-        return lastDot >= 0 ? className.substring(lastDot + 1) : className;
     }
 }

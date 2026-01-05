@@ -1,8 +1,7 @@
 package migration4o;
 
 import migration4o.engine.DOEngine;
-import migration4o.engine.migration.engine.DOGenericExportEngine;
-import migration4o.engine.migration.formats.xml.XMLFormatHandler;
+import migration4o.engine.migration.XMLMigrationEngine;
 
 public class Migration4o {
     public static void main(String[] args) {
@@ -15,7 +14,8 @@ public class Migration4o {
 
             // Export database to XML files with schema and report
             System.out.println("\n=== EXPORTING TO XML ===");
-            DOGenericExportEngine.export(engine, new XMLFormatHandler());
+            XMLMigrationEngine xmlEngine = new XMLMigrationEngine();
+            xmlEngine.exportToXML(engine);
             System.out.println("XML migration export completed successfully!");
 
         } catch (Exception e) {

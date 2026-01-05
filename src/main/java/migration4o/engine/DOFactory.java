@@ -1,7 +1,6 @@
 package migration4o.engine;
 
-import migration4o.engine.migration.formats.excel.ExcelExportEngine;
-import migration4o.engine.migration.formats.xml.XMLMigrationEngine;
+import migration4o.engine.migration.XMLMigrationEngine;
 import migration4o.engine.report.DOObjectTreeReportGenerator;
 import migration4o.engine.report.DOStructureReportGenerator;
 import migration4o.engine.report.reachability.ReachabilityReportGenerator;
@@ -39,15 +38,6 @@ public class DOFactory {
     }
 
     /**
-     * Create a new instance of ExcelExportEngine.
-     * 
-     * @return A new ExcelExportEngine instance
-     */
-    public static ExcelExportEngine createExcelExportEngine() {
-        return new ExcelExportEngine();
-    }
-
-    /**
      * Create a new instance of XMLMigrationEngine.
      * 
      * @return A new XMLMigrationEngine instance
@@ -55,6 +45,4 @@ public class DOFactory {
     public static XMLMigrationEngine createXMLMigrationEngine() {
         return new XMLMigrationEngine();
     }
-
-    // Note: DOGenericExportEngine uses static methods, no factory method needed
 }

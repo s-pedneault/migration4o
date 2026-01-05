@@ -1,18 +1,19 @@
-package migration4o.engine.migration.formats.xml;
+package migration4o.engine.migration;
 
 import java.io.File;
 import java.io.IOException;
+import java.text.Normalizer;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 import migration4o.engine.DOEngine;
-import migration4o.engine.migration.engine.ExportUtils;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaModule;
 
 /**
- * Implementation of XML migration engine.
- * Orchestrates schema generation, data export, and report generation.
+ * Streamlined XML export engine.
+ * Orchestrates schema generation, data export, and report generation for XML
+ * format only.
  */
 public class XMLMigrationEngine {
 
@@ -59,7 +60,7 @@ public class XMLMigrationEngine {
         // Export one file per module
         for (DOSchemaModule module : schema.getModules()) {
             String moduleFilePath = dataDir.getAbsolutePath() + "/"
-                    + ExportUtils.sanitizeModuleName(module.getName()) + ".xml";
+                    + sanitizeModuleName(module.getName()) + ".xml";
             dataExporter.exportModule(module, moduleFilePath);
             System.out.println("Module exported: " + module.getName());
         }
@@ -80,6 +81,38 @@ public class XMLMigrationEngine {
     }
 
     /**
-     * Sanitize a filename by replacing problematic characters.
+     * Remove accents from text by normalizing and removing diacritical marks.
      */
+    private static String removeAccents(String text) {
+        if (text == null) {
+            return "";
+        }
+        String normalized = Normalizer.normalize(text, Normalizer.Form.NFD);
+        return normalized.replaceAll("\\p{InCombiningDiacriticalMarks}+", "");
+    }
+
+    /**
+     * Sanitize a module name for use as a file name.
+     * Removes or replaces characters that are not valid in file names.
+     */
+    private static String sanitizeModuleName(String moduleName) {
+        if (moduleName == null || moduleName.trim().isEmpty()) {
+            return "unnamed_module";
+        }
+
+        // Remove accents first
+        String withoutAccents = removeAccents(moduleName.trim());
+
+        // Replace spaces and special characters with underscores
+        String sanitized = withoutAccents
+                .replaceAll("[\\s\\-\\.]", "_")
+                .replaceAll("[^a-zA-Z0-9_]", "");
+
+        // Ensure it's not empty
+        if (sanitized.isEmpty()) {
+            sanitized = "module";
+        }
+
+        return sanitized;
+    }
 }
