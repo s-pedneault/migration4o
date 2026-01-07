@@ -1831,7 +1831,7 @@
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" embedContents="true" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.horaire.Horaire" destinationName="Horaire" isExported="true">
+    <class source="gest.horaire.Horaire" destinationName="Horaire" isExported="true" parentClass="gest.gen.EntiteContientID">
         <field name="mID" type="int" indexed="true"/>
         <field name="mStatut" type="int" indexed="true"/>
         <field source="mVectEtape" destinationName="vectEtape" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenClass="gest.processus.Etape"/>

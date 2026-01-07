@@ -31,6 +31,7 @@ public class SchemaEditorPanel extends JPanel {
     private DefaultTableModel fieldsTableModel;
     private JLabel statusLabel;
     private SchemaTreeNode currentSelectedNode;
+    private String currentFilter = "";
 
     public SchemaEditorPanel(String schemaFilePath) {
         this.schemaFilePath = schemaFilePath;
@@ -131,13 +132,24 @@ public class SchemaEditorPanel extends JPanel {
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
         JTextField searchField = new JTextField();
-        searchField.putClientProperty("JTextField.placeholderText", "Search classes...");
+        searchField.putClientProperty("JTextField.placeholderText", "Filter classes...");
 
-        JButton searchButton = new JButton("Search");
-        searchButton.addActionListener(e -> searchTree(searchField.getText()));
+        // Add document listener to filter as user types
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                filterTree(searchField.getText());
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                filterTree(searchField.getText());
+            }
+
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                filterTree(searchField.getText());
+            }
+        });
 
         panel.add(searchField, BorderLayout.CENTER);
-        panel.add(searchButton, BorderLayout.EAST);
 
         return panel;
     }
@@ -147,37 +159,46 @@ public class SchemaEditorPanel extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Fields"));
 
         // Create table model
-        String[] columnNames = { "Field Name", "Source", "Destination", "Exported", "Skip If Empty", "Collection",
+        String[] columnNames = { "Source", "Destination", "Exported", "Skip If Empty", "Collection",
                 "Embed Contents", "Children Class" };
         fieldsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false; // Read-only for now
+                // Source (column 0) is read-only, everything else is editable
+                return column != 0;
             }
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 3 || columnIndex == 4 || columnIndex == 5 || columnIndex == 6) {
+                if (columnIndex == 2 || columnIndex == 3 || columnIndex == 4 || columnIndex == 5) {
                     return Boolean.class;
                 }
                 return String.class;
             }
         };
 
+        // Add table model listener to track changes
+        fieldsTableModel.addTableModelListener(e -> {
+            if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
+                markModified();
+            }
+        });
+
         fieldsTable = new JTable(fieldsTableModel);
         fieldsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fieldsTable.getTableHeader().setReorderingAllowed(false);
 
         // Set column widths
-        fieldsTable.getColumnModel().getColumn(0).setPreferredWidth(150);
-        fieldsTable.getColumnModel().getColumn(1).setPreferredWidth(200);
-        fieldsTable.getColumnModel().getColumn(2).setPreferredWidth(150);
-        fieldsTable.getColumnModel().getColumn(3).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(4).setPreferredWidth(100);
-        fieldsTable.getColumnModel().getColumn(5).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(6).setPreferredWidth(120);
-        fieldsTable.getColumnModel().getColumn(7).setPreferredWidth(150);
-
+        fieldsTable.getColumnModel().getColumn(0).setPreferredWidth(200);
+        fieldsTable.getColumnModel().getColumn(1).setPreferredWidth(150);
+        fieldsTable.getColumnModel().getColumn(2).setPreferredWidth(80);
+        fieldsTable.getColumnModel().getColumn(3).setPreferredWidth(100);
+        fieldsTable.getColumnModel().getColumn(4).setPreferredWidth(80);
+        fieldsTable.getColumnModel().getColumn(5).setPreferredWidth(120);
+        fieldsTable.getColumnModel().getColumn(6).setPreferredWidth(150);
+        // Add Children Class dropdown editor for last column
+        JComboBox<String> childrenClassCombo = createChildrenClassComboBox();
+        fieldsTable.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(childrenClassCombo));
         JScrollPane scrollPane = new JScrollPane(fieldsTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -222,38 +243,116 @@ public class SchemaEditorPanel extends JPanel {
         SchemaTreeNode rootNode = (SchemaTreeNode) treeModel.getRoot();
         rootNode.removeAllChildren();
 
-        if (schema == null || schema.getModules() == null) {
+        if (schema == null || schema.getClasses() == null) {
             treeModel.reload();
             return;
         }
 
-        // Add modules
-        for (DOSchemaModule module : schema.getModules()) {
-            SchemaTreeNode moduleNode = new SchemaTreeNode(
-                    module.getName(),
-                    NodeType.MODULE,
-                    module);
-            rootNode.add(moduleNode);
-
-            // Add classes
-            if (module.getClasses() != null) {
-                for (DOSchemaClass schemaClass : module.getClasses()) {
-                    String className = schemaClass.getShortName();
-                    if (!schemaClass.isMigrate()) {
-                        className += " (not exported)";
-                    }
-
-                    SchemaTreeNode classNode = new SchemaTreeNode(
-                            className,
-                            NodeType.CLASS,
-                            schemaClass);
-                    moduleNode.add(classNode);
-                }
+        // Filter classes first
+        List<DOSchemaClass> filteredClasses = new ArrayList<>();
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (matchesFilter(schemaClass)) {
+                filteredClasses.add(schemaClass);
             }
+        }
+
+        // Build class name to class map for quick lookup
+        java.util.Map<String, DOSchemaClass> classMap = new java.util.HashMap<>();
+        for (DOSchemaClass schemaClass : filteredClasses) {
+            classMap.put(schemaClass.getShortName(), schemaClass);
+            // Also map by absolute name for parent lookups
+            if (schemaClass.getAbsoluteName() != null) {
+                classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+            }
+        }
+
+        // Build parent-to-children map
+        java.util.Map<String, List<DOSchemaClass>> childrenMap = new java.util.HashMap<>();
+        List<DOSchemaClass> rootClasses = new ArrayList<>();
+
+        for (DOSchemaClass schemaClass : filteredClasses) {
+            String parentName = schemaClass.getParentClass();
+            if (parentName == null || parentName.isEmpty() || parentName.equals("Undetermined")) {
+                rootClasses.add(schemaClass);
+            } else {
+                childrenMap.computeIfAbsent(parentName, k -> new ArrayList<>()).add(schemaClass);
+            }
+        }
+
+        // Sort root classes by name
+        rootClasses.sort((a, b) -> getClassDisplayName(a).compareToIgnoreCase(getClassDisplayName(b)));
+
+        // Build tree from root classes
+        for (DOSchemaClass rootClass : rootClasses) {
+            SchemaTreeNode classNode = createClassNode(rootClass);
+            rootNode.add(classNode);
+            addChildClasses(classNode, rootClass, childrenMap, classMap);
         }
 
         treeModel.reload();
         expandFirstLevel();
+    }
+
+    private SchemaTreeNode createClassNode(DOSchemaClass schemaClass) {
+        String className = getClassDisplayName(schemaClass);
+        if (!schemaClass.isMigrate()) {
+            className += " (not exported)";
+        }
+        return new SchemaTreeNode(className, NodeType.CLASS, schemaClass);
+    }
+
+    private void addChildClasses(SchemaTreeNode parentNode, DOSchemaClass parentClass,
+            java.util.Map<String, List<DOSchemaClass>> childrenMap,
+            java.util.Map<String, DOSchemaClass> classMap) {
+        // Look for children by short name and absolute name
+        List<DOSchemaClass> children = new ArrayList<>();
+
+        if (childrenMap.containsKey(parentClass.getShortName())) {
+            children.addAll(childrenMap.get(parentClass.getShortName()));
+        }
+        if (parentClass.getAbsoluteName() != null && childrenMap.containsKey(parentClass.getAbsoluteName())) {
+            List<DOSchemaClass> absoluteChildren = childrenMap.get(parentClass.getAbsoluteName());
+            for (DOSchemaClass child : absoluteChildren) {
+                if (!children.contains(child)) {
+                    children.add(child);
+                }
+            }
+        }
+
+        // Sort children by name
+        children.sort((a, b) -> getClassDisplayName(a).compareToIgnoreCase(getClassDisplayName(b)));
+
+        // Add child nodes recursively
+        for (DOSchemaClass child : children) {
+            SchemaTreeNode childNode = createClassNode(child);
+            parentNode.add(childNode);
+            addChildClasses(childNode, child, childrenMap, classMap);
+        }
+    }
+
+    private String getPackageName(String fullyQualifiedName) {
+        if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
+            return "(default)";
+        }
+        int lastDot = fullyQualifiedName.lastIndexOf('.');
+        if (lastDot > 0) {
+            return fullyQualifiedName.substring(0, lastDot);
+        }
+        return "(default)";
+    }
+
+    private String getClassDisplayName(DOSchemaClass schemaClass) {
+        String sourceName = schemaClass.getAbsoluteName();
+        String shortName = sourceName != null && sourceName.contains(".")
+                ? sourceName.substring(sourceName.lastIndexOf('.') + 1)
+                : (sourceName != null ? sourceName : schemaClass.getShortName());
+
+        String destinationName = schemaClass.getShortName();
+        if (destinationName != null && !destinationName.isEmpty()
+                && !shortName.equals(destinationName)) {
+            return shortName + " > " + destinationName;
+        }
+        return shortName;
     }
 
     private void onTreeSelectionChanged() {
@@ -305,7 +404,15 @@ public class SchemaEditorPanel extends JPanel {
         JCheckBox exportCheckBox = propertyPanel.addCheckBox("Export (migrate)", schemaClass.isMigrate());
         exportCheckBox.addActionListener(e -> {
             markModified();
-            updateTreeNodeLabel(currentSelectedNode, schemaClass);
+            // Update tree label based on checkbox state
+            String className = getClassDisplayName(schemaClass);
+            if (!exportCheckBox.isSelected()) {
+                className += " (not exported)";
+            }
+            if (currentSelectedNode != null) {
+                currentSelectedNode.setUserObject(className);
+                treeModel.nodeChanged(currentSelectedNode);
+            }
         });
 
         // Parent Class selector
@@ -348,6 +455,20 @@ public class SchemaEditorPanel extends JPanel {
         return comboBox;
     }
 
+    private JComboBox<String> createChildrenClassComboBox() {
+        List<String> classNames = new ArrayList<>();
+        classNames.add("");
+
+        // Collect all class names from schema
+        if (schema != null && schema.getClasses() != null) {
+            for (DOSchemaClass cls : schema.getClasses()) {
+                classNames.add(cls.getAbsoluteName());
+            }
+        }
+
+        return new JComboBox<>(classNames.toArray(new String[0]));
+    }
+
     private void updateTreeNodeLabel(SchemaTreeNode node, DOSchemaClass schemaClass) {
         if (node == null || node.getNodeType() != NodeType.CLASS) {
             return;
@@ -369,7 +490,6 @@ public class SchemaEditorPanel extends JPanel {
 
         for (DOSchemaField field : schemaClass.getFields()) {
             Object[] rowData = {
-                    field.getDestinationName(),
                     field.getSource(),
                     field.getDestinationName(),
                     field.isExported(),
@@ -448,36 +568,37 @@ public class SchemaEditorPanel extends JPanel {
         }
     }
 
-    private void searchTree(String searchText) {
-        if (searchText == null || searchText.trim().isEmpty()) {
-            return;
-        }
-
-        String lowerSearch = searchText.toLowerCase();
-        TreeNode root = (TreeNode) treeModel.getRoot();
-
-        // Simple search through tree nodes
-        searchNode(root, lowerSearch);
+    private void filterTree(String filterText) {
+        currentFilter = filterText != null ? filterText.toLowerCase().trim() : "";
+        buildTree();
     }
 
-    private boolean searchNode(TreeNode node, String searchText) {
-        if (node instanceof SchemaTreeNode) {
-            SchemaTreeNode schemaNode = (SchemaTreeNode) node;
-            String nodeText = schemaNode.toString().toLowerCase();
+    private boolean matchesFilter(DOSchemaClass schemaClass) {
+        if (currentFilter.isEmpty()) {
+            return true;
+        }
 
-            if (nodeText.contains(searchText)) {
-                TreePath path = new TreePath(treeModel.getPathToRoot(schemaNode));
-                schemaTree.setSelectionPath(path);
-                schemaTree.scrollPathToVisible(path);
+        // Check display name (includes both source name and destination)
+        String displayName = getClassDisplayName(schemaClass).toLowerCase();
+        if (displayName.contains(currentFilter)) {
+            return true;
+        }
+
+        // Check source class name only (last part of absolute name)
+        if (schemaClass.getAbsoluteName() != null) {
+            String sourceName = schemaClass.getAbsoluteName();
+            String sourceClassName = sourceName.contains(".")
+                    ? sourceName.substring(sourceName.lastIndexOf('.') + 1)
+                    : sourceName;
+            if (sourceClassName.toLowerCase().contains(currentFilter)) {
                 return true;
             }
         }
 
-        // Search children
-        for (int i = 0; i < node.getChildCount(); i++) {
-            if (searchNode(node.getChildAt(i), searchText)) {
-                return true;
-            }
+        // Check destination name
+        if (schemaClass.getShortName() != null &&
+                schemaClass.getShortName().toLowerCase().contains(currentFilter)) {
+            return true;
         }
 
         return false;
