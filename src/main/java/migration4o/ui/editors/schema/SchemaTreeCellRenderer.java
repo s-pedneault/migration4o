@@ -1,0 +1,80 @@
+package migration4o.ui.editors.schema;
+
+import migration4o.ui.models.SchemaTreeNode;
+
+import javax.swing.*;
+import javax.swing.tree.DefaultTreeCellRenderer;
+import java.awt.*;
+
+/**
+ * Custom tree cell renderer for schema tree nodes.
+ * Provides different icons and colors for different node types.
+ */
+public class SchemaTreeCellRenderer extends DefaultTreeCellRenderer {
+
+    private static final Color MODULE_COLOR = new Color(0, 100, 200);
+    private static final Color CLASS_COLOR = new Color(0, 150, 0);
+    private static final Color FIELD_COLOR = new Color(100, 100, 100);
+    private static final Color DISABLED_COLOR = new Color(150, 150, 150);
+
+    @Override
+    public Component getTreeCellRendererComponent(JTree tree, Object value,
+            boolean selected, boolean expanded,
+            boolean leaf, int row, boolean hasFocus) {
+
+        super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
+
+        if (value instanceof SchemaTreeNode) {
+            SchemaTreeNode node = (SchemaTreeNode) value;
+
+            switch (node.getNodeType()) {
+                case ROOT:
+                    setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
+                    setFont(getFont().deriveFont(Font.BOLD));
+                    break;
+
+                case MODULE:
+                    setIcon(UIManager.getIcon("FileView.directoryIcon"));
+                    if (!selected) {
+                        setForeground(MODULE_COLOR);
+                    }
+                    setFont(getFont().deriveFont(Font.BOLD));
+                    break;
+
+                case CLASS:
+                    setIcon(UIManager.getIcon("FileView.fileIcon"));
+                    String classText = node.toString();
+                    if (classText.contains("(not exported)")) {
+                        if (!selected) {
+                            setForeground(DISABLED_COLOR);
+                        }
+                        setFont(getFont().deriveFont(Font.ITALIC));
+                    } else {
+                        if (!selected) {
+                            setForeground(CLASS_COLOR);
+                        }
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                    }
+                    break;
+
+                case FIELD:
+                    setIcon(null);
+                    String fieldText = node.toString();
+                    if (fieldText.contains("(not exported)")) {
+                        if (!selected) {
+                            setForeground(DISABLED_COLOR);
+                        }
+                        setFont(getFont().deriveFont(Font.ITALIC));
+                    } else {
+                        if (!selected) {
+                            setForeground(FIELD_COLOR);
+                        }
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                    }
+                    break;
+            }
+        }
+
+        return this;
+    }
+}
