@@ -582,7 +582,7 @@
         <field source="mActivitesSimultaneesLayout" destinationName="activitesSimultaneesLayout" isExported="true" skipIfEmpty="true" type="int"/>
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.config.ParamConfig" destinationName="ParamConfig" isExported="true">
+    <class source="gest.config.ParamConfig" destinationName="ParamConfig" isExported="true" parentClass="gest.config.ParamConfigSSI">
         <field source="mIdentVilleDansNumActiv" destinationName="identVilleDansNumActiv" isExported="true" skipIfEmpty="true" type="boolean"/>
         <field source="mIDLogo" destinationName="idLogo" isExported="true" skipIfEmpty="true" type="gest.fichier.IDFichier" embedContents="true" />
         <field source="mNbrChiffreSequence" destinationName="nbrChiffreSequence" isExported="true" skipIfEmpty="true" type="int"/>
@@ -1224,7 +1224,7 @@
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipIfEmpty="true" type="gest.equipement.IDTypeEquipement" embedContents="true" />
     </class>
-    <class source="gest.equipement.Equipement" destinationName="Equipement" isExported="true">
+    <class source="gest.equipement.Equipement" destinationName="Equipement" isExported="false" parentClass="">
         <field name="mID" type="int" indexed="true"/>
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="String"/>
         <field source="mVectEquipExist" destinationName="vectEquipExist" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenClass="gest.equipement.EquipExist"/>
@@ -2663,7 +2663,7 @@
         <field source="mVectIntervalleIntAnnee" destinationName="vectIntervalleIntAnnee" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenClass="gest.gen.IntervalleInt"/>
         <field source="mVectIntervalleIntJourMois" destinationName="vectIntervalleIntJourMois" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenClass="gest.gen.IntervalleInt"/>
     </class>
-    <class source="gest.planInterv.BatDebitNecessaire" destinationName="BatDebitNecessaire" isExported="true">
+    <class source="gest.planInterv.BatDebitNecessaire" destinationName="BatDebitNecessaire" isExported="true" parentClass="gest.gen.Entite">
         <field source="mComm" destinationName="comm" isExported="true" skipIfEmpty="true" type="int"/>
         <field source="mCommLong" destinationName="commLong" isExported="true" skipIfEmpty="true" type="gest.gen.Qte"/>
         <field source="mCommProtOuv" destinationName="commProtOuv" isExported="true" skipIfEmpty="true" type="int"/>
@@ -3720,7 +3720,7 @@
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipIfEmpty="true" type="gest.graph.IDGraph" embedContents="true" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="java.awt.Color" destinationName="Color" isExported="true">
+    <class source="java.awt.Color" destinationName="Color" isExported="true" parentClass="java.lang.Class">
         <reference class="gest.activite.TypeActivite" field="mCouleurActiv"/>
         <reference class="gest.gen.ParamPropCouleur$NEntreeDeLegende" field="mColor"/>
         <reference class="gest.secCiv.NivAlerte" field="mColor"/>
@@ -3732,12 +3732,12 @@
         <field source="fvalue" destinationName="fvalue" isExported="true" skipIfEmpty="true" type="float"/>
         <field source="value" destinationName="value" isExported="true" skipIfEmpty="true" type="int"/>
     </class>
-    <class source="java.awt.color.ColorSpace" destinationName="ColorSpace" isExported="true">
+    <class source="java.awt.color.ColorSpace" destinationName="ColorSpace" isExported="true" parentClass="java.lang.Class">
         <reference class="java.awt.Color" field="cs"/>
         <field source="numComponents" destinationName="numComponents" isExported="true" skipIfEmpty="true" type="int"/>
         <field source="type" destinationName="type" isExported="true" skipIfEmpty="true" type="int"/>
     </class>
-    <class source="java.lang.Class" destinationName="Class" isExported="true">
+    <class source="java.lang.Class" destinationName="Class" isExported="false">
         <reference class="gest.gen.IDEntiteDefaut" field="mClass"/>
         <reference class="gest.listePerso.FormatDonnee" field="mClasseDonneeReelle"/>
         <reference class="gest.listePerso.FormatDonnee" field="mClasseDonneeReellePrimarisee"/>
@@ -3775,7 +3775,7 @@
         <reference class="gest.utilGroupe.Utilisateur" field="mPreferences"/>
         <field name="com.db4o.config.THashtable" type=""/>
     </class>
-    <class source="java.util.UUID" destinationName="UUID" isExported="true">
+    <class source="java.util.UUID" destinationName="UUID" isExported="false">
         <reference class="gest.prevention.Prevention" field="mFormWebOwnerUUID"/>
         <reference class="gest.prevention.Prevention" field="mFormWebEnqueteUUID"/>
         <reference class="gest.typePrev.TypePrev" field="mFormWebUUID"/>

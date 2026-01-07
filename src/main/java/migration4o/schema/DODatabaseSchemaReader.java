@@ -104,6 +104,7 @@ public class DODatabaseSchemaReader {
         // New format uses 'source' and 'isExported'
         String source = fieldElement.getAttribute("source");
         String destinationName = fieldElement.getAttribute("destinationName");
+        String type = fieldElement.getAttribute("type");
         String isExportedAttr = fieldElement.getAttribute("isExported");
         String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
         String collection = fieldElement.getAttribute("collection");
@@ -127,7 +128,7 @@ public class DODatabaseSchemaReader {
         // Children class name
         String childrenClassName = !children.isEmpty() ? children : null;
 
-        return new DOSchemaField(source, destinationName, isExported, isSkipIfEmpty,
+        return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
                 isCollection, isEmbedContents, childrenClassName, null, null);
     }
 

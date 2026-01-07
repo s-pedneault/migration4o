@@ -7,6 +7,7 @@ import migration4o.util.TypeUtil;
 public class DOSchemaField {
     private final String source;
     private final String destinationName;
+    private final String type;
     private final boolean isExported;
     private final boolean skipIfEmpty;
     private final boolean isCollection;
@@ -16,11 +17,12 @@ public class DOSchemaField {
     private DODatabaseClass databaseClass;
     private DOSchemaClass childrenSchemaClass;
 
-    public DOSchemaField(String source, String destinationName, boolean isExported, boolean skipIfEmpty,
+    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
             boolean isCollection, boolean embedContents,
             String childrenClassName, DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this.source = source;
         this.destinationName = destinationName;
+        this.type = type;
         this.isExported = isExported;
         this.skipIfEmpty = skipIfEmpty;
         this.isCollection = isCollection;
@@ -36,6 +38,10 @@ public class DOSchemaField {
 
     public String getDestinationName() {
         return destinationName;
+    }
+
+    public String getType() {
+        return type;
     }
 
     public boolean isExported() {

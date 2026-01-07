@@ -119,6 +119,7 @@ public class DOSchemaReader {
     private DOSchemaField parseField(Element fieldElement) {
         String source = fieldElement.getAttribute("sourceName");
         String destinationName = fieldElement.getAttribute("destinationName");
+        String type = fieldElement.getAttribute("type");
         String migrate = fieldElement.getAttribute("migrate");
         String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
         String collection = fieldElement.getAttribute("collection");
@@ -140,7 +141,7 @@ public class DOSchemaReader {
 
         String childrenClassName = !childrenClass.isEmpty() ? childrenClass : (!children.isEmpty() ? children : null);
 
-        return new DOSchemaField(source, destinationName, isExported, isSkipIfEmpty,
+        return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
                 isCollection, isEmbedContents, childrenClassName, null, null);
     }
 

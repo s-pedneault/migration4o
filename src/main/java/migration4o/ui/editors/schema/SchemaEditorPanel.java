@@ -159,18 +159,18 @@ public class SchemaEditorPanel extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Fields"));
 
         // Create table model
-        String[] columnNames = { "Source", "Destination", "Exported", "Skip If Empty", "Collection",
+        String[] columnNames = { "Source", "Destination", "Type", "Exported", "Skip If Empty", "Collection",
                 "Embed Contents", "Children Class" };
         fieldsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                // Source (column 0) is read-only, everything else is editable
-                return column != 0;
+                // All columns are editable
+                return true;
             }
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 2 || columnIndex == 3 || columnIndex == 4 || columnIndex == 5) {
+                if (columnIndex == 3 || columnIndex == 4 || columnIndex == 5 || columnIndex == 6) {
                     return Boolean.class;
                 }
                 return String.class;
@@ -191,14 +191,20 @@ public class SchemaEditorPanel extends JPanel {
         // Set column widths
         fieldsTable.getColumnModel().getColumn(0).setPreferredWidth(200);
         fieldsTable.getColumnModel().getColumn(1).setPreferredWidth(150);
-        fieldsTable.getColumnModel().getColumn(2).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(3).setPreferredWidth(100);
-        fieldsTable.getColumnModel().getColumn(4).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(5).setPreferredWidth(120);
-        fieldsTable.getColumnModel().getColumn(6).setPreferredWidth(150);
+        fieldsTable.getColumnModel().getColumn(2).setPreferredWidth(150);
+        fieldsTable.getColumnModel().getColumn(3).setPreferredWidth(80);
+        fieldsTable.getColumnModel().getColumn(4).setPreferredWidth(100);
+        fieldsTable.getColumnModel().getColumn(5).setPreferredWidth(80);
+        fieldsTable.getColumnModel().getColumn(6).setPreferredWidth(120);
+        fieldsTable.getColumnModel().getColumn(7).setPreferredWidth(150);
+
+        // Add Type dropdown editor
+        JComboBox<String> typeCombo = createTypeComboBox();
+        fieldsTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(typeCombo));
+
         // Add Children Class dropdown editor for last column
         JComboBox<String> childrenClassCombo = createChildrenClassComboBox();
-        fieldsTable.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(childrenClassCombo));
+        fieldsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(childrenClassCombo));
         JScrollPane scrollPane = new JScrollPane(fieldsTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -469,6 +475,35 @@ public class SchemaEditorPanel extends JPanel {
         return new JComboBox<>(classNames.toArray(new String[0]));
     }
 
+    private JComboBox<String> createTypeComboBox() {
+        List<String> types = new ArrayList<>();
+
+        // Add Java primitives
+        types.add("");
+        types.add("boolean");
+        types.add("byte");
+        types.add("char");
+        types.add("short");
+        types.add("int");
+        types.add("long");
+        types.add("float");
+        types.add("double");
+        types.add("String");
+        types.add("java.lang.Object");
+        types.add("java.lang.Object[]");
+        types.add("java.util.Date");
+        types.add("java.util.Vector");
+
+        // Add all schema classes
+        if (schema != null && schema.getClasses() != null) {
+            for (DOSchemaClass cls : schema.getClasses()) {
+                types.add(cls.getAbsoluteName());
+            }
+        }
+
+        return new JComboBox<>(types.toArray(new String[0]));
+    }
+
     private void updateTreeNodeLabel(SchemaTreeNode node, DOSchemaClass schemaClass) {
         if (node == null || node.getNodeType() != NodeType.CLASS) {
             return;
@@ -492,6 +527,7 @@ public class SchemaEditorPanel extends JPanel {
             Object[] rowData = {
                     field.getSource(),
                     field.getDestinationName(),
+                    field.getType() != null ? field.getType() : "",
                     field.isExported(),
                     field.isSkipIfEmpty(),
                     field.isCollection(),
