@@ -1,8 +1,10 @@
 package migration4o.ui.editors.schema;
 
 import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.ui.components.PropertyPanel;
+import migration4o.util.TypeUtil;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,34 +17,39 @@ public class FieldEditorDialog extends JDialog {
     private final DOSchema schema;
     private final JTextField sourceField;
     private final JTextField destField;
+    private final JPanel typePanel;
     private final JLabel typeLabel;
     private final JCheckBox exportedCheckBox;
     private final JCheckBox skipIfEmptyCheckBox;
     private final JCheckBox collectionCheckBox;
     private final JCheckBox embedContentsCheckBox;
+    private final JPanel childrenTypePanel;
     private final JLabel childrenTypeLabel;
+    private final JLabel childrenTypeStatusLabel;
+    private final JButton createChildrenClassButton;
     private final JTextField titleField;
     private final JTextField descField;
+    private final boolean isNewField;
+
+    private JPanel formPanel;
 
     private boolean okClicked = false;
+    private boolean deleted = false;
+    private String classToCreate = null;
 
-    public FieldEditorDialog(Frame owner, DOSchema schema, DOSchemaField field) {
-        super(owner, "Edit Field", true);
+    public FieldEditorDialog(Frame owner, DOSchema schema, DOSchemaField field, boolean isNewField) {
+        super(owner, isNewField ? "Add Field" : "Edit Field", true);
         this.schema = schema;
+        this.isNewField = isNewField;
 
         setLayout(new BorderLayout(10, 10));
 
-        // Create form panel
-        PropertyPanel formPanel = new PropertyPanel();
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Add fields
-        sourceField = formPanel.addTextField("Source", field.getSource() != null ? field.getSource() : "");
-        destField = formPanel.addTextField("Destination",
-                field.getDestinationName() != null ? field.getDestinationName() : "");
+        // Initialize all fields first
+        sourceField = new JTextField(field.getSource() != null ? field.getSource() : "", 30);
+        destField = new JTextField(field.getDestinationName() != null ? field.getDestinationName() : "", 30);
 
         // Type - show as text with Edit button
-        JPanel typePanel = new JPanel(new BorderLayout(5, 0));
+        typePanel = new JPanel(new BorderLayout(5, 0));
         typeLabel = new JLabel(field.getType() != null ? field.getType() : "");
         typeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY),
@@ -57,41 +64,208 @@ public class FieldEditorDialog extends JDialog {
             }
         });
         typePanel.add(editTypeButton, BorderLayout.EAST);
-        formPanel.addCustomField("Type", typePanel);
 
-        exportedCheckBox = formPanel.addCheckBox("Exported", field.isExported());
-        skipIfEmptyCheckBox = formPanel.addCheckBox("Skip If Empty", field.isSkipIfEmpty());
-        collectionCheckBox = formPanel.addCheckBox("Collection", field.isCollection());
-        embedContentsCheckBox = formPanel.addCheckBox("Embed Contents", field.isEmbedContents());
+        titleField = new JTextField(field.getTitle() != null ? field.getTitle() : "", 30);
+        descField = new JTextField(field.getDescription() != null ? field.getDescription() : "", 30);
 
-        // Children Type - show as text with Edit button
-        JPanel childrenTypePanel = new JPanel(new BorderLayout(5, 0));
+        exportedCheckBox = new JCheckBox();
+        exportedCheckBox.setSelected(field.isExported());
+
+        skipIfEmptyCheckBox = new JCheckBox();
+        skipIfEmptyCheckBox.setSelected(field.isSkipIfEmpty());
+
+        collectionCheckBox = new JCheckBox();
+        collectionCheckBox.setSelected(field.isCollection());
+
+        // Add listener to collection checkbox to show/hide related fields
+        collectionCheckBox.addActionListener(e -> rebuildForm());
+
+        embedContentsCheckBox = new JCheckBox();
+        embedContentsCheckBox.setSelected(field.isEmbedContents());
+
+        // Children Type - show as text with Edit button and status
+        childrenTypePanel = new JPanel(new BorderLayout(5, 0));
+        JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
+
         childrenTypeLabel = new JLabel(field.getChildrenType() != null ? field.getChildrenType() : "");
         childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY),
                 BorderFactory.createEmptyBorder(3, 5, 3, 5)));
-        childrenTypePanel.add(childrenTypeLabel, BorderLayout.CENTER);
+        childrenTypeContentPanel.add(childrenTypeLabel, BorderLayout.CENTER);
 
         JButton editChildrenTypeButton = new JButton("Edit");
         editChildrenTypeButton.addActionListener(e -> {
             String selected = ClassFinderDialog.showDialog(owner, schema, childrenTypeLabel.getText());
             if (selected != null) {
                 childrenTypeLabel.setText(selected);
+                updateChildrenTypeStatus();
             }
         });
-        childrenTypePanel.add(editChildrenTypeButton, BorderLayout.EAST);
-        formPanel.addCustomField("Children Type", childrenTypePanel);
+        childrenTypeContentPanel.add(editChildrenTypeButton, BorderLayout.EAST);
 
-        titleField = formPanel.addTextField("Title", field.getTitle() != null ? field.getTitle() : "");
-        descField = formPanel.addTextField("Description",
-                field.getDescription() != null ? field.getDescription() : "");
+        childrenTypePanel.add(childrenTypeContentPanel, BorderLayout.CENTER);
 
-        add(formPanel, BorderLayout.CENTER);
+        // Status and Create button panel
+        JPanel statusPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        childrenTypeStatusLabel = new JLabel();
+        statusPanel.add(childrenTypeStatusLabel);
+
+        createChildrenClassButton = new JButton("Create Class");
+        createChildrenClassButton.setVisible(false);
+        createChildrenClassButton.addActionListener(e -> createChildrenClass());
+        statusPanel.add(createChildrenClassButton);
+
+        childrenTypePanel.add(statusPanel, BorderLayout.SOUTH);
+
+        // Build the form initially
+        rebuildForm();
 
         // Create button panel
         add(createButtonPanel(), BorderLayout.SOUTH);
 
+        // Update initial status
+        updateChildrenTypeStatus();
+
         pack();
+    }
+
+    private void rebuildForm() {
+        // Remove old form if it exists
+        if (formPanel != null) {
+            remove(formPanel);
+        }
+
+        // Create new form panel with GridBagLayout
+        JPanel innerPanel = new JPanel(new GridBagLayout());
+        innerPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridx = 0;
+        gbc.gridy = 0;
+        gbc.anchor = GridBagConstraints.NORTHWEST;
+        gbc.insets = new Insets(5, 10, 5, 10);
+
+        // Add fields in order
+        addFormRow(innerPanel, gbc, "Source:", sourceField);
+        addFormRow(innerPanel, gbc, "Destination:", destField);
+        addFormRow(innerPanel, gbc, "Type:", typePanel);
+        addFormRow(innerPanel, gbc, "Title:", titleField);
+        addFormRow(innerPanel, gbc, "Description:", descField);
+        addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
+        addFormRow(innerPanel, gbc, "Skip If Empty:", skipIfEmptyCheckBox);
+        addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
+
+        // Only add collection-related fields if collection is checked
+        if (collectionCheckBox.isSelected()) {
+            addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
+            addFormRow(innerPanel, gbc, "Children Type:", childrenTypePanel);
+        }
+
+        // Add a filler component to push everything to the top
+        gbc.weighty = 1.0;
+        gbc.fill = GridBagConstraints.BOTH;
+        innerPanel.add(Box.createVerticalGlue(), gbc);
+
+        // Wrap in scroll pane for better sizing
+        formPanel = new JPanel(new BorderLayout());
+        JScrollPane scrollPane = new JScrollPane(innerPanel);
+        scrollPane.setBorder(null);
+        scrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        scrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        formPanel.add(scrollPane, BorderLayout.CENTER);
+
+        add(formPanel, BorderLayout.CENTER);
+
+        setMinimumSize(new Dimension(700, 500));
+        setPreferredSize(new Dimension(800, 650));
+
+        revalidate();
+        repaint();
+        pack();
+    }
+
+    private void addFormRow(JPanel panel, GridBagConstraints gbc, String labelText, JComponent component) {
+        gbc.gridx = 0;
+        gbc.fill = GridBagConstraints.NONE;
+        gbc.weightx = 0.0;
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        panel.add(label, gbc);
+
+        gbc.gridx = 1;
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1.0;
+        panel.add(component, gbc);
+
+        gbc.gridy++;
+    }
+
+    private void updateChildrenTypeStatus() {
+        String childrenType = childrenTypeLabel.getText();
+
+        if (childrenType == null || childrenType.isEmpty()) {
+            childrenTypeStatusLabel.setText("");
+            childrenTypeStatusLabel.setForeground(Color.BLACK);
+            createChildrenClassButton.setVisible(false);
+            return;
+        }
+
+        // Check if it's a primitive type
+        if (TypeUtil.isPrimitiveType(childrenType)) {
+            childrenTypeStatusLabel.setText("✓ Primitive type");
+            childrenTypeStatusLabel.setForeground(new Color(0, 150, 0));
+            createChildrenClassButton.setVisible(false);
+            return;
+        }
+
+        // Check if it's a class in our schema
+        boolean isResolved = false;
+        if (schema != null && schema.getClasses() != null) {
+            for (DOSchemaClass cls : schema.getClasses()) {
+                if (cls.getAbsoluteName().equals(childrenType) || cls.getShortName().equals(childrenType)) {
+                    isResolved = true;
+                    break;
+                }
+            }
+        }
+
+        if (isResolved) {
+            childrenTypeStatusLabel.setText("✓ Class found");
+            childrenTypeStatusLabel.setForeground(new Color(0, 150, 0));
+            createChildrenClassButton.setVisible(false);
+        } else {
+            childrenTypeStatusLabel.setText("⚠ Unresolved type");
+            childrenTypeStatusLabel.setForeground(new Color(200, 0, 0));
+            createChildrenClassButton.setVisible(true);
+        }
+    }
+
+    private void createChildrenClass() {
+        String className = childrenTypeLabel.getText();
+        if (className == null || className.isEmpty()) {
+            return;
+        }
+
+        // Confirm with user
+        int result = JOptionPane.showConfirmDialog(this,
+                "Create a new class '" + className + "' in the schema?" +
+                        "\n\nThe class will be created when you save this field.",
+                "Create Class",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (result != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Mark this class for creation
+        classToCreate = className;
+
+        JOptionPane.showMessageDialog(this,
+                "Class '" + className + "' will be created when you save this field.",
+                "Class Creation Scheduled",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     private JPanel createButtonPanel() {
@@ -106,6 +280,26 @@ public class FieldEditorDialog extends JDialog {
         JButton cancelButton = new JButton("Cancel");
         cancelButton.addActionListener(e -> dispose());
 
+        // Add delete button for existing fields
+        if (!isNewField) {
+            JButton deleteButton = new JButton("Delete");
+            deleteButton.setForeground(Color.RED);
+            deleteButton.addActionListener(e -> {
+                int result = JOptionPane.showConfirmDialog(this,
+                        "Are you sure you want to delete this field?",
+                        "Confirm Delete",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE);
+
+                if (result == JOptionPane.YES_OPTION) {
+                    deleted = true;
+                    okClicked = true;
+                    dispose();
+                }
+            });
+            buttonPanel.add(deleteButton);
+        }
+
         buttonPanel.add(okButton);
         buttonPanel.add(cancelButton);
 
@@ -114,6 +308,10 @@ public class FieldEditorDialog extends JDialog {
 
     public boolean isOkClicked() {
         return okClicked;
+    }
+
+    public boolean isDeleted() {
+        return deleted;
     }
 
     public String getFieldSource() {
@@ -157,15 +355,26 @@ public class FieldEditorDialog extends JDialog {
     }
 
     /**
+     * Get the name of the class that should be created (if Create Class button was
+     * clicked).
+     * 
+     * @return class name to create, or null if no class should be created
+     */
+    public String getClassToCreate() {
+        return classToCreate;
+    }
+
+    /**
      * Show the dialog and return whether OK was clicked.
      * 
-     * @param owner  The parent frame
-     * @param schema The schema containing classes
-     * @param field  The field to edit
+     * @param owner      The parent frame
+     * @param schema     The schema containing classes
+     * @param field      The field to edit
+     * @param isNewField Whether this is a new field being added
      * @return The dialog instance if OK was clicked, null otherwise
      */
-    public static FieldEditorDialog showDialog(Frame owner, DOSchema schema, DOSchemaField field) {
-        FieldEditorDialog dialog = new FieldEditorDialog(owner, schema, field);
+    public static FieldEditorDialog showDialog(Frame owner, DOSchema schema, DOSchemaField field, boolean isNewField) {
+        FieldEditorDialog dialog = new FieldEditorDialog(owner, schema, field, isNewField);
         dialog.setLocationRelativeTo(owner);
         dialog.setVisible(true);
         return dialog.isOkClicked() ? dialog : null;

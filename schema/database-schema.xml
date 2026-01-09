@@ -824,13 +824,13 @@
         <field source="mValeurTerrain" destinationName="valeurTerrain" isExported="true" skipIfEmpty="true" type="double" />
         <field source="mVectAliasAdresse" destinationName="vectAliasAdresse" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.Adresse" />
         <field source="mVectAliasNom" destinationName="vectAliasNom" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.DossPrev$NAliasNom" />
-        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" childrenType="gest.champPerso.ChampPerso" />
+        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" collection="true" childrenType="gest.champPerso.ChampPerso" />
         <field source="mVectIDCodeRef" destinationName="vectIdCodeRef" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.codeRef.IDCodeRef" />
         <field source="mVectOldMatricule" destinationName="vectOldMatricule" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="String" />
         <field source="mVectPeriodicites" destinationName="vectPeriodicites" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.PeriodiciteDossPrev" />
         <field source="mVectPersonneRess" destinationName="vectPersonneRess" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.PersonneRess" />
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
-        <field source="mVectProdDang" destinationName="vectProdDang" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.dossPredv.ProdDang" />
+        <field source="mVectProdDang" destinationName="vectProdDang" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.dossPrev.ProdDang" />
         <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" embedContents="true" />
         <field source="mIDCategRisque" destinationName="idCategRisque" isExported="true" skipIfEmpty="true" type="gest.DSI2003.IDDsi2003E2" embedContents="true" />
         <field source="mIDClassif" destinationName="idClassif" isExported="true" skipIfEmpty="true" type="gest.classif.IDClassif" embedContents="true" />
@@ -3976,5 +3976,8 @@
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectNTri" />
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectRequete" />
         <field source="com.db4o.config.TNull" destinationName="TNull" isExported="true" skipIfEmpty="true" />
+    </class>
+    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="gest.dossPrev.DossPrev$NAliasNom" isExported="true">
+        <field source="iNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
 </classes>

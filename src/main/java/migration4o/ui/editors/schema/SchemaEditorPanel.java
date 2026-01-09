@@ -11,6 +11,7 @@ import migration4o.util.TypeUtil;
 import javax.swing.*;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
 import javax.swing.tree.*;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
@@ -231,6 +232,8 @@ public class SchemaEditorPanel extends JPanel {
                 fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new TypeRenderer());
             } else if (fieldColumns[i].name.equals("Children Type")) {
                 fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new ChildrenTypeRenderer());
+            } else if (fieldColumns[i].name.equals("Collection")) {
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new CollectionRenderer());
             }
         }
 
@@ -262,6 +265,13 @@ public class SchemaEditorPanel extends JPanel {
 
         JScrollPane scrollPane = new JScrollPane(fieldsTable);
         panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Add button panel at the bottom
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton addFieldButton = new JButton("Add Field");
+        addFieldButton.addActionListener(e -> addNewField());
+        buttonPanel.add(addFieldButton);
+        panel.add(buttonPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -682,6 +692,82 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
+     * Custom renderer for the Collection column.
+     * Displays a checkbox and highlights the cell with red background if there's a
+     * collection/childrenType mismatch.
+     */
+    private class CollectionRenderer extends JCheckBox implements TableCellRenderer {
+
+        public CollectionRenderer() {
+            setHorizontalAlignment(JLabel.CENTER);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+
+            // Set checkbox state
+            if (value instanceof Boolean) {
+                setSelected((Boolean) value);
+            } else {
+                setSelected(false);
+            }
+
+            // Check for collection/childrenType consistency error
+            boolean hasError = false;
+            if (row >= 0 && row < fieldsTableModel.getRowCount()) {
+                // Get collection value (current cell)
+                Boolean isCollection = (Boolean) value;
+
+                // Get childrenType value from the table
+                Object childrenTypeObj = fieldsTableModel.getValueAt(row, getColumnIndex("Children Type"));
+                String childrenType = childrenTypeObj != null ? childrenTypeObj.toString() : "";
+                boolean hasChildrenType = !childrenType.isEmpty();
+
+                if (isCollection != null) {
+                    // Error: collection is true but childrenType is empty
+                    if (isCollection && !hasChildrenType) {
+                        hasError = true;
+                    }
+                    // Error: collection is false but childrenType is not empty
+                    if (!isCollection && hasChildrenType) {
+                        hasError = true;
+                    }
+                }
+            }
+
+            // Set background color based on error state
+            if (hasError) {
+                if (!isSelected) {
+                    setBackground(new Color(255, 200, 200)); // Light red background
+                } else {
+                    setBackground(table.getSelectionBackground().darker());
+                }
+            } else {
+                if (!isSelected) {
+                    setBackground(table.getBackground());
+                } else {
+                    setBackground(table.getSelectionBackground());
+                }
+            }
+
+            setForeground(isSelected ? table.getSelectionForeground() : table.getForeground());
+
+            return this;
+        }
+
+        private int getColumnIndex(String columnName) {
+            for (int i = 0; i < fieldColumns.length; i++) {
+                if (fieldColumns[i].name.equals(columnName)) {
+                    return i;
+                }
+            }
+            return -1;
+        }
+    }
+
+    /**
      * Navigate to a class in the tree by its absolute name.
      */
     private void navigateToClass(String className) {
@@ -741,6 +827,69 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
+     * Add a new field to the current class.
+     */
+    private void addNewField() {
+        if (currentSelectedNode == null || currentSelectedNode.getNodeType() != NodeType.CLASS) {
+            return;
+        }
+
+        // Create a new empty field
+        DOSchemaField newField = new DOSchemaField("", "", "java.lang.String", true, true, false, false, "", null,
+                null);
+
+        // Show field editor dialog
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        FieldEditorDialog dialog = FieldEditorDialog.showDialog(owner, schema, newField, true);
+
+        if (dialog != null) {
+            if (dialog.isDeleted()) {
+                // User cancelled by deleting
+                return;
+            }
+
+            // Check if a new class should be created
+            if (dialog.getClassToCreate() != null) {
+                createNewClass(dialog.getClassToCreate());
+            }
+
+            // Create the new field object with all properties
+            DOSchemaField newFieldWithData = new DOSchemaField(
+                dialog.getFieldSource(),
+                dialog.getFieldDestination(),
+                dialog.getFieldType(),
+                dialog.isFieldExported(),
+                dialog.isFieldSkipIfEmpty(),
+                dialog.isFieldCollection(),
+                dialog.isFieldEmbedContents(),
+                dialog.getFieldChildrenType(),
+                dialog.getFieldTitle(),
+                dialog.getFieldDescription(),
+                null,
+                null
+            );
+            
+            // Add the new field to the table
+            Object[] rowData = {
+                    dialog.getFieldSource(),
+                    dialog.getFieldDestination(),
+                    dialog.getFieldType(),
+                    dialog.isFieldExported(),
+                    dialog.isFieldSkipIfEmpty(),
+                    dialog.isFieldCollection(),
+                    dialog.isFieldEmbedContents(),
+                    dialog.getFieldChildrenType()
+            };
+            fieldsTableModel.addRow(rowData);
+
+            // Rebuild the class with the updated fields
+            rebuildCurrentClassFields();
+
+            markModified();
+        }
+    }
+
+    /**
      * Open a dialog to edit a field's properties.
      */
     private void openFieldEditor(int rowIndex) {
@@ -757,9 +906,25 @@ public class SchemaEditorPanel extends JPanel {
 
         // Show field editor dialog
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
-        FieldEditorDialog dialog = FieldEditorDialog.showDialog(owner, schema, field);
+        FieldEditorDialog dialog = FieldEditorDialog.showDialog(owner, schema, field, false);
 
         if (dialog != null) {
+            if (dialog.isDeleted()) {
+                // Remove the field from the table
+                fieldsTableModel.removeRow(rowIndex);
+                
+                // Rebuild the class with the updated fields
+                rebuildCurrentClassFields();
+                
+                markModified();
+                return;
+            }
+
+            // Check if a new class should be created
+            if (dialog.getClassToCreate() != null) {
+                createNewClass(dialog.getClassToCreate());
+            }
+
             // Update the field in the table
             fieldsTableModel.setValueAt(dialog.getFieldSource(), rowIndex, 0);
             fieldsTableModel.setValueAt(dialog.getFieldDestination(), rowIndex, 1);
@@ -770,7 +935,143 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
 
+            // Rebuild the class with the updated fields
+            rebuildCurrentClassFields();
+
             markModified();
+        }
+    }
+
+    /**
+     * Create a new class in the schema.
+     * 
+     * @param className The name of the class to create
+     */
+    private void createNewClass(String className) {
+        if (className == null || className.isEmpty() || schema == null) {
+            return;
+        }
+
+        // Check if class already exists
+        if (schema.getClasses() != null) {
+            for (DOSchemaClass existing : schema.getClasses()) {
+                if (existing.getAbsoluteName().equals(className) || existing.getShortName().equals(className)) {
+                    // Class already exists, no need to create
+                    return;
+                }
+            }
+        }
+
+        // Create a new class with minimal fields
+        DOSchemaClass newClass = new DOSchemaClass(
+                className, // absoluteName
+                className, // simpleName (use same name)
+                null, // description
+                null, // title
+                null, // parentClassName
+                new DOSchemaField[0], // empty fields array
+                null, // schemaReferences
+                true // migrate
+        );
+
+        // Create new schema with the added class
+        DOSchemaClass[] existingClasses = schema.getClasses();
+        DOSchemaClass[] newClasses = new DOSchemaClass[existingClasses.length + 1];
+        System.arraycopy(existingClasses, 0, newClasses, 0, existingClasses.length);
+        newClasses[existingClasses.length] = newClass;
+
+        // Recreate schema with new classes array
+        schema = new DOSchema(newClasses, schema.getModules(), schema.getFoundationClasses());
+
+        // Rebuild the tree to show the new class
+        buildTree();
+
+        markModified();
+
+        setStatus("Created new class: " + className);
+    }
+
+    /**
+     * Rebuild the currently selected class with updated fields from the table model.
+     * This is necessary because DOSchemaClass and DOSchemaField are immutable.
+     */
+    private void rebuildCurrentClassFields() {
+        if (currentSelectedNode == null || currentSelectedNode.getNodeType() != NodeType.CLASS) {
+            return;
+        }
+
+        DOSchemaClass oldClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
+        
+        // Create a map of original fields by source name to preserve title and description
+        java.util.Map<String, DOSchemaField> originalFieldsMap = new java.util.HashMap<>();
+        if (oldClass.getFields() != null) {
+            for (DOSchemaField field : oldClass.getFields()) {
+                originalFieldsMap.put(field.getSource(), field);
+            }
+        }
+        
+        // Build new fields array from table model
+        int rowCount = fieldsTableModel.getRowCount();
+        DOSchemaField[] newFields = new DOSchemaField[rowCount];
+        
+        for (int i = 0; i < rowCount; i++) {
+            String source = (String) fieldsTableModel.getValueAt(i, 0);
+            String destination = (String) fieldsTableModel.getValueAt(i, 1);
+            String type = (String) fieldsTableModel.getValueAt(i, 2);
+            Boolean exported = (Boolean) fieldsTableModel.getValueAt(i, 3);
+            Boolean skipIfEmpty = (Boolean) fieldsTableModel.getValueAt(i, 4);
+            Boolean collection = (Boolean) fieldsTableModel.getValueAt(i, 5);
+            Boolean embedContents = (Boolean) fieldsTableModel.getValueAt(i, 6);
+            String childrenType = (String) fieldsTableModel.getValueAt(i, 7);
+            
+            // Try to find the original field by source name to preserve title and description
+            String title = null;
+            String description = null;
+            DOSchemaField originalField = originalFieldsMap.get(source);
+            if (originalField != null) {
+                title = originalField.getTitle();
+                description = originalField.getDescription();
+            }
+            
+            newFields[i] = new DOSchemaField(
+                source != null ? source : "",
+                destination != null ? destination : "",
+                type != null ? type : "",
+                exported != null ? exported : false,
+                skipIfEmpty != null ? skipIfEmpty : true,
+                collection != null ? collection : false,
+                embedContents != null ? embedContents : false,
+                childrenType != null ? childrenType : "",
+                title,
+                description,
+                null,  // databaseClass
+                null   // childrenSchemaClass
+            );
+        }
+        
+        // Create new class with updated fields
+        DOSchemaClass newClass = new DOSchemaClass(
+            oldClass.getSourceName(),
+            oldClass.getDestinationName(),
+            oldClass.getDescription(),
+            oldClass.getTitle(),
+            oldClass.getParentClass(),
+            newFields,
+            oldClass.getSchemaReferences(),
+            oldClass.isMigrate()
+        );
+        
+        // Replace the class in the schema
+        if (schema != null && schema.getClasses() != null) {
+            DOSchemaClass[] classes = schema.getClasses();
+            for (int i = 0; i < classes.length; i++) {
+                if (classes[i] == oldClass) {
+                    classes[i] = newClass;
+                    // Update the node reference
+                    currentSelectedNode.setSchemaElement(newClass);
+                    break;
+                }
+            }
         }
     }
 
@@ -923,6 +1224,21 @@ public class SchemaEditorPanel extends JPanel {
 
             // Check the childrenType field (for collections)
             if (isUnresolvedType(field.getChildrenType())) {
+                return true;
+            }
+
+            // Check collection/childrenType consistency
+            boolean isCollection = field.isCollection();
+            String childrenType = field.getChildrenType();
+            boolean hasChildrenType = childrenType != null && !childrenType.isEmpty();
+
+            // Error: collection is true but childrenType is empty
+            if (isCollection && !hasChildrenType) {
+                return true;
+            }
+
+            // Error: collection is false but childrenType is not empty
+            if (!isCollection && hasChildrenType) {
                 return true;
             }
         }
