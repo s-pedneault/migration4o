@@ -7,7 +7,7 @@
     <class source="com.db4o.StaticField" destinationName="StaticField" isExported="true">
         <reference class="com.db4o.StaticClass" field="fields" />
         <field source="name" destinationName="name" isExported="true" skipIfEmpty="true" type="String" />
-        <field source="value" type="java.lang.Object" />
+        <field source="value" destinationName="value" isExported="true" skipIfEmpty="true" type="java.lang.Object" />
     </class>
     <class source="com.db4o.config.Entry" destinationName="Entry" isExported="false">
         <field source="key" destinationName="key" isExported="true" skipIfEmpty="true" type="java.lang.Object" />
@@ -29,8 +29,8 @@
     </class>
     <class source="gen.util.ObjetToString" destinationName="ObjetToString" isExported="true" parentClass="gest.gen.Entite">
         <field source="mHashCodeSurToString" destinationName="hashCodeSurToString" isExported="true" skipIfEmpty="true" type="boolean" />
-        <field source="mObjet" type="java.lang.Object" />
-        <field source="mObjetsFormatsAlternatifs" type="java.lang.Object[]" childrenType="java.lang.Object" />
+        <field source="mObjet" destinationName="objet" isExported="true" skipIfEmpty="true" type="java.lang.Object" />
+        <field source="mObjetsFormatsAlternatifs" type="java.lang.Object[]" isExported="true" skipIfEmpty="true" childrenType="java.lang.Object" />
         <field source="mToString" destinationName="toString" isExported="true" skipIfEmpty="true" type="String" />
     </class>
     <class source="gen.util.VectObjetToString" destinationName="VectObjetToString" isExported="true" parentClass="java.util.Vector">
