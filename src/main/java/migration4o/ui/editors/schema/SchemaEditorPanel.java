@@ -2,6 +2,7 @@ package migration4o.ui.editors.schema;
 
 import migration4o.models.schema.*;
 import migration4o.schema.DODatabaseSchemaReader;
+import migration4o.schema.DODatabaseSchemaWriter;
 import migration4o.ui.components.PropertyPanel;
 import migration4o.ui.models.SchemaTreeNode;
 import migration4o.ui.models.SchemaTreeNode.NodeType;
@@ -10,7 +11,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.*;
 import java.awt.*;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -160,7 +160,7 @@ public class SchemaEditorPanel extends JPanel {
 
         // Create table model
         String[] columnNames = { "Source", "Destination", "Type", "Exported", "Skip If Empty", "Collection",
-                "Embed Contents", "Children Class" };
+                "Embed Contents", "Children Type" };
         fieldsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -254,17 +254,33 @@ public class SchemaEditorPanel extends JPanel {
             return;
         }
 
-        // Filter classes first
-        List<DOSchemaClass> filteredClasses = new ArrayList<>();
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (matchesFilter(schemaClass)) {
-                filteredClasses.add(schemaClass);
+        // If filtering, show all matching classes as a flat list
+        if (!currentFilter.isEmpty()) {
+            List<DOSchemaClass> matchingClasses = new ArrayList<>();
+            for (DOSchemaClass schemaClass : schema.getClasses()) {
+                if (matchesFilter(schemaClass)) {
+                    matchingClasses.add(schemaClass);
+                }
             }
+
+            // Sort by display name
+            matchingClasses.sort((a, b) -> getClassDisplayName(a).compareToIgnoreCase(getClassDisplayName(b)));
+
+            // Add all matching classes as direct children of root
+            for (DOSchemaClass schemaClass : matchingClasses) {
+                SchemaTreeNode classNode = createClassNode(schemaClass);
+                rootNode.add(classNode);
+            }
+
+            treeModel.reload();
+            expandFirstLevel();
+            return;
         }
 
+        // No filter - build hierarchy normally
         // Build class name to class map for quick lookup
         java.util.Map<String, DOSchemaClass> classMap = new java.util.HashMap<>();
-        for (DOSchemaClass schemaClass : filteredClasses) {
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
             classMap.put(schemaClass.getShortName(), schemaClass);
             // Also map by absolute name for parent lookups
             if (schemaClass.getAbsoluteName() != null) {
@@ -276,7 +292,7 @@ public class SchemaEditorPanel extends JPanel {
         java.util.Map<String, List<DOSchemaClass>> childrenMap = new java.util.HashMap<>();
         List<DOSchemaClass> rootClasses = new ArrayList<>();
 
-        for (DOSchemaClass schemaClass : filteredClasses) {
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
             String parentName = schemaClass.getParentClass();
             if (parentName == null || parentName.isEmpty() || parentName.equals("Undetermined")) {
                 rootClasses.add(schemaClass);
@@ -334,17 +350,6 @@ public class SchemaEditorPanel extends JPanel {
             parentNode.add(childNode);
             addChildClasses(childNode, child, childrenMap, classMap);
         }
-    }
-
-    private String getPackageName(String fullyQualifiedName) {
-        if (fullyQualifiedName == null || fullyQualifiedName.isEmpty()) {
-            return "(default)";
-        }
-        int lastDot = fullyQualifiedName.lastIndexOf('.');
-        if (lastDot > 0) {
-            return fullyQualifiedName.substring(0, lastDot);
-        }
-        return "(default)";
     }
 
     private String getClassDisplayName(DOSchemaClass schemaClass) {
@@ -504,20 +509,6 @@ public class SchemaEditorPanel extends JPanel {
         return new JComboBox<>(types.toArray(new String[0]));
     }
 
-    private void updateTreeNodeLabel(SchemaTreeNode node, DOSchemaClass schemaClass) {
-        if (node == null || node.getNodeType() != NodeType.CLASS) {
-            return;
-        }
-
-        String className = schemaClass.getShortName();
-        if (!schemaClass.isMigrate()) {
-            className += " (not exported)";
-        }
-
-        node.setUserObject(className);
-        treeModel.nodeChanged(node);
-    }
-
     private void populateFieldsTable(DOSchemaClass schemaClass) {
         if (schemaClass.getFields() == null) {
             return;
@@ -532,7 +523,7 @@ public class SchemaEditorPanel extends JPanel {
                     field.isSkipIfEmpty(),
                     field.isCollection(),
                     field.isEmbedContents(),
-                    field.getChildrenClassName() != null ? field.getChildrenClassName() : ""
+                    field.getChildrenType() != null ? field.getChildrenType() : ""
             };
             fieldsTableModel.addRow(rowData);
         }
@@ -561,19 +552,28 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     private void saveSchema() {
+        if (schema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "No schema loaded to save.",
+                    "Save Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         try {
             setStatus("Saving schema...");
 
-            // TODO: Implement schema saving (write back to XML)
-            // This will require a schema writer component
+            // Use the writer to save the schema
+            DODatabaseSchemaWriter writer = new DODatabaseSchemaWriter();
+            writer.writeSchema(schema, schemaFilePath);
+
+            modified = false;
+            setStatus("Schema saved successfully");
 
             JOptionPane.showMessageDialog(this,
-                    "Schema saving is not yet implemented.\n" +
-                            "This feature will write changes back to the XML file.",
-                    "Not Implemented",
+                    "Schema saved successfully!\nBackup created.",
+                    "Save Successful",
                     JOptionPane.INFORMATION_MESSAGE);
-
-            setStatus("Ready");
 
         } catch (Exception e) {
             e.printStackTrace();

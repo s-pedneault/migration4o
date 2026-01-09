@@ -15,6 +15,7 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
+import migration4o.models.schema.DOSchemaReference;
 
 /**
  * Reader for the new database-schema.xml format.
@@ -79,11 +80,11 @@ public class DODatabaseSchemaReader {
 
         // Use destinationName as simpleName if available, otherwise derive from source
         String simpleName = !destinationName.isEmpty() ? destinationName : getSimpleClassName(absoluteName);
-        String exportName = simpleName;
 
         // Parse isExported attribute to migrate flag (default to true if not specified)
         boolean migrate = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
 
+        // Parse fields
         List<DOSchemaField> fieldList = new ArrayList<>();
         NodeList fieldNodes = classElement.getElementsByTagName("field");
         for (int i = 0; i < fieldNodes.getLength(); i++) {
@@ -94,14 +95,28 @@ public class DODatabaseSchemaReader {
             }
         }
 
-        DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
+        // Parse reference elements
+        List<DOSchemaReference> referenceList = new ArrayList<>();
+        NodeList referenceNodes = classElement.getElementsByTagName("reference");
+        for (int i = 0; i < referenceNodes.getLength(); i++) {
+            Element referenceElement = (Element) referenceNodes.item(i);
+            // Only parse direct child references
+            if (referenceElement.getParentNode() == classElement) {
+                String refClass = referenceElement.getAttribute("class");
+                String refField = referenceElement.getAttribute("field");
+                referenceList.add(new DOSchemaReference(refClass, refField));
+            }
+        }
 
-        // Use the constructor that takes migrate parameter
-        return new DOSchemaClass(absoluteName, simpleName, parentClassName, migrate, title, fields);
+        DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
+        DOSchemaReference[] references = referenceList.toArray(new DOSchemaReference[0]);
+
+        // Create new constructor that accepts references
+        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClassName, fields, references,
+                migrate);
     }
 
     private DOSchemaField parseField(Element fieldElement) {
-        // New format uses 'source' and 'isExported'
         String source = fieldElement.getAttribute("source");
         String destinationName = fieldElement.getAttribute("destinationName");
         String type = fieldElement.getAttribute("type");
@@ -109,24 +124,16 @@ public class DODatabaseSchemaReader {
         String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
         String collection = fieldElement.getAttribute("collection");
         String embedContents = fieldElement.getAttribute("embedContents");
+        String childrenType = fieldElement.getAttribute("childrenType");
 
-        String name = fieldElement.getAttribute("name");
-        String children = fieldElement.getAttribute("children");
-
-        // Fallback to 'name' if 'source' is empty
-        if (source.isEmpty())
-            source = name;
-        if (destinationName.isEmpty())
-            destinationName = name;
-
-        // Parse boolean attributes (default to true if not specified for isExported)
+        // Parse boolean attributes
         boolean isExported = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
         boolean isSkipIfEmpty = "true".equalsIgnoreCase(skipIfEmpty);
         boolean isCollection = "true".equalsIgnoreCase(collection);
         boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
 
         // Children class name
-        String childrenClassName = !children.isEmpty() ? children : null;
+        String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
 
         return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
                 isCollection, isEmbedContents, childrenClassName, null, null);

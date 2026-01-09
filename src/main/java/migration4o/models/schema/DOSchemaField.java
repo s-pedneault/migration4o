@@ -2,7 +2,6 @@
 package migration4o.models.schema;
 
 import migration4o.models.database.DODatabaseClass;
-import migration4o.util.TypeUtil;
 
 public class DOSchemaField {
     private final String source;
@@ -12,14 +11,15 @@ public class DOSchemaField {
     private final boolean skipIfEmpty;
     private final boolean isCollection;
     private final boolean embedContents;
-    private final String childrenClassName;
+    private final String childrenType;
 
     private DODatabaseClass databaseClass;
     private DOSchemaClass childrenSchemaClass;
 
     public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
             boolean isCollection, boolean embedContents,
-            String childrenClassName, DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
+            String childrenType,
+            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this.source = source;
         this.destinationName = destinationName;
         this.type = type;
@@ -27,7 +27,7 @@ public class DOSchemaField {
         this.skipIfEmpty = skipIfEmpty;
         this.isCollection = isCollection;
         this.embedContents = embedContents;
-        this.childrenClassName = childrenClassName;
+        this.childrenType = childrenType;
         this.databaseClass = databaseClass;
         this.childrenSchemaClass = childrenSchemaClass;
     }
@@ -60,8 +60,8 @@ public class DOSchemaField {
         return embedContents;
     }
 
-    public String getChildrenClassName() {
-        return childrenClassName;
+    public String getChildrenType() {
+        return childrenType;
     }
 
     public DODatabaseClass getDatabaseClass() {
@@ -78,9 +78,5 @@ public class DOSchemaField {
 
     public void setChildrenSchemaClass(DOSchemaClass childrenSchemaClass) {
         this.childrenSchemaClass = childrenSchemaClass;
-    }
-
-    public boolean isPrimitive() {
-        return TypeUtil.isPrimitiveType(source);
     }
 }

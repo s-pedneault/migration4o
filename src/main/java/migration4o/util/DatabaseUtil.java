@@ -81,14 +81,14 @@ public class DatabaseUtil {
         String fieldName = storedField.getName();
         String typeName = storedField.getStoredType().getName();
         String description = "";
-        boolean isPrimitive = schemaField != null ? schemaField.isPrimitive() : false;
+        boolean isPrimitive = TypeUtil.isPrimitiveType(typeName);
         boolean isArray = storedField.isArray();
         boolean isCollection = isArray || CollectionTypeUtil.isCollectionType(typeName);
 
         String contentTypeName = null;
         if (isCollection) {
-            if (schemaField != null && schemaField.getChildrenClassName() != null) {
-                contentTypeName = schemaField.getChildrenClassName();
+            if (schemaField != null && schemaField.getChildrenType() != null) {
+                contentTypeName = schemaField.getChildrenType();
                 System.out.println("Enhanced field " + fieldName + " with schema content type: " + contentTypeName);
             } else {
                 contentTypeName = CollectionTypeUtil.extractContentTypeFromTypeName(typeName, isArray);

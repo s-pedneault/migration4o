@@ -15,7 +15,6 @@ import org.w3c.dom.NodeList;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
 
 public class DOSchemaReader {

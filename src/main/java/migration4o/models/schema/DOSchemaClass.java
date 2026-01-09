@@ -15,30 +15,32 @@ public class DOSchemaClass {
     private final String title;
     private final String description;
     private final DOSchemaField[] fields;
+    private final DOSchemaReference[] schemaReferences;
     private final List<DOReference> referenceList;
     private DODatabaseClass databaseClass;
 
     public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {
-        this(source, destinationName, null, title, parentClassName, fields, migrate);
+        this(source, destinationName, null, title, parentClassName, fields, null, migrate);
     }
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
             String parentClassName,
             DOSchemaField[] fields, String exportName) {
         this(absoluteName, exportName != null ? exportName : simpleName, description, title,
-                parentClassName, fields, true);
+                parentClassName, fields, null, true);
     }
 
-    private DOSchemaClass(String source, String destinationName, String description, String title,
-            String parentClassName, DOSchemaField[] fields, boolean migrate) {
-        this.source = source;
-        this.destinationName = destinationName;
+    public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
+            String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate) {
+        this.source = absoluteName;
+        this.destinationName = simpleName;
         this.description = description;
         this.parentClassName = parentClassName;
         this.migrate = migrate;
         this.title = title;
         this.fields = fields != null ? fields : new DOSchemaField[0];
+        this.schemaReferences = schemaReferences != null ? schemaReferences : new DOSchemaReference[0];
         this.referenceList = new ArrayList<>();
     }
 
@@ -84,6 +86,10 @@ public class DOSchemaClass {
 
     public DOSchemaField[] getFields() {
         return fields;
+    }
+
+    public DOSchemaReference[] getSchemaReferences() {
+        return schemaReferences;
     }
 
     public DOReference[] getReferences() {

@@ -1,7 +1,6 @@
 package migration4o.models.database;
 
 import migration4o.models.database.DOObjectReference;
-import migration4o.models.database.DODatabaseField;
 
 public class DOObjectReference {
     private final Long sourceObjectId;

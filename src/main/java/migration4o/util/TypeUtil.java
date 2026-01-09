@@ -5,11 +5,8 @@ import migration4o.models.database.DODatabaseField;
 public class TypeUtil {
 
     public static boolean isPrimitiveType(DODatabaseField field) {
-        if (field.isPrimitive())
-            return true;
         String typeName = field.getTypeName();
         return isPrimitiveType(typeName);
-
     }
 
     public static boolean isPrimitiveType(String typeName) {
