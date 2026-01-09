@@ -125,10 +125,12 @@ public class DODatabaseSchemaReader {
         String collection = fieldElement.getAttribute("collection");
         String embedContents = fieldElement.getAttribute("embedContents");
         String childrenType = fieldElement.getAttribute("childrenType");
+        String title = fieldElement.getAttribute("title");
+        String description = fieldElement.getAttribute("description");
 
         // Parse boolean attributes
         boolean isExported = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
-        boolean isSkipIfEmpty = "true".equalsIgnoreCase(skipIfEmpty);
+        boolean isSkipIfEmpty = skipIfEmpty.isEmpty() || "true".equalsIgnoreCase(skipIfEmpty);
         boolean isCollection = "true".equalsIgnoreCase(collection);
         boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
 
@@ -136,7 +138,9 @@ public class DODatabaseSchemaReader {
         String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
 
         return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
-                isCollection, isEmbedContents, childrenClassName, null, null);
+                isCollection, isEmbedContents, childrenClassName,
+                title.isEmpty() ? null : title,
+                description.isEmpty() ? null : description, null, null);
     }
 
     private String getSimpleClassName(String absoluteName) {

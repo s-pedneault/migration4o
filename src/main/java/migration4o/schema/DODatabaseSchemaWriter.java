@@ -23,7 +23,7 @@ public class DODatabaseSchemaWriter {
 
         // Write the schema
         try (FileWriter writer = new FileWriter(filePath)) {
-            writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+            writer.write("<?xml version='1.0' encoding='UTF-8'?>\n");
             writer.write("<classes>\n");
 
             // Write all classes in their current order
@@ -63,13 +63,16 @@ public class DODatabaseSchemaWriter {
         writer.write(indent + "<class");
         writeAttribute(writer, "source", schemaClass.getAbsoluteName());
         writeAttribute(writer, "destinationName", schemaClass.getShortName());
+        writeAttribute(writer, "isExported", String.valueOf(schemaClass.isMigrate()));
+
+        if (schemaClass.getTitle() != null && !schemaClass.getTitle().isEmpty()) {
+            writeAttribute(writer, "title", schemaClass.getTitle());
+        }
 
         if (schemaClass.getParentClass() != null && !schemaClass.getParentClass().isEmpty()
                 && !"Undetermined".equals(schemaClass.getParentClass())) {
             writeAttribute(writer, "parentClass", schemaClass.getParentClass());
         }
-
-        writeAttribute(writer, "isExported", String.valueOf(schemaClass.isMigrate()));
 
         // Check if we have fields, references or nested content
         boolean hasFields = schemaClass.getFields() != null && schemaClass.getFields().length > 0;
@@ -77,21 +80,22 @@ public class DODatabaseSchemaWriter {
                 && schemaClass.getSchemaReferences().length > 0;
 
         if (!hasFields && !hasReferences) {
-            writer.write(" />\n");
+            writer.write(">\n");
+            writer.write(indent + "</class>\n");
         } else {
             writer.write(">\n");
 
-            // Write fields
-            if (hasFields) {
-                for (DOSchemaField field : schemaClass.getFields()) {
-                    writeField(writer, field, indentLevel + 1);
-                }
-            }
-
-            // Write references
+            // Write references first (as in original format)
             if (hasReferences) {
                 for (DOSchemaReference ref : schemaClass.getSchemaReferences()) {
                     writeReference(writer, ref, indentLevel + 1);
+                }
+            }
+
+            // Write fields after references
+            if (hasFields) {
+                for (DOSchemaField field : schemaClass.getFields()) {
+                    writeField(writer, field, indentLevel + 1);
                 }
             }
 
@@ -104,20 +108,25 @@ public class DODatabaseSchemaWriter {
 
         writer.write(indent + "<field");
 
+        // If field has source, use source and destinationName attributes
+        // Otherwise use name attribute (for fields without source mapping)
         if (field.getSource() != null && !field.getSource().isEmpty()) {
             writeAttribute(writer, "source", field.getSource());
-        }
-
-        if (field.getDestinationName() != null && !field.getDestinationName().isEmpty()) {
-            writeAttribute(writer, "destinationName", field.getDestinationName());
+            if (field.getDestinationName() != null && !field.getDestinationName().isEmpty()) {
+                writeAttribute(writer, "destinationName", field.getDestinationName());
+            }
+            writeAttribute(writer, "isExported", String.valueOf(field.isExported()));
+            writeAttribute(writer, "skipIfEmpty", String.valueOf(field.isSkipIfEmpty()));
+        } else {
+            // No source - use name attribute
+            if (field.getDestinationName() != null && !field.getDestinationName().isEmpty()) {
+                writeAttribute(writer, "name", field.getDestinationName());
+            }
         }
 
         if (field.getType() != null && !field.getType().isEmpty()) {
             writeAttribute(writer, "type", field.getType());
         }
-
-        writeAttribute(writer, "isExported", String.valueOf(field.isExported()));
-        writeAttribute(writer, "skipIfEmpty", String.valueOf(field.isSkipIfEmpty()));
 
         if (field.isCollection()) {
             writeAttribute(writer, "collection", "true");
@@ -128,7 +137,15 @@ public class DODatabaseSchemaWriter {
         }
 
         if (field.getChildrenType() != null && !field.getChildrenType().isEmpty()) {
-            writeAttribute(writer, "children", field.getChildrenType());
+            writeAttribute(writer, "childrenType", field.getChildrenType());
+        }
+
+        if (field.getTitle() != null && !field.getTitle().isEmpty()) {
+            writeAttribute(writer, "title", field.getTitle());
+        }
+
+        if (field.getDescription() != null && !field.getDescription().isEmpty()) {
+            writeAttribute(writer, "description", field.getDescription());
         }
 
         writer.write(" />\n");

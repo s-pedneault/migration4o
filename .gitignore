@@ -53,3 +53,4 @@ config/local/
 *.dat
 *.db4o
 test-data/
+schema/*.bak

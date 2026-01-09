@@ -12,6 +12,8 @@ public class DOSchemaField {
     private final boolean isCollection;
     private final boolean embedContents;
     private final String childrenType;
+    private final String title;
+    private final String description;
 
     private DODatabaseClass databaseClass;
     private DOSchemaClass childrenSchemaClass;
@@ -19,6 +21,22 @@ public class DOSchemaField {
     public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
             boolean isCollection, boolean embedContents,
             String childrenType,
+            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
+        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
+                childrenType, null, null, databaseClass, childrenSchemaClass);
+    }
+
+    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
+            boolean isCollection, boolean embedContents,
+            String childrenType, String description,
+            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
+        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
+                childrenType, null, description, databaseClass, childrenSchemaClass);
+    }
+
+    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
+            boolean isCollection, boolean embedContents,
+            String childrenType, String title, String description,
             DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this.source = source;
         this.destinationName = destinationName;
@@ -28,6 +46,8 @@ public class DOSchemaField {
         this.isCollection = isCollection;
         this.embedContents = embedContents;
         this.childrenType = childrenType;
+        this.title = title;
+        this.description = description;
         this.databaseClass = databaseClass;
         this.childrenSchemaClass = childrenSchemaClass;
     }
@@ -62,6 +82,14 @@ public class DOSchemaField {
 
     public String getChildrenType() {
         return childrenType;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public String getDescription() {
+        return description;
     }
 
     public DODatabaseClass getDatabaseClass() {

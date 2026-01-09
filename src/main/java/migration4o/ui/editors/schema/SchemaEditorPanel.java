@@ -6,11 +6,15 @@ import migration4o.schema.DODatabaseSchemaWriter;
 import migration4o.ui.components.PropertyPanel;
 import migration4o.ui.models.SchemaTreeNode;
 import migration4o.ui.models.SchemaTreeNode.NodeType;
+import migration4o.util.TypeUtil;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.*;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -219,6 +223,26 @@ public class SchemaEditorPanel extends JPanel {
         for (int i = 0; i < fieldColumns.length; i++) {
             fieldsTable.getColumnModel().getColumn(i).setPreferredWidth(fieldColumns[i].width);
         }
+
+        // Set custom renderer for Children Type column
+        fieldsTable.getColumnModel().getColumn(7).setCellRenderer(new ChildrenTypeRenderer());
+
+        // Add mouse listener for Children Type clicks
+        fieldsTable.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                int row = fieldsTable.rowAtPoint(e.getPoint());
+                int col = fieldsTable.columnAtPoint(e.getPoint());
+
+                // Check if clicked on Children Type column
+                if (col == 7 && row >= 0) {
+                    String childrenType = (String) fieldsTableModel.getValueAt(row, col);
+                    if (childrenType != null && !childrenType.isEmpty()) {
+                        navigateToClass(childrenType);
+                    }
+                }
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(fieldsTable);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -546,6 +570,113 @@ public class SchemaEditorPanel extends JPanel {
         // Set up cell editors now that schema is loaded
         fieldsTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(createTypeComboBox()));
         fieldsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(createChildrenClassComboBox()));
+    }
+
+    /**
+     * Custom renderer for the Children Type column.
+     * - Classes: blue and underlined
+     * - Primitives: green
+     * - Others: red
+     */
+    private class ChildrenTypeRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            if (value != null && !value.toString().isEmpty()) {
+                String typeName = value.toString();
+
+                // Check if it's a class in our schema
+                boolean isSchemaClass = false;
+                if (schema != null && schema.getClasses() != null) {
+                    for (DOSchemaClass cls : schema.getClasses()) {
+                        if (cls.getAbsoluteName().equals(typeName)) {
+                            isSchemaClass = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isSchemaClass) {
+                    // Class: blue and underlined
+                    setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
+                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+                } else if (TypeUtil.isPrimitiveType(typeName)) {
+                    // Primitive: green
+                    setText("<html><font color='green'>" + typeName + "</font></html>");
+                    setCursor(Cursor.getDefaultCursor());
+                } else {
+                    // Other: red
+                    setText("<html><font color='red'>" + typeName + "</font></html>");
+                    setCursor(Cursor.getDefaultCursor());
+                }
+            } else {
+                setCursor(Cursor.getDefaultCursor());
+            }
+
+            return c;
+        }
+    }
+
+    /**
+     * Navigate to a class in the tree by its absolute name.
+     */
+    private void navigateToClass(String className) {
+        if (schema == null || schema.getClasses() == null) {
+            return;
+        }
+
+        // Find the class in the schema
+        DOSchemaClass targetClass = null;
+        for (DOSchemaClass cls : schema.getClasses()) {
+            if (cls.getAbsoluteName().equals(className)) {
+                targetClass = cls;
+                break;
+            }
+        }
+
+        if (targetClass == null) {
+            return; // Class not found in schema
+        }
+
+        // Clear any filter to ensure the class is visible
+        if (!currentFilter.isEmpty()) {
+            currentFilter = "";
+            buildTree();
+        }
+
+        // Find the node in the tree
+        SchemaTreeNode nodeToSelect = findClassNode((SchemaTreeNode) treeModel.getRoot(), targetClass);
+        if (nodeToSelect != null) {
+            TreePath path = new TreePath(treeModel.getPathToRoot(nodeToSelect));
+            schemaTree.setSelectionPath(path);
+            schemaTree.scrollPathToVisible(path);
+        }
+    }
+
+    /**
+     * Recursively find a class node in the tree.
+     */
+    private SchemaTreeNode findClassNode(SchemaTreeNode node, DOSchemaClass targetClass) {
+        if (node.getNodeType() == NodeType.CLASS) {
+            DOSchemaClass nodeClass = (DOSchemaClass) node.getSchemaElement();
+            if (nodeClass.getAbsoluteName().equals(targetClass.getAbsoluteName())) {
+                return node;
+            }
+        }
+
+        // Search children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            SchemaTreeNode child = (SchemaTreeNode) node.getChildAt(i);
+            SchemaTreeNode result = findClassNode(child, targetClass);
+            if (result != null) {
+                return result;
+            }
+        }
+
+        return null;
     }
 
     private void markModified() {

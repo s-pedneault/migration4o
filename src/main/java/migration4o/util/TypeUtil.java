@@ -13,35 +13,57 @@ public class TypeUtil {
         if (typeName == null) {
             return false;
         }
+
+        String lowerTypeName = typeName.toLowerCase();
+
         // Java primitive types
-        if (typeName.equals("boolean") || typeName.equals("byte") || typeName.equals("char") ||
-                typeName.equals("short") || typeName.equals("int") || typeName.equals("long") ||
-                typeName.equals("float") || typeName.equals("double")) {
+        if (lowerTypeName.equals("boolean") || lowerTypeName.equals("byte") || lowerTypeName.equals("char") ||
+                lowerTypeName.equals("short") || lowerTypeName.equals("int") || lowerTypeName.equals("long") ||
+                lowerTypeName.equals("float") || lowerTypeName.equals("double")) {
             return true;
         }
 
         // Common Java standard library types that are considered "primitive" for our
         // purposes
-        return typeName.equals("java.lang.String") ||
-                typeName.equals("java.lang.Integer") ||
-                typeName.equals("java.lang.Long") ||
-                typeName.equals("java.lang.Double") ||
-                typeName.equals("java.lang.Float") ||
-                typeName.equals("java.lang.Boolean") ||
-                typeName.equals("java.lang.Character") ||
-                typeName.equals("java.lang.Byte") ||
-                typeName.equals("java.lang.Short") ||
-                typeName.equals("java.math.BigDecimal") ||
-                typeName.equals("java.math.BigInteger") ||
-                typeName.equals("java.util.Date") ||
-                typeName.equals("java.sql.Date") ||
-                typeName.equals("java.sql.Time") ||
-                typeName.equals("java.sql.Timestamp") ||
-                typeName.equals("java.time.LocalDate") ||
-                typeName.equals("java.time.LocalTime") ||
-                typeName.equals("java.time.LocalDateTime") ||
-                typeName.equals("java.time.ZonedDateTime") ||
-                typeName.equals("java.util.UUID");
+        // Check both fully qualified names and simple class names (case-insensitive)
+        return matchesType(lowerTypeName, "java.lang.string") ||
+                matchesType(lowerTypeName, "java.lang.integer") ||
+                matchesType(lowerTypeName, "java.lang.long") ||
+                matchesType(lowerTypeName, "java.lang.double") ||
+                matchesType(lowerTypeName, "java.lang.float") ||
+                matchesType(lowerTypeName, "java.lang.boolean") ||
+                matchesType(lowerTypeName, "java.lang.character") ||
+                matchesType(lowerTypeName, "java.lang.byte") ||
+                matchesType(lowerTypeName, "java.lang.short") ||
+                matchesType(lowerTypeName, "java.math.bigdecimal") ||
+                matchesType(lowerTypeName, "java.math.biginteger") ||
+                matchesType(lowerTypeName, "java.util.date") ||
+                matchesType(lowerTypeName, "java.sql.date") ||
+                matchesType(lowerTypeName, "java.sql.time") ||
+                matchesType(lowerTypeName, "java.sql.timestamp") ||
+                matchesType(lowerTypeName, "java.time.localdate") ||
+                matchesType(lowerTypeName, "java.time.localtime") ||
+                matchesType(lowerTypeName, "java.time.localdatetime") ||
+                matchesType(lowerTypeName, "java.time.zoneddatetime") ||
+                matchesType(lowerTypeName, "java.util.uuid");
+    }
+
+    /**
+     * Check if typeName matches either the full qualified name or the simple class
+     * name.
+     * Both parameters should be in lowercase.
+     */
+    private static boolean matchesType(String lowerTypeName, String lowerFullName) {
+        if (lowerTypeName.equals(lowerFullName)) {
+            return true;
+        }
+        // Extract simple name (everything after the last dot)
+        int lastDot = lowerFullName.lastIndexOf('.');
+        if (lastDot >= 0) {
+            String simpleName = lowerFullName.substring(lastDot + 1);
+            return lowerTypeName.equals(simpleName);
+        }
+        return false;
     }
 
 }
