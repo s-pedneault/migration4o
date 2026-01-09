@@ -249,12 +249,12 @@ public class SchemaEditorPanel extends JPanel {
                 if (e.getClickCount() == 2) {
                     openFieldEditor(row);
                 }
-                // Single click on Children Type column to navigate
+                // Single click on Type or Children Type column to navigate
                 else if (e.getClickCount() == 1 && col >= 0 && col < fieldColumns.length
-                        && fieldColumns[col].name.equals("Children Type")) {
-                    String childrenType = (String) fieldsTableModel.getValueAt(row, col);
-                    if (childrenType != null && !childrenType.isEmpty()) {
-                        navigateToClass(childrenType);
+                        && (fieldColumns[col].name.equals("Type") || fieldColumns[col].name.equals("Children Type"))) {
+                    String typeName = (String) fieldsTableModel.getValueAt(row, col);
+                    if (typeName != null && !typeName.isEmpty()) {
+                        navigateToClass(typeName);
                     }
                 }
             }
@@ -613,15 +613,20 @@ public class SchemaEditorPanel extends JPanel {
                 }
 
                 if (isSchemaClass) {
-                    // Class: blue
-                    setText("<html><font color='blue'>" + typeName + "</font></html>");
+                    // Class: blue and underlined
+                    setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
+                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
                 } else if (TypeUtil.isPrimitiveType(typeName)) {
                     // Primitive: green
                     setText("<html><font color='green'>" + typeName + "</font></html>");
+                    setCursor(Cursor.getDefaultCursor());
                 } else {
                     // Other: red (unresolved)
                     setText("<html><font color='red'>" + typeName + "</font></html>");
+                    setCursor(Cursor.getDefaultCursor());
                 }
+            } else {
+                setCursor(Cursor.getDefaultCursor());
             }
 
             return c;
@@ -750,82 +755,23 @@ public class SchemaEditorPanel extends JPanel {
 
         DOSchemaField field = schemaClass.getFields()[rowIndex];
 
-        // Create dialog
-        JDialog dialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                "Edit Field", true);
-        dialog.setLayout(new BorderLayout(10, 10));
+        // Show field editor dialog
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        FieldEditorDialog dialog = FieldEditorDialog.showDialog(owner, schema, field);
 
-        // Create form panel
-        PropertyPanel formPanel = new PropertyPanel();
-        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-
-        // Add fields
-        JTextField sourceField = formPanel.addTextField("Source", field.getSource() != null ? field.getSource() : "");
-        JTextField destField = formPanel.addTextField("Destination",
-                field.getDestinationName() != null ? field.getDestinationName() : "");
-        JComboBox<String> typeCombo = createTypeComboBox();
-        typeCombo.setSelectedItem(field.getType() != null ? field.getType() : "");
-        typeCombo.setEditable(true);
-        formPanel.addCustomField("Type", typeCombo);
-
-        JCheckBox exportedCheckBox = formPanel.addCheckBox("Exported", field.isExported());
-        JCheckBox skipIfEmptyCheckBox = formPanel.addCheckBox("Skip If Empty", field.isSkipIfEmpty());
-        JCheckBox collectionCheckBox = formPanel.addCheckBox("Collection", field.isCollection());
-        JCheckBox embedContentsCheckBox = formPanel.addCheckBox("Embed Contents", field.isEmbedContents());
-
-        // Children Type - show as text with Edit button
-        JPanel childrenTypePanel = new JPanel(new BorderLayout(5, 0));
-        JLabel childrenTypeLabel = new JLabel(field.getChildrenType() != null ? field.getChildrenType() : "");
-        childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
-        childrenTypePanel.add(childrenTypeLabel, BorderLayout.CENTER);
-
-        JButton editChildrenTypeButton = new JButton("Edit");
-        editChildrenTypeButton.addActionListener(e -> {
-            String selected = showClassFinder(childrenTypeLabel.getText());
-            if (selected != null) {
-                childrenTypeLabel.setText(selected);
-            }
-        });
-        childrenTypePanel.add(editChildrenTypeButton, BorderLayout.EAST);
-        formPanel.addCustomField("Children Type", childrenTypePanel);
-
-        JTextField titleField = formPanel.addTextField("Title", field.getTitle() != null ? field.getTitle() : "");
-        JTextField descField = formPanel.addTextField("Description",
-                field.getDescription() != null ? field.getDescription() : "");
-
-        dialog.add(formPanel, BorderLayout.CENTER);
-
-        // Create button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        JButton okButton = new JButton("OK");
-        JButton cancelButton = new JButton("Cancel");
-
-        okButton.addActionListener(e -> {
+        if (dialog != null) {
             // Update the field in the table
-            fieldsTableModel.setValueAt(sourceField.getText(), rowIndex, 0);
-            fieldsTableModel.setValueAt(destField.getText(), rowIndex, 1);
-            fieldsTableModel.setValueAt(typeCombo.getSelectedItem(), rowIndex, 2);
-            fieldsTableModel.setValueAt(exportedCheckBox.isSelected(), rowIndex, 3);
-            fieldsTableModel.setValueAt(skipIfEmptyCheckBox.isSelected(), rowIndex, 4);
-            fieldsTableModel.setValueAt(collectionCheckBox.isSelected(), rowIndex, 5);
-            fieldsTableModel.setValueAt(embedContentsCheckBox.isSelected(), rowIndex, 6);
-            fieldsTableModel.setValueAt(childrenTypeLabel.getText(), rowIndex, 7);
+            fieldsTableModel.setValueAt(dialog.getFieldSource(), rowIndex, 0);
+            fieldsTableModel.setValueAt(dialog.getFieldDestination(), rowIndex, 1);
+            fieldsTableModel.setValueAt(dialog.getFieldType(), rowIndex, 2);
+            fieldsTableModel.setValueAt(dialog.isFieldExported(), rowIndex, 3);
+            fieldsTableModel.setValueAt(dialog.isFieldSkipIfEmpty(), rowIndex, 4);
+            fieldsTableModel.setValueAt(dialog.isFieldCollection(), rowIndex, 5);
+            fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
+            fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
 
             markModified();
-            dialog.dispose();
-        });
-
-        cancelButton.addActionListener(e -> dialog.dispose());
-
-        buttonPanel.add(okButton);
-        buttonPanel.add(cancelButton);
-        dialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        dialog.pack();
-        dialog.setLocationRelativeTo(this);
-        dialog.setVisible(true);
+        }
     }
 
     /**
@@ -835,123 +781,8 @@ public class SchemaEditorPanel extends JPanel {
      * @return The selected class name, or null if cancelled
      */
     private String showClassFinder(String initialValue) {
-        JDialog finderDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                "Class Finder", true);
-        finderDialog.setLayout(new BorderLayout(10, 10));
-        finderDialog.setSize(500, 400);
-
-        // Search field at the top
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
-        JTextField searchField = new JTextField(initialValue != null ? initialValue : "");
-        searchField.putClientProperty("JTextField.placeholderText", "Type to search classes...");
-        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        finderDialog.add(searchPanel, BorderLayout.NORTH);
-
-        // List of matching classes
-        DefaultListModel<String> listModel = new DefaultListModel<>();
-        JList<String> classList = new JList<>(listModel);
-        classList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Populate initial list
-        updateClassList(listModel, initialValue != null ? initialValue : "");
-
-        // Update list as user types
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(listModel, searchField.getText());
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(listModel, searchField.getText());
-            }
-
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(listModel, searchField.getText());
-            }
-        });
-
-        JScrollPane listScroll = new JScrollPane(classList);
-        listScroll.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-        finderDialog.add(listScroll, BorderLayout.CENTER);
-
-        // Button panel
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-
-        final String[] result = { null };
-
-        JButton okButton = new JButton("OK");
-        okButton.addActionListener(e -> {
-            String selected = classList.getSelectedValue();
-            if (selected != null) {
-                result[0] = selected;
-                finderDialog.dispose();
-            }
-        });
-
-        JButton clearButton = new JButton("Clear");
-        clearButton.addActionListener(e -> {
-            result[0] = "";
-            finderDialog.dispose();
-        });
-
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> finderDialog.dispose());
-
-        // Double-click to select
-        classList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    String selected = classList.getSelectedValue();
-                    if (selected != null) {
-                        result[0] = selected;
-                        finderDialog.dispose();
-                    }
-                }
-            }
-        });
-
-        buttonPanel.add(okButton);
-        buttonPanel.add(clearButton);
-        buttonPanel.add(cancelButton);
-        finderDialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        finderDialog.setLocationRelativeTo(this);
-        finderDialog.setVisible(true);
-
-        return result[0];
-    }
-
-    /**
-     * Update the class list based on the search pattern.
-     */
-    private void updateClassList(DefaultListModel<String> listModel, String pattern) {
-        listModel.clear();
-
-        if (schema == null || schema.getClasses() == null) {
-            return;
-        }
-
-        String lowerPattern = pattern.toLowerCase();
-        List<String> matches = new ArrayList<>();
-
-        for (DOSchemaClass cls : schema.getClasses()) {
-            String className = cls.getAbsoluteName();
-            if (className.toLowerCase().contains(lowerPattern)) {
-                matches.add(className);
-            }
-        }
-
-        // Sort matches
-        matches.sort(String.CASE_INSENSITIVE_ORDER);
-
-        // Add to list
-        for (String match : matches) {
-            listModel.addElement(match);
-        }
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        return ClassFinderDialog.showDialog(owner, schema, initialValue);
     }
 
     private void markModified() {
