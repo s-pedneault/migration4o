@@ -33,6 +33,21 @@ public class SchemaEditorPanel extends JPanel {
     private SchemaTreeNode currentSelectedNode;
     private String currentFilter = "";
 
+    // Column definitions for the fields table
+    private static class ColumnDefinition {
+        final String name;
+        final int width;
+        final Class<?> columnClass;
+
+        ColumnDefinition(String name, int width, Class<?> columnClass) {
+            this.name = name;
+            this.width = width;
+            this.columnClass = columnClass;
+        }
+    }
+
+    private ColumnDefinition[] fieldColumns;
+
     public SchemaEditorPanel(String schemaFilePath) {
         this.schemaFilePath = schemaFilePath;
         this.modified = false;
@@ -158,22 +173,34 @@ public class SchemaEditorPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createTitledBorder("Fields"));
 
+        // Define columns with their properties
+        fieldColumns = new ColumnDefinition[] {
+                new ColumnDefinition("Source", 200, String.class),
+                new ColumnDefinition("Destination", 150, String.class),
+                new ColumnDefinition("Type", 150, String.class),
+                new ColumnDefinition("Exported", 60, Boolean.class),
+                new ColumnDefinition("Skip If Empty", 90, Boolean.class),
+                new ColumnDefinition("Collection", 70, Boolean.class),
+                new ColumnDefinition("Embed Contents", 120, Boolean.class),
+                new ColumnDefinition("Children Type", 200, String.class)
+        };
+
+        // Extract column names
+        String[] columnNames = new String[fieldColumns.length];
+        for (int i = 0; i < fieldColumns.length; i++) {
+            columnNames[i] = fieldColumns[i].name;
+        }
+
         // Create table model
-        String[] columnNames = { "Source", "Destination", "Type", "Exported", "Skip If Empty", "Collection",
-                "Embed Contents", "Children Type" };
         fieldsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                // All columns are editable
                 return true;
             }
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 3 || columnIndex == 4 || columnIndex == 5 || columnIndex == 6) {
-                    return Boolean.class;
-                }
-                return String.class;
+                return fieldColumns[columnIndex].columnClass;
             }
         };
 
@@ -188,23 +215,11 @@ public class SchemaEditorPanel extends JPanel {
         fieldsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fieldsTable.getTableHeader().setReorderingAllowed(false);
 
-        // Set column widths
-        fieldsTable.getColumnModel().getColumn(0).setPreferredWidth(200);
-        fieldsTable.getColumnModel().getColumn(1).setPreferredWidth(150);
-        fieldsTable.getColumnModel().getColumn(2).setPreferredWidth(150);
-        fieldsTable.getColumnModel().getColumn(3).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(4).setPreferredWidth(100);
-        fieldsTable.getColumnModel().getColumn(5).setPreferredWidth(80);
-        fieldsTable.getColumnModel().getColumn(6).setPreferredWidth(120);
-        fieldsTable.getColumnModel().getColumn(7).setPreferredWidth(150);
+        // Configure column widths
+        for (int i = 0; i < fieldColumns.length; i++) {
+            fieldsTable.getColumnModel().getColumn(i).setPreferredWidth(fieldColumns[i].width);
+        }
 
-        // Add Type dropdown editor
-        JComboBox<String> typeCombo = createTypeComboBox();
-        fieldsTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(typeCombo));
-
-        // Add Children Class dropdown editor for last column
-        JComboBox<String> childrenClassCombo = createChildrenClassComboBox();
-        fieldsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(childrenClassCombo));
         JScrollPane scrollPane = new JScrollPane(fieldsTable);
         panel.add(scrollPane, BorderLayout.CENTER);
 
@@ -527,6 +542,10 @@ public class SchemaEditorPanel extends JPanel {
             };
             fieldsTableModel.addRow(rowData);
         }
+
+        // Set up cell editors now that schema is loaded
+        fieldsTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(createTypeComboBox()));
+        fieldsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(createChildrenClassComboBox()));
     }
 
     private void markModified() {
