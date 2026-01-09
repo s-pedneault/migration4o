@@ -14,7 +14,10 @@ public class TypeUtil {
             return false;
         }
 
-        String lowerTypeName = typeName.toLowerCase();
+        // Strip array notation (e.g., "int[]" -> "int", "String[][]" -> "String")
+        String baseTypeName = typeName.replaceAll("\\[\\]", "").trim();
+
+        String lowerTypeName = baseTypeName.toLowerCase();
 
         // Java primitive types
         if (lowerTypeName.equals("boolean") || lowerTypeName.equals("byte") || lowerTypeName.equals("char") ||
@@ -26,7 +29,8 @@ public class TypeUtil {
         // Common Java standard library types that are considered "primitive" for our
         // purposes
         // Check both fully qualified names and simple class names (case-insensitive)
-        return matchesType(lowerTypeName, "java.lang.string") ||
+        return matchesType(lowerTypeName, "java.lang.object") ||
+                matchesType(lowerTypeName, "java.lang.string") ||
                 matchesType(lowerTypeName, "java.lang.integer") ||
                 matchesType(lowerTypeName, "java.lang.long") ||
                 matchesType(lowerTypeName, "java.lang.double") ||

@@ -1,5 +1,6 @@
 package migration4o.ui.editors.schema;
 
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.ui.models.SchemaTreeNode;
 
 import javax.swing.*;
@@ -16,6 +17,13 @@ public class SchemaTreeCellRenderer extends DefaultTreeCellRenderer {
     private static final Color CLASS_COLOR = new Color(0, 150, 0);
     private static final Color FIELD_COLOR = new Color(100, 100, 100);
     private static final Color DISABLED_COLOR = new Color(150, 150, 150);
+    private static final Color ERROR_COLOR = new Color(200, 0, 0);
+
+    private SchemaEditorPanel editorPanel;
+
+    public SchemaTreeCellRenderer(SchemaEditorPanel editorPanel) {
+        this.editorPanel = editorPanel;
+    }
 
     @Override
     public Component getTreeCellRendererComponent(JTree tree, Object value,
@@ -44,7 +52,19 @@ public class SchemaTreeCellRenderer extends DefaultTreeCellRenderer {
                 case CLASS:
                     setIcon(UIManager.getIcon("FileView.fileIcon"));
                     String classText = node.toString();
-                    if (classText.contains("(not exported)")) {
+                    boolean hasErrors = false;
+
+                    // Check if this class node has errors
+                    if (editorPanel != null && node.getSchemaElement() instanceof DOSchemaClass) {
+                        hasErrors = editorPanel.hasErrors((DOSchemaClass) node.getSchemaElement());
+                    }
+
+                    if (hasErrors) {
+                        if (!selected) {
+                            setForeground(ERROR_COLOR);
+                        }
+                        setFont(getFont().deriveFont(Font.BOLD));
+                    } else if (classText.contains("(not exported)")) {
                         if (!selected) {
                             setForeground(DISABLED_COLOR);
                         }

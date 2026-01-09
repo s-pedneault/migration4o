@@ -36,6 +36,7 @@ public class SchemaEditorPanel extends JPanel {
     private JLabel statusLabel;
     private SchemaTreeNode currentSelectedNode;
     private String currentFilter = "";
+    private boolean showOnlyErrors = false;
 
     // Column definitions for the fields table
     private static class ColumnDefinition {
@@ -132,7 +133,7 @@ public class SchemaEditorPanel extends JPanel {
         schemaTree.setRootVisible(true);
 
         // Set custom renderer for better visualization
-        schemaTree.setCellRenderer(new SchemaTreeCellRenderer());
+        schemaTree.setCellRenderer(new SchemaTreeCellRenderer(this));
 
         // Add selection listener
         schemaTree.addTreeSelectionListener(e -> onTreeSelectionChanged());
@@ -170,6 +171,15 @@ public class SchemaEditorPanel extends JPanel {
 
         panel.add(searchField, BorderLayout.CENTER);
 
+        // Add "Errors only" checkbox
+        JCheckBox errorsOnlyCheckbox = new JCheckBox("Errors only");
+        errorsOnlyCheckbox.setToolTipText("Show only classes with unresolved field types");
+        errorsOnlyCheckbox.addActionListener(e -> {
+            showOnlyErrors = errorsOnlyCheckbox.isSelected();
+            filterTree(searchField.getText());
+        });
+        panel.add(errorsOnlyCheckbox, BorderLayout.EAST);
+
         return panel;
     }
 
@@ -199,7 +209,7 @@ public class SchemaEditorPanel extends JPanel {
         fieldsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return true;
+                return false; // Disable inline editing
             }
 
             @Override
@@ -208,34 +218,40 @@ public class SchemaEditorPanel extends JPanel {
             }
         };
 
-        // Add table model listener to track changes
-        fieldsTableModel.addTableModelListener(e -> {
-            if (e.getType() == javax.swing.event.TableModelEvent.UPDATE) {
-                markModified();
-            }
-        });
-
         fieldsTable = new JTable(fieldsTableModel);
         fieldsTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         fieldsTable.getTableHeader().setReorderingAllowed(false);
 
-        // Configure column widths
+        // Configure column widths and renderers
         for (int i = 0; i < fieldColumns.length; i++) {
             fieldsTable.getColumnModel().getColumn(i).setPreferredWidth(fieldColumns[i].width);
+
+            // Set custom renderers based on column name
+            if (fieldColumns[i].name.equals("Type")) {
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new TypeRenderer());
+            } else if (fieldColumns[i].name.equals("Children Type")) {
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new ChildrenTypeRenderer());
+            }
         }
 
-        // Set custom renderer for Children Type column
-        fieldsTable.getColumnModel().getColumn(7).setCellRenderer(new ChildrenTypeRenderer());
-
-        // Add mouse listener for Children Type clicks
+        // Add mouse listener for double-clicks to edit fields
         fieldsTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 int row = fieldsTable.rowAtPoint(e.getPoint());
                 int col = fieldsTable.columnAtPoint(e.getPoint());
 
-                // Check if clicked on Children Type column
-                if (col == 7 && row >= 0) {
+                if (row < 0) {
+                    return;
+                }
+
+                // Double-click to edit field
+                if (e.getClickCount() == 2) {
+                    openFieldEditor(row);
+                }
+                // Single click on Children Type column to navigate
+                else if (e.getClickCount() == 1 && col >= 0 && col < fieldColumns.length
+                        && fieldColumns[col].name.equals("Children Type")) {
                     String childrenType = (String) fieldsTableModel.getValueAt(row, col);
                     if (childrenType != null && !childrenType.isEmpty()) {
                         navigateToClass(childrenType);
@@ -293,8 +309,9 @@ public class SchemaEditorPanel extends JPanel {
             return;
         }
 
-        // If filtering, show all matching classes as a flat list
-        if (!currentFilter.isEmpty()) {
+        // If filtering (by text or errors only), show all matching classes as a flat
+        // list
+        if (!currentFilter.isEmpty() || showOnlyErrors) {
             List<DOSchemaClass> matchingClasses = new ArrayList<>();
             for (DOSchemaClass schemaClass : schema.getClasses()) {
                 if (matchesFilter(schemaClass)) {
@@ -566,10 +583,49 @@ public class SchemaEditorPanel extends JPanel {
             };
             fieldsTableModel.addRow(rowData);
         }
+    }
 
-        // Set up cell editors now that schema is loaded
-        fieldsTable.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(createTypeComboBox()));
-        fieldsTable.getColumnModel().getColumn(7).setCellEditor(new DefaultCellEditor(createChildrenClassComboBox()));
+    /**
+     * Custom renderer for the Type column.
+     * - Classes: blue
+     * - Primitives: green
+     * - Others: red (unresolved)
+     */
+    private class TypeRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus,
+                int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            if (value != null && !value.toString().isEmpty()) {
+                String typeName = value.toString();
+
+                // Check if it's a class in our schema
+                boolean isSchemaClass = false;
+                if (schema != null && schema.getClasses() != null) {
+                    for (DOSchemaClass cls : schema.getClasses()) {
+                        if (cls.getAbsoluteName().equals(typeName) || cls.getShortName().equals(typeName)) {
+                            isSchemaClass = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (isSchemaClass) {
+                    // Class: blue
+                    setText("<html><font color='blue'>" + typeName + "</font></html>");
+                } else if (TypeUtil.isPrimitiveType(typeName)) {
+                    // Primitive: green
+                    setText("<html><font color='green'>" + typeName + "</font></html>");
+                } else {
+                    // Other: red (unresolved)
+                    setText("<html><font color='red'>" + typeName + "</font></html>");
+                }
+            }
+
+            return c;
+        }
     }
 
     /**
@@ -592,7 +648,7 @@ public class SchemaEditorPanel extends JPanel {
                 boolean isSchemaClass = false;
                 if (schema != null && schema.getClasses() != null) {
                     for (DOSchemaClass cls : schema.getClasses()) {
-                        if (cls.getAbsoluteName().equals(typeName)) {
+                        if (cls.getAbsoluteName().equals(typeName) || cls.getShortName().equals(typeName)) {
                             isSchemaClass = true;
                             break;
                         }
@@ -679,6 +735,225 @@ public class SchemaEditorPanel extends JPanel {
         return null;
     }
 
+    /**
+     * Open a dialog to edit a field's properties.
+     */
+    private void openFieldEditor(int rowIndex) {
+        if (currentSelectedNode == null || currentSelectedNode.getNodeType() != NodeType.CLASS) {
+            return;
+        }
+
+        DOSchemaClass schemaClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
+        if (schemaClass.getFields() == null || rowIndex >= schemaClass.getFields().length) {
+            return;
+        }
+
+        DOSchemaField field = schemaClass.getFields()[rowIndex];
+
+        // Create dialog
+        JDialog dialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                "Edit Field", true);
+        dialog.setLayout(new BorderLayout(10, 10));
+
+        // Create form panel
+        PropertyPanel formPanel = new PropertyPanel();
+        formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Add fields
+        JTextField sourceField = formPanel.addTextField("Source", field.getSource() != null ? field.getSource() : "");
+        JTextField destField = formPanel.addTextField("Destination",
+                field.getDestinationName() != null ? field.getDestinationName() : "");
+        JComboBox<String> typeCombo = createTypeComboBox();
+        typeCombo.setSelectedItem(field.getType() != null ? field.getType() : "");
+        typeCombo.setEditable(true);
+        formPanel.addCustomField("Type", typeCombo);
+
+        JCheckBox exportedCheckBox = formPanel.addCheckBox("Exported", field.isExported());
+        JCheckBox skipIfEmptyCheckBox = formPanel.addCheckBox("Skip If Empty", field.isSkipIfEmpty());
+        JCheckBox collectionCheckBox = formPanel.addCheckBox("Collection", field.isCollection());
+        JCheckBox embedContentsCheckBox = formPanel.addCheckBox("Embed Contents", field.isEmbedContents());
+
+        // Children Type - show as text with Edit button
+        JPanel childrenTypePanel = new JPanel(new BorderLayout(5, 0));
+        JLabel childrenTypeLabel = new JLabel(field.getChildrenType() != null ? field.getChildrenType() : "");
+        childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY),
+                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+        childrenTypePanel.add(childrenTypeLabel, BorderLayout.CENTER);
+
+        JButton editChildrenTypeButton = new JButton("Edit");
+        editChildrenTypeButton.addActionListener(e -> {
+            String selected = showClassFinder(childrenTypeLabel.getText());
+            if (selected != null) {
+                childrenTypeLabel.setText(selected);
+            }
+        });
+        childrenTypePanel.add(editChildrenTypeButton, BorderLayout.EAST);
+        formPanel.addCustomField("Children Type", childrenTypePanel);
+
+        JTextField titleField = formPanel.addTextField("Title", field.getTitle() != null ? field.getTitle() : "");
+        JTextField descField = formPanel.addTextField("Description",
+                field.getDescription() != null ? field.getDescription() : "");
+
+        dialog.add(formPanel, BorderLayout.CENTER);
+
+        // Create button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+
+        okButton.addActionListener(e -> {
+            // Update the field in the table
+            fieldsTableModel.setValueAt(sourceField.getText(), rowIndex, 0);
+            fieldsTableModel.setValueAt(destField.getText(), rowIndex, 1);
+            fieldsTableModel.setValueAt(typeCombo.getSelectedItem(), rowIndex, 2);
+            fieldsTableModel.setValueAt(exportedCheckBox.isSelected(), rowIndex, 3);
+            fieldsTableModel.setValueAt(skipIfEmptyCheckBox.isSelected(), rowIndex, 4);
+            fieldsTableModel.setValueAt(collectionCheckBox.isSelected(), rowIndex, 5);
+            fieldsTableModel.setValueAt(embedContentsCheckBox.isSelected(), rowIndex, 6);
+            fieldsTableModel.setValueAt(childrenTypeLabel.getText(), rowIndex, 7);
+
+            markModified();
+            dialog.dispose();
+        });
+
+        cancelButton.addActionListener(e -> dialog.dispose());
+
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        dialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        dialog.pack();
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+    }
+
+    /**
+     * Show a class finder dialog to select a class name.
+     * 
+     * @param initialValue The initial value to show in the search field
+     * @return The selected class name, or null if cancelled
+     */
+    private String showClassFinder(String initialValue) {
+        JDialog finderDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                "Class Finder", true);
+        finderDialog.setLayout(new BorderLayout(10, 10));
+        finderDialog.setSize(500, 400);
+
+        // Search field at the top
+        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
+        searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
+        JTextField searchField = new JTextField(initialValue != null ? initialValue : "");
+        searchField.putClientProperty("JTextField.placeholderText", "Type to search classes...");
+        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
+        searchPanel.add(searchField, BorderLayout.CENTER);
+        finderDialog.add(searchPanel, BorderLayout.NORTH);
+
+        // List of matching classes
+        DefaultListModel<String> listModel = new DefaultListModel<>();
+        JList<String> classList = new JList<>(listModel);
+        classList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+
+        // Populate initial list
+        updateClassList(listModel, initialValue != null ? initialValue : "");
+
+        // Update list as user types
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                updateClassList(listModel, searchField.getText());
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                updateClassList(listModel, searchField.getText());
+            }
+
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                updateClassList(listModel, searchField.getText());
+            }
+        });
+
+        JScrollPane listScroll = new JScrollPane(classList);
+        listScroll.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+        finderDialog.add(listScroll, BorderLayout.CENTER);
+
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+
+        final String[] result = { null };
+
+        JButton okButton = new JButton("OK");
+        okButton.addActionListener(e -> {
+            String selected = classList.getSelectedValue();
+            if (selected != null) {
+                result[0] = selected;
+                finderDialog.dispose();
+            }
+        });
+
+        JButton clearButton = new JButton("Clear");
+        clearButton.addActionListener(e -> {
+            result[0] = "";
+            finderDialog.dispose();
+        });
+
+        JButton cancelButton = new JButton("Cancel");
+        cancelButton.addActionListener(e -> finderDialog.dispose());
+
+        // Double-click to select
+        classList.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    String selected = classList.getSelectedValue();
+                    if (selected != null) {
+                        result[0] = selected;
+                        finderDialog.dispose();
+                    }
+                }
+            }
+        });
+
+        buttonPanel.add(okButton);
+        buttonPanel.add(clearButton);
+        buttonPanel.add(cancelButton);
+        finderDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        finderDialog.setLocationRelativeTo(this);
+        finderDialog.setVisible(true);
+
+        return result[0];
+    }
+
+    /**
+     * Update the class list based on the search pattern.
+     */
+    private void updateClassList(DefaultListModel<String> listModel, String pattern) {
+        listModel.clear();
+
+        if (schema == null || schema.getClasses() == null) {
+            return;
+        }
+
+        String lowerPattern = pattern.toLowerCase();
+        List<String> matches = new ArrayList<>();
+
+        for (DOSchemaClass cls : schema.getClasses()) {
+            String className = cls.getAbsoluteName();
+            if (className.toLowerCase().contains(lowerPattern)) {
+                matches.add(className);
+            }
+        }
+
+        // Sort matches
+        matches.sort(String.CASE_INSENSITIVE_ORDER);
+
+        // Add to list
+        for (String match : matches) {
+            listModel.addElement(match);
+        }
+    }
+
     private void markModified() {
         if (!modified) {
             modified = true;
@@ -760,6 +1035,11 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     private boolean matchesFilter(DOSchemaClass schemaClass) {
+        // Check errors filter first
+        if (showOnlyErrors && !hasErrors(schemaClass)) {
+            return false;
+        }
+
         if (currentFilter.isEmpty()) {
             return true;
         }
@@ -788,6 +1068,62 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         return false;
+    }
+
+    /**
+     * Check if a class has errors (unresolved field types).
+     * A field type is unresolved if it's not a primitive and not found in the
+     * schema classes.
+     */
+    /**
+     * Check if a class has any unresolved type errors.
+     * Made package-private so the renderer can access it.
+     */
+    boolean hasErrors(DOSchemaClass schemaClass) {
+        if (schemaClass.getFields() == null || schemaClass.getFields().length == 0) {
+            return false;
+        }
+
+        for (DOSchemaField field : schemaClass.getFields()) {
+            // Check the main type field
+            if (isUnresolvedType(field.getType())) {
+                return true;
+            }
+
+            // Check the childrenType field (for collections)
+            if (isUnresolvedType(field.getChildrenType())) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a type name is unresolved (not primitive and not in schema).
+     */
+    private boolean isUnresolvedType(String typeName) {
+        if (typeName == null || typeName.isEmpty()) {
+            return false;
+        }
+
+        // Check if it's a primitive type
+        if (TypeUtil.isPrimitiveType(typeName)) {
+            return false;
+        }
+
+        // Check if it's a class in our schema
+        if (schema != null && schema.getClasses() != null) {
+            for (DOSchemaClass cls : schema.getClasses()) {
+                // Check both absolute name and short name
+                if (cls.getAbsoluteName().equals(typeName) || cls.getShortName().equals(typeName)) {
+                    return false;
+                }
+            }
+        }
+
+        // Not primitive and not in schema = unresolved
+        return true;
     }
 
     private String getSchemaStats() {
