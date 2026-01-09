@@ -855,20 +855,19 @@ public class SchemaEditorPanel extends JPanel {
 
             // Create the new field object with all properties
             DOSchemaField newFieldWithData = new DOSchemaField(
-                dialog.getFieldSource(),
-                dialog.getFieldDestination(),
-                dialog.getFieldType(),
-                dialog.isFieldExported(),
-                dialog.isFieldSkipIfEmpty(),
-                dialog.isFieldCollection(),
-                dialog.isFieldEmbedContents(),
-                dialog.getFieldChildrenType(),
-                dialog.getFieldTitle(),
-                dialog.getFieldDescription(),
-                null,
-                null
-            );
-            
+                    dialog.getFieldSource(),
+                    dialog.getFieldDestination(),
+                    dialog.getFieldType(),
+                    dialog.isFieldExported(),
+                    dialog.isFieldSkipIfEmpty(),
+                    dialog.isFieldCollection(),
+                    dialog.isFieldEmbedContents(),
+                    dialog.getFieldChildrenType(),
+                    dialog.getFieldTitle(),
+                    dialog.getFieldDescription(),
+                    null,
+                    null);
+
             // Add the new field to the table
             Object[] rowData = {
                     dialog.getFieldSource(),
@@ -912,10 +911,10 @@ public class SchemaEditorPanel extends JPanel {
             if (dialog.isDeleted()) {
                 // Remove the field from the table
                 fieldsTableModel.removeRow(rowIndex);
-                
+
                 // Rebuild the class with the updated fields
                 rebuildCurrentClassFields();
-                
+
                 markModified();
                 return;
             }
@@ -992,7 +991,8 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
-     * Rebuild the currently selected class with updated fields from the table model.
+     * Rebuild the currently selected class with updated fields from the table
+     * model.
      * This is necessary because DOSchemaClass and DOSchemaField are immutable.
      */
     private void rebuildCurrentClassFields() {
@@ -1001,19 +1001,20 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         DOSchemaClass oldClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
-        
-        // Create a map of original fields by source name to preserve title and description
+
+        // Create a map of original fields by source name to preserve title and
+        // description
         java.util.Map<String, DOSchemaField> originalFieldsMap = new java.util.HashMap<>();
         if (oldClass.getFields() != null) {
             for (DOSchemaField field : oldClass.getFields()) {
                 originalFieldsMap.put(field.getSource(), field);
             }
         }
-        
+
         // Build new fields array from table model
         int rowCount = fieldsTableModel.getRowCount();
         DOSchemaField[] newFields = new DOSchemaField[rowCount];
-        
+
         for (int i = 0; i < rowCount; i++) {
             String source = (String) fieldsTableModel.getValueAt(i, 0);
             String destination = (String) fieldsTableModel.getValueAt(i, 1);
@@ -1023,8 +1024,9 @@ public class SchemaEditorPanel extends JPanel {
             Boolean collection = (Boolean) fieldsTableModel.getValueAt(i, 5);
             Boolean embedContents = (Boolean) fieldsTableModel.getValueAt(i, 6);
             String childrenType = (String) fieldsTableModel.getValueAt(i, 7);
-            
-            // Try to find the original field by source name to preserve title and description
+
+            // Try to find the original field by source name to preserve title and
+            // description
             String title = null;
             String description = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
@@ -1032,35 +1034,34 @@ public class SchemaEditorPanel extends JPanel {
                 title = originalField.getTitle();
                 description = originalField.getDescription();
             }
-            
+
             newFields[i] = new DOSchemaField(
-                source != null ? source : "",
-                destination != null ? destination : "",
-                type != null ? type : "",
-                exported != null ? exported : false,
-                skipIfEmpty != null ? skipIfEmpty : true,
-                collection != null ? collection : false,
-                embedContents != null ? embedContents : false,
-                childrenType != null ? childrenType : "",
-                title,
-                description,
-                null,  // databaseClass
-                null   // childrenSchemaClass
+                    source != null ? source : "",
+                    destination != null ? destination : "",
+                    type != null ? type : "",
+                    exported != null ? exported : false,
+                    skipIfEmpty != null ? skipIfEmpty : true,
+                    collection != null ? collection : false,
+                    embedContents != null ? embedContents : false,
+                    childrenType != null ? childrenType : "",
+                    title,
+                    description,
+                    null, // databaseClass
+                    null // childrenSchemaClass
             );
         }
-        
+
         // Create new class with updated fields
         DOSchemaClass newClass = new DOSchemaClass(
-            oldClass.getSourceName(),
-            oldClass.getDestinationName(),
-            oldClass.getDescription(),
-            oldClass.getTitle(),
-            oldClass.getParentClass(),
-            newFields,
-            oldClass.getSchemaReferences(),
-            oldClass.isMigrate()
-        );
-        
+                oldClass.getSourceName(),
+                oldClass.getDestinationName(),
+                oldClass.getDescription(),
+                oldClass.getTitle(),
+                oldClass.getParentClass(),
+                newFields,
+                oldClass.getSchemaReferences(),
+                oldClass.isMigrate());
+
         // Replace the class in the schema
         if (schema != null && schema.getClasses() != null) {
             DOSchemaClass[] classes = schema.getClasses();
