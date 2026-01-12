@@ -488,7 +488,7 @@ public class SchemaComparisonPanel extends JPanel {
             // Sort fields according to reference schema order
             DOSchemaField[] sortedFields = sortFieldsByReferenceOrder(classToShow.getFields(),
                     diff.getReferenceClass());
-            
+
             // Create table with action buttons if showing compared schema
             JPanel tablePanel;
             if (!isLeftTree && diff.getReferenceClass() != null) {
@@ -497,9 +497,9 @@ public class SchemaComparisonPanel extends JPanel {
                 tablePanel = new JPanel(new BorderLayout());
                 tablePanel.add(createFieldsTable(sortedFields), BorderLayout.CENTER);
             }
-            
+
             contentPanel.add(tablePanel, BorderLayout.CENTER);
-            
+
             // If a specific field was selected, try to highlight it
             JScrollPane scrollPane = findScrollPane(tablePanel);
             if (selectedField != null && scrollPane != null && scrollPane.getViewport().getView() instanceof JTable) {
@@ -536,49 +536,49 @@ public class SchemaComparisonPanel extends JPanel {
      */
     private JPanel createFieldsTableWithActions(DOSchemaField[] fields, ClassDifference diff) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
-        
+
         // Get list of fields only in compared schema (missing from reference)
         List<DOSchemaField> missingFields = diff.getFieldsOnlyInCompared();
         java.util.Set<String> missingFieldNames = new java.util.HashSet<>();
         for (DOSchemaField f : missingFields) {
             missingFieldNames.add(f.getSource());
         }
-        
+
         // Create the table
         JScrollPane tablePane = createFieldsTable(fields);
         panel.add(tablePane, BorderLayout.CENTER);
-        
+
         // Add buttons panel for missing fields
         if (!missingFieldNames.isEmpty() && onAddField != null && diff.getReferenceClass() != null) {
             JPanel buttonsPanel = new JPanel();
             buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
             buttonsPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
-            
+
             for (DOSchemaField field : fields) {
                 if (missingFieldNames.contains(field.getSource())) {
-                    JButton addButton = new JButton("Add " + field.getSource() + " to " + comparison.getReferenceLabel());
+                    JButton addButton = new JButton(
+                            "Add " + field.getSource() + " to " + comparison.getReferenceLabel());
                     addButton.setAlignmentX(Component.LEFT_ALIGNMENT);
                     addButton.addActionListener(e -> {
                         onAddField.accept(diff.getReferenceClass(), field);
                         setStatus("Field '" + field.getSource() + "' added - remember to save schema");
-                        
+
                         // Refresh comparison
                         SchemaComparison newComparison = new SchemaComparison(
-                            comparison.getReferenceSchema(),
-                            comparison.getReferenceLabel(),
-                            comparison.getComparedSchema(),
-                            comparison.getComparedLabel()
-                        );
+                                comparison.getReferenceSchema(),
+                                comparison.getReferenceLabel(),
+                                comparison.getComparedSchema(),
+                                comparison.getComparedLabel());
                         updateComparison(newComparison);
                     });
                     buttonsPanel.add(addButton);
                     buttonsPanel.add(Box.createRigidArea(new Dimension(0, 3)));
                 }
             }
-            
+
             panel.add(new JScrollPane(buttonsPanel), BorderLayout.SOUTH);
         }
-        
+
         return panel;
     }
 
@@ -922,7 +922,7 @@ public class SchemaComparisonPanel extends JPanel {
 
     private TreePath findPathByKeyRecursive(TreePath parentPath, String targetKey) {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
-        
+
         if (targetKey.equals(getNodeKeyFromPath(parentPath))) {
             return parentPath;
         }

@@ -207,7 +207,7 @@ public class SchemaEditorPanel extends JPanel {
         DOSchemaClass targetClass = null;
         int classIndex = -1;
         DOSchemaClass[] classes = schema.getClasses();
-        
+
         for (int i = 0; i < classes.length; i++) {
             if (classes[i].getSourceName().equals(parentClass.getSourceName())) {
                 targetClass = classes[i];
@@ -228,8 +228,8 @@ public class SchemaEditorPanel extends JPanel {
             for (DOSchemaField existing : targetClass.getFields()) {
                 if (existing.getSource().equals(field.getSource())) {
                     JOptionPane.showMessageDialog(this,
-                            "Field '" + field.getSource() + "' already exists in class '" + 
-                            targetClass.getSourceName() + "'.",
+                            "Field '" + field.getSource() + "' already exists in class '" +
+                                    targetClass.getSourceName() + "'.",
                             "Field Exists", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
