@@ -30,10 +30,10 @@ public class Migration4oUI {
             // Add schema editor tab
             try {
                 SchemaEditorPanel schemaEditor = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
+                schemaEditor.setOnCompareRequested(() -> mainWindow.openDatabaseFile());
 
-                // Load the schema to track it
-                DODatabaseSchemaReader reader = new DODatabaseSchemaReader();
-                DOSchema schema = reader.readSchema(DEFAULT_SCHEMA_PATH);
+                // Get the schema from the editor (already loaded by the constructor)
+                DOSchema schema = schemaEditor.getSchema();
 
                 mainWindow.addSchemaTab("Schema Editor", schemaEditor, schema, true);
             } catch (Exception e) {

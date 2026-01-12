@@ -848,7 +848,7 @@
         <field source="mIDUsageDuLocal" destinationName="idUsageDuLocal" isExported="true" skipIfEmpty="true" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
         <field source="mIDUsagePrincipal" destinationName="idUsagePrincipal" isExported="true" skipIfEmpty="true" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="gest.dossPrev.DossPrev$NAliasNom" isExported="true">
+    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="NAliasNom" isExported="true" parentClass="gest.gen.Entite">
         <field source="iNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
     <class source="gest.dossPrev.DossPrevSuppr" destinationName="DossierAdresseSupprime" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -885,7 +885,22 @@
         <field source="mPropNombre" destinationName="propNombre" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mPropQuant" destinationName="propQuant" isExported="true" skipIfEmpty="true" type="gest.gen.Qte" />
     </class>
-    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossPrev" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossPrev" isExported="true" title="HistoImportDossPrev" parentClass="gest.gen.EntiteContientID">
+        <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mDateImport" destinationName="dateImport" isExported="true" skipIfEmpty="true" type="java.util.Date" />
+        <field source="mFilename" destinationName="filename" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="mIDOperateur" destinationName="idOperateur" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" />
+        <field source="mCodeGeo" destinationName="codeGeo" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="mNumAjoutsAnalyses" destinationName="numAjoutsAnalyses" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumAjoutsEffectues" destinationName="numAjoutsEffectues" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumModifs" destinationName="numModifs" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumSuppressionsAnalyses" destinationName="numSuppressionsAnalyses" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumSuppressionsEffectues" destinationName="numSuppressionsEffectues" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumConflits" destinationName="numConflits" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumNonTraites" destinationName="numNonTraites" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mNumTraites" destinationName="numTraites" isExported="true" skipIfEmpty="true" type="int" />
+        <field source="mResultat" destinationName="resultat" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
     <class source="gest.dossPrev.IDDossPrev" destinationName="IDDossPrev" isExported="true" parentClass="gest.gen.IDEntite">
         <reference class="gest.planInterv.PlanAdresseContact" field="mIDDossPrev" />

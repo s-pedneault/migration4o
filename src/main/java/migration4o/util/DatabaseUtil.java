@@ -173,15 +173,40 @@ public class DatabaseUtil {
 
     /**
      * Extracts fields from a stored class with schema enhancement.
+     * Deduplicates fields with the same name (keeps array version if both exist).
      */
     public static DODatabaseField[] extractFieldsFromStoredClass(StoredClass storedClass, DOSchemaClass schemaClass) {
         try {
             StoredField[] storedFields = storedClass.getStoredFields();
-            DODatabaseField[] fields = new DODatabaseField[storedFields.length];
 
-            for (int i = 0; i < storedFields.length; i++) {
-                DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass, storedFields[i].getName());
-                fields[i] = convertStoredFieldToDOField(storedFields[i], matchingSchemaField);
+            // Use a map to deduplicate fields by name
+            // Key: field name, Value: StoredField
+            java.util.Map<String, StoredField> fieldMap = new java.util.LinkedHashMap<>();
+
+            for (StoredField sf : storedFields) {
+                String fieldName = sf.getName();
+                StoredField existing = fieldMap.get(fieldName);
+
+                if (existing == null) {
+                    // First occurrence of this field name
+                    fieldMap.put(fieldName, sf);
+                } else {
+                    // Duplicate field name - prefer array version
+                    if (sf.isArray() && !existing.isArray()) {
+                        // New field is array, existing is not - replace with array version
+                        fieldMap.put(fieldName, sf);
+                    }
+                    // else keep existing (either both are arrays, both are non-arrays, or existing
+                    // is already array)
+                }
+            }
+
+            // Convert deduplicated fields to DODatabaseField array
+            DODatabaseField[] fields = new DODatabaseField[fieldMap.size()];
+            int index = 0;
+            for (StoredField sf : fieldMap.values()) {
+                DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass, sf.getName());
+                fields[index++] = convertStoredFieldToDOField(sf, matchingSchemaField);
             }
 
             return fields;

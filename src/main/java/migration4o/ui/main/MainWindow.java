@@ -85,7 +85,7 @@ public class MainWindow extends JFrame {
 
         // Open Database menu item
         JMenuItem openDatabaseItem = new JMenuItem("Open Database...");
-        openDatabaseItem.addActionListener(e -> openDatabase());
+        openDatabaseItem.addActionListener(e -> openDatabaseFile());
         fileMenu.add(openDatabaseItem);
 
         fileMenu.addSeparator();
@@ -94,14 +94,6 @@ public class MainWindow extends JFrame {
         exitItem.addActionListener(e -> System.exit(0));
         fileMenu.add(exitItem);
         menuBar.add(fileMenu);
-
-        // Tools menu
-        JMenu toolsMenu = new JMenu("Tools");
-        JMenuItem compareItem = new JMenuItem("Custom Schema Comparison...");
-        compareItem.setToolTipText("Compare any two schemas (automatic comparison happens when opening a database)");
-        compareItem.addActionListener(e -> compareSchemas());
-        toolsMenu.add(compareItem);
-        menuBar.add(toolsMenu);
 
         // Help menu
         JMenu helpMenu = new JMenu("Help");
@@ -122,7 +114,7 @@ public class MainWindow extends JFrame {
                 JOptionPane.INFORMATION_MESSAGE);
     }
 
-    private void openDatabase() {
+    public void openDatabaseFile() {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open DB4O Database");
         fileChooser.setFileFilter(new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak)", "dat", "bak"));
@@ -229,6 +221,7 @@ public class MainWindow extends JFrame {
                     // Create schema editor panel with inferred schema
                     String tabTitle = "DB: " + selectedFile.getName();
                     SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName());
+                    schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
                     addSchemaTab(tabTitle, schemaEditor, inferredSchema, false);
 
                     // Switch to the database tab
@@ -273,9 +266,9 @@ public class MainWindow extends JFrame {
         // Make final for lambda
         final SchemaTabInfo finalReferenceTab = referenceTab;
 
-        // Create comparison
+        // Create comparison - use live schema from editor in case it was reloaded
         SchemaComparison comparison = new SchemaComparison(
-                referenceTab.schema, referenceTab.label,
+                referenceTab.editorPanel.getSchema(), referenceTab.label,
                 databaseSchema, "DB: " + databaseName);
 
         // Create comparison panel with callbacks to add missing elements
@@ -351,10 +344,10 @@ public class MainWindow extends JFrame {
         if (compared == null)
             return;
 
-        // Perform comparison
+        // Perform comparison - use live schema from editors in case they were reloaded
         SchemaComparison comparison = new SchemaComparison(
-                reference.schema, reference.label,
-                compared.schema, compared.label);
+                reference.editorPanel.getSchema(), reference.label,
+                compared.editorPanel.getSchema(), compared.label);
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(

@@ -8,14 +8,14 @@ import migration4o.models.DOReference;
 import migration4o.models.database.DODatabaseClass;
 
 public class DOSchemaClass {
-    private final String source;
-    private final String destinationName;
-    private final String parentClassName;
-    private final boolean migrate;
-    private final String title;
-    private final String description;
-    private final DOSchemaField[] fields;
-    private final DOSchemaReference[] schemaReferences;
+    private String source;
+    private String destinationName;
+    private String parentClassName;
+    private boolean migrate;
+    private String title;
+    private String description;
+    private DOSchemaField[] fields;
+    private DOSchemaReference[] schemaReferences;
     private final List<DOReference> referenceList;
     private DODatabaseClass databaseClass;
 
@@ -119,5 +119,21 @@ public class DOSchemaClass {
 
     public void setDatabaseClass(DODatabaseClass databaseClass) {
         this.databaseClass = databaseClass;
+    }
+
+    public void setShortName(String destinationName) {
+        this.destinationName = destinationName;
+    }
+
+    public void setParentClass(String parentClassName) {
+        this.parentClassName = parentClassName;
+    }
+
+    public void setMigrate(boolean migrate) {
+        this.migrate = migrate;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

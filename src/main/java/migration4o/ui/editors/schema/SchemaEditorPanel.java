@@ -39,6 +39,7 @@ public class SchemaEditorPanel extends JPanel {
     private String currentFilter = "";
     private boolean showOnlyErrors = false;
     private boolean groupByPackage = false;
+    private Runnable onCompareRequested; // Callback for Compare button
 
     // Column definitions for the fields table
     private static class ColumnDefinition {
@@ -75,6 +76,18 @@ public class SchemaEditorPanel extends JPanel {
         initializeUI();
         buildTree();
         setStatus("Inferred schema loaded: " + displayName + " (read-only)");
+    }
+
+    public void setOnCompareRequested(Runnable callback) {
+        this.onCompareRequested = callback;
+    }
+
+    /**
+     * Get the current schema.
+     * This returns the live schema object, which may have been reloaded.
+     */
+    public DOSchema getSchema() {
+        return schema;
     }
 
     /**
@@ -228,6 +241,18 @@ public class SchemaEditorPanel extends JPanel {
         JButton collapseAllButton = new JButton("Collapse All");
         collapseAllButton.addActionListener(e -> collapseAll());
         toolbar.add(collapseAllButton);
+
+        toolbar.addSeparator();
+
+        // Compare button
+        JButton compareButton = new JButton("Compare...");
+        compareButton.setToolTipText("Open database to compare with this schema");
+        compareButton.addActionListener(e -> {
+            if (onCompareRequested != null) {
+                onCompareRequested.run();
+            }
+        });
+        toolbar.add(compareButton);
 
         return toolbar;
     }
@@ -417,6 +442,21 @@ public class SchemaEditorPanel extends JPanel {
             // Load schema using DODatabaseSchemaReader
             DODatabaseSchemaReader reader = new DODatabaseSchemaReader();
             schema = reader.readSchema(schemaFilePath);
+
+            // Debug: print loaded classes count and check for ParamConfig
+            int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;
+            boolean hasParamConfig = false;
+            if (schema.getClasses() != null) {
+                for (DOSchemaClass cls : schema.getClasses()) {
+                    if ("gest.config.ParamConfig".equals(cls.getSourceName())) {
+                        hasParamConfig = true;
+                        System.out.println("DEBUG: Found ParamConfig - source: " + cls.getSourceName() +
+                                ", dest: " + cls.getShortName() + ", parent: " + cls.getParentClass());
+                        break;
+                    }
+                }
+            }
+            System.out.println("DEBUG: Loaded " + classCount + " classes, hasParamConfig=" + hasParamConfig);
 
             // Build tree
             buildTree();
@@ -634,6 +674,9 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     private void onTreeSelectionChanged() {
+        // Apply any pending property changes before switching
+        applyCurrentProperties();
+
         TreePath path = schemaTree.getSelectionPath();
         if (path == null) {
             propertyPanel.clear();
@@ -664,6 +707,93 @@ public class SchemaEditorPanel extends JPanel {
                 break;
             default:
                 break;
+        }
+    }
+
+    /**
+     * Apply current property panel values to the schema object.
+     * This is called before saving or switching selections to preserve edits.
+     */
+    private void applyCurrentProperties() {
+        if (currentSelectedNode == null) {
+            return;
+        }
+
+        switch (currentSelectedNode.getNodeType()) {
+            case MODULE:
+                applyModuleProperties((DOSchemaModule) currentSelectedNode.getSchemaElement());
+                break;
+            case CLASS:
+                applyClassProperties((DOSchemaClass) currentSelectedNode.getSchemaElement());
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Apply module property changes from the property panel.
+     */
+    private void applyModuleProperties(DOSchemaModule module) {
+        JComponent nameField = propertyPanel.getField("Name");
+        if (nameField instanceof JTextField) {
+            String newName = ((JTextField) nameField).getText();
+            if (newName != null && !newName.trim().isEmpty()) {
+                module.setName(newName.trim());
+            }
+        }
+    }
+
+    /**
+     * Apply class property changes from the property panel.
+     */
+    private void applyClassProperties(DOSchemaClass schemaClass) {
+        // Apply Destination Name
+        JComponent destNameField = propertyPanel.getField("Destination Name");
+        if (destNameField instanceof JTextField) {
+            String newDestName = ((JTextField) destNameField).getText();
+            if (newDestName != null && !newDestName.trim().isEmpty()) {
+                schemaClass.setShortName(newDestName.trim());
+            }
+        }
+
+        // Apply Export checkbox
+        JComponent exportField = propertyPanel.getField("Export (migrate)");
+        if (exportField instanceof JCheckBox) {
+            boolean migrate = ((JCheckBox) exportField).isSelected();
+            schemaClass.setMigrate(migrate);
+        }
+
+        // Apply Parent Class
+        JComponent parentField = propertyPanel.getField("Parent Class");
+        if (parentField instanceof JComboBox) {
+            @SuppressWarnings("unchecked")
+            JComboBox<String> comboBox = (JComboBox<String>) parentField;
+            String selectedParent = (String) comboBox.getSelectedItem();
+            if (selectedParent != null) {
+                if ("Undetermined".equals(selectedParent)) {
+                    schemaClass.setParentClass("");
+                } else {
+                    schemaClass.setParentClass(selectedParent);
+                }
+            }
+        }
+
+        // Apply Title (if present)
+        JComponent titleField = propertyPanel.getField("Title");
+        if (titleField instanceof JTextField) {
+            String newTitle = ((JTextField) titleField).getText();
+            schemaClass.setTitle(newTitle != null ? newTitle.trim() : "");
+        }
+
+        // Update the tree node display in case the name changed
+        if (currentSelectedNode != null) {
+            String displayName = getClassDisplayName(schemaClass);
+            if (!schemaClass.isMigrate()) {
+                displayName += " (not exported)";
+            }
+            currentSelectedNode.setUserObject(displayName);
+            treeModel.nodeChanged(currentSelectedNode);
         }
     }
 
@@ -1318,6 +1448,9 @@ public class SchemaEditorPanel extends JPanel {
                     JOptionPane.ERROR_MESSAGE);
             return;
         }
+
+        // Apply any pending property changes before saving
+        applyCurrentProperties();
 
         try {
             setStatus("Saving schema...");

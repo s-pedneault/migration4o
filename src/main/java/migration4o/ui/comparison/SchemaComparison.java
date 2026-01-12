@@ -36,6 +36,14 @@ public class SchemaComparison {
         Map<String, DOSchemaClass> referenceClasses = buildClassMap(referenceSchema);
         Map<String, DOSchemaClass> comparedClasses = buildClassMap(comparedSchema);
 
+        // Debug: check ParamConfig
+        System.out.println("DEBUG Comparison: Reference has ParamConfig? "
+                + referenceClasses.containsKey("gest.config.ParamConfig"));
+        System.out.println("DEBUG Comparison: Compared has ParamConfig? "
+                + comparedClasses.containsKey("gest.config.ParamConfig"));
+        System.out.println("DEBUG Comparison: Reference class count: " + referenceClasses.size());
+        System.out.println("DEBUG Comparison: Compared class count: " + comparedClasses.size());
+
         Set<String> allClassNames = new HashSet<>();
         allClassNames.addAll(referenceClasses.keySet());
         allClassNames.addAll(comparedClasses.keySet());
@@ -104,7 +112,15 @@ public class SchemaComparison {
         // Compare childrenType with null/empty tolerance
         String refChildren = normalizeEmptyString(refField.getChildrenType());
         String cmpChildren = normalizeEmptyString(cmpField.getChildrenType());
-        if (!Objects.equals(refChildren, cmpChildren)) {
+
+        // Special case: if reference schema defines a proper type and database has
+        // java.lang.Object,
+        // don't consider it a difference (schema takes precedence)
+        boolean isObjectPlaceholder = (refChildren != null && !refChildren.isEmpty() &&
+                !refChildren.equals("java.lang.Object") &&
+                "java.lang.Object".equals(cmpChildren));
+
+        if (!Objects.equals(refChildren, cmpChildren) && !isObjectPlaceholder) {
             diff.addDifference("childrenType", refField.getChildrenType(), cmpField.getChildrenType());
         }
 
@@ -163,7 +179,26 @@ public class SchemaComparison {
         Map<String, DOSchemaClass> map = new HashMap<>();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                map.put(schemaClass.getSourceName(), schemaClass);
+                String key = schemaClass.getSourceName();
+
+                // Debug ParamConfig specifically
+                if ("ParamConfig".equals(schemaClass.getShortName())) {
+                    System.out.println("DEBUG buildClassMap: Found ParamConfig - source='" + key + "', dest='" +
+                            schemaClass.getShortName() + "'");
+                }
+
+                // Skip classes with null or empty source name
+                if (key == null || key.trim().isEmpty()) {
+                    System.out.println(
+                            "WARNING: Skipping class with null/empty source name: " + schemaClass.getShortName());
+                    continue;
+                }
+
+                if (map.containsKey(key)) {
+                    System.out.println("WARNING: Duplicate class key '" + key + "' - overwriting " +
+                            map.get(key).getShortName() + " with " + schemaClass.getShortName());
+                }
+                map.put(key, schemaClass);
             }
         }
         return map;

@@ -13,6 +13,8 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
@@ -55,8 +57,19 @@ public class SchemaComparisonPanel extends JPanel {
 
         // Split pane with synchronized trees on left and details on right
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setDividerLocation(700);
-        splitPane.setResizeWeight(0.6);
+        splitPane.setResizeWeight(0.4);
+
+        // Set divider location after component is visible
+        splitPane.addComponentListener(new java.awt.event.ComponentAdapter() {
+            private boolean initialized = false;
+            @Override
+            public void componentResized(java.awt.event.ComponentEvent e) {
+                if (!initialized && splitPane.getWidth() > 0) {
+                    splitPane.setDividerLocation(0.4); // 40% for trees, 60% for details
+                    initialized = true;
+                }
+            }
+        });
 
         // Synchronized trees on left
         syncTreePanel = new SynchronizedTreePanel(
@@ -64,9 +77,11 @@ public class SchemaComparisonPanel extends JPanel {
                 comparison.getComparedLabel());
 
         // Add selection listeners to both trees
+        // Note: These are mainly for keyboard navigation
+        // Mouse clicks are handled by the onActiveTreeChanged callback below
         syncTreePanel.getLeftTree().addTreeSelectionListener(e -> {
             TreePath path = e.getNewLeadSelectionPath();
-            if (path != null) {
+            if (path != null && syncTreePanel.isLeftTreeActive()) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                 showDetails(node, true);
             }
@@ -74,9 +89,22 @@ public class SchemaComparisonPanel extends JPanel {
 
         syncTreePanel.getRightTree().addTreeSelectionListener(e -> {
             TreePath path = e.getNewLeadSelectionPath();
-            if (path != null) {
+            if (path != null && !syncTreePanel.isLeftTreeActive()) {
                 DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                 showDetails(node, false);
+            }
+        });
+
+        // Listen for active tree changes (primarily from mouse clicks)
+        // This ensures details update when clicking on the same node in different trees
+        syncTreePanel.setOnActiveTreeChanged(() -> {
+            JTree activeTree = syncTreePanel.getActiveTree();
+            if (activeTree != null) {
+                TreePath path = activeTree.getSelectionPath();
+                if (path != null) {
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                    showDetails(node, syncTreePanel.isLeftTreeActive());
+                }
             }
         });
 
@@ -114,13 +142,13 @@ public class SchemaComparisonPanel extends JPanel {
         optionsPanel.add(showCollectionTypeDifferencesCheckbox);
 
         // Checkbox for grouping by package
-        groupByPackageCheckbox = new JCheckBox("Group by package", false);
+        groupByPackageCheckbox = new JCheckBox("Group by package", true);
         groupByPackageCheckbox.setToolTipText("Group classes by package instead of inheritance");
         groupByPackageCheckbox.addActionListener(e -> buildTrees());
         optionsPanel.add(groupByPackageCheckbox);
 
         // Checkbox for showing all classes
-        JCheckBox showAllClassesCheckbox = new JCheckBox("Show all classes", false);
+        JCheckBox showAllClassesCheckbox = new JCheckBox("Show all classes", true);
         showAllClassesCheckbox.setToolTipText("Show all classes, not just those with differences");
         showAllClassesCheckbox.addActionListener(e -> {
             comparison.setShowAllClasses(showAllClassesCheckbox.isSelected());
@@ -128,6 +156,9 @@ public class SchemaComparisonPanel extends JPanel {
             updateSummary();
         });
         optionsPanel.add(showAllClassesCheckbox);
+        
+        // Initialize with show all classes enabled
+        comparison.setShowAllClasses(true);
 
         panel.add(optionsPanel, BorderLayout.SOUTH);
 
@@ -150,8 +181,22 @@ public class SchemaComparisonPanel extends JPanel {
             SynchronizedTreePanel.SyncTreeNode syncNode = (SynchronizedTreePanel.SyncTreeNode) userObject;
             ClassDifference diff = syncNode.getDifference();
 
-            if (diff != null && !syncNode.isGhost()) {
-                showClassDifferenceDetails(diff);
+            // Handle field node - show parent class's fields table
+            if (syncNode.isField()) {
+                // Get parent node which is the class
+                DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();
+                if (parentNode != null && parentNode.getUserObject() instanceof SynchronizedTreePanel.SyncTreeNode) {
+                    SynchronizedTreePanel.SyncTreeNode parentSyncNode = (SynchronizedTreePanel.SyncTreeNode) parentNode
+                            .getUserObject();
+                    ClassDifference parentDiff = parentSyncNode.getDifference();
+                    if (parentDiff != null) {
+                        showClassFieldsTable(parentDiff, syncNode.getFieldData(), isLeftTree);
+                    }
+                }
+            }
+            // Handle class node
+            else if (diff != null && !syncNode.isGhost()) {
+                showClassFieldsTable(diff, null, isLeftTree);
             } else if (diff != null && syncNode.isGhost()) {
                 showGhostClassDetails(diff, isLeftTree);
             }
@@ -334,6 +379,110 @@ public class SchemaComparisonPanel extends JPanel {
                 withDiffs);
 
         summaryArea.setText(summary);
+    }
+
+    /**
+     * Shows a comprehensive fields table for the selected class.
+     * Similar to the schema editor view.
+     */
+    private void showClassFieldsTable(ClassDifference diff, DOSchemaField selectedField, boolean isLeftTree) {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+        // Schema source header
+        String schemaSource = isLeftTree ? comparison.getReferenceLabel() : comparison.getComparedLabel();
+        JLabel sourceLabel = new JLabel("Showing: " + schemaSource);
+        sourceLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        sourceLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 5, 0));
+        panel.add(sourceLabel, BorderLayout.NORTH);
+
+        // Class info and fields table panel
+        JPanel contentPanel = new JPanel(new BorderLayout(5, 5));
+
+        // Class info header
+        JTextArea infoArea = new JTextArea();
+        infoArea.setEditable(false);
+        infoArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        infoArea.setRows(2);
+
+        StringBuilder info = new StringBuilder();
+        info.append("Class: ").append(diff.getClassName()).append("\n");
+
+        DOSchemaClass classToShow = isLeftTree ? diff.getReferenceClass() : diff.getComparedClass();
+        if (classToShow != null) {
+            info.append("Fields: ").append(classToShow.getFields() != null ? classToShow.getFields().length : 0);
+        }
+
+        infoArea.setText(info.toString());
+        contentPanel.add(infoArea, BorderLayout.NORTH);
+
+        // Fields table
+        if (classToShow != null && classToShow.getFields() != null && classToShow.getFields().length > 0) {
+            // Sort fields according to reference schema order
+            DOSchemaField[] sortedFields = sortFieldsByReferenceOrder(classToShow.getFields(),
+                    diff.getReferenceClass());
+            JScrollPane fieldsTablePane = createFieldsTable(sortedFields);
+            contentPanel.add(fieldsTablePane, BorderLayout.CENTER);
+
+            // If a specific field was selected, try to highlight it in the table
+            if (selectedField != null && fieldsTablePane.getViewport().getView() instanceof JTable) {
+                JTable table = (JTable) fieldsTablePane.getViewport().getView();
+                for (int row = 0; row < table.getRowCount(); row++) {
+                    if (selectedField.getSource().equals(table.getValueAt(row, 0))) {
+                        table.setRowSelectionInterval(row, row);
+                        table.scrollRectToVisible(table.getCellRect(row, 0, true));
+                        break;
+                    }
+                }
+            }
+        }
+
+        panel.add(contentPanel, BorderLayout.CENTER);
+
+        detailPanel.add(panel);
+    }
+
+    /**
+     * Sorts fields according to the order they appear in the reference schema.
+     * Fields not in reference appear at the end, sorted alphabetically.
+     */
+    private DOSchemaField[] sortFieldsByReferenceOrder(DOSchemaField[] fields, DOSchemaClass referenceClass) {
+        if (fields == null || fields.length == 0) {
+            return fields;
+        }
+
+        // Create a map of field names to their order in reference schema
+        Map<String, Integer> referenceOrder = new HashMap<>();
+        if (referenceClass != null && referenceClass.getFields() != null) {
+            DOSchemaField[] refFields = referenceClass.getFields();
+            for (int i = 0; i < refFields.length; i++) {
+                referenceOrder.put(refFields[i].getSource(), i);
+            }
+        }
+
+        // Sort fields: first by reference order, then alphabetically for fields not in
+        // reference
+        DOSchemaField[] sortedFields = fields.clone();
+        Arrays.sort(sortedFields, (f1, f2) -> {
+            Integer order1 = referenceOrder.get(f1.getSource());
+            Integer order2 = referenceOrder.get(f2.getSource());
+
+            // Both in reference: sort by reference order
+            if (order1 != null && order2 != null) {
+                return order1.compareTo(order2);
+            }
+            // Only f1 in reference: f1 comes first
+            if (order1 != null) {
+                return -1;
+            }
+            // Only f2 in reference: f2 comes first
+            if (order2 != null) {
+                return 1;
+            }
+            // Neither in reference: sort alphabetically
+            return f1.getSource().compareTo(f2.getSource());
+        });
+
+        return sortedFields;
     }
 
     private String formatValue(Object value) {

@@ -1,7 +1,7 @@
 package migration4o.models.schema;
 
 public class DOSchemaModule {
-    private final String name;
+    private String name;
     private final DOSchemaClass[] classes;
 
     public DOSchemaModule(String name, DOSchemaClass[] classes) {
@@ -15,5 +15,9 @@ public class DOSchemaModule {
 
     public DOSchemaClass[] getClasses() {
         return classes;
+    }
+
+    public void setName(String name) {
+        this.name = name;
     }
 }
