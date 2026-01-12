@@ -62,6 +62,7 @@ public class SchemaComparisonPanel extends JPanel {
         // Set divider location after component is visible
         splitPane.addComponentListener(new java.awt.event.ComponentAdapter() {
             private boolean initialized = false;
+
             @Override
             public void componentResized(java.awt.event.ComponentEvent e) {
                 if (!initialized && splitPane.getWidth() > 0) {
@@ -156,7 +157,7 @@ public class SchemaComparisonPanel extends JPanel {
             updateSummary();
         });
         optionsPanel.add(showAllClassesCheckbox);
-        
+
         // Initialize with show all classes enabled
         comparison.setShowAllClasses(true);
 
