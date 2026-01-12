@@ -28,6 +28,22 @@ public class MainWindow extends JFrame {
 
     private JTabbedPane tabbedPane;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
+    private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
+
+    private static class ComparisonTabInfo {
+        SchemaTabInfo referenceTab;
+        SchemaTabInfo comparedTab;
+        String title;
+        SchemaComparisonPanel panel;
+
+        ComparisonTabInfo(SchemaTabInfo referenceTab, SchemaTabInfo comparedTab, String title,
+                SchemaComparisonPanel panel) {
+            this.referenceTab = referenceTab;
+            this.comparedTab = comparedTab;
+            this.title = title;
+            this.panel = panel;
+        }
+    }
 
     public MainWindow() {
         initializeUI();
@@ -298,6 +314,9 @@ public class MainWindow extends JFrame {
     public void addSchemaTab(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         tabbedPane.addTab(title, editor);
         schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
+
+        // Set up listener to refresh comparisons when this schema is reloaded
+        editor.setOnSchemaReloaded(() -> refreshComparisonsForEditor(editor));
     }
 
     private void compareSchemas() {
@@ -359,6 +378,9 @@ public class MainWindow extends JFrame {
         String tabTitle = "Compare: " + reference.label + " vs " + compared.label;
         addTab(tabTitle, comparisonPanel);
         tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+
+        // Track this comparison tab
+        comparisonTabs.put(comparisonPanel, new ComparisonTabInfo(reference, compared, tabTitle, comparisonPanel));
     }
 
     private void addClassToReference(SchemaEditorPanel editor, String className, DOSchemaClass sourceClass) {
@@ -381,6 +403,35 @@ public class MainWindow extends JFrame {
                 "Field addition feature will be implemented in SchemaEditorPanel.\n" +
                         "Field: " + field.getSource() + " in class: " + parentClass.getSourceName(),
                 "Feature Pending", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Refresh all comparison tabs that involve the given editor.
+     */
+    private void refreshComparisonsForEditor(SchemaEditorPanel editor) {
+        List<Component> toRefresh = new ArrayList<>();
+
+        // Find all comparison tabs involving this editor
+        for (Map.Entry<Component, ComparisonTabInfo> entry : comparisonTabs.entrySet()) {
+            ComparisonTabInfo info = entry.getValue();
+            if (info.referenceTab.editorPanel == editor || info.comparedTab.editorPanel == editor) {
+                toRefresh.add(entry.getKey());
+            }
+        }
+
+        // Refresh each comparison
+        for (Component comp : toRefresh) {
+            ComparisonTabInfo info = comparisonTabs.get(comp);
+            if (info != null) {
+                // Create new comparison with updated schemas
+                SchemaComparison comparison = new SchemaComparison(
+                        info.referenceTab.editorPanel.getSchema(), info.referenceTab.label,
+                        info.comparedTab.editorPanel.getSchema(), info.comparedTab.label);
+
+                // Update the panel with new comparison
+                info.panel.updateComparison(comparison);
+            }
+        }
     }
 
     public static void main(String[] args) {

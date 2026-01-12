@@ -26,7 +26,7 @@ import java.util.function.BiConsumer;
  */
 public class SchemaComparisonPanel extends JPanel {
 
-    private final SchemaComparison comparison;
+    private SchemaComparison comparison;
     private final BiConsumer<String, DOSchemaClass> onAddClass;
     private final BiConsumer<DOSchemaClass, DOSchemaField> onAddField;
 
@@ -46,6 +46,26 @@ public class SchemaComparisonPanel extends JPanel {
         initializeUI();
         buildTrees();
         updateSummary();
+    }
+
+    /**
+     * Update the comparison with new schemas and refresh the display.
+     */
+    public void updateComparison(SchemaComparison newComparison) {
+        this.comparison = newComparison;
+
+        // Preserve the show all classes setting
+        boolean showAllClasses = comparison.isShowAllClasses();
+        newComparison.setShowAllClasses(showAllClasses);
+
+        // Rebuild trees and update summary
+        buildTrees();
+        updateSummary();
+
+        // Clear details panel
+        detailPanel.removeAll();
+        detailPanel.revalidate();
+        detailPanel.repaint();
     }
 
     private void initializeUI() {

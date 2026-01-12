@@ -40,6 +40,7 @@ public class SchemaEditorPanel extends JPanel {
     private boolean showOnlyErrors = false;
     private boolean groupByPackage = false;
     private Runnable onCompareRequested; // Callback for Compare button
+    private Runnable onSchemaReloaded; // Callback for schema reload
 
     // Column definitions for the fields table
     private static class ColumnDefinition {
@@ -80,6 +81,13 @@ public class SchemaEditorPanel extends JPanel {
 
     public void setOnCompareRequested(Runnable callback) {
         this.onCompareRequested = callback;
+    }
+
+    /**
+     * Set a callback to be invoked when the schema is reloaded.
+     */
+    public void setOnSchemaReloaded(Runnable callback) {
+        this.onSchemaReloaded = callback;
     }
 
     /**
@@ -1438,6 +1446,11 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         loadSchema();
+
+        // Notify listeners that schema was reloaded
+        if (onSchemaReloaded != null) {
+            onSchemaReloaded.run();
+        }
     }
 
     private void saveSchema() {

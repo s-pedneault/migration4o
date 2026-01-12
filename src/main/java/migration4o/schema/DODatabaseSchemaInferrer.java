@@ -178,6 +178,37 @@ public class DODatabaseSchemaInferrer {
     }
 
     /**
+     * Type normalization map - converts fully qualified types to their canonical
+     * form.
+     * Edit this map to add more type normalizations as needed.
+     */
+    private static final java.util.Map<String, String> TYPE_NORMALIZATION_MAP = new java.util.HashMap<String, String>() {
+        {
+            put("java.lang.String", "string");
+            put("java.util.Date", "date");
+            put("java.lang.Object", "object");
+            put("java.lang.Integer", "int");
+            put("java.lang.Long", "long");
+            put("java.lang.Boolean", "boolean");
+            put("java.lang.Double", "double");
+            put("java.lang.Float", "float");
+        }
+    };
+
+    /**
+     * Normalizes a type name to match schema conventions.
+     */
+    private String normalizeTypeName(String typeName) {
+        if (typeName == null || typeName.isEmpty()) {
+            return typeName;
+        }
+
+        // Check if we have a normalization rule for this type
+        String normalized = TYPE_NORMALIZATION_MAP.get(typeName);
+        return normalized != null ? normalized : typeName;
+    }
+
+    /**
      * Determines the type of a field.
      */
     private String determineFieldType(DODatabaseField dbField) {
@@ -192,8 +223,8 @@ public class DODatabaseSchemaInferrer {
             typeName = typeName.substring(0, typeName.length() - 2);
         }
 
-        // Return the type name as-is - it should already be properly formatted
-        return typeName;
+        // Normalize the type name
+        return normalizeTypeName(typeName);
     }
 
     /**
