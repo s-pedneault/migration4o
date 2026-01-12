@@ -62,6 +62,113 @@ public class SchemaEditorPanel extends JPanel {
         loadSchema();
     }
 
+    /**
+     * Constructor for viewing an inferred schema (not backed by a file).
+     * The schema cannot be saved in this mode.
+     */
+    public SchemaEditorPanel(DOSchema schema, String displayName) {
+        this.schemaFilePath = null; // No file backing
+        this.schema = schema;
+        this.modified = false;
+
+        initializeUI();
+        buildTree();
+        setStatus("Inferred schema loaded: " + displayName + " (read-only)");
+    }
+
+    /**
+     * Add a class from another schema to this schema.
+     * This is used when adding a database-only class to the reference schema.
+     * 
+     * @param className   The name of the class to add
+     * @param sourceClass The source class to copy from
+     */
+    public void addClassFromComparison(String className, DOSchemaClass sourceClass) {
+        if (className == null || className.isEmpty() || schema == null || sourceClass == null) {
+            return;
+        }
+
+        // Check if class already exists
+        if (schema.getClasses() != null) {
+            for (DOSchemaClass existing : schema.getClasses()) {
+                if (existing.getAbsoluteName().equals(className) || existing.getSourceName().equals(className)) {
+                    JOptionPane.showMessageDialog(this,
+                            "Class '" + className + "' already exists in the schema.",
+                            "Class Exists", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
+        }
+
+        // Create a new class copying all properties from the source
+        DOSchemaClass newClass = new DOSchemaClass(
+                sourceClass.getSourceName(),
+                sourceClass.getDestinationName(),
+                sourceClass.getDescription(),
+                sourceClass.getTitle(),
+                sourceClass.getParentClass(),
+                sourceClass.getFields() != null ? sourceClass.getFields().clone() : new DOSchemaField[0],
+                sourceClass.getSchemaReferences(),
+                sourceClass.isMigrate());
+
+        // Create new schema with the added class
+        DOSchemaClass[] existingClasses = schema.getClasses();
+        DOSchemaClass[] newClasses = new DOSchemaClass[existingClasses.length + 1];
+        System.arraycopy(existingClasses, 0, newClasses, 0, existingClasses.length);
+        newClasses[existingClasses.length] = newClass;
+
+        // Recreate schema with new classes array
+        schema = new DOSchema(newClasses, schema.getModules(), schema.getFoundationClasses());
+
+        // Rebuild the tree to show the new class
+        buildTree();
+
+        // Find and select the new class in the tree
+        selectClassByName(className);
+
+        markModified();
+
+        setStatus("Added class: " + className + " with " +
+                (sourceClass.getFields() != null ? sourceClass.getFields().length : 0) + " field(s)");
+    }
+
+    /**
+     * Select a class in the tree by its name.
+     */
+    private void selectClassByName(String className) {
+        if (className == null || treeModel == null) {
+            return;
+        }
+
+        SchemaTreeNode root = (SchemaTreeNode) treeModel.getRoot();
+        selectClassInNode(root, className);
+    }
+
+    private boolean selectClassInNode(SchemaTreeNode node, String className) {
+        // Check if this node is the class we're looking for
+        if (node.getNodeType() == NodeType.CLASS) {
+            DOSchemaClass schemaClass = (DOSchemaClass) node.getSchemaElement();
+            if (schemaClass != null &&
+                    (schemaClass.getAbsoluteName().equals(className)
+                            || schemaClass.getSourceName().equals(className))) {
+                TreePath path = new TreePath(node.getPath());
+                schemaTree.setSelectionPath(path);
+                schemaTree.scrollPathToVisible(path);
+                return true;
+            }
+        }
+
+        // Recursively search children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            SchemaTreeNode child = (SchemaTreeNode) node.getChildAt(i);
+            if (selectClassInNode(child, className)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private void initializeUI() {
         setLayout(new BorderLayout(5, 5));
 
@@ -94,18 +201,20 @@ public class SchemaEditorPanel extends JPanel {
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
 
-        // Reload button
+        // Reload button (only enabled if we have a file)
         JButton reloadButton = new JButton("Reload");
         reloadButton.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
         reloadButton.addActionListener(e -> reloadSchema());
+        reloadButton.setEnabled(schemaFilePath != null);
         toolbar.add(reloadButton);
 
         toolbar.addSeparator();
 
-        // Save button
+        // Save button (only enabled if we have a file)
         JButton saveButton = new JButton("Save");
         saveButton.setIcon(UIManager.getIcon("FileView.floppyDriveIcon"));
         saveButton.addActionListener(e -> saveSchema());
+        saveButton.setEnabled(schemaFilePath != null);
         toolbar.add(saveButton);
 
         toolbar.addSeparator();

@@ -66,14 +66,30 @@ public class CollectionTypeUtil {
             return null;
         }
 
-        // If the field already has a content type, use it
+        System.out.println("DEBUG getCollectionContentType for field: " + field.getName()
+                + ", typeName=" + field.getTypeName()
+                + ", isArray=" + field.isArray()
+                + ", contentTypeClass=" + field.getContentTypeClass()
+                + ", contentTypeName=" + field.getContentTypeName());
+
+        // First, check if there's a content type class (most reliable)
+        if (field.getContentTypeClass() != null) {
+            String result = field.getContentTypeClass().getAbsoluteName();
+            System.out.println("  -> Using contentTypeClass: " + result);
+            return result;
+        }
+
+        // If the field already has a content type name, use it
         String contentTypeName = field.getContentTypeName();
         if (contentTypeName != null && !contentTypeName.isEmpty()) {
+            System.out.println("  -> Using contentTypeName: " + contentTypeName);
             return contentTypeName;
         }
 
         // Try to determine from the type name
-        return extractContentTypeFromTypeName(field.getTypeName(), field.isArray());
+        String result = extractContentTypeFromTypeName(field.getTypeName(), field.isArray());
+        System.out.println("  -> Extracted from type name: " + result);
+        return result;
     }
 
     /**

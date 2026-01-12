@@ -5,6 +5,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
+import java.util.Arrays;
+import java.util.Comparator;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -26,9 +28,12 @@ public class DODatabaseSchemaWriter {
             writer.write("<?xml version='1.0' encoding='UTF-8'?>\n");
             writer.write("<classes>\n");
 
-            // Write all classes in their current order
+            // Sort classes alphabetically by absolute name before writing
             if (schema.getClasses() != null) {
-                for (DOSchemaClass schemaClass : schema.getClasses()) {
+                DOSchemaClass[] sortedClasses = Arrays.copyOf(schema.getClasses(), schema.getClasses().length);
+                Arrays.sort(sortedClasses, Comparator.comparing(DOSchemaClass::getAbsoluteName));
+
+                for (DOSchemaClass schemaClass : sortedClasses) {
                     writeClass(writer, schemaClass, 1);
                 }
             }

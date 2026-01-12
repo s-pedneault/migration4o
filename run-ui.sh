@@ -14,8 +14,26 @@ if [ ! -d "classes" ]; then
     exit 1
 fi
 
-# Run the UI application
-java -cp "classes:lib/*" migration4o.ui.Migration4oUI
+# Run the UI application with module access flags for DB4O compatibility
+# These flags allow DB4O to use reflection on internal Java classes
+java --add-opens java.base/java.util=ALL-UNNAMED \
+     --add-opens java.base/java.lang=ALL-UNNAMED \
+     --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
+     --add-opens java.base/java.io=ALL-UNNAMED \
+     --add-opens java.base/java.nio=ALL-UNNAMED \
+     --add-opens java.base/java.net=ALL-UNNAMED \
+     --add-opens java.base/java.text=ALL-UNNAMED \
+     --add-opens java.base/java.time=ALL-UNNAMED \
+     --add-opens java.base/java.util.concurrent=ALL-UNNAMED \
+     --add-opens java.base/java.security=ALL-UNNAMED \
+     --add-opens java.desktop/java.awt=ALL-UNNAMED \
+     --add-opens java.desktop/java.awt.color=ALL-UNNAMED \
+     --add-opens java.desktop/java.awt.font=ALL-UNNAMED \
+     --add-opens java.desktop/java.awt.geom=ALL-UNNAMED \
+     --add-opens java.desktop/java.awt.image=ALL-UNNAMED \
+     --add-opens java.desktop/javax.swing=ALL-UNNAMED \
+     --add-opens java.sql/java.sql=ALL-UNNAMED \
+     -cp "classes:lib/*" migration4o.ui.Migration4oUI
 
 echo ""
 echo "UI closed."

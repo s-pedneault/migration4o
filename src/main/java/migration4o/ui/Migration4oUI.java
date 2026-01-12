@@ -1,5 +1,7 @@
 package migration4o.ui;
 
+import migration4o.models.schema.DOSchema;
+import migration4o.schema.DODatabaseSchemaReader;
 import migration4o.ui.editors.schema.SchemaEditorPanel;
 import migration4o.ui.main.MainWindow;
 
@@ -26,8 +28,21 @@ public class Migration4oUI {
             MainWindow mainWindow = new MainWindow();
 
             // Add schema editor tab
-            SchemaEditorPanel schemaEditor = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
-            mainWindow.addTab("Schema Editor", schemaEditor);
+            try {
+                SchemaEditorPanel schemaEditor = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
+
+                // Load the schema to track it
+                DODatabaseSchemaReader reader = new DODatabaseSchemaReader();
+                DOSchema schema = reader.readSchema(DEFAULT_SCHEMA_PATH);
+
+                mainWindow.addSchemaTab("Schema Editor", schemaEditor, schema, true);
+            } catch (Exception e) {
+                e.printStackTrace();
+                JOptionPane.showMessageDialog(null,
+                        "Error loading default schema: " + e.getMessage(),
+                        "Schema Load Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
 
             // Show window
             mainWindow.setVisible(true);

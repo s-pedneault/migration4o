@@ -848,6 +848,9 @@
         <field source="mIDUsageDuLocal" destinationName="idUsageDuLocal" isExported="true" skipIfEmpty="true" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
         <field source="mIDUsagePrincipal" destinationName="idUsagePrincipal" isExported="true" skipIfEmpty="true" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
     </class>
+    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="gest.dossPrev.DossPrev$NAliasNom" isExported="true">
+        <field source="iNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+    </class>
     <class source="gest.dossPrev.DossPrevSuppr" destinationName="DossierAdresseSupprime" isExported="true" parentClass="gest.gen.EntiteContientID">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipIfEmpty="true" type="gest.gen.Adresse" />
@@ -1564,6 +1567,9 @@
         <field source="mLimiteMax" destinationName="limiteMax" isExported="true" skipIfEmpty="true" type="java.lang.Object" />
         <field source="mLimiteMin" destinationName="limiteMin" isExported="true" skipIfEmpty="true" type="java.lang.Object" />
     </class>
+    <class source="gest.gen.ParamStatPresActivite" destinationName="ParamStatPresActivite" isExported="true" title="ParamStatPresActivite" parentClass="gest.gen.EntiteParam">
+        <field source="mIgnorerFeuilleTemps" destinationName="ignorerFeuilleTemps" isExported="true" skipIfEmpty="true" type="boolean" />
+    </class>
     <class source="gest.gen.ParamVersion" destinationName="ParamVersion" isExported="true" parentClass="gest.gen.EntiteParam">
     </class>
     <class source="gest.gen.Periodicite" destinationName="Periodicite" isExported="true" parentClass="gest.gen.Entite">
@@ -1884,7 +1890,7 @@
     </class>
     <class source="gest.intervention.CarteAppel" destinationName="CarteAppel" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mCarteAppel" />
-        <field source="mByteXML" destinationName="byteXML" isExported="true" skipIfEmpty="true" type="byte" />
+        <field source="mByteXML" destinationName="byteXML" isExported="true" skipIfEmpty="true" type="byte[]" collection="true" childrenType="byte" />
         <field source="mDateFichier" destinationName="dateFichier" isExported="true" skipIfEmpty="true" type="String" />
         <field source="mNoAppel" destinationName="noAppel" isExported="true" skipIfEmpty="true" type="String" />
         <field source="mNomFichier" destinationName="nomFichier" isExported="true" skipIfEmpty="true" type="String" />
@@ -2284,6 +2290,10 @@
         <field source="mIDCaserne" destinationName="idCaserne" isExported="true" skipIfEmpty="true" type="gest.caserne.IDCaserne" embedContents="true" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipIfEmpty="true" type="gest.activite.IDTypeActivite" embedContents="true" />
+    </class>
+    <class source="gest.intervention.ParamCarteAppel$NValRempl" destinationName="gest.intervention.ParamCarteAppel$NValRempl" isExported="true">
+        <field source="iVal" destinationName="val" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="iRempl" destinationName="rempl" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
     <class source="gest.intervention.ParamIntervDSI2003" destinationName="ParamIntervDSI2003" isExported="true" title="Paramètres DSI-2003" parentClass="gest.gen.EntiteParam">
         <field source="mAffArronConformesSeulementDansDSI" destinationName="affArronConformesSeulementDansDSI" isExported="true" skipIfEmpty="true" type="boolean" />
@@ -3976,8 +3986,5 @@
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectNTri" />
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectRequete" />
         <field source="com.db4o.config.TNull" destinationName="TNull" isExported="true" skipIfEmpty="true" />
-    </class>
-    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="gest.dossPrev.DossPrev$NAliasNom" isExported="true">
-        <field source="iNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
 </classes>
