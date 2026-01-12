@@ -38,6 +38,7 @@ public class SchemaEditorPanel extends JPanel {
     private SchemaTreeNode currentSelectedNode;
     private String currentFilter = "";
     private boolean showOnlyErrors = false;
+    private boolean groupByPackage = false;
 
     // Column definitions for the fields table
     private static class ColumnDefinition {
@@ -281,6 +282,9 @@ public class SchemaEditorPanel extends JPanel {
 
         panel.add(searchField, BorderLayout.CENTER);
 
+        // Add options panel on the right (with checkboxes)
+        JPanel optionsPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 0));
+
         // Add "Errors only" checkbox
         JCheckBox errorsOnlyCheckbox = new JCheckBox("Errors only");
         errorsOnlyCheckbox.setToolTipText("Show only classes with unresolved field types");
@@ -288,7 +292,18 @@ public class SchemaEditorPanel extends JPanel {
             showOnlyErrors = errorsOnlyCheckbox.isSelected();
             filterTree(searchField.getText());
         });
-        panel.add(errorsOnlyCheckbox, BorderLayout.EAST);
+        optionsPanel.add(errorsOnlyCheckbox);
+
+        // Add "Group by package" checkbox
+        JCheckBox groupByPackageCheckbox = new JCheckBox("By Package");
+        groupByPackageCheckbox.setToolTipText("Group classes by package instead of inheritance");
+        groupByPackageCheckbox.addActionListener(e -> {
+            groupByPackage = groupByPackageCheckbox.isSelected();
+            buildTree();
+        });
+        optionsPanel.add(groupByPackageCheckbox);
+
+        panel.add(optionsPanel, BorderLayout.EAST);
 
         return panel;
     }
@@ -420,6 +435,14 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     private void buildTree() {
+        if (groupByPackage) {
+            buildTreeByPackage();
+        } else {
+            buildTreeByInheritance();
+        }
+    }
+
+    private void buildTreeByInheritance() {
         SchemaTreeNode rootNode = (SchemaTreeNode) treeModel.getRoot();
         rootNode.removeAllChildren();
 
@@ -484,6 +507,75 @@ public class SchemaEditorPanel extends JPanel {
             SchemaTreeNode classNode = createClassNode(rootClass);
             rootNode.add(classNode);
             addChildClasses(classNode, rootClass, childrenMap, classMap);
+        }
+
+        treeModel.reload();
+        expandFirstLevel();
+    }
+
+    private void buildTreeByPackage() {
+        SchemaTreeNode rootNode = (SchemaTreeNode) treeModel.getRoot();
+        rootNode.removeAllChildren();
+
+        if (schema == null || schema.getClasses() == null) {
+            treeModel.reload();
+            return;
+        }
+
+        // If filtering, show all matching classes as a flat list
+        if (!currentFilter.isEmpty() || showOnlyErrors) {
+            List<DOSchemaClass> matchingClasses = new ArrayList<>();
+            for (DOSchemaClass schemaClass : schema.getClasses()) {
+                if (matchesFilter(schemaClass)) {
+                    matchingClasses.add(schemaClass);
+                }
+            }
+
+            // Sort by display name
+            matchingClasses.sort((a, b) -> getClassDisplayName(a).compareToIgnoreCase(getClassDisplayName(b)));
+
+            // Add all matching classes as direct children of root
+            for (DOSchemaClass schemaClass : matchingClasses) {
+                SchemaTreeNode classNode = createClassNode(schemaClass);
+                rootNode.add(classNode);
+            }
+
+            treeModel.reload();
+            expandFirstLevel();
+            return;
+        }
+
+        // No filter - group by package
+        java.util.Map<String, List<DOSchemaClass>> packageMap = new java.util.TreeMap<>();
+
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            String className = schemaClass.getAbsoluteName();
+            String packageName = "(default)";
+
+            if (className != null && className.contains(".")) {
+                packageName = className.substring(0, className.lastIndexOf('.'));
+            }
+
+            packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
+        }
+
+        // Create package nodes and add classes
+        for (java.util.Map.Entry<String, List<DOSchemaClass>> entry : packageMap.entrySet()) {
+            String packageName = entry.getKey();
+            List<DOSchemaClass> classes = entry.getValue();
+
+            // Sort classes within package
+            classes.sort((a, b) -> getClassDisplayName(a).compareToIgnoreCase(getClassDisplayName(b)));
+
+            // Create package node
+            SchemaTreeNode packageNode = new SchemaTreeNode(packageName + " (" + classes.size() + ")", NodeType.MODULE);
+            rootNode.add(packageNode);
+
+            // Add classes to package node
+            for (DOSchemaClass schemaClass : classes) {
+                SchemaTreeNode classNode = createClassNode(schemaClass);
+                packageNode.add(classNode);
+            }
         }
 
         treeModel.reload();
