@@ -293,6 +293,11 @@ public class MainWindow extends JFrame {
                 (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass),
                 (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
 
+        // Set callback to mark editor as modified when field is edited from comparison
+        comparisonPanel.setOnSchemaModified(() -> {
+            finalReferenceTab.editorPanel.markModified();
+        });
+
         // Add comparison result as a new tab
         String tabTitle = "Compare: " + referenceTab.label + " vs DB: " + databaseName;
         addTab(tabTitle, comparisonPanel);
@@ -374,6 +379,12 @@ public class MainWindow extends JFrame {
                 (className, sourceClass) -> addClassToReference(reference.editorPanel, className, sourceClass),
                 (parentClass, field) -> addFieldToReference(reference.editorPanel, parentClass, field));
 
+        // Set callback to mark reference editor as modified when field is edited from
+        // comparison
+        comparisonPanel.setOnSchemaModified(() -> {
+            reference.editorPanel.markModified();
+        });
+
         // Add comparison result as a new tab
         String tabTitle = "Compare: " + reference.label + " vs " + compared.label;
         addTab(tabTitle, comparisonPanel);
@@ -397,12 +408,16 @@ public class MainWindow extends JFrame {
     }
 
     private void addFieldToReference(SchemaEditorPanel editor, DOSchemaClass parentClass, DOSchemaField field) {
-        // This will be handled by the SchemaEditorPanel
-        // For now, show a message - will implement field addition in SchemaEditorPanel
-        JOptionPane.showMessageDialog(this,
-                "Field addition feature will be implemented in SchemaEditorPanel.\n" +
-                        "Field: " + field.getSource() + " in class: " + parentClass.getSourceName(),
-                "Feature Pending", JOptionPane.INFORMATION_MESSAGE);
+        // Call the editor's addFieldFromComparison method
+        editor.addFieldFromComparison(parentClass, field);
+
+        // Switch to the reference schema tab to show the added field
+        for (Map.Entry<Component, SchemaTabInfo> entry : schemaTabs.entrySet()) {
+            if (entry.getValue().editorPanel == editor) {
+                tabbedPane.setSelectedComponent(entry.getKey());
+                break;
+            }
+        }
     }
 
     /**

@@ -234,6 +234,10 @@ public class SchemaComparison {
         return comparedLabel;
     }
 
+    public boolean isShowAllClasses() {
+        return showAllClasses;
+    }
+
     public void setShowAllClasses(boolean showAllClasses) {
         this.showAllClasses = showAllClasses;
         differences.clear();

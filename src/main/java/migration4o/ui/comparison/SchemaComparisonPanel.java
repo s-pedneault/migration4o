@@ -5,6 +5,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.ui.comparison.SchemaComparison.ClassDifference;
 import migration4o.ui.comparison.SchemaComparison.FieldPropertyDifference;
+import migration4o.ui.editors.schema.FieldEditorDialog;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
@@ -12,6 +13,8 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -29,12 +32,14 @@ public class SchemaComparisonPanel extends JPanel {
     private SchemaComparison comparison;
     private final BiConsumer<String, DOSchemaClass> onAddClass;
     private final BiConsumer<DOSchemaClass, DOSchemaField> onAddField;
+    private Runnable onSchemaModified; // Callback when schema is modified
 
     private SynchronizedTreePanel syncTreePanel;
     private JPanel detailPanel;
     private JTextArea summaryArea;
     private JCheckBox showCollectionTypeDifferencesCheckbox;
     private JCheckBox groupByPackageCheckbox;
+    private JLabel statusLabel;
 
     public SchemaComparisonPanel(SchemaComparison comparison,
             BiConsumer<String, DOSchemaClass> onAddClass,
@@ -58,14 +63,32 @@ public class SchemaComparisonPanel extends JPanel {
         boolean showAllClasses = comparison.isShowAllClasses();
         newComparison.setShowAllClasses(showAllClasses);
 
+        // Preserve tree state before rebuilding
+        List<TreePath> expandedPaths = getExpandedPaths(syncTreePanel.getLeftTree());
+        TreePath selectedPath = syncTreePanel.getLeftTree().getSelectionPath();
+        String selectedNodeKey = selectedPath != null ? getNodeKeyFromPath(selectedPath) : null;
+
         // Rebuild trees and update summary
         buildTrees();
         updateSummary();
+
+        // Restore tree state
+        restoreExpandedPaths(syncTreePanel.getLeftTree(), expandedPaths);
+        if (selectedNodeKey != null) {
+            restoreSelectionByKey(syncTreePanel.getLeftTree(), selectedNodeKey);
+        }
 
         // Clear details panel
         detailPanel.removeAll();
         detailPanel.revalidate();
         detailPanel.repaint();
+    }
+
+    /**
+     * Set callback to be notified when the schema is modified.
+     */
+    public void setOnSchemaModified(Runnable callback) {
+        this.onSchemaModified = callback;
     }
 
     private void initializeUI() {
@@ -129,6 +152,21 @@ public class SchemaComparisonPanel extends JPanel {
             }
         });
 
+        // Add double-click listener for field editing (left tree only - reference
+        // schema)
+        syncTreePanel.getLeftTree().addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    TreePath path = syncTreePanel.getLeftTree().getPathForLocation(e.getX(), e.getY());
+                    if (path != null) {
+                        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                        handleDoubleClick(node);
+                    }
+                }
+            }
+        });
+
         splitPane.setLeftComponent(syncTreePanel);
 
         // Details on right
@@ -182,6 +220,15 @@ public class SchemaComparisonPanel extends JPanel {
         comparison.setShowAllClasses(true);
 
         panel.add(optionsPanel, BorderLayout.SOUTH);
+
+        // Status label for messages
+        statusLabel = new JLabel(" ");
+        statusLabel.setFont(new Font("Arial", Font.ITALIC, 11));
+        statusLabel.setForeground(new Color(0, 100, 0));
+        statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        JPanel statusPanel = new JPanel(new BorderLayout());
+        statusPanel.add(statusLabel, BorderLayout.WEST);
+        panel.add(statusPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -441,12 +488,22 @@ public class SchemaComparisonPanel extends JPanel {
             // Sort fields according to reference schema order
             DOSchemaField[] sortedFields = sortFieldsByReferenceOrder(classToShow.getFields(),
                     diff.getReferenceClass());
-            JScrollPane fieldsTablePane = createFieldsTable(sortedFields);
-            contentPanel.add(fieldsTablePane, BorderLayout.CENTER);
-
-            // If a specific field was selected, try to highlight it in the table
-            if (selectedField != null && fieldsTablePane.getViewport().getView() instanceof JTable) {
-                JTable table = (JTable) fieldsTablePane.getViewport().getView();
+            
+            // Create table with action buttons if showing compared schema
+            JPanel tablePanel;
+            if (!isLeftTree && diff.getReferenceClass() != null) {
+                tablePanel = createFieldsTableWithActions(sortedFields, diff);
+            } else {
+                tablePanel = new JPanel(new BorderLayout());
+                tablePanel.add(createFieldsTable(sortedFields), BorderLayout.CENTER);
+            }
+            
+            contentPanel.add(tablePanel, BorderLayout.CENTER);
+            
+            // If a specific field was selected, try to highlight it
+            JScrollPane scrollPane = findScrollPane(tablePanel);
+            if (selectedField != null && scrollPane != null && scrollPane.getViewport().getView() instanceof JTable) {
+                JTable table = (JTable) scrollPane.getViewport().getView();
                 for (int row = 0; row < table.getRowCount(); row++) {
                     if (selectedField.getSource().equals(table.getValueAt(row, 0))) {
                         table.setRowSelectionInterval(row, row);
@@ -460,6 +517,69 @@ public class SchemaComparisonPanel extends JPanel {
         panel.add(contentPanel, BorderLayout.CENTER);
 
         detailPanel.add(panel);
+    }
+
+    /**
+     * Find JScrollPane in a component hierarchy.
+     */
+    private JScrollPane findScrollPane(JPanel panel) {
+        for (Component comp : panel.getComponents()) {
+            if (comp instanceof JScrollPane) {
+                return (JScrollPane) comp;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Create a fields table with "Add Field" buttons for missing fields.
+     */
+    private JPanel createFieldsTableWithActions(DOSchemaField[] fields, ClassDifference diff) {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+        
+        // Get list of fields only in compared schema (missing from reference)
+        List<DOSchemaField> missingFields = diff.getFieldsOnlyInCompared();
+        java.util.Set<String> missingFieldNames = new java.util.HashSet<>();
+        for (DOSchemaField f : missingFields) {
+            missingFieldNames.add(f.getSource());
+        }
+        
+        // Create the table
+        JScrollPane tablePane = createFieldsTable(fields);
+        panel.add(tablePane, BorderLayout.CENTER);
+        
+        // Add buttons panel for missing fields
+        if (!missingFieldNames.isEmpty() && onAddField != null && diff.getReferenceClass() != null) {
+            JPanel buttonsPanel = new JPanel();
+            buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
+            buttonsPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+            
+            for (DOSchemaField field : fields) {
+                if (missingFieldNames.contains(field.getSource())) {
+                    JButton addButton = new JButton("Add " + field.getSource() + " to " + comparison.getReferenceLabel());
+                    addButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+                    addButton.addActionListener(e -> {
+                        onAddField.accept(diff.getReferenceClass(), field);
+                        setStatus("Field '" + field.getSource() + "' added - remember to save schema");
+                        
+                        // Refresh comparison
+                        SchemaComparison newComparison = new SchemaComparison(
+                            comparison.getReferenceSchema(),
+                            comparison.getReferenceLabel(),
+                            comparison.getComparedSchema(),
+                            comparison.getComparedLabel()
+                        );
+                        updateComparison(newComparison);
+                    });
+                    buttonsPanel.add(addButton);
+                    buttonsPanel.add(Box.createRigidArea(new Dimension(0, 3)));
+                }
+            }
+            
+            panel.add(new JScrollPane(buttonsPanel), BorderLayout.SOUTH);
+        }
+        
+        return panel;
     }
 
     /**
@@ -584,5 +704,237 @@ public class SchemaComparisonPanel extends JPanel {
             }
         }
         return count;
+    }
+
+    /**
+     * Handle double-click on a tree node to open field editor.
+     */
+    private void handleDoubleClick(DefaultMutableTreeNode node) {
+        Object userObject = node.getUserObject();
+        if (!(userObject instanceof SynchronizedTreePanel.SyncTreeNode)) {
+            return;
+        }
+
+        SynchronizedTreePanel.SyncTreeNode syncNode = (SynchronizedTreePanel.SyncTreeNode) userObject;
+
+        // Only handle field nodes from the reference schema
+        if (!syncNode.isField()) {
+            return;
+        }
+
+        DOSchemaField oldField = syncNode.getFieldData();
+        if (oldField == null) {
+            return;
+        }
+
+        // Get the parent class
+        DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();
+        if (parentNode == null || !(parentNode.getUserObject() instanceof SynchronizedTreePanel.SyncTreeNode)) {
+            return;
+        }
+
+        SynchronizedTreePanel.SyncTreeNode parentSyncNode = (SynchronizedTreePanel.SyncTreeNode) parentNode
+                .getUserObject();
+        ClassDifference diff = parentSyncNode.getDifference();
+        DOSchemaClass oldClass = diff != null ? diff.getReferenceClass() : null;
+        if (oldClass == null) {
+            return;
+        }
+
+        // Open field editor dialog
+        Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+        DOSchema referenceSchema = comparison.getReferenceSchema();
+
+        FieldEditorDialog dialog = FieldEditorDialog.showDialog(owner, referenceSchema, oldField, false);
+
+        if (dialog != null && dialog.isOkClicked()) {
+            // Create new field with updated values (fields are immutable)
+            DOSchemaField newField = new DOSchemaField(
+                    dialog.getFieldSource(),
+                    dialog.getFieldDestination(),
+                    dialog.getFieldType(),
+                    dialog.isFieldExported(),
+                    dialog.isFieldSkipIfEmpty(),
+                    dialog.isFieldCollection(),
+                    dialog.isFieldEmbedContents(),
+                    dialog.getFieldChildrenType(),
+                    dialog.getFieldTitle(),
+                    dialog.getFieldDescription(),
+                    oldField.getDatabaseClass(),
+                    oldField.getChildrenSchemaClass());
+
+            // Replace the field in the class's field array
+            DOSchemaField[] oldFields = oldClass.getFields();
+            DOSchemaField[] newFields = new DOSchemaField[oldFields.length];
+            for (int i = 0; i < oldFields.length; i++) {
+                if (oldFields[i] == oldField) {
+                    newFields[i] = newField;
+                } else {
+                    newFields[i] = oldFields[i];
+                }
+            }
+
+            // Create new class with updated fields array
+            DOSchemaClass newClass = new DOSchemaClass(
+                    oldClass.getSourceName(),
+                    oldClass.getDestinationName(),
+                    oldClass.getDescription(),
+                    oldClass.getTitle(),
+                    oldClass.getParentClass(),
+                    newFields,
+                    oldClass.getSchemaReferences(),
+                    oldClass.isMigrate());
+
+            // Replace the class in the schema
+            DOSchemaClass[] classes = referenceSchema.getClasses();
+            for (int i = 0; i < classes.length; i++) {
+                if (classes[i] == oldClass) {
+                    classes[i] = newClass;
+                    break;
+                }
+            }
+
+            // Notify that schema was modified
+            if (onSchemaModified != null) {
+                onSchemaModified.run();
+            }
+
+            // Refresh comparison to show updates
+            SchemaComparison newComparison = new SchemaComparison(
+                    referenceSchema,
+                    comparison.getReferenceLabel(),
+                    comparison.getComparedSchema(),
+                    comparison.getComparedLabel());
+            updateComparison(newComparison);
+
+            // Show non-intrusive status message
+            setStatus("Field '" + newField.getSource() + "' updated - remember to save schema");
+        }
+    }
+
+    /**
+     * Set status message (non-intrusive alternative to dialog).
+     */
+    private void setStatus(String message) {
+        if (statusLabel != null) {
+            statusLabel.setText(message);
+            // Clear status after 5 seconds
+            Timer timer = new Timer(5000, e -> statusLabel.setText(" "));
+            timer.setRepeats(false);
+            timer.start();
+        }
+    }
+
+    /**
+     * Get all expanded paths in the tree.
+     */
+    private List<TreePath> getExpandedPaths(JTree tree) {
+        List<TreePath> paths = new ArrayList<>();
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+        collectExpandedPaths(tree, new TreePath(root), paths);
+        return paths;
+    }
+
+    private void collectExpandedPaths(JTree tree, TreePath parent, List<TreePath> paths) {
+        if (tree.isExpanded(parent)) {
+            paths.add(parent);
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) parent.getLastPathComponent();
+            for (int i = 0; i < node.getChildCount(); i++) {
+                collectExpandedPaths(tree, parent.pathByAddingChild(node.getChildAt(i)), paths);
+            }
+        }
+    }
+
+    /**
+     * Get the unique key for a node from a tree path.
+     */
+    private String getNodeKeyFromPath(TreePath path) {
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        Object userObject = node.getUserObject();
+        if (userObject instanceof SynchronizedTreePanel.SyncTreeNode) {
+            return ((SynchronizedTreePanel.SyncTreeNode) userObject).getKey();
+        }
+        return userObject != null ? userObject.toString() : "";
+    }
+
+    /**
+     * Restore expanded paths after tree rebuild.
+     */
+    private void restoreExpandedPaths(JTree tree, List<TreePath> expandedPaths) {
+        for (TreePath oldPath : expandedPaths) {
+            TreePath newPath = findPathByKeys(tree, oldPath);
+            if (newPath != null) {
+                tree.expandPath(newPath);
+            }
+        }
+    }
+
+    /**
+     * Restore selection by node key after tree rebuild.
+     */
+    private void restoreSelectionByKey(JTree tree, String nodeKey) {
+        TreePath path = findPathByKey(tree, nodeKey);
+        if (path != null) {
+            tree.setSelectionPath(path);
+            tree.scrollPathToVisible(path);
+        }
+    }
+
+    /**
+     * Find a tree path by matching node keys.
+     */
+    private TreePath findPathByKeys(JTree tree, TreePath oldPath) {
+        Object[] oldNodes = oldPath.getPath();
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+        TreePath currentPath = new TreePath(root);
+
+        for (int i = 1; i < oldNodes.length; i++) {
+            DefaultMutableTreeNode oldNode = (DefaultMutableTreeNode) oldNodes[i];
+            String targetKey = getNodeKeyFromPath(new TreePath(oldNode));
+
+            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) currentPath.getLastPathComponent();
+            boolean found = false;
+
+            for (int j = 0; j < parent.getChildCount(); j++) {
+                DefaultMutableTreeNode child = (DefaultMutableTreeNode) parent.getChildAt(j);
+                if (targetKey.equals(getNodeKeyFromPath(new TreePath(child)))) {
+                    currentPath = currentPath.pathByAddingChild(child);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return null;
+            }
+        }
+
+        return currentPath;
+    }
+
+    /**
+     * Find a tree path by node key.
+     */
+    private TreePath findPathByKey(JTree tree, String nodeKey) {
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) tree.getModel().getRoot();
+        return findPathByKeyRecursive(new TreePath(root), nodeKey);
+    }
+
+    private TreePath findPathByKeyRecursive(TreePath parentPath, String targetKey) {
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) parentPath.getLastPathComponent();
+        
+        if (targetKey.equals(getNodeKeyFromPath(parentPath))) {
+            return parentPath;
+        }
+
+        for (int i = 0; i < node.getChildCount(); i++) {
+            TreePath childPath = parentPath.pathByAddingChild(node.getChildAt(i));
+            TreePath result = findPathByKeyRecursive(childPath, targetKey);
+            if (result != null) {
+                return result;
+            }
+        }
+
+        return null;
     }
 }

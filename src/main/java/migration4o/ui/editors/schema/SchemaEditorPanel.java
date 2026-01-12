@@ -191,6 +191,82 @@ public class SchemaEditorPanel extends JPanel {
         return false;
     }
 
+    /**
+     * Add a field from another schema/database to a class in this schema.
+     * This is used when adding a database-only field to a reference schema class.
+     * 
+     * @param parentClass The class to add the field to
+     * @param field       The field to add
+     */
+    public void addFieldFromComparison(DOSchemaClass parentClass, DOSchemaField field) {
+        if (parentClass == null || field == null || schema == null) {
+            return;
+        }
+
+        // Find the class in the current schema
+        DOSchemaClass targetClass = null;
+        int classIndex = -1;
+        DOSchemaClass[] classes = schema.getClasses();
+        
+        for (int i = 0; i < classes.length; i++) {
+            if (classes[i].getSourceName().equals(parentClass.getSourceName())) {
+                targetClass = classes[i];
+                classIndex = i;
+                break;
+            }
+        }
+
+        if (targetClass == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Class '" + parentClass.getSourceName() + "' not found in schema.",
+                    "Class Not Found", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Check if field already exists
+        if (targetClass.getFields() != null) {
+            for (DOSchemaField existing : targetClass.getFields()) {
+                if (existing.getSource().equals(field.getSource())) {
+                    JOptionPane.showMessageDialog(this,
+                            "Field '" + field.getSource() + "' already exists in class '" + 
+                            targetClass.getSourceName() + "'.",
+                            "Field Exists", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+            }
+        }
+
+        // Create new field array with the added field
+        DOSchemaField[] oldFields = targetClass.getFields() != null ? targetClass.getFields() : new DOSchemaField[0];
+        DOSchemaField[] newFields = new DOSchemaField[oldFields.length + 1];
+        System.arraycopy(oldFields, 0, newFields, 0, oldFields.length);
+        newFields[oldFields.length] = field;
+
+        // Create new class with updated fields
+        DOSchemaClass newClass = new DOSchemaClass(
+                targetClass.getSourceName(),
+                targetClass.getDestinationName(),
+                targetClass.getDescription(),
+                targetClass.getTitle(),
+                targetClass.getParentClass(),
+                newFields,
+                targetClass.getSchemaReferences(),
+                targetClass.isMigrate());
+
+        // Replace the class in the schema
+        classes[classIndex] = newClass;
+
+        // Rebuild the tree to reflect the changes
+        buildTree();
+
+        // Find and select the class to show the new field
+        selectClassByName(targetClass.getSourceName());
+
+        markModified();
+
+        setStatus("Added field: " + field.getSource() + " to class: " + targetClass.getSourceName());
+    }
+
     private void initializeUI() {
         setLayout(new BorderLayout(5, 5));
 
@@ -1426,7 +1502,10 @@ public class SchemaEditorPanel extends JPanel {
         return ClassFinderDialog.showDialog(owner, schema, initialValue);
     }
 
-    private void markModified() {
+    /**
+     * Mark the schema as modified (unsaved changes).
+     */
+    public void markModified() {
         if (!modified) {
             modified = true;
             setStatus("Modified - unsaved changes");

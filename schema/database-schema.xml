@@ -824,7 +824,7 @@
         <field source="mValeurTerrain" destinationName="valeurTerrain" isExported="true" skipIfEmpty="true" type="double" />
         <field source="mVectAliasAdresse" destinationName="vectAliasAdresse" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.Adresse" />
         <field source="mVectAliasNom" destinationName="vectAliasNom" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.DossPrev$NAliasNom" />
-        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" collection="true" childrenType="gest.champPerso.ChampPerso" />
+        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" />
         <field source="mVectIDCodeRef" destinationName="vectIdCodeRef" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.codeRef.IDCodeRef" />
         <field source="mVectOldMatricule" destinationName="vectOldMatricule" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="string" />
         <field source="mVectPeriodicites" destinationName="vectPeriodicites" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.PeriodiciteDossPrev" />
@@ -1766,7 +1766,7 @@
         <field source="mNote" destinationName="note" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNumActivite" destinationName="numActivite" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mStatut" destinationName="statut" isExported="true" skipIfEmpty="true" type="int" />
-        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" childrenType="gest.champPerso.ChampPerso" />
+        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipIfEmpty="true" type="gest.champPerso.VectChampPerso" />
         <field source="mVectEmployeDispo" destinationName="vectEmployeDispo" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.IDEmploye" />
         <field source="mVectEtape" destinationName="vectEtape" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" />
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
