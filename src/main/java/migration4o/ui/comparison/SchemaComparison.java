@@ -19,6 +19,7 @@ public class SchemaComparison {
     private final String comparedLabel;
 
     private final List<ClassDifference> differences;
+    private boolean showAllClasses = false;
 
     public SchemaComparison(DOSchema referenceSchema, String referenceLabel,
             DOSchema comparedSchema, String comparedLabel) {
@@ -50,8 +51,8 @@ public class SchemaComparison {
                 compareFields(diff, refClass, cmpClass);
             }
 
-            // Add if there are any differences
-            if (diff.hasDifferences()) {
+            // Add if there are any differences, or if showing all classes
+            if (diff.hasDifferences() || showAllClasses) {
                 differences.add(diff);
             }
         }
@@ -196,6 +197,12 @@ public class SchemaComparison {
 
     public String getComparedLabel() {
         return comparedLabel;
+    }
+
+    public void setShowAllClasses(boolean showAllClasses) {
+        this.showAllClasses = showAllClasses;
+        differences.clear();
+        performComparison();
     }
 
     /**

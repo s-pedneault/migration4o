@@ -28,11 +28,11 @@ public class SchemaComparisonPanel extends JPanel {
     private final BiConsumer<String, DOSchemaClass> onAddClass;
     private final BiConsumer<DOSchemaClass, DOSchemaField> onAddField;
 
-    private JTree differenceTree;
-    private DefaultTreeModel treeModel;
+    private SynchronizedTreePanel syncTreePanel;
     private JPanel detailPanel;
     private JTextArea summaryArea;
     private JCheckBox showCollectionTypeDifferencesCheckbox;
+    private JCheckBox groupByPackageCheckbox;
 
     public SchemaComparisonPanel(SchemaComparison comparison,
             BiConsumer<String, DOSchemaClass> onAddClass,
@@ -42,7 +42,7 @@ public class SchemaComparisonPanel extends JPanel {
         this.onAddField = onAddField;
 
         initializeUI();
-        buildTree();
+        buildTrees();
         updateSummary();
     }
 
@@ -53,13 +53,34 @@ public class SchemaComparisonPanel extends JPanel {
         // Header
         add(createHeader(), BorderLayout.NORTH);
 
-        // Split pane with tree on left and details on right
+        // Split pane with synchronized trees on left and details on right
         JSplitPane splitPane = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
-        splitPane.setDividerLocation(400);
-        splitPane.setResizeWeight(0.4);
+        splitPane.setDividerLocation(700);
+        splitPane.setResizeWeight(0.6);
 
-        // Tree on left
-        splitPane.setLeftComponent(createTreePanel());
+        // Synchronized trees on left
+        syncTreePanel = new SynchronizedTreePanel(
+                comparison.getReferenceLabel(),
+                comparison.getComparedLabel());
+
+        // Add selection listeners to both trees
+        syncTreePanel.getLeftTree().addTreeSelectionListener(e -> {
+            TreePath path = e.getNewLeadSelectionPath();
+            if (path != null) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                showDetails(node, true);
+            }
+        });
+
+        syncTreePanel.getRightTree().addTreeSelectionListener(e -> {
+            TreePath path = e.getNewLeadSelectionPath();
+            if (path != null) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                showDetails(node, false);
+            }
+        });
+
+        splitPane.setLeftComponent(syncTreePanel);
 
         // Details on right
         detailPanel = new JPanel(new BorderLayout());
@@ -73,7 +94,7 @@ public class SchemaComparisonPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
-        JLabel titleLabel = new JLabel("Schema Comparison");
+        JLabel titleLabel = new JLabel("Schema Comparison - Synchronized View");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         panel.add(titleLabel, BorderLayout.NORTH);
 
@@ -83,144 +104,117 @@ public class SchemaComparisonPanel extends JPanel {
         summaryArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
         panel.add(summaryArea, BorderLayout.CENTER);
 
-        // Add checkbox for filtering collection type differences
+        // Add options panel with checkboxes
+        JPanel optionsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+
+        // Checkbox for filtering collection type differences
         showCollectionTypeDifferencesCheckbox = new JCheckBox("Show collection content type differences", false);
         showCollectionTypeDifferencesCheckbox
                 .setToolTipText("When unchecked, hides field differences that only differ in childrenType");
-        showCollectionTypeDifferencesCheckbox.addActionListener(e -> {
-            buildTree(); // Rebuild tree when checkbox state changes
+        optionsPanel.add(showCollectionTypeDifferencesCheckbox);
+
+        // Checkbox for grouping by package
+        groupByPackageCheckbox = new JCheckBox("Group by package", false);
+        groupByPackageCheckbox.setToolTipText("Group classes by package instead of inheritance");
+        groupByPackageCheckbox.addActionListener(e -> buildTrees());
+        optionsPanel.add(groupByPackageCheckbox);
+
+        // Checkbox for showing all classes
+        JCheckBox showAllClassesCheckbox = new JCheckBox("Show all classes", false);
+        showAllClassesCheckbox.setToolTipText("Show all classes, not just those with differences");
+        showAllClassesCheckbox.addActionListener(e -> {
+            comparison.setShowAllClasses(showAllClassesCheckbox.isSelected());
+            buildTrees();
+            updateSummary();
         });
-        panel.add(showCollectionTypeDifferencesCheckbox, BorderLayout.SOUTH);
+        optionsPanel.add(showAllClassesCheckbox);
+
+        panel.add(optionsPanel, BorderLayout.SOUTH);
 
         return panel;
     }
 
-    private JScrollPane createTreePanel() {
-        DefaultMutableTreeNode root = new DefaultMutableTreeNode("Differences");
-        treeModel = new DefaultTreeModel(root);
-        differenceTree = new JTree(treeModel);
-        differenceTree.setRootVisible(true);
-        differenceTree.setShowsRootHandles(true);
-
-        differenceTree.addTreeSelectionListener(e -> {
-            TreePath path = e.getNewLeadSelectionPath();
-            if (path != null) {
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                showDetails(node);
-            }
-        });
-
-        JScrollPane scrollPane = new JScrollPane(differenceTree);
-        scrollPane.setBorder(BorderFactory.createTitledBorder("Differences Tree"));
-        return scrollPane;
+    private void buildTrees() {
+        boolean groupByPackage = groupByPackageCheckbox.isSelected();
+        syncTreePanel.buildTrees(comparison.getDifferences(),
+                comparison.getReferenceLabel(),
+                comparison.getComparedLabel(),
+                groupByPackage);
     }
 
-    private void buildTree() {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) treeModel.getRoot();
-        root.removeAllChildren();
-
-        List<ClassDifference> differences = comparison.getDifferences();
-
-        // Group by difference type
-        DefaultMutableTreeNode missingInRef = new DefaultMutableTreeNode(
-                "Classes only in " + comparison.getComparedLabel() + " (" +
-                        differences.stream().filter(ClassDifference::isOnlyInCompared).count() + ")");
-        DefaultMutableTreeNode missingInCmp = new DefaultMutableTreeNode(
-                "Classes only in " + comparison.getReferenceLabel() + " (" +
-                        differences.stream().filter(ClassDifference::isOnlyInReference).count() + ")");
-        DefaultMutableTreeNode withDifferences = new DefaultMutableTreeNode("Classes with field differences (TBD)");
-
-        for (ClassDifference diff : differences) {
-            DifferenceNode node = new DifferenceNode(diff);
-
-            if (diff.isOnlyInCompared()) {
-                missingInRef.add(node);
-            } else if (diff.isOnlyInReference()) {
-                missingInCmp.add(node);
-            } else {
-                // Has field differences
-                if (!diff.getFieldsOnlyInCompared().isEmpty()) {
-                    DefaultMutableTreeNode fieldsNode = new DefaultMutableTreeNode(
-                            "Fields only in " + comparison.getComparedLabel() + " ("
-                                    + diff.getFieldsOnlyInCompared().size() + ")");
-                    for (DOSchemaField field : diff.getFieldsOnlyInCompared()) {
-                        fieldsNode.add(new FieldNode(field, diff.getComparedClass()));
-                    }
-                    node.add(fieldsNode);
-                }
-
-                if (!diff.getFieldsOnlyInReference().isEmpty()) {
-                    DefaultMutableTreeNode fieldsNode = new DefaultMutableTreeNode(
-                            "Fields only in " + comparison.getReferenceLabel() + " ("
-                                    + diff.getFieldsOnlyInReference().size() + ")");
-                    for (DOSchemaField field : diff.getFieldsOnlyInReference()) {
-                        fieldsNode.add(new FieldNode(field, diff.getReferenceClass()));
-                    }
-                    node.add(fieldsNode);
-                }
-
-                if (!diff.getFieldsWithDifferences().isEmpty()) {
-                    DefaultMutableTreeNode propsNode = new DefaultMutableTreeNode(
-                            "Fields with property differences (" + getFilteredPropertyDifferencesCount(diff) + ")");
-                    for (String fieldName : diff.getFieldsWithDifferences().keySet()) {
-                        FieldPropertyDifference propDiff = diff.getFieldsWithDifferences().get(fieldName);
-
-                        // Filter out if only childrenType differs and checkbox is unchecked
-                        if (!showCollectionTypeDifferencesCheckbox.isSelected()
-                                && isOnlyChildrenTypeDifference(propDiff)) {
-                            continue;
-                        }
-
-                        PropertyDifferenceNode propNode = new PropertyDifferenceNode(fieldName, propDiff, diff);
-                        propsNode.add(propNode);
-                    }
-
-                    // Only add the node if it has children after filtering
-                    if (propsNode.getChildCount() > 0) {
-                        node.add(propsNode);
-                    }
-                }
-
-                // Only add the class node if it has any children (actual differences after
-                // filtering)
-                if (node.getChildCount() > 0) {
-                    withDifferences.add(node);
-                }
-            }
-        }
-
-        // Update the count in the withDifferences node label
-        withDifferences.setUserObject("Classes with field differences (" + withDifferences.getChildCount() + ")");
-
-        if (missingInRef.getChildCount() > 0)
-            root.add(missingInRef);
-        if (missingInCmp.getChildCount() > 0)
-            root.add(missingInCmp);
-        if (withDifferences.getChildCount() > 0)
-            root.add(withDifferences);
-
-        treeModel.reload();
-
-        // Expand first level
-        differenceTree.expandRow(0);
-    }
-
-    private void showDetails(DefaultMutableTreeNode node) {
+    private void showDetails(DefaultMutableTreeNode node, boolean isLeftTree) {
         detailPanel.removeAll();
 
-        if (node.getUserObject() instanceof ClassDifference) {
-            ClassDifference diff = (ClassDifference) node.getUserObject();
-            showClassDifferenceDetails(diff);
-        } else if (node instanceof FieldNode) {
-            FieldNode fieldNode = (FieldNode) node;
-            showFieldDetails(fieldNode.field, fieldNode.parentClass);
-        } else if (node instanceof PropertyDifferenceNode) {
-            PropertyDifferenceNode propNode = (PropertyDifferenceNode) node;
-            showPropertyDifferenceDetails(propNode);
+        Object userObject = node.getUserObject();
+        if (userObject instanceof SynchronizedTreePanel.SyncTreeNode) {
+            SynchronizedTreePanel.SyncTreeNode syncNode = (SynchronizedTreePanel.SyncTreeNode) userObject;
+            ClassDifference diff = syncNode.getDifference();
+
+            if (diff != null && !syncNode.isGhost()) {
+                showClassDifferenceDetails(diff);
+            } else if (diff != null && syncNode.isGhost()) {
+                showGhostClassDetails(diff, isLeftTree);
+            }
         }
 
         detailPanel.revalidate();
         detailPanel.repaint();
+    }
+
+    private void showGhostClassDetails(ClassDifference diff, boolean isLeftTree) {
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+        JTextArea infoArea = new JTextArea();
+        infoArea.setEditable(false);
+        infoArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
+
+        StringBuilder info = new StringBuilder();
+        info.append("Class: ").append(diff.getClassName()).append("\n\n");
+
+        if (isLeftTree) {
+            // Ghost in reference (left), exists in compared (right)
+            info.append("Status: Only exists in ").append(comparison.getComparedLabel()).append("\n");
+            DOSchemaClass comparedClass = diff.getComparedClass();
+            if (comparedClass != null) {
+                info.append("Fields: ").append(
+                        comparedClass.getFields() != null ? comparedClass.getFields().length : 0).append("\n");
+            }
+        } else {
+            // Ghost in compared (right), exists in reference (left)
+            info.append("Status: Only exists in ").append(comparison.getReferenceLabel()).append("\n");
+            DOSchemaClass refClass = diff.getReferenceClass();
+            if (refClass != null) {
+                info.append("Fields: ").append(
+                        refClass.getFields() != null ? refClass.getFields().length : 0).append("\n");
+            }
+        }
+
+        infoArea.setText(info.toString());
+        panel.add(infoArea, BorderLayout.NORTH);
+
+        // Show field table if exists in compared schema
+        if (diff.isOnlyInCompared() && diff.getComparedClass() != null &&
+                diff.getComparedClass().getFields() != null && diff.getComparedClass().getFields().length > 0) {
+            JPanel fieldsPanel = new JPanel(new BorderLayout());
+            fieldsPanel.setBorder(BorderFactory.createTitledBorder("Fields in " + comparison.getComparedLabel()));
+            fieldsPanel.add(createFieldsTable(diff.getComparedClass().getFields()), BorderLayout.CENTER);
+            panel.add(fieldsPanel, BorderLayout.CENTER);
+
+            // Add button to add class to reference
+            if (onAddClass != null) {
+                JButton addButton = new JButton("Add Class to " + comparison.getReferenceLabel());
+                addButton.addActionListener(e -> {
+                    onAddClass.accept(diff.getClassName(), diff.getComparedClass());
+                    JOptionPane.showMessageDialog(this,
+                            "Class '" + diff.getClassName() + "' has been added to the reference schema.\n" +
+                                    "Please save the reference schema to persist changes.",
+                            "Class Added", JOptionPane.INFORMATION_MESSAGE);
+                });
+                panel.add(addButton, BorderLayout.SOUTH);
+            }
+        }
+
+        detailPanel.add(panel);
     }
 
     private void showClassDifferenceDetails(ClassDifference diff) {
@@ -340,132 +334,6 @@ public class SchemaComparisonPanel extends JPanel {
                 withDiffs);
 
         summaryArea.setText(summary);
-    }
-
-    private static class DifferenceNode extends DefaultMutableTreeNode {
-        public DifferenceNode(ClassDifference diff) {
-            super(diff);
-        }
-
-        @Override
-        public String toString() {
-            ClassDifference diff = (ClassDifference) getUserObject();
-            return diff.getClassName();
-        }
-    }
-
-    private static class FieldNode extends DefaultMutableTreeNode {
-        private final DOSchemaField field;
-        private final DOSchemaClass parentClass;
-
-        public FieldNode(DOSchemaField field, DOSchemaClass parentClass) {
-            super(field);
-            this.field = field;
-            this.parentClass = parentClass;
-        }
-
-        @Override
-        public String toString() {
-            return field.getSource() + " : " + field.getType();
-        }
-    }
-
-    private static class PropertyDifferenceNode extends DefaultMutableTreeNode {
-        private final String fieldName;
-        private final FieldPropertyDifference propertyDiff;
-        private final ClassDifference classDiff;
-
-        public PropertyDifferenceNode(String fieldName, FieldPropertyDifference propertyDiff,
-                ClassDifference classDiff) {
-            super(fieldName);
-            this.fieldName = fieldName;
-            this.propertyDiff = propertyDiff;
-            this.classDiff = classDiff;
-        }
-
-        @Override
-        public String toString() {
-            int diffCount = propertyDiff.getDifferences().size();
-            return fieldName + " (" + diffCount + " difference" + (diffCount > 1 ? "s" : "") + ")";
-        }
-    }
-
-    private void showPropertyDifferenceDetails(PropertyDifferenceNode propNode) {
-        JPanel panel = new JPanel(new BorderLayout(5, 5));
-
-        // Title
-        JLabel titleLabel = new JLabel("Field: " + propNode.fieldName);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
-        titleLabel.setBorder(BorderFactory.createEmptyBorder(5, 5, 10, 5));
-        panel.add(titleLabel, BorderLayout.NORTH);
-
-        // Property differences table
-        List<String[]> rows = new ArrayList<>();
-
-        for (Map.Entry<String, FieldPropertyDifference.PropertyDiff> entry : propNode.propertyDiff.getDifferences()
-                .entrySet()) {
-            String property = entry.getKey();
-            FieldPropertyDifference.PropertyDiff diff = entry.getValue();
-
-            String refValue = formatValue(diff.getReferenceValue());
-            String cmpValue = formatValue(diff.getComparedValue());
-
-            rows.add(new String[] {
-                    property,
-                    refValue,
-                    cmpValue
-            });
-        }
-
-        String[][] data = rows.toArray(new String[0][]);
-        String[] columns = {
-                "Property",
-                comparison.getReferenceLabel(),
-                comparison.getComparedLabel()
-        };
-
-        JTable table = new JTable(data, columns);
-        table.setEnabled(false);
-        table.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        table.setRowHeight(25);
-
-        // Highlight differences with color
-        table.setDefaultRenderer(Object.class, new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
-                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-                if (column > 0 && row < data.length) {
-                    String refVal = data[row][1];
-                    String cmpVal = data[row][2];
-                    if (!refVal.equals(cmpVal)) {
-                        c.setBackground(new Color(255, 250, 205)); // Light yellow
-                    } else {
-                        c.setBackground(Color.WHITE);
-                    }
-                }
-
-                return c;
-            }
-        });
-
-        JScrollPane scrollPane = new JScrollPane(table);
-        panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Add explanation text
-        JTextArea explanation = new JTextArea(
-                "The table above shows properties that differ between the two schemas.\n" +
-                        "Rows are highlighted in yellow to indicate differences.");
-        explanation.setEditable(false);
-        explanation.setBackground(panel.getBackground());
-        explanation.setWrapStyleWord(true);
-        explanation.setLineWrap(true);
-        explanation.setRows(2);
-        explanation.setBorder(BorderFactory.createEmptyBorder(10, 5, 5, 5));
-        panel.add(explanation, BorderLayout.SOUTH);
-
-        detailPanel.add(panel);
     }
 
     private String formatValue(Object value) {
