@@ -160,6 +160,12 @@ public class DatabaseUtil {
         DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
         DODatabaseField[] fields = extractFieldsFromStoredClass(storedClass, matchingSchemaClass);
 
+        // Get object IDs while database is still open
+        long[] objectIds = storedClass.getIDs();
+        if (objectIds == null) {
+            objectIds = new long[0];
+        }
+
         return new DODatabaseClass(
                 className,
                 getSimpleClassName(className),
@@ -168,7 +174,8 @@ public class DatabaseUtil {
                 superClassName,
                 fields,
                 objectCount,
-                0);
+                0,
+                objectIds);
     }
 
     /**

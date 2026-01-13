@@ -5,7 +5,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import com.db4o.ObjectSet;
 import com.db4o.ext.ExtObjectContainer;
+import com.db4o.query.Query;
 
 import migration4o.database.DODatabaseReader;
 import migration4o.models.database.DODatabase;
@@ -75,6 +77,9 @@ public class DODatabaseSchemaInferrer {
                 new DOSchemaClass[0] // No foundation classes from database
         );
 
+        // Deduplicate object IDs across inheritance hierarchies
+        schema = deduplicateObjectIdsInInheritanceHierarchies(schema);
+
         System.out.println("Successfully inferred schema with " + schemaClasses.size() + " classes");
 
         return schema;
@@ -101,6 +106,10 @@ public class DODatabaseSchemaInferrer {
                 container,
                 absoluteName);
 
+        // Get object IDs from DODatabaseClass (already captured during database
+        // loading)
+        long[] objectIds = dbClass.getObjectIds();
+
         // Create schema class - all database classes are marked as migrate=true
         return new DOSchemaClass(
                 absoluteName,
@@ -110,8 +119,8 @@ public class DODatabaseSchemaInferrer {
                 parentClassName,
                 schemaFields,
                 null, // schemaReferences - not available from database
-                true // migrate - assume all database classes should be migrated
-        );
+                true, // migrate - assume all database classes should be migrated
+                objectIds);
     }
 
     /**
@@ -297,5 +306,115 @@ public class DODatabaseSchemaInferrer {
                 new DOSchemaClass[0],
                 new DOSchemaModule[0],
                 new DOSchemaClass[0]);
+    }
+
+    /**
+     * Deduplicates object IDs across inheritance hierarchies.
+     * 
+     * DB4O stores each object at every level of its inheritance chain, so the same
+     * object ID appears in the parent class, grandparent class, etc. This method
+     * removes duplicate IDs by keeping them only in the most derived (leaf) class.
+     * 
+     * Algorithm:
+     * 1. Find all leaf classes (classes with no subclasses)
+     * 2. For each leaf class, get its object IDs
+     * 3. For each object ID, walk up the parent chain and remove it from ancestors
+     * 
+     * @param schema The schema with potentially duplicate object IDs
+     * @return A new schema with deduplicated object IDs
+     */
+    private DOSchema deduplicateObjectIdsInInheritanceHierarchies(DOSchema schema) {
+        System.out.println("Deduplicating object IDs across inheritance hierarchies...");
+
+        // Build class map for quick lookup
+        Map<String, DOSchemaClass> classMap = new HashMap<>();
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+        }
+
+        // Build subclass map to identify leaf classes
+        Map<String, List<String>> subclassMap = new HashMap<>();
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            String parentName = schemaClass.getSuperClassAbsoluteName();
+            if (parentName != null && !parentName.isEmpty()) {
+                subclassMap.computeIfAbsent(parentName, k -> new ArrayList<>())
+                        .add(schemaClass.getAbsoluteName());
+            }
+        }
+
+        int leafClassCount = 0;
+        int nonLeafClassCount = 0;
+
+        // Collect IDs to remove from each class
+        Map<String, java.util.Set<Long>> idsToRemove = new HashMap<>();
+
+        // Process each class
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            String className = schemaClass.getAbsoluteName();
+
+            // Check if this is a leaf class (no subclasses)
+            boolean isLeaf = !subclassMap.containsKey(className);
+
+            if (isLeaf) {
+                leafClassCount++;
+            } else {
+                nonLeafClassCount++;
+            }
+
+            if (isLeaf && schemaClass.getObjectIds() != null) {
+                // For each object ID in this leaf class
+                for (long objectId : schemaClass.getObjectIds()) {
+                    // Walk up the parent chain and mark this ID for removal
+                    String currentParent = schemaClass.getSuperClassAbsoluteName();
+                    while (currentParent != null && !currentParent.isEmpty()) {
+                        idsToRemove.computeIfAbsent(currentParent, k -> new java.util.HashSet<>())
+                                .add(objectId);
+
+                        DOSchemaClass parentClass = classMap.get(currentParent);
+                        if (parentClass == null) {
+                            break;
+                        }
+                        currentParent = parentClass.getSuperClassAbsoluteName();
+                    }
+                }
+            }
+        }
+
+        // Update uniqueObjectIds in classes based on deduplication
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            String className = schemaClass.getAbsoluteName();
+            java.util.Set<Long> toRemove = idsToRemove.get(className);
+
+            if (toRemove != null && !toRemove.isEmpty() && schemaClass.getObjectIds() != null) {
+                // Filter out the IDs that belong to derived classes
+                long[] originalIds = schemaClass.getObjectIds();
+                List<Long> filteredIds = new ArrayList<>();
+
+                for (long id : originalIds) {
+                    if (!toRemove.contains(id)) {
+                        filteredIds.add(id);
+                    }
+                }
+
+                // Set unique IDs on the class
+                long[] uniqueIds = new long[filteredIds.size()];
+                for (int i = 0; i < filteredIds.size(); i++) {
+                    uniqueIds[i] = filteredIds.get(i);
+                }
+                schemaClass.setUniqueObjectIds(uniqueIds);
+
+                int removedCount = originalIds.length - uniqueIds.length;
+                if (removedCount > 0) {
+                    System.out.println("Deduplicated " + removedCount + " object IDs from " + className +
+                            " (" + originalIds.length + " -> " + uniqueIds.length + ")");
+                }
+            }
+            // else: uniqueObjectIds is already initialized as a copy of objectIds
+        }
+
+        System.out.println("Object ID deduplication complete: " + leafClassCount + " leaf classes, " +
+                nonLeafClassCount + " non-leaf classes");
+
+        return schema;
     }
 }

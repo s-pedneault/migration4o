@@ -18,6 +18,8 @@ public class DOSchemaClass {
     private DOSchemaReference[] schemaReferences;
     private final List<DOReference> referenceList;
     private DODatabaseClass databaseClass;
+    private long[] objectIds; // Object IDs from database
+    private long[] uniqueObjectIds; // Unique object IDs after deduplication
 
     public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {
@@ -33,6 +35,12 @@ public class DOSchemaClass {
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
             String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate) {
+        this(absoluteName, simpleName, description, title, parentClassName, fields, schemaReferences, migrate, null);
+    }
+
+    public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
+            String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate,
+            long[] objectIds) {
         this.source = absoluteName;
         this.destinationName = simpleName;
         this.description = description;
@@ -42,6 +50,10 @@ public class DOSchemaClass {
         this.fields = fields != null ? fields : new DOSchemaField[0];
         this.schemaReferences = schemaReferences != null ? schemaReferences : new DOSchemaReference[0];
         this.referenceList = new ArrayList<>();
+        this.objectIds = objectIds;
+        // Initialize uniqueObjectIds as a copy of objectIds (will be deduplicated later
+        // if needed)
+        this.uniqueObjectIds = objectIds != null ? objectIds.clone() : null;
     }
 
     public String getSourceName() {
@@ -135,5 +147,25 @@ public class DOSchemaClass {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public long[] getObjectIds() {
+        return objectIds;
+    }
+
+    public int getObjectCount() {
+        return objectIds != null ? objectIds.length : 0;
+    }
+
+    public long[] getUniqueObjectIds() {
+        return uniqueObjectIds;
+    }
+
+    public void setUniqueObjectIds(long[] uniqueObjectIds) {
+        this.uniqueObjectIds = uniqueObjectIds;
+    }
+
+    public int getUniqueObjectCount() {
+        return uniqueObjectIds != null ? uniqueObjectIds.length : 0;
     }
 }

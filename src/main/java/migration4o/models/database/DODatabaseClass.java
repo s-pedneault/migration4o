@@ -20,6 +20,7 @@ public class DODatabaseClass {
     private int totalObjectCount;
     private int migratedObjectCount;
     private DODatabaseObject[] resolvedObjects;
+    private final long[] objectIds;
 
     // Direct inheritance references
     private DODatabaseClass parentClass;
@@ -32,7 +33,7 @@ public class DODatabaseClass {
 
     public DODatabaseClass(String absoluteName, String shortName, String description, String title,
             String superClassAbsoluteName,
-            DODatabaseField[] fields, int totalObjectCount, int migratedObjectCount) {
+            DODatabaseField[] fields, int totalObjectCount, int migratedObjectCount, long[] objectIds) {
         this.absoluteName = absoluteName;
         this.shortName = shortName;
         this.description = description;
@@ -44,6 +45,7 @@ public class DODatabaseClass {
         this.totalObjectCount = totalObjectCount;
         this.migratedObjectCount = migratedObjectCount;
         this.resolvedObjects = new DODatabaseObject[0];
+        this.objectIds = objectIds != null ? objectIds : new long[0];
 
         // Initialize inheritance collections
         this.directSubclasses = new Vector<DODatabaseClass>();
@@ -124,6 +126,10 @@ public class DODatabaseClass {
 
     public void setResolvedObjects(DODatabaseObject[] resolvedObjects) {
         this.resolvedObjects = resolvedObjects != null ? resolvedObjects.clone() : new DODatabaseObject[0];
+    }
+
+    public long[] getObjectIds() {
+        return objectIds != null ? objectIds.clone() : new long[0];
     }
 
     public DODatabaseClass getParentClass() {

@@ -291,6 +291,15 @@ public class SchemaComparisonPanel extends JPanel {
             if (comparedClass != null) {
                 info.append("Fields: ").append(
                         comparedClass.getFields() != null ? comparedClass.getFields().length : 0).append("\n");
+                int objectCount = comparedClass.getObjectCount();
+                int uniqueObjectCount = comparedClass.getUniqueObjectCount();
+                if (objectCount > 0) {
+                    info.append("Objects: ").append(objectCount);
+                    if (uniqueObjectCount != objectCount) {
+                        info.append(" (Unique: ").append(uniqueObjectCount).append(")");
+                    }
+                    info.append("\n");
+                }
             }
         } else {
             // Ghost in compared (right), exists in reference (left)
@@ -299,6 +308,15 @@ public class SchemaComparisonPanel extends JPanel {
             if (refClass != null) {
                 info.append("Fields: ").append(
                         refClass.getFields() != null ? refClass.getFields().length : 0).append("\n");
+                int objectCount = refClass.getObjectCount();
+                int uniqueObjectCount = refClass.getUniqueObjectCount();
+                if (objectCount > 0) {
+                    info.append("Objects: ").append(objectCount);
+                    if (uniqueObjectCount != objectCount) {
+                        info.append(" (Unique: ").append(uniqueObjectCount).append(")");
+                    }
+                    info.append("\n");
+                }
             }
         }
 
@@ -478,6 +496,14 @@ public class SchemaComparisonPanel extends JPanel {
         DOSchemaClass classToShow = isLeftTree ? diff.getReferenceClass() : diff.getComparedClass();
         if (classToShow != null) {
             info.append("Fields: ").append(classToShow.getFields() != null ? classToShow.getFields().length : 0);
+            int objectCount = classToShow.getObjectCount();
+            int uniqueObjectCount = classToShow.getUniqueObjectCount();
+            if (objectCount > 0) {
+                info.append("  |  Objects: ").append(objectCount);
+                if (uniqueObjectCount != objectCount) {
+                    info.append(" (Unique: ").append(uniqueObjectCount).append(")");
+                }
+            }
         }
 
         infoArea.setText(info.toString());
