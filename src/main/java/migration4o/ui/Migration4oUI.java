@@ -35,7 +35,7 @@ public class Migration4oUI {
                 // Get the schema from the editor (already loaded by the constructor)
                 DOSchema schema = schemaEditor.getSchema();
 
-                mainWindow.addSchemaTab("Schema Editor", schemaEditor, schema, true);
+                mainWindow.addSchemaTab("Reference schema", schemaEditor, schema, true);
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(null,

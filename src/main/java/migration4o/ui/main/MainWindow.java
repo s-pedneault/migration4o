@@ -11,6 +11,7 @@ import migration4o.schema.DODatabaseSchemaWriter;
 import migration4o.ui.comparison.SchemaComparison;
 import migration4o.ui.comparison.SchemaComparisonPanel;
 import migration4o.ui.editors.schema.SchemaEditorPanel;
+import migration4o.ui.migration.MigrationCoveragePanel;
 
 import javax.swing.*;
 import javax.swing.filechooser.FileNameExtensionFilter;
@@ -27,8 +28,15 @@ import java.util.Map;
 public class MainWindow extends JFrame {
 
     private JTabbedPane tabbedPane;
+    private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
+
+    // Track database-related tabs for closing
+    private Component databaseSchemaTab = null;
+    private Component conformityAnalysisTab = null;
+    private Component migrationCoverageTab = null;
+    private DOSchema currentDatabaseSchema = null;
 
     private static class ComparisonTabInfo {
         SchemaTabInfo referenceTab;
@@ -83,54 +91,26 @@ public class MainWindow extends JFrame {
 
         // Add to frame
         add(tabbedPane, BorderLayout.CENTER);
-
-        // Add menu bar
-        setJMenuBar(createMenuBar());
     }
 
     private void addTabs() {
-        // Tabs will be added here
-        // First tab will be the schema editor
-    }
-
-    private JMenuBar createMenuBar() {
-        JMenuBar menuBar = new JMenuBar();
-
-        // File menu
-        JMenu fileMenu = new JMenu("File");
-
-        // Open Database menu item
-        JMenuItem openDatabaseItem = new JMenuItem("Open Database...");
-        openDatabaseItem.addActionListener(e -> openDatabaseFile());
-        fileMenu.add(openDatabaseItem);
-
-        fileMenu.addSeparator();
-
-        JMenuItem exitItem = new JMenuItem("Exit");
-        exitItem.addActionListener(e -> System.exit(0));
-        fileMenu.add(exitItem);
-        menuBar.add(fileMenu);
-
-        // Help menu
-        JMenu helpMenu = new JMenu("Help");
-        JMenuItem aboutItem = new JMenuItem("About");
-        aboutItem.addActionListener(e -> showAboutDialog());
-        helpMenu.add(aboutItem);
-        menuBar.add(helpMenu);
-
-        return menuBar;
-    }
-
-    private void showAboutDialog() {
-        JOptionPane.showMessageDialog(this,
-                "Migration4o - Database Migration Tool\n" +
-                        "Version 1.0\n\n" +
-                        "A tool for migrating database schemas and data.",
-                "About Migration4o",
-                JOptionPane.INFORMATION_MESSAGE);
+        // Create and add welcome panel as first tab
+        welcomePanel = new WelcomePanel();
+        welcomePanel.setOnOpenDatabase(() -> openDatabaseFile());
+        welcomePanel.setOnCloseDatabase(() -> closeDatabase());
+        tabbedPane.addTab("Welcome", welcomePanel);
     }
 
     public void openDatabaseFile() {
+        // Don't open if a database is already open
+        if (currentDatabaseSchema != null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please close the current database before opening a new one.",
+                    "Database Already Open",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open DB4O Database");
         fileChooser.setFileFilter(new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak)", "dat", "bak"));
@@ -143,21 +123,8 @@ public class MainWindow extends JFrame {
 
         File selectedFile = fileChooser.getSelectedFile();
 
-        // Show progress dialog
-        JDialog progressDialog = new JDialog(this, "Loading Database", true);
-        JProgressBar progressBar = new JProgressBar();
-        progressBar.setIndeterminate(true);
-        progressBar.setString("Opening database and inferring schema...");
-        progressBar.setStringPainted(true);
-
-        JPanel progressPanel = new JPanel(new BorderLayout(10, 10));
-        progressPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
-        progressPanel.add(new JLabel("Please wait..."), BorderLayout.NORTH);
-        progressPanel.add(progressBar, BorderLayout.CENTER);
-
-        progressDialog.add(progressPanel);
-        progressDialog.pack();
-        progressDialog.setLocationRelativeTo(this);
+        // Show loading state on welcome panel
+        welcomePanel.showLoading(selectedFile.getAbsolutePath());
 
         // Process in background thread
         SwingWorker<DOSchema, Void> worker = new SwingWorker<>() {
@@ -194,7 +161,8 @@ public class MainWindow extends JFrame {
 
             @Override
             protected void done() {
-                progressDialog.dispose();
+                // Hide loading state
+                welcomePanel.hideLoading();
 
                 try {
                     DOSchema inferredSchema = get();
@@ -234,17 +202,28 @@ public class MainWindow extends JFrame {
                         return;
                     }
 
+                    // Store the database schema
+                    currentDatabaseSchema = inferredSchema;
+
                     // Create schema editor panel with inferred schema
-                    String tabTitle = "DB: " + selectedFile.getName();
                     SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName());
                     schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
-                    addSchemaTab(tabTitle, schemaEditor, inferredSchema, false);
 
-                    // Switch to the database tab
-                    tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+                    // Add database structure tab
+                    databaseSchemaTab = schemaEditor;
+                    addSchemaTab("Database structure", schemaEditor, inferredSchema, false);
 
                     // Automatically create comparison with reference schema
-                    createComparisonWithReference(inferredSchema, selectedFile.getName());
+                    createComparisonWithReference(inferredSchema);
+
+                    // Create migration coverage tab
+                    createMigrationCoverageTab(inferredSchema);
+
+                    // Update welcome panel state
+                    welcomePanel.setDatabaseOpen(true);
+
+                    // Switch to the database structure tab
+                    tabbedPane.setSelectedComponent(databaseSchemaTab);
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -257,14 +236,13 @@ public class MainWindow extends JFrame {
         };
 
         worker.execute();
-        progressDialog.setVisible(true);
     }
 
     /**
      * Automatically creates a comparison between the reference schema and a newly
      * loaded database schema.
      */
-    private void createComparisonWithReference(DOSchema databaseSchema, String databaseName) {
+    private void createComparisonWithReference(DOSchema databaseSchema) {
         // Find the reference schema
         SchemaTabInfo referenceTab = null;
         for (SchemaTabInfo tabInfo : schemaTabs.values()) {
@@ -285,7 +263,7 @@ public class MainWindow extends JFrame {
         // Create comparison - use live schema from editor in case it was reloaded
         SchemaComparison comparison = new SchemaComparison(
                 referenceTab.editorPanel.getSchema(), referenceTab.label,
-                databaseSchema, "DB: " + databaseName);
+                databaseSchema, "Database");
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(
@@ -298,12 +276,68 @@ public class MainWindow extends JFrame {
             finalReferenceTab.editorPanel.markModified();
         });
 
-        // Add comparison result as a new tab
-        String tabTitle = "Compare: " + referenceTab.label + " vs DB: " + databaseName;
-        addTab(tabTitle, comparisonPanel);
+        // Store and add conformity analysis tab
+        conformityAnalysisTab = comparisonPanel;
+        addTab("Conformity analysis", comparisonPanel);
+    }
 
-        // Switch to the comparison tab
-        tabbedPane.setSelectedIndex(tabbedPane.getTabCount() - 1);
+    /**
+     * Creates the migration coverage tab.
+     */
+    private void createMigrationCoverageTab(DOSchema databaseSchema) {
+        // Find the reference schema
+        SchemaTabInfo referenceTab = null;
+        for (SchemaTabInfo tabInfo : schemaTabs.values()) {
+            if (tabInfo.isReference) {
+                referenceTab = tabInfo;
+                break;
+            }
+        }
+
+        if (referenceTab == null) {
+            System.out.println("Warning: No reference schema found for migration coverage");
+            return;
+        }
+
+        // Create migration coverage panel
+        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(
+                referenceTab.editorPanel.getSchema(),
+                databaseSchema);
+
+        // Store and add migration coverage tab
+        migrationCoverageTab = coveragePanel;
+        addTab("Migration coverage", coveragePanel);
+    }
+
+    /**
+     * Closes the database and removes all database-related tabs.
+     */
+    private void closeDatabase() {
+        // Remove database-related tabs
+        if (databaseSchemaTab != null) {
+            tabbedPane.remove(databaseSchemaTab);
+            schemaTabs.remove(databaseSchemaTab);
+            databaseSchemaTab = null;
+        }
+
+        if (conformityAnalysisTab != null) {
+            tabbedPane.remove(conformityAnalysisTab);
+            comparisonTabs.remove(conformityAnalysisTab);
+            conformityAnalysisTab = null;
+        }
+
+        if (migrationCoverageTab != null) {
+            tabbedPane.remove(migrationCoverageTab);
+            migrationCoverageTab = null;
+        }
+
+        currentDatabaseSchema = null;
+
+        // Update welcome panel state
+        welcomePanel.setDatabaseOpen(false);
+
+        // Switch to welcome tab
+        tabbedPane.setSelectedIndex(0);
     }
 
     /**

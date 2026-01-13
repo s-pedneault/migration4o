@@ -25,6 +25,13 @@ javac --release 25 -cp ".:lib/*" -d classes $(find src/main/java -name "*.java" 
 
 if [ $? -eq 0 ]; then
     echo "✓ Compilation successful"
+    
+    # Copy resources to classes directory
+    if [ -d "src/main/resources" ]; then
+        echo "Copying resources..."
+        cp -r src/main/resources/* classes/
+        echo "✓ Resources copied"
+    fi
     echo ""
     echo "========================================"
     echo "BUILD COMPLETE - NO ERRORS"
