@@ -1,12 +1,23 @@
 package migration4o.ui.migration;
 
+import migration4o.database.DODatabaseOpener;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.ObjectResolverUtil;
+import com.db4o.ext.ExtObjectContainer;
+import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+import com.db4o.reflect.generic.GenericObject;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 import java.awt.*;
 import java.util.*;
+import java.util.List;
 
 /**
  * Panel showing migration coverage analysis with combined class list.
@@ -15,16 +26,31 @@ public class MigrationCoveragePanel extends JPanel {
 
     private JTable table;
     private DefaultTableModel tableModel;
+    private DOSchema referenceSchema;
+    private DOSchema databaseSchema;
+    private String databasePath;
 
-    public MigrationCoveragePanel(DOSchema referenceSchema, DOSchema databaseSchema) {
+    public MigrationCoveragePanel(DOSchema referenceSchema, DOSchema databaseSchema, String databasePath) {
         setLayout(new BorderLayout());
 
+        this.referenceSchema = referenceSchema;
+        this.databaseSchema = databaseSchema;
+        this.databasePath = databasePath;
+
         // Create table model
-        String[] columnNames = { "Class Name" };
+        String[] columnNames = { "Class Name", "Objects", "Unique", "Migration" };
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return false;
+            }
+
+            @Override
+            public Class<?> getColumnClass(int columnIndex) {
+                if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3) {
+                    return Integer.class;
+                }
+                return String.class;
             }
         };
 
@@ -35,6 +61,13 @@ public class MigrationCoveragePanel extends JPanel {
         table.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         table.setAutoCreateRowSorter(true);
 
+        // Set custom renderer for the first column (class name) with colors
+        table.getColumnModel().getColumn(0).setCellRenderer(new ClassNameRenderer());
+
+        // Set custom renderer for the Migration column (progress bar)
+        table.getColumnModel().getColumn(3).setCellRenderer(new MigrationProgressRenderer());
+        table.getColumnModel().getColumn(3).setPreferredWidth(150);
+
         // Populate table with merged class list
         populateTable(referenceSchema, databaseSchema);
 
@@ -44,6 +77,13 @@ public class MigrationCoveragePanel extends JPanel {
 
         // Add summary panel at top
         add(createSummaryPanel(referenceSchema, databaseSchema), BorderLayout.NORTH);
+
+        // Add button panel at bottom
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton reachButton = new JButton("Reach");
+        reachButton.addActionListener(e -> performReachAnalysis());
+        buttonPanel.add(reachButton);
+        add(buttonPanel, BorderLayout.SOUTH);
     }
 
     private JPanel createSummaryPanel(DOSchema referenceSchema, DOSchema databaseSchema) {
@@ -66,24 +106,1124 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     private void populateTable(DOSchema referenceSchema, DOSchema databaseSchema) {
-        // Collect all unique class names
-        Set<String> allClassNames = new TreeSet<>(); // TreeSet for sorted order
+        // Clear existing rows before repopulating
+        tableModel.setRowCount(0);
+
+        // Build maps for quick lookup
+        Map<String, DOSchemaClass> refClassMap = new HashMap<>();
+        Map<String, DOSchemaClass> dbClassMap = new HashMap<>();
 
         if (referenceSchema != null && referenceSchema.getClasses() != null) {
             for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
-                allClassNames.add(schemaClass.getAbsoluteName());
+                refClassMap.put(schemaClass.getAbsoluteName(), schemaClass);
             }
         }
 
         if (databaseSchema != null && databaseSchema.getClasses() != null) {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                allClassNames.add(schemaClass.getAbsoluteName());
+                dbClassMap.put(schemaClass.getAbsoluteName(), schemaClass);
             }
         }
 
+        // Collect all unique class names
+        Set<String> allClassNames = new TreeSet<>(); // TreeSet for sorted order
+        allClassNames.addAll(refClassMap.keySet());
+        allClassNames.addAll(dbClassMap.keySet());
+
         // Add to table (already sorted by TreeSet)
         for (String className : allClassNames) {
-            tableModel.addRow(new Object[] { className });
+            DOSchemaClass dbClass = dbClassMap.get(className);
+
+            int objectCount = 0;
+            int uniqueCount = 0;
+            int migratedCount = 0;
+
+            if (dbClass != null) {
+                objectCount = dbClass.getObjectCount();
+                uniqueCount = dbClass.getUniqueObjectCount();
+                migratedCount = objectCount - uniqueCount; // Duplicates removed = migrated
+            }
+
+            tableModel.addRow(new Object[] { className, objectCount, uniqueCount, migratedCount });
+
+            // Debug specific class
+            if (className.equals("gest.dossPrev.PersonneRess")) {
+                System.out.println("DEBUG TABLE: Adding PersonneRess row - Objects=" + objectCount + ", Unique="
+                        + uniqueCount + ", Migrated=" + migratedCount);
+            }
         }
+    }
+
+    /**
+     * Custom cell renderer for class names with color coding:
+     * - Grey: class not set to migrate
+     * - Black: class has 0 unique objects
+     * - Green: class found in schema
+     * - Red: class only in database
+     */
+    private class ClassNameRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            if (!isSelected && value instanceof String) {
+                String className = (String) value;
+
+                // Find the class in reference and database schemas
+                DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
+                DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
+
+                // Determine color based on rules
+                if (refClass != null && !refClass.isMigrate()) {
+                    // Grey: class not set to migrate
+                    c.setForeground(Color.GRAY);
+                } else if (dbClass != null && dbClass.getUniqueObjectCount() == 0) {
+                    // Black: class has 0 unique objects
+                    c.setForeground(Color.BLACK);
+                } else if (refClass != null) {
+                    // Green: class found in schema
+                    c.setForeground(new Color(0, 128, 0));
+                } else if (dbClass != null) {
+                    // Red: class only in database
+                    c.setForeground(Color.RED);
+                } else {
+                    c.setForeground(Color.BLACK);
+                }
+            }
+
+            return c;
+        }
+
+        private DOSchemaClass findClassInSchema(DOSchema schema, String className) {
+            if (schema == null || schema.getClasses() == null) {
+                return null;
+            }
+            for (DOSchemaClass schemaClass : schema.getClasses()) {
+                if (schemaClass.getAbsoluteName().equals(className)) {
+                    return schemaClass;
+                }
+            }
+            return null;
+        }
+    }
+
+    /**
+     * Custom cell renderer for Migration column showing progress bar
+     * Max = Objects count, Value = Objects - Unique (migrated/deduplicated count)
+     * Background = red, Progress = green
+     * Special cases:
+     * - Light grey if not flagged to migrate
+     * - Blue if descendant of EntiteContientID
+     * - Yellow if descendant of IDEntite
+     */
+    private class MigrationProgressRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
+        private int value;
+        private int maximum;
+        private Color backgroundColor;
+        private Color progressColor;
+
+        public MigrationProgressRenderer() {
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object val,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+
+            if (val instanceof Integer) {
+                this.value = (Integer) val;
+
+                // Get the Objects count from column 1
+                this.maximum = 0;
+                Object objectsValue = table.getValueAt(row, 1);
+                if (objectsValue instanceof Integer) {
+                    this.maximum = (Integer) objectsValue;
+                }
+
+                // Get class name from column 0
+                String className = "";
+                Object classNameValue = table.getValueAt(row, 0);
+                if (classNameValue instanceof String) {
+                    className = (String) classNameValue;
+                }
+
+                // Determine colors based on class properties
+                determineColors(className);
+            }
+
+            return this;
+        }
+
+        private void determineColors(String className) {
+            // Find the class in reference and database schemas
+            DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
+            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
+            DOSchemaClass schemaClass = refClass != null ? refClass : dbClass;
+
+            // Default colors
+            backgroundColor = new Color(239, 68, 68); // Red
+            progressColor = new Color(34, 197, 94); // Green
+
+            if (schemaClass != null) {
+                // Check if class is not flagged to migrate
+                if (!schemaClass.isMigrate()) {
+                    backgroundColor = new Color(211, 211, 211); // Light grey
+                    progressColor = new Color(169, 169, 169); // Darker grey for progress
+                }
+                // Check if descendant of EntiteContientID
+                else if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                    backgroundColor = new Color(59, 130, 246); // Blue
+                    progressColor = new Color(59, 130, 246); // Blue (fully)
+                } // Check if descendant of EntiteContientID
+                else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                    backgroundColor = new Color(99, 190, 246); // Blue
+                    progressColor = new Color(99, 190, 246); // Blue (fully)
+                }
+                // Check if descendant of IDEntite
+                else if (isDescendantOf(schemaClass, "gest.gen.IDEntite")) {
+                    backgroundColor = new Color(234, 179, 8); // Yellow
+                    progressColor = new Color(234, 179, 8); // Yellow (fully)
+                }
+            }
+        }
+
+        private boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName) {
+            String currentParent = schemaClass.getParentClass();
+
+            // Walk up the inheritance chain
+            while (currentParent != null && !currentParent.isEmpty()) {
+                if (currentParent.equals(ancestorClassName)) {
+                    return true;
+                }
+
+                // Find parent class and continue walking up
+                DOSchemaClass parentClass = findClassInSchema(referenceSchema, currentParent);
+                if (parentClass == null) {
+                    parentClass = findClassInSchema(databaseSchema, currentParent);
+                }
+
+                if (parentClass == null) {
+                    break;
+                }
+
+                currentParent = parentClass.getParentClass();
+            }
+
+            return false;
+        }
+
+        private DOSchemaClass findClassInSchema(DOSchema schema, String className) {
+            if (schema == null || schema.getClasses() == null) {
+                return null;
+            }
+            for (DOSchemaClass schemaClass : schema.getClasses()) {
+                if (schemaClass.getAbsoluteName().equals(className)) {
+                    return schemaClass;
+                }
+            }
+            return null;
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            super.paintComponent(g);
+
+            int width = getWidth();
+            int height = getHeight();
+
+            // Draw background
+            g.setColor(backgroundColor);
+            g.fillRect(0, 0, width, height);
+
+            // Draw progress
+            if (maximum > 0) {
+                int progressWidth = (int) ((double) value / maximum * width);
+                g.setColor(progressColor);
+                g.fillRect(0, 0, progressWidth, height);
+            }
+
+            // Draw border
+            g.setColor(Color.GRAY);
+            g.drawRect(0, 0, width - 1, height - 1);
+        }
+    }
+
+    /**
+     * Performs reach analysis to identify which objects can be reached through
+     * parent references.
+     * Goes through descendants of EntiteContientID and EntiteParam, activates each
+     * object,
+     * and removes child IDs from their respective class's uniqueObjectIds array.
+     */
+    private void performReachAnalysis() {
+        if (databasePath == null || databasePath.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No database path available. Please reopen the database.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Create monitoring dialog with tree view
+        JDialog monitorDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                "Reach Analysis Monitor", true);
+        JPanel dialogPanel = new JPanel(new BorderLayout(10, 10));
+        dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        // Status label at top
+        JLabel statusLabel = new JLabel("Initializing...");
+        statusLabel.setHorizontalAlignment(SwingConstants.CENTER);
+        dialogPanel.add(statusLabel, BorderLayout.NORTH);
+
+        // Tree to show exploration path
+        DefaultMutableTreeNode rootNode = new DefaultMutableTreeNode("Reach Exploration");
+        DefaultTreeModel treeModel = new DefaultTreeModel(rootNode);
+        JTree explorationTree = new JTree(treeModel);
+        explorationTree.setRootVisible(true);
+        JScrollPane treeScrollPane = new JScrollPane(explorationTree);
+        treeScrollPane.setPreferredSize(new Dimension(600, 400));
+        dialogPanel.add(treeScrollPane, BorderLayout.CENTER);
+
+        // Progress bar at bottom
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        dialogPanel.add(progressBar, BorderLayout.SOUTH);
+
+        monitorDialog.setContentPane(dialogPanel);
+        monitorDialog.setSize(650, 500);
+        monitorDialog.setLocationRelativeTo(this);
+        monitorDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
+        // Track current exploration path for tree updates
+        Stack<DefaultMutableTreeNode> explorationStack = new Stack<>();
+        explorationStack.push(rootNode);
+
+        // Map to track nodes by their labels (for removal)
+        Map<String, DefaultMutableTreeNode> nodeMap = new java.util.concurrent.ConcurrentHashMap<>();
+
+        // Run in background to avoid blocking UI
+        SwingWorker<Void, TreeUpdate> worker = new SwingWorker<>() {
+            @Override
+            protected Void doInBackground() throws Exception {
+                publish(new TreeUpdate(TreeUpdateType.STATUS, "Opening database..."));
+
+                ExtObjectContainer container = null;
+                try {
+                    // Open database
+                    DODatabaseOpener opener = new DODatabaseOpener();
+                    container = opener.openDatabase(databasePath);
+
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Database opened successfully"));
+
+                    // Track all reached objects globally to avoid infinite loops and duplicates
+                    Set<Long> reachedObjectIds = new HashSet<>();
+
+                    // Maps to track object processing progress per class
+                    Map<String, Integer> classProcessedCount = new java.util.concurrent.ConcurrentHashMap<>();
+                    Map<String, Integer> classTotalCount = new java.util.concurrent.ConcurrentHashMap<>();
+
+                    // Pre-calculate total counts for each class
+                    for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                        classTotalCount.put(schemaClass.getAbsoluteName(), schemaClass.getUniqueObjectCount());
+                        classProcessedCount.put(schemaClass.getAbsoluteName(), 0);
+                    }
+
+                    // Count classes to process
+                    int classCount = 0;
+                    for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                        if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID") ||
+                                isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                            classCount++;
+                        }
+                    }
+
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Found " + classCount + " root classes to process"));
+
+                    // Process all root classes (descendants of EntiteContientID or EntiteParam)
+                    int processedCount = 0;
+                    for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                        if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID") ||
+                                isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+
+                            processedCount++;
+                            String simpleName = schemaClass.getAbsoluteName();
+                            if (simpleName.contains(".")) {
+                                simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
+                            }
+                            publish(new TreeUpdate(TreeUpdateType.STATUS,
+                                    String.format("Exploring %d/%d: %s (%d objects)",
+                                            processedCount, classCount, simpleName,
+                                            schemaClass.getUniqueObjectCount())));
+
+                            // Explore all objects in this root class recursively
+                            long[] uniqueIds = schemaClass.getUniqueObjectIds();
+                            if (uniqueIds != null) {
+                                for (long objectId : uniqueIds) {
+                                    MigrationCoveragePanel.this.exploreObjectRecursively(container, objectId,
+                                            reachedObjectIds,
+                                            this::publish, rootNode, treeModel, classProcessedCount, classTotalCount);
+                                }
+                            }
+                        }
+                    }
+
+                    publish(new TreeUpdate(TreeUpdateType.STATUS,
+                            "Reached " + reachedObjectIds.size() + " total objects"));
+                    publish(new TreeUpdate(TreeUpdateType.STATUS,
+                            "Removing reached objects from class uniqueObjectIds arrays..."));
+
+                    // Now remove all reached object IDs from their respective classes
+                    Map<String, Set<Long>> reachedByClass = new HashMap<>();
+                    for (long objectId : reachedObjectIds) {
+                        try {
+                            Object obj = container.ext().getByID(objectId);
+                            if (obj != null) {
+                                String className = getClassName(obj);
+                                if (className != null) {
+                                    reachedByClass.computeIfAbsent(className, k -> new HashSet<>()).add(objectId);
+                                }
+                            }
+                        } catch (Exception e) {
+                            // Skip objects that can't be retrieved
+                        }
+                    }
+
+                    for (Map.Entry<String, Set<Long>> entry : reachedByClass.entrySet()) {
+                        String childClassName = entry.getKey();
+                        Set<Long> idsToRemove = entry.getValue();
+
+                        DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
+                        if (childClass != null) {
+                            removeIdsFromClass(childClass, idsToRemove);
+                        }
+                    }
+
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Finalizing reach analysis..."));
+
+                } finally {
+                    if (container != null) {
+                        container.close();
+                    }
+                }
+
+                return null;
+            }
+
+            @Override
+            protected void process(List<TreeUpdate> chunks) {
+                // Update UI based on tree update type
+                for (TreeUpdate update : chunks) {
+                    switch (update.type) {
+                        case STATUS:
+                            statusLabel.setText(update.message);
+                            System.out.println(update.message);
+                            break;
+                        case ADD_NODE:
+                            // Add node to tree
+                            if (update.parentLabel != null && update.childLabel != null) {
+                                DefaultMutableTreeNode parentNode = nodeMap.get(update.parentLabel);
+                                if (parentNode == null) {
+                                    // If parent not found, try using root
+                                    parentNode = rootNode;
+                                }
+                                DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(update.childLabel);
+                                parentNode.add(newNode);
+                                nodeMap.put(update.childLabel, newNode);
+                                treeModel.nodeStructureChanged(parentNode);
+                                // Expand and scroll to show the new node
+                                TreePath path = new TreePath(newNode.getPath());
+                                explorationTree.scrollPathToVisible(path);
+                                explorationTree.expandPath(path.getParentPath());
+                            }
+                            break;
+                        case REMOVE_NODE:
+                            // Remove node from tree
+                            if (update.nodeLabel != null) {
+                                DefaultMutableTreeNode nodeToRemove = nodeMap.get(update.nodeLabel);
+                                if (nodeToRemove != null && nodeToRemove.getParent() != null) {
+                                    DefaultMutableTreeNode parent = (DefaultMutableTreeNode) nodeToRemove.getParent();
+                                    parent.remove(nodeToRemove);
+                                    nodeMap.remove(update.nodeLabel);
+                                    treeModel.nodeStructureChanged(parent);
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+
+            @Override
+            protected void done() {
+                // Close monitor dialog
+                monitorDialog.dispose();
+
+                try {
+                    get(); // Check for exceptions
+
+                    // Debug: Check a specific class before refresh
+                    DOSchemaClass testClass = findClassInSchemaByName(databaseSchema, "gest.dossPrev.PersonneRess");
+                    if (testClass != null) {
+                        System.out.println("DEBUG: Before refresh - PersonneRess unique count: "
+                                + testClass.getUniqueObjectCount());
+                    }
+
+                    // Refresh table to show updated counts
+                    statusLabel.setText("Refreshing table...");
+                    populateTable(referenceSchema, databaseSchema);
+
+                    // Debug: Check after refresh
+                    if (testClass != null) {
+                        System.out.println("DEBUG: After refresh - PersonneRess unique count: "
+                                + testClass.getUniqueObjectCount());
+                    }
+
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
+                            "Reach analysis completed successfully!\nThe table has been updated with new object counts.",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
+                            "Error during reach analysis: " + e.getMessage(),
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+
+        // Start the worker
+        worker.execute();
+
+        // Show monitor dialog (will block until worker calls dispose)
+        monitorDialog.setVisible(true);
+    }
+
+    // Helper classes for tree updates
+    private enum TreeUpdateType {
+        STATUS, ADD_NODE, REMOVE_NODE
+    }
+
+    private static class TreeUpdate {
+        TreeUpdateType type;
+        String message;
+        String parentLabel; // Label of parent node
+        String nodeLabel; // Label of node to add or remove
+        String childLabel; // Alias for nodeLabel for ADD operations
+
+        TreeUpdate(TreeUpdateType type, String message) {
+            this.type = type;
+            this.message = message;
+        }
+
+        TreeUpdate(TreeUpdateType type, String parentLabel, String childLabel) {
+            this.type = type;
+            this.parentLabel = parentLabel;
+            this.childLabel = childLabel;
+            this.nodeLabel = childLabel;
+        }
+
+        static TreeUpdate removeNode(String nodeLabel) {
+            TreeUpdate update = new TreeUpdate(TreeUpdateType.REMOVE_NODE, (String) null);
+            update.nodeLabel = nodeLabel;
+            return update;
+        }
+    }
+
+    /**
+     * Recursively explores an object and all objects reachable from it.
+     * Marks all encountered objects as reached.
+     */
+    public void exploreObjectRecursively(ExtObjectContainer container, long objectId, Set<Long> reachedObjectIds,
+            java.util.function.Consumer<TreeUpdate> publisher,
+            DefaultMutableTreeNode parentNode, DefaultTreeModel treeModel,
+            Map<String, Integer> classProcessedCount,
+            Map<String, Integer> classTotalCount) {
+        // Avoid infinite loops - if already visited, skip
+        if (reachedObjectIds.contains(objectId)) {
+            return;
+        }
+
+        // Mark this object as reached
+        reachedObjectIds.add(objectId);
+
+        // Track the object node label for removal later
+        String objectNodeLabel = null;
+
+        try {
+            // Get and activate the object
+            Object obj = container.ext().getByID(objectId);
+            if (obj == null) {
+                return;
+            }
+
+            String className = getClassName(obj);
+            String simpleClassName = className != null ? className.substring(className.lastIndexOf('.') + 1) : "Object";
+
+            // Update processed count for this class
+            int processed = classProcessedCount.getOrDefault(className, 0) + 1;
+            classProcessedCount.put(className, processed);
+            int total = classTotalCount.getOrDefault(className, 0);
+
+            objectNodeLabel = simpleClassName + " [" + processed + "/" + total + "]";
+
+            // Add object node to tree
+            String parentLabel = (String) parentNode.getUserObject();
+            publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, parentLabel, objectNodeLabel));
+
+            ObjectResolverUtil.activateObject(container, obj, objectId);
+
+            // If it's a GenericObject, explore all its fields
+            if (obj instanceof GenericObject) {
+                GenericObject genericObj = (GenericObject) obj;
+
+                StoredClass storedClass = container.ext().storedClass(genericObj);
+                if (storedClass != null) {
+                    // Don't pre-add field nodes - they will be added on-demand when important
+                    // objects are found
+                    exploreAllFields(container, genericObj, className, reachedObjectIds, publisher,
+                            objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
+                }
+            }
+
+            // Remove object node from tree when done exploring this object
+            if (objectNodeLabel != null) {
+                publisher.accept(TreeUpdate.removeNode(objectNodeLabel));
+            }
+        } catch (Exception e) {
+            System.err.println("Error exploring object " + objectId + ": " + e.getMessage());
+            // Remove node on error
+            if (objectNodeLabel != null) {
+                publisher.accept(TreeUpdate.removeNode(objectNodeLabel));
+            }
+        }
+    }
+
+    /**
+     * Explores all fields of a GenericObject, following references recursively.
+     * Field nodes are added on-demand only when important child objects are found.
+     */
+    private void exploreAllFields(ExtObjectContainer container, GenericObject obj, String parentClassName,
+            Set<Long> reachedObjectIds,
+            java.util.function.Consumer<TreeUpdate> publisher,
+            String objectNodeLabel, DefaultTreeModel treeModel,
+            Map<String, Integer> classProcessedCount,
+            Map<String, Integer> classTotalCount) {
+        try {
+            StoredClass storedClass = container.ext().storedClass(obj);
+            if (storedClass == null) {
+                return;
+            }
+
+            StoredField[] fields = storedClass.getStoredFields();
+            for (StoredField field : fields) {
+                try {
+                    Object fieldValue = field.get(obj);
+                    if (fieldValue == null) {
+                        continue; // Skip null fields
+                    }
+
+                    // Handle collections
+                    if (fieldValue instanceof Collection) {
+                        Collection<?> collection = (Collection<?>) fieldValue;
+                        // Check if any item in collection is important
+                        boolean hasImportantItems = false;
+                        for (Object item : collection) {
+                            if (item != null && isImportantObject(container, item)) {
+                                hasImportantItems = true;
+                                break;
+                            }
+                        }
+
+                        if (hasImportantItems) {
+                            // Add field node only if it contains important objects
+                            String fieldLabel = "Field: " + field.getName();
+                            publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, objectNodeLabel, fieldLabel));
+
+                            for (Object item : collection) {
+                                if (item != null) {
+                                    processFieldReference(container, item, field.getName(), parentClassName,
+                                            reachedObjectIds, publisher, fieldLabel, treeModel,
+                                            classProcessedCount, classTotalCount);
+                                }
+                            }
+                        } else {
+                            // Process without showing in tree
+                            for (Object item : collection) {
+                                if (item != null) {
+                                    processFieldReference(container, item, field.getName(), parentClassName,
+                                            reachedObjectIds, publisher, objectNodeLabel, treeModel,
+                                            classProcessedCount, classTotalCount);
+                                }
+                            }
+                        }
+                    }
+                    // Handle arrays
+                    else if (fieldValue.getClass().isArray()) {
+                        int length = java.lang.reflect.Array.getLength(fieldValue);
+                        // Check if any item in array is important
+                        boolean hasImportantItems = false;
+                        for (int i = 0; i < length; i++) {
+                            Object item = java.lang.reflect.Array.get(fieldValue, i);
+                            if (item != null && isImportantObject(container, item)) {
+                                hasImportantItems = true;
+                                break;
+                            }
+                        }
+
+                        if (hasImportantItems) {
+                            // Add field node only if it contains important objects
+                            String fieldLabel = "Field: " + field.getName();
+                            publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, objectNodeLabel, fieldLabel));
+
+                            for (int i = 0; i < length; i++) {
+                                Object item = java.lang.reflect.Array.get(fieldValue, i);
+                                if (item != null) {
+                                    processFieldReference(container, item, field.getName(), parentClassName,
+                                            reachedObjectIds, publisher, fieldLabel, treeModel,
+                                            classProcessedCount, classTotalCount);
+                                }
+                            }
+                        } else {
+                            // Process without showing in tree
+                            for (int i = 0; i < length; i++) {
+                                Object item = java.lang.reflect.Array.get(fieldValue, i);
+                                if (item != null) {
+                                    processFieldReference(container, item, field.getName(), parentClassName,
+                                            reachedObjectIds, publisher, objectNodeLabel, treeModel,
+                                            classProcessedCount, classTotalCount);
+                                }
+                            }
+                        }
+                    }
+                    // Handle single object references
+                    else {
+                        long refId = container.ext().getID(fieldValue);
+                        if (refId > 0) {
+                            // Check if this is an important object
+                            if (isImportantObject(container, fieldValue)) {
+                                // Add field node for important single reference
+                                String fieldLabel = "Field: " + field.getName();
+                                publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, objectNodeLabel, fieldLabel));
+
+                                processFieldReference(container, fieldValue, field.getName(), parentClassName,
+                                        reachedObjectIds, publisher, fieldLabel, treeModel,
+                                        classProcessedCount, classTotalCount);
+                            } else {
+                                // Process without showing in tree
+                                processFieldReference(container, fieldValue, field.getName(), parentClassName,
+                                        reachedObjectIds, publisher, objectNodeLabel, treeModel,
+                                        classProcessedCount, classTotalCount);
+                            }
+                        }
+                        // Primitives and non-persistent values are ignored
+                    }
+
+                    // Note: Field nodes are NOT removed here because child objects may still be
+                    // adding themselves under these field nodes asynchronously.
+                    // Field nodes will be cleaned up when their parent object node is removed.
+                } catch (Exception e) {
+                    System.err.println("Error processing field " + field.getName() + ": " + e.getMessage());
+                    // Field node will be cleaned up with parent object node
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error accessing fields: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Processes a field value that might be a reference to another object.
+     * Handles special IDEntite relationships with type matching.
+     */
+    private void processFieldReference(ExtObjectContainer container, Object item, String fieldName,
+            String parentClassName, Set<Long> reachedObjectIds,
+            java.util.function.Consumer<TreeUpdate> publisher,
+            String parentLabel, DefaultTreeModel treeModel,
+            Map<String, Integer> classProcessedCount,
+            Map<String, Integer> classTotalCount) {
+        long childId = container.ext().getID(item);
+        if (childId <= 0) {
+            return; // Not a persistent object
+        }
+
+        String className = getClassName(item);
+        if (className == null) {
+            return;
+        }
+
+        // Check if this is an IDEntite descendant
+        DOSchemaClass itemClass = findClassInSchemaByName(databaseSchema, className);
+        if (itemClass != null && isDescendantOf(itemClass, "gest.gen.IDEntite")) {
+            // This is an IDEntite - extract expected type from field name
+            // Field like "mIDTypeAssistanceParticuliere" should match
+            // "TypeAssistanceParticuliere"
+            String expectedType = extractExpectedTypeFromFieldName(fieldName, className);
+
+            // Handle the special mID relationship with type filtering
+            handleIDEntiteRelationship(container, item, childId, expectedType, reachedObjectIds,
+                    publisher, parentLabel, treeModel, classProcessedCount, classTotalCount);
+        } else {
+            // Regular object - explore it recursively
+            DefaultMutableTreeNode parentNode = new DefaultMutableTreeNode(parentLabel);
+            exploreObjectRecursively(container, childId, reachedObjectIds, publisher, parentNode,
+                    treeModel, classProcessedCount, classTotalCount);
+        }
+    }
+
+    /**
+     * Extracts expected EntiteContientID type from field name.
+     * Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+     */
+    private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
+        // If field name starts with "mID", extract the part after it
+        if (fieldName.startsWith("mID")) {
+            return fieldName.substring(3); // Remove "mID" prefix
+        }
+        // Otherwise try to extract from the ID class name
+        // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+        String simpleClassName = idClassName.substring(idClassName.lastIndexOf('.') + 1);
+        if (simpleClassName.startsWith("ID")) {
+            return simpleClassName.substring(2); // Remove "ID" prefix
+        }
+        return null;
+    }
+
+    /**
+     * Handles IDEntite relationships: marks the IDEntite as reached, then finds
+     * the corresponding EntiteContientID object with matching mID and type.
+     */
+    private void handleIDEntiteRelationship(ExtObjectContainer container, Object idEntiteObj,
+            long idEntiteId, String expectedType, Set<Long> reachedObjectIds,
+            java.util.function.Consumer<TreeUpdate> publisher,
+            String parentLabel, DefaultTreeModel treeModel,
+            Map<String, Integer> classProcessedCount,
+            Map<String, Integer> classTotalCount) {
+        // Mark the IDEntite object itself as reached
+        if (!reachedObjectIds.contains(idEntiteId)) {
+            reachedObjectIds.add(idEntiteId);
+        }
+
+        try {
+            // Activate and extract the mID field
+            ObjectResolverUtil.activateObject(container, idEntiteObj, idEntiteId);
+            Long mID = extractMIDField(container, idEntiteObj);
+
+            if (mID == null) {
+                return; // No mID field found
+            }
+
+            // Find EntiteContientID objects with the same mID and matching type
+            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                    // Check if this class matches the expected type (if specified)
+                    String simpleClassName = schemaClass.getAbsoluteName();
+                    if (simpleClassName.contains(".")) {
+                        simpleClassName = simpleClassName.substring(simpleClassName.lastIndexOf('.') + 1);
+                    }
+
+                    // Only explore if type matches or no type specified
+                    if (expectedType != null && !simpleClassName.equals(expectedType)) {
+                        continue; // Skip classes that don't match the expected type
+                    }
+
+                    long[] objectIds = schemaClass.getUniqueObjectIds();
+                    if (objectIds != null) {
+                        for (long objectId : objectIds) {
+                            // Skip if already reached
+                            if (reachedObjectIds.contains(objectId)) {
+                                continue;
+                            }
+
+                            try {
+                                Object obj = container.ext().getByID(objectId);
+                                if (obj != null) {
+                                    ObjectResolverUtil.activateObject(container, obj, objectId);
+                                    Long objMID = extractMIDField(container, obj);
+
+                                    // If mIDs match, explore this EntiteContientID object
+                                    if (mID.equals(objMID)) {
+                                        DefaultMutableTreeNode parentNode = new DefaultMutableTreeNode(parentLabel);
+                                        exploreObjectRecursively(container, objectId, reachedObjectIds,
+                                                publisher, parentNode, treeModel, classProcessedCount, classTotalCount);
+                                    }
+                                }
+                            } catch (Exception e) {
+                                // Skip objects that can't be processed
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error handling IDEntite relationship for object " + idEntiteId + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * Extracts the mID field value from a GenericObject.
+     */
+    private Long extractMIDField(ExtObjectContainer container, Object obj) {
+        if (!(obj instanceof GenericObject)) {
+            return null;
+        }
+
+        GenericObject genericObj = (GenericObject) obj;
+        StoredClass storedClass = container.ext().storedClass(genericObj);
+        if (storedClass == null) {
+            return null;
+        }
+
+        StoredField[] fields = storedClass.getStoredFields();
+        for (StoredField field : fields) {
+            if ("mID".equals(field.getName())) {
+                try {
+                    Object value = field.get(genericObj);
+                    if (value instanceof Long) {
+                        return (Long) value;
+                    } else if (value instanceof Integer) {
+                        return ((Integer) value).longValue();
+                    }
+                } catch (Exception e) {
+                    // Field access failed
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * DEPRECATED: Old non-recursive method - replaced by exploreObjectRecursively
+     * Processes a single class: activates each object in uniqueObjectIds,
+     * examines fields for collections, extracts child IDs, and removes them
+     * from their respective class's uniqueObjectIds array.
+     */
+    private void processClass(ExtObjectContainer container, DOSchemaClass parentClass) {
+        long[] uniqueIds = parentClass.getUniqueObjectIds();
+        if (uniqueIds == null || uniqueIds.length == 0) {
+            return;
+        }
+
+        // Track all child IDs found, organized by class name
+        Map<String, Set<Long>> childIdsByClass = new HashMap<>();
+
+        // Process each object
+        for (long objectId : uniqueIds) {
+            try {
+                // Get and activate the object
+                Object obj = container.ext().getByID(objectId);
+                if (obj != null) {
+                    ObjectResolverUtil.activateObject(container, obj, objectId);
+
+                    // If it's a GenericObject, we can inspect its fields
+                    if (obj instanceof GenericObject) {
+                        GenericObject genericObj = (GenericObject) obj;
+                        extractChildIds(container, genericObj, childIdsByClass);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error processing object " + objectId + " of class " +
+                        parentClass.getAbsoluteName() + ": " + e.getMessage());
+            }
+        }
+
+        // Now remove child IDs from their respective classes
+        for (Map.Entry<String, Set<Long>> entry : childIdsByClass.entrySet()) {
+            String childClassName = entry.getKey();
+            Set<Long> idsToRemove = entry.getValue();
+
+            DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
+            if (childClass != null) {
+                removeIdsFromClass(childClass, idsToRemove);
+            }
+        }
+    }
+
+    /**
+     * Extracts child object IDs from all collection fields of a GenericObject.
+     */
+    private void extractChildIds(ExtObjectContainer container, GenericObject obj,
+            Map<String, Set<Long>> childIdsByClass) {
+        try {
+            // Use db4o StoredClass API to access fields properly
+            StoredClass storedClass = container.ext().storedClass(obj);
+            if (storedClass == null) {
+                return;
+            }
+
+            // Get all stored fields
+            StoredField[] fields = storedClass.getStoredFields();
+            for (StoredField field : fields) {
+                try {
+                    Object fieldValue = field.get(obj);
+                    if (fieldValue != null) {
+                        // Check if it's a collection
+                        if (fieldValue instanceof Collection) {
+                            Collection<?> collection = (Collection<?>) fieldValue;
+                            for (Object item : collection) {
+                                if (item != null) {
+                                    long childId = container.ext().getID(item);
+                                    if (childId > 0) {
+                                        // Get the class name of the child object
+                                        String childClassName = getClassName(item);
+                                        if (childClassName != null) {
+                                            childIdsByClass.computeIfAbsent(childClassName, k -> new HashSet<>())
+                                                    .add(childId);
+                                        }
+                                    }
+                                }
+                            }
+                        } else if (fieldValue.getClass().isArray()) {
+                            // Handle arrays
+                            int length = java.lang.reflect.Array.getLength(fieldValue);
+                            for (int i = 0; i < length; i++) {
+                                Object item = java.lang.reflect.Array.get(fieldValue, i);
+                                if (item != null) {
+                                    long childId = container.ext().getID(item);
+                                    if (childId > 0) {
+                                        String childClassName = getClassName(item);
+                                        if (childClassName != null) {
+                                            childIdsByClass.computeIfAbsent(childClassName, k -> new HashSet<>())
+                                                    .add(childId);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println(
+                            "Error extracting child IDs from field " + field.getName() + ": " + e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Error accessing stored class for object: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Gets the class name of an object (handles both GenericObject and regular
+     * objects).
+     */
+    private String getClassName(Object obj) {
+        if (obj instanceof GenericObject) {
+            GenericObject genericObj = (GenericObject) obj;
+            return genericObj.getGenericClass().getName();
+        } else {
+            return obj.getClass().getName();
+        }
+    }
+
+    /**
+     * Removes a set of object IDs from a class's uniqueObjectIds array.
+     */
+    private void removeIdsFromClass(DOSchemaClass schemaClass, Set<Long> idsToRemove) {
+        long[] currentIds = schemaClass.getUniqueObjectIds();
+        if (currentIds == null || currentIds.length == 0) {
+            return;
+        }
+
+        // Filter out the IDs to remove
+        long[] newIds = Arrays.stream(currentIds)
+                .filter(id -> !idsToRemove.contains(id))
+                .toArray();
+
+        // Update the class with the new array
+        if (newIds.length != currentIds.length) {
+            schemaClass.setUniqueObjectIds(newIds);
+            System.out.println("Removed " + (currentIds.length - newIds.length) +
+                    " child references from class " + schemaClass.getAbsoluteName() +
+                    " (was " + currentIds.length + ", now " + newIds.length + ")");
+        }
+    }
+
+    /**
+     * Helper method to find a class by name in a schema array.
+     */
+    private DOSchemaClass findClassInSchemaByName(DOSchema schema, String className) {
+        if (schema == null || schema.getClasses() == null) {
+            return null;
+        }
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (schemaClass.getAbsoluteName().equals(className)) {
+                return schemaClass;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Helper method to check if a class is a descendant of another class.
+     */
+    private boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName) {
+        String currentParent = schemaClass.getParentClass();
+
+        // Walk up the inheritance chain
+        while (currentParent != null && !currentParent.isEmpty()) {
+            if (currentParent.equals(ancestorClassName)) {
+                return true;
+            }
+
+            // Find parent class and continue walking up
+            DOSchemaClass parentClass = findClassInSchemaByName(referenceSchema, currentParent);
+            if (parentClass == null) {
+                parentClass = findClassInSchemaByName(databaseSchema, currentParent);
+            }
+
+            if (parentClass == null) {
+                break;
+            }
+
+            currentParent = parentClass.getParentClass();
+        }
+
+        return false;
+    }
+
+    /**
+     * Checks if an object is important (descendant of EntiteContientID or
+     * IDEntite).
+     */
+    private boolean isImportantObject(ExtObjectContainer container, Object obj) {
+        if (obj == null) {
+            return false;
+        }
+
+        String className = getClassName(obj);
+        if (className == null) {
+            return false;
+        }
+
+        DOSchemaClass objClass = findClassInSchemaByName(databaseSchema, className);
+        if (objClass != null) {
+            return isDescendantOf(objClass, "gest.gen.EntiteContientID") ||
+                    isDescendantOf(objClass, "gest.gen.IDEntite");
+        }
+
+        return false;
+    }
+
+    /**
+     * DEPRECATED: No longer used - we check objects directly instead of field
+     * types.
+     * Checks if a field type is important (descendant of EntiteContientID or
+     * IDEntite).
+     * Also returns true for collections/arrays that might contain important types.
+     */
+    private boolean isImportantFieldType(String fieldTypeName) {
+        // Always include collections and arrays - they might contain important objects
+        if (fieldTypeName.startsWith("java.util.") || fieldTypeName.startsWith("[")) {
+            return true;
+        }
+
+        // Check if the type itself is important
+        DOSchemaClass fieldClass = findClassInSchemaByName(databaseSchema, fieldTypeName);
+        if (fieldClass != null) {
+            return isDescendantOf(fieldClass, "gest.gen.EntiteContientID") ||
+                    isDescendantOf(fieldClass, "gest.gen.IDEntite");
+        }
+
+        return false;
     }
 }

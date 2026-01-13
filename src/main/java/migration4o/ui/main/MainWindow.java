@@ -37,6 +37,7 @@ public class MainWindow extends JFrame {
     private Component conformityAnalysisTab = null;
     private Component migrationCoverageTab = null;
     private DOSchema currentDatabaseSchema = null;
+    private String currentDatabasePath = null;
 
     private static class ComparisonTabInfo {
         SchemaTabInfo referenceTab;
@@ -122,6 +123,7 @@ public class MainWindow extends JFrame {
         }
 
         File selectedFile = fileChooser.getSelectedFile();
+        currentDatabasePath = selectedFile.getAbsolutePath();
 
         // Show loading state on welcome panel
         welcomePanel.showLoading(selectedFile.getAbsolutePath());
@@ -302,7 +304,8 @@ public class MainWindow extends JFrame {
         // Create migration coverage panel
         MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(
                 referenceTab.editorPanel.getSchema(),
-                databaseSchema);
+                databaseSchema,
+                currentDatabasePath);
 
         // Store and add migration coverage tab
         migrationCoverageTab = coveragePanel;
@@ -332,6 +335,7 @@ public class MainWindow extends JFrame {
         }
 
         currentDatabaseSchema = null;
+        currentDatabasePath = null;
 
         // Update welcome panel state
         welcomePanel.setDatabaseOpen(false);
