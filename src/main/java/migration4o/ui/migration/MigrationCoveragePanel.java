@@ -930,11 +930,6 @@ public class MigrationCoveragePanel extends JPanel {
                     long[] objectIds = schemaClass.getUniqueObjectIds();
                     if (objectIds != null) {
                         for (long objectId : objectIds) {
-                            // Skip if already reached
-                            if (reachedObjectIds.contains(objectId)) {
-                                continue;
-                            }
-
                             try {
                                 Object obj = container.ext().getByID(objectId);
                                 if (obj != null) {
@@ -943,9 +938,13 @@ public class MigrationCoveragePanel extends JPanel {
 
                                     // If mIDs match, explore this EntiteContientID object
                                     if (mID.equals(objMID)) {
+                                        // Show this object in tree even if already reached elsewhere
+                                        // This allows users to see the IDEntite field relationships
                                         DefaultMutableTreeNode parentNode = new DefaultMutableTreeNode(parentLabel);
                                         exploreObjectRecursively(container, objectId, reachedObjectIds,
                                                 publisher, parentNode, treeModel, classProcessedCount, classTotalCount);
+                                        // Only show the first matching object for this field
+                                        break;
                                     }
                                 }
                             } catch (Exception e) {
