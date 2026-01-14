@@ -1166,14 +1166,6 @@
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipIfEmpty="true" type="gest.equipement.IDTypeEquipement" embedContents="true" />
     </class>
-    <class source="gest.equipement.Equipement" destinationName="Equipement" isExported="false">
-        <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" />
-        <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
-        <field source="mVectEquipExist" destinationName="vectEquipExist" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.equipement.EquipExist" />
-        <field source="mPermetIntervention" destinationName="permetIntervention" isExported="true" skipIfEmpty="true" type="boolean" />
-        <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
-        <field source="IDGraph" destinationName="idGraph" isExported="true" skipIfEmpty="true" type="gest.graph.IDGraph" />
-    </class>
     <class source="gest.equipement.IDEquipConsom" destinationName="IDEquipConsom" isExported="true" parentClass="gest.gen.IDEntite">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipConsom" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDEquipConsom" />
