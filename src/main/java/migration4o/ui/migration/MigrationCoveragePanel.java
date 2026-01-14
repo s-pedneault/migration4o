@@ -38,7 +38,7 @@ public class MigrationCoveragePanel extends JPanel {
         this.databasePath = databasePath;
 
         // Create table model
-        String[] columnNames = { "Class Name", "Objects", "Unique", "Migration" };
+        String[] columnNames = { "Class Name", "Objects", "Unique", "Reached", "Migration" };
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -47,7 +47,7 @@ public class MigrationCoveragePanel extends JPanel {
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3) {
+                if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3 || columnIndex == 4) {
                     return Integer.class;
                 }
                 return String.class;
@@ -65,8 +65,8 @@ public class MigrationCoveragePanel extends JPanel {
         table.getColumnModel().getColumn(0).setCellRenderer(new ClassNameRenderer());
 
         // Set custom renderer for the Migration column (progress bar)
-        table.getColumnModel().getColumn(3).setCellRenderer(new MigrationProgressRenderer());
-        table.getColumnModel().getColumn(3).setPreferredWidth(150);
+        table.getColumnModel().getColumn(4).setCellRenderer(new MigrationProgressRenderer());
+        table.getColumnModel().getColumn(4).setPreferredWidth(150);
 
         // Populate table with merged class list
         populateTable(referenceSchema, databaseSchema);
@@ -83,6 +83,11 @@ public class MigrationCoveragePanel extends JPanel {
         JButton reachButton = new JButton("Reach");
         reachButton.addActionListener(e -> performReachAnalysis());
         buttonPanel.add(reachButton);
+
+        JButton exportButton = new JButton("Export");
+        exportButton.addActionListener(e -> exportObjectIds());
+        buttonPanel.add(exportButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -136,20 +141,22 @@ public class MigrationCoveragePanel extends JPanel {
 
             int objectCount = 0;
             int uniqueCount = 0;
+            int reachedCount = 0;
             int migratedCount = 0;
 
             if (dbClass != null) {
                 objectCount = dbClass.getObjectCount();
                 uniqueCount = dbClass.getUniqueObjectCount();
+                reachedCount = dbClass.getReachedObjectCount();
                 migratedCount = objectCount - uniqueCount; // Duplicates removed = migrated
             }
 
-            tableModel.addRow(new Object[] { className, objectCount, uniqueCount, migratedCount });
+            tableModel.addRow(new Object[] { className, objectCount, uniqueCount, reachedCount, migratedCount });
 
             // Debug specific class
             if (className.equals("gest.dossPrev.PersonneRess")) {
                 System.out.println("DEBUG TABLE: Adding PersonneRess row - Objects=" + objectCount + ", Unique="
-                        + uniqueCount + ", Migrated=" + migratedCount);
+                        + uniqueCount + ", Reached=" + reachedCount + ", Migrated=" + migratedCount);
             }
         }
     }
@@ -471,9 +478,9 @@ public class MigrationCoveragePanel extends JPanel {
                     publish(new TreeUpdate(TreeUpdateType.STATUS,
                             "Reached " + reachedObjectIds.size() + " total objects"));
                     publish(new TreeUpdate(TreeUpdateType.STATUS,
-                            "Removing reached objects from class uniqueObjectIds arrays..."));
+                            "Adding reached objects to class reachedObjectIds arrays..."));
 
-                    // Now remove all reached object IDs from their respective classes
+                    // Now add all reached object IDs to their respective classes' reachedObjectIds
                     Map<String, Set<Long>> reachedByClass = new HashMap<>();
                     for (long objectId : reachedObjectIds) {
                         try {
@@ -491,11 +498,11 @@ public class MigrationCoveragePanel extends JPanel {
 
                     for (Map.Entry<String, Set<Long>> entry : reachedByClass.entrySet()) {
                         String childClassName = entry.getKey();
-                        Set<Long> idsToRemove = entry.getValue();
+                        Set<Long> idsToAdd = entry.getValue();
 
                         DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
                         if (childClass != null) {
-                            removeIdsFromClass(childClass, idsToRemove);
+                            addIdsToReachedList(childClass, idsToAdd);
                         }
                     }
 
@@ -639,13 +646,11 @@ public class MigrationCoveragePanel extends JPanel {
             DefaultMutableTreeNode parentNode, DefaultTreeModel treeModel,
             Map<String, Integer> classProcessedCount,
             Map<String, Integer> classTotalCount) {
-        // Avoid infinite loops - if already visited, skip
-        if (reachedObjectIds.contains(objectId)) {
+        // Avoid processing the same object twice - check and add atomically
+        if (!reachedObjectIds.add(objectId)) {
+            // Object was already processed, skip it
             return;
         }
-
-        // Mark this object as reached
-        reachedObjectIds.add(objectId);
 
         // Track the object node label for removal later
         String objectNodeLabel = null;
@@ -1027,14 +1032,14 @@ public class MigrationCoveragePanel extends JPanel {
             }
         }
 
-        // Now remove child IDs from their respective classes
+        // Now add child IDs to their respective classes' reachedObjectIds
         for (Map.Entry<String, Set<Long>> entry : childIdsByClass.entrySet()) {
             String childClassName = entry.getKey();
-            Set<Long> idsToRemove = entry.getValue();
+            Set<Long> idsToAdd = entry.getValue();
 
             DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
             if (childClass != null) {
-                removeIdsFromClass(childClass, idsToRemove);
+                addIdsToReachedList(childClass, idsToAdd);
             }
         }
     }
@@ -1117,23 +1122,38 @@ public class MigrationCoveragePanel extends JPanel {
     /**
      * Removes a set of object IDs from a class's uniqueObjectIds array.
      */
-    private void removeIdsFromClass(DOSchemaClass schemaClass, Set<Long> idsToRemove) {
-        long[] currentIds = schemaClass.getUniqueObjectIds();
-        if (currentIds == null || currentIds.length == 0) {
-            return;
+    private void addIdsToReachedList(DOSchemaClass schemaClass, Set<Long> idsToAdd) {
+        long[] currentReachedIds = schemaClass.getReachedObjectIds();
+        if (currentReachedIds == null) {
+            currentReachedIds = new long[0];
         }
 
-        // Filter out the IDs to remove
-        long[] newIds = Arrays.stream(currentIds)
-                .filter(id -> !idsToRemove.contains(id))
-                .toArray();
+        // Create a set of existing reached IDs to avoid duplicates
+        Set<Long> existingIds = new HashSet<>();
+        for (long id : currentReachedIds) {
+            existingIds.add(id);
+        }
 
-        // Update the class with the new array
-        if (newIds.length != currentIds.length) {
-            schemaClass.setUniqueObjectIds(newIds);
-            System.out.println("Removed " + (currentIds.length - newIds.length) +
-                    " child references from class " + schemaClass.getAbsoluteName() +
-                    " (was " + currentIds.length + ", now " + newIds.length + ")");
+        // Add new IDs that aren't already in the list
+        Set<Long> newIds = new HashSet<>();
+        for (long id : idsToAdd) {
+            if (!existingIds.contains(id)) {
+                newIds.add(id);
+            }
+        }
+
+        // Combine existing and new IDs
+        if (!newIds.isEmpty()) {
+            long[] combinedIds = new long[currentReachedIds.length + newIds.size()];
+            System.arraycopy(currentReachedIds, 0, combinedIds, 0, currentReachedIds.length);
+            int index = currentReachedIds.length;
+            for (long id : newIds) {
+                combinedIds[index++] = id;
+            }
+            schemaClass.setReachedObjectIds(combinedIds);
+            System.out.println("Added " + newIds.size() +
+                    " reached objects to class " + schemaClass.getAbsoluteName() +
+                    " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
         }
     }
 
@@ -1224,5 +1244,102 @@ public class MigrationCoveragePanel extends JPanel {
         }
 
         return false;
+    }
+
+    /**
+     * Exports object IDs to files.
+     */
+    private void exportObjectIds() {
+        try {
+            // Create output directory
+            java.nio.file.Path outputDir = java.nio.file.Paths.get("output/migration/ids");
+            java.nio.file.Files.createDirectories(outputDir);
+
+            // Prepare output files
+            java.nio.file.Path entriesFile = outputDir.resolve("entries.txt");
+            java.nio.file.Path leafsFile = outputDir.resolve("leafs.txt");
+            java.nio.file.Path countersFile = outputDir.resolve("counters.txt");
+
+            try (java.io.PrintWriter entriesWriter = new java.io.PrintWriter(
+                    java.nio.file.Files.newBufferedWriter(entriesFile));
+                    java.io.PrintWriter leafsWriter = new java.io.PrintWriter(
+                            java.nio.file.Files.newBufferedWriter(leafsFile));
+                    java.io.PrintWriter countersWriter = new java.io.PrintWriter(
+                            java.nio.file.Files.newBufferedWriter(countersFile))) {
+
+                // Iterate through all classes in the database schema
+                if (databaseSchema != null && databaseSchema.getClasses() != null) {
+                    // Sort classes by name for consistent output
+                    List<DOSchemaClass> sortedClasses = new ArrayList<>(Arrays.asList(databaseSchema.getClasses()));
+                    sortedClasses.sort(Comparator.comparing(DOSchemaClass::getAbsoluteName));
+
+                    for (DOSchemaClass schemaClass : sortedClasses) {
+                        String className = schemaClass.getAbsoluteName();
+
+                        // Get all object IDs (entries) - export all classes even with no IDs
+                        long[] allObjectIds = schemaClass.getObjectIds();
+                        entriesWriter.print(className);
+                        entriesWriter.print("\t");
+                        if (allObjectIds != null && allObjectIds.length > 0) {
+                            for (int i = 0; i < allObjectIds.length; i++) {
+                                if (i > 0) {
+                                    entriesWriter.print(",");
+                                }
+                                entriesWriter.print(allObjectIds[i]);
+                            }
+                        }
+                        entriesWriter.println();
+
+                        // Get unique object IDs (leafs) - export all classes even with no IDs
+                        long[] uniqueObjectIds = schemaClass.getUniqueObjectIds();
+                        leafsWriter.print(className);
+                        leafsWriter.print("\t");
+                        if (uniqueObjectIds != null && uniqueObjectIds.length > 0) {
+                            // Use a set to remove duplicates and sort
+                            Set<Long> uniqueIdSet = new TreeSet<>();
+                            for (long id : uniqueObjectIds) {
+                                uniqueIdSet.add(id);
+                            }
+
+                            boolean first = true;
+                            for (Long id : uniqueIdSet) {
+                                if (!first) {
+                                    leafsWriter.print(",");
+                                }
+                                leafsWriter.print(id);
+                                first = false;
+                            }
+                        }
+                        leafsWriter.println();
+
+                        // Export counters: className, objectIds length, uniqueObjectIds length,
+                        // reachedObjectIds length
+                        long[] reachedObjectIds = schemaClass.getReachedObjectIds();
+                        countersWriter.print(className);
+                        countersWriter.print("\t");
+                        countersWriter.print(allObjectIds != null ? allObjectIds.length : 0);
+                        countersWriter.print("\t");
+                        countersWriter.print(uniqueObjectIds != null ? uniqueObjectIds.length : 0);
+                        countersWriter.print("\t");
+                        countersWriter.print(reachedObjectIds != null ? reachedObjectIds.length : 0);
+                        countersWriter.println();
+                    }
+                }
+
+                JOptionPane.showMessageDialog(this,
+                        "Object IDs exported successfully to:\n" +
+                                entriesFile.toAbsolutePath() + "\n" +
+                                leafsFile.toAbsolutePath() + "\n" +
+                                countersFile.toAbsolutePath(),
+                        "Export Successful",
+                        JOptionPane.INFORMATION_MESSAGE);
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this,
+                    "Error exporting object IDs: " + ex.getMessage(),
+                    "Export Error",
+                    JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
+        }
     }
 }

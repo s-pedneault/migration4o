@@ -20,6 +20,7 @@ public class DOSchemaClass {
     private DODatabaseClass databaseClass;
     private long[] objectIds; // Object IDs from database
     private long[] uniqueObjectIds; // Unique object IDs after deduplication
+    private long[] reachedObjectIds; // Object IDs reached during reach analysis
 
     public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {
@@ -54,6 +55,7 @@ public class DOSchemaClass {
         // Initialize uniqueObjectIds as a copy of objectIds (will be deduplicated later
         // if needed)
         this.uniqueObjectIds = objectIds != null ? objectIds.clone() : null;
+        this.reachedObjectIds = new long[0]; // Start with empty array
     }
 
     public String getSourceName() {
@@ -167,5 +169,17 @@ public class DOSchemaClass {
 
     public int getUniqueObjectCount() {
         return uniqueObjectIds != null ? uniqueObjectIds.length : 0;
+    }
+
+    public long[] getReachedObjectIds() {
+        return reachedObjectIds;
+    }
+
+    public void setReachedObjectIds(long[] reachedObjectIds) {
+        this.reachedObjectIds = reachedObjectIds;
+    }
+
+    public int getReachedObjectCount() {
+        return reachedObjectIds != null ? reachedObjectIds.length : 0;
     }
 }

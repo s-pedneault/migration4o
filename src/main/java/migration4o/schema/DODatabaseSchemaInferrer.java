@@ -361,8 +361,10 @@ public class DODatabaseSchemaInferrer {
                 nonLeafClassCount++;
             }
 
-            if (isLeaf && schemaClass.getObjectIds() != null) {
-                // For each object ID in this leaf class
+            // Process ALL classes (leaf and non-leaf) to ensure proper deduplication
+            // Each class's object IDs should be removed from all its ancestors
+            if (schemaClass.getObjectIds() != null) {
+                // For each object ID in this class
                 for (long objectId : schemaClass.getObjectIds()) {
                     // Walk up the parent chain and mark this ID for removal
                     String currentParent = schemaClass.getSuperClassAbsoluteName();
