@@ -49,6 +49,14 @@ public class SchemaTreeCellRenderer extends DefaultTreeCellRenderer {
                     setFont(getFont().deriveFont(Font.BOLD));
                     break;
 
+                case FOLDER:
+                    setIcon(UIManager.getIcon("FileView.directoryIcon"));
+                    if (!selected) {
+                        setForeground(MODULE_COLOR);
+                    }
+                    setFont(getFont().deriveFont(Font.ITALIC));
+                    break;
+
                 case CLASS:
                     setIcon(UIManager.getIcon("FileView.fileIcon"));
                     String classText = node.toString();

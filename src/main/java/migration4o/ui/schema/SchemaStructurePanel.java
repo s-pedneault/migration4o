@@ -216,21 +216,29 @@ public class SchemaStructurePanel extends JPanel {
         // Mark the IDEntite class as reached
         unreachedClasses.remove(idEntiteClass.getAbsoluteName());
 
-        // Extract the expected type from the field name
-        // e.g., "mIDClassif" -> "Classif"
-        String expectedType = extractExpectedTypeFromFieldName(field.getSource(), idEntiteClass.getAbsoluteName());
+        // Get the target class from the pointsTo attribute (preferred)
+        // or fall back to name extraction for backwards compatibility
+        String targetClassName = idEntiteClass.getPointsTo();
+        if (targetClassName == null) {
+            // Fallback: extract from field name or class name
+            targetClassName = extractExpectedTypeFromFieldName(field.getSource(), idEntiteClass.getAbsoluteName());
+        }
 
-        if (expectedType != null) {
-            // Find the target class with this name (could be EntiteContientID or
-            // EntiteParam)
-            DOSchemaClass targetClass = findClassBySimpleName(expectedType);
+        if (targetClassName != null) {
+            // Find the target class by absolute name first, then by simple name
+            DOSchemaClass targetClass = findClassInSchemaByName(targetClassName);
+            if (targetClass == null) {
+                targetClass = findClassBySimpleName(targetClassName);
+            }
+
             if (targetClass != null &&
                     (isDescendantOf(targetClass, "gest.gen.EntiteContientID") ||
                             isDescendantOf(targetClass, "gest.gen.EntiteParam"))) {
                 // Mark the target class as reached
                 unreachedClasses.remove(targetClass.getAbsoluteName());
 
-                String fieldLabel = "Field: " + field.getSource() + " → " + expectedType;
+                String fieldLabel = "Field: " + field.getSource() + " → "
+                        + getSimpleName(targetClass.getAbsoluteName());
                 DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
                 classNode.add(fieldNode);
 
@@ -337,11 +345,18 @@ public class SchemaStructurePanel extends JPanel {
                     else if (childrenType != null) {
                         DOSchemaClass childTypeClass = findClassInSchemaByName(childrenType);
                         if (childTypeClass != null && isDescendantOf(childTypeClass, "gest.gen.IDEntite")) {
-                            String expectedType = extractExpectedTypeFromFieldName(field.getSource(), childrenType);
-                            if (expectedType != null) {
-                                String targetSimpleName = getSimpleName(targetClassName);
-                                if (targetSimpleName.equals(expectedType)) {
-                                    isMatch = true;
+                            // Use pointsTo if available, otherwise fall back to name extraction
+                            String pointsTo = childTypeClass.getPointsTo();
+                            if (pointsTo != null && pointsTo.equals(targetClassName)) {
+                                isMatch = true;
+                            } else if (pointsTo == null) {
+                                // Fallback to name extraction
+                                String expectedType = extractExpectedTypeFromFieldName(field.getSource(), childrenType);
+                                if (expectedType != null) {
+                                    String targetSimpleName = getSimpleName(targetClassName);
+                                    if (targetSimpleName.equals(expectedType)) {
+                                        isMatch = true;
+                                    }
                                 }
                             }
                         }
@@ -351,11 +366,18 @@ public class SchemaStructurePanel extends JPanel {
                 else {
                     DOSchemaClass fieldTypeClass = findClassInSchemaByName(fieldType);
                     if (fieldTypeClass != null && isDescendantOf(fieldTypeClass, "gest.gen.IDEntite")) {
-                        String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
-                        if (expectedType != null) {
-                            String targetSimpleName = getSimpleName(targetClassName);
-                            if (targetSimpleName.equals(expectedType)) {
-                                isMatch = true;
+                        // Use pointsTo if available, otherwise fall back to name extraction
+                        String pointsTo = fieldTypeClass.getPointsTo();
+                        if (pointsTo != null && pointsTo.equals(targetClassName)) {
+                            isMatch = true;
+                        } else if (pointsTo == null) {
+                            // Fallback to name extraction
+                            String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
+                            if (expectedType != null) {
+                                String targetSimpleName = getSimpleName(targetClassName);
+                                if (targetSimpleName.equals(expectedType)) {
+                                    isMatch = true;
+                                }
                             }
                         }
                     }

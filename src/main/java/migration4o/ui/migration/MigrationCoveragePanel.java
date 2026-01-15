@@ -876,10 +876,13 @@ public class MigrationCoveragePanel extends JPanel {
         // Check if this is an IDEntite descendant
         DOSchemaClass itemClass = findClassInSchemaByName(databaseSchema, className);
         if (itemClass != null && isDescendantOf(itemClass, "gest.gen.IDEntite")) {
-            // This is an IDEntite - extract expected type from field name
-            // Field like "mIDTypeAssistanceParticuliere" should match
-            // "TypeAssistanceParticuliere"
-            String expectedType = extractExpectedTypeFromFieldName(fieldName, className);
+            // This is an IDEntite - get target type from pointsTo or extract from field
+            // name
+            String expectedType = itemClass.getPointsTo();
+            if (expectedType == null) {
+                // Fallback to name extraction
+                expectedType = extractExpectedTypeFromFieldName(fieldName, className);
+            }
 
             // Handle the special mID relationship with type filtering
             handleIDEntiteRelationship(container, item, childId, expectedType, reachedObjectIds,

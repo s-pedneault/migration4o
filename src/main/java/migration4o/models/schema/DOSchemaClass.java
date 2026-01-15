@@ -21,27 +21,29 @@ public class DOSchemaClass {
     private long[] objectIds; // Object IDs from database
     private long[] uniqueObjectIds; // Unique object IDs after deduplication
     private long[] reachedObjectIds; // Object IDs reached during reach analysis
+    private String pointsTo; // For IDEntite classes: the target class name this points to
 
     public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {
-        this(source, destinationName, null, title, parentClassName, fields, null, migrate);
+        this(source, destinationName, null, title, parentClassName, fields, null, migrate, null, null);
     }
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
             String parentClassName,
             DOSchemaField[] fields, String exportName) {
         this(absoluteName, exportName != null ? exportName : simpleName, description, title,
-                parentClassName, fields, null, true);
+                parentClassName, fields, null, true, null, null);
     }
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
             String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate) {
-        this(absoluteName, simpleName, description, title, parentClassName, fields, schemaReferences, migrate, null);
+        this(absoluteName, simpleName, description, title, parentClassName, fields, schemaReferences, migrate, null,
+                null);
     }
 
     public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
             String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate,
-            long[] objectIds) {
+            long[] objectIds, String pointsTo) {
         this.source = absoluteName;
         this.destinationName = simpleName;
         this.description = description;
@@ -56,6 +58,7 @@ public class DOSchemaClass {
         // if needed)
         this.uniqueObjectIds = objectIds != null ? objectIds.clone() : null;
         this.reachedObjectIds = new long[0]; // Start with empty array
+        this.pointsTo = pointsTo;
     }
 
     public String getSourceName() {
@@ -181,5 +184,13 @@ public class DOSchemaClass {
 
     public int getReachedObjectCount() {
         return reachedObjectIds != null ? reachedObjectIds.length : 0;
+    }
+
+    public String getPointsTo() {
+        return pointsTo;
+    }
+
+    public void setPointsTo(String pointsTo) {
+        this.pointsTo = pointsTo;
     }
 }

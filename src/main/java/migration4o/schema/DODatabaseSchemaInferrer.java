@@ -120,7 +120,8 @@ public class DODatabaseSchemaInferrer {
                 schemaFields,
                 null, // schemaReferences - not available from database
                 true, // migrate - assume all database classes should be migrated
-                objectIds);
+                objectIds,
+                null); // pointsTo - not available from database inference
     }
 
     /**

@@ -77,12 +77,16 @@ public class DODatabaseSchemaReader {
         String description = classElement.getAttribute("description");
         String title = classElement.getAttribute("title");
         String isExportedAttr = classElement.getAttribute("isExported");
+        String pointsTo = classElement.getAttribute("pointsTo");
 
         // Use destinationName as simpleName if available, otherwise derive from source
         String simpleName = !destinationName.isEmpty() ? destinationName : getSimpleClassName(absoluteName);
 
         // Parse isExported attribute to migrate flag (default to true if not specified)
         boolean migrate = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
+
+        // Use null if pointsTo is empty
+        String pointsToValue = pointsTo.isEmpty() ? null : pointsTo;
 
         // Parse fields
         List<DOSchemaField> fieldList = new ArrayList<>();
@@ -111,9 +115,9 @@ public class DODatabaseSchemaReader {
         DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
         DOSchemaReference[] references = referenceList.toArray(new DOSchemaReference[0]);
 
-        // Create new constructor that accepts references
+        // Create new constructor that accepts references and pointsTo
         return new DOSchemaClass(absoluteName, simpleName, description, title, parentClassName, fields, references,
-                migrate);
+                migrate, null, pointsToValue);
     }
 
     private DOSchemaField parseField(Element fieldElement) {

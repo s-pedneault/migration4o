@@ -760,10 +760,21 @@ public class SchemaEditorPanel extends JPanel {
 
                 // Check IDEntite-style reference (mID* fields)
                 if (!isReference && fieldType != null && isIDEntiteType(fieldType)) {
-                    String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
-                    if (expectedType != null &&
-                            (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
-                        isReference = true;
+                    // Find the IDEntite class to get its pointsTo attribute
+                    DOSchemaClass idEntiteClass = findClassByName(fieldType);
+                    if (idEntiteClass != null) {
+                        String pointsTo = idEntiteClass.getPointsTo();
+                        if (pointsTo != null &&
+                                (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
+                            isReference = true;
+                        } else if (pointsTo == null) {
+                            // Fallback to name extraction if pointsTo not set
+                            String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
+                            if (expectedType != null &&
+                                    (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
+                                isReference = true;
+                            }
+                        }
                     }
                 }
 
