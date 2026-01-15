@@ -25,7 +25,7 @@
     <class source="gen.util.HVector" destinationName="HVector" isExported="true" parentClass="java.util.Vector">
         <field source="mReadOnly" destinationName="readOnly" isExported="true" skipIfEmpty="true" type="boolean" />
     </class>
-    <class source="gen.util.IDToString" destinationName="IDToString" isExported="true" parentClass="gen.util.ObjetToString">
+    <class source="gen.util.IDToString" destinationName="IDToString" isExported="false" parentClass="gen.util.ObjetToString">
     </class>
     <class source="gen.util.ObjetToString" destinationName="ObjetToString" isExported="true" parentClass="gest.gen.Entite">
         <field source="mHashCodeSurToString" destinationName="hashCodeSurToString" isExported="true" skipIfEmpty="true" type="boolean" />

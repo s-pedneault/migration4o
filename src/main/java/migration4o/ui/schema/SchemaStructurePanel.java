@@ -221,9 +221,11 @@ public class SchemaStructurePanel extends JPanel {
         String expectedType = extractExpectedTypeFromFieldName(field.getSource(), idEntiteClass.getAbsoluteName());
 
         if (expectedType != null) {
-            // Find the EntiteContientID class with this name
+            // Find the target class with this name (could be EntiteContientID or EntiteParam)
             DOSchemaClass targetClass = findClassBySimpleName(expectedType);
-            if (targetClass != null && isDescendantOf(targetClass, "gest.gen.EntiteContientID")) {
+            if (targetClass != null && 
+                (isDescendantOf(targetClass, "gest.gen.EntiteContientID") || 
+                 isDescendantOf(targetClass, "gest.gen.EntiteParam"))) {
                 // Mark the target class as reached
                 unreachedClasses.remove(targetClass.getAbsoluteName());
 

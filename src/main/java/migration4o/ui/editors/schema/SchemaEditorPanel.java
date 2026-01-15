@@ -711,7 +711,162 @@ public class SchemaEditorPanel extends JPanel {
         if (!schemaClass.isMigrate()) {
             className += " (not exported)";
         }
-        return new SchemaTreeNode(className, NodeType.CLASS, schemaClass);
+        SchemaTreeNode classNode = new SchemaTreeNode(className, NodeType.CLASS, schemaClass);
+
+        // Add field references that point to this class
+        addFieldReferencesToClass(classNode, schemaClass);
+
+        return classNode;
+    }
+
+    /**
+     * Finds and adds all fields throughout the schema that reference the given
+     * class.
+     * Includes both direct field type references and IDEntite-style references.
+     */
+    private void addFieldReferencesToClass(SchemaTreeNode classNode, DOSchemaClass targetClass) {
+        if (schema == null || schema.getClasses() == null) {
+            return;
+        }
+
+        List<String> references = new ArrayList<>();
+        String targetShortName = targetClass.getShortName();
+        String targetAbsoluteName = targetClass.getAbsoluteName();
+
+        // Search all classes and their fields for references to this class
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (schemaClass.getFields() == null) {
+                continue;
+            }
+
+            for (DOSchemaField field : schemaClass.getFields()) {
+                boolean isReference = false;
+
+                // Check direct field type reference
+                String fieldType = field.getType();
+                if (fieldType != null) {
+                    if (fieldType.equals(targetShortName) || fieldType.equals(targetAbsoluteName)) {
+                        isReference = true;
+                    }
+                }
+
+                // Check collection children type
+                String childrenType = field.getChildrenType();
+                if (childrenType != null) {
+                    if (childrenType.equals(targetShortName) || childrenType.equals(targetAbsoluteName)) {
+                        isReference = true;
+                    }
+                }
+
+                // Check IDEntite-style reference (mID* fields)
+                if (!isReference && fieldType != null && isIDEntiteType(fieldType)) {
+                    String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
+                    if (expectedType != null &&
+                            (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
+                        isReference = true;
+                    }
+                }
+
+                if (isReference) {
+                    String refName = schemaClass.getAbsoluteName() + "." + field.getSource();
+                    references.add(refName);
+                }
+            }
+        }
+
+        // Sort and add references as child nodes
+        if (!references.isEmpty()) {
+            references.sort(String::compareToIgnoreCase);
+            SchemaTreeNode referencesFolder = new SchemaTreeNode(
+                    "Referenced by (" + references.size() + " fields)",
+                    NodeType.FOLDER,
+                    null);
+            classNode.add(referencesFolder);
+
+            for (String ref : references) {
+                SchemaTreeNode refNode = new SchemaTreeNode(ref, NodeType.FIELD, null);
+                referencesFolder.add(refNode);
+            }
+        }
+    }
+
+    /**
+     * Check if a type is an IDEntite descendant.
+     */
+    private boolean isIDEntiteType(String typeName) {
+        if (typeName == null || schema == null || schema.getClasses() == null) {
+            return false;
+        }
+
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (typeName.equals(schemaClass.getShortName()) || typeName.equals(schemaClass.getAbsoluteName())) {
+                return isDescendantOf(schemaClass, "gest.gen.IDEntite");
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Extract expected target type from an IDEntite field name.
+     */
+    private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
+        // If field name starts with "mID", extract the part after it
+        if (fieldName != null && fieldName.startsWith("mID")) {
+            return fieldName.substring(3); // Remove "mID" prefix
+        }
+        // Otherwise try to extract from the ID class name
+        // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+        if (idClassName != null) {
+            String simpleClassName = idClassName.contains(".")
+                    ? idClassName.substring(idClassName.lastIndexOf('.') + 1)
+                    : idClassName;
+            if (simpleClassName.startsWith("ID")) {
+                return simpleClassName.substring(2); // Remove "ID" prefix
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Check if a class is a descendant of a given parent class.
+     */
+    private boolean isDescendantOf(DOSchemaClass schemaClass, String parentClassName) {
+        if (schemaClass == null || parentClassName == null) {
+            return false;
+        }
+
+        String currentParent = schemaClass.getParentClass();
+        while (currentParent != null && !currentParent.isEmpty() && !currentParent.equals("Undetermined")) {
+            if (currentParent.equals(parentClassName)) {
+                return true;
+            }
+
+            // Find parent class and continue up the hierarchy
+            DOSchemaClass parentClass = findClassByName(currentParent);
+            if (parentClass == null) {
+                break;
+            }
+            currentParent = parentClass.getParentClass();
+        }
+
+        return false;
+    }
+
+    /**
+     * Find a class by its short name or absolute name.
+     */
+    private DOSchemaClass findClassByName(String className) {
+        if (schema == null || schema.getClasses() == null || className == null) {
+            return null;
+        }
+
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (className.equals(schemaClass.getShortName()) ||
+                    className.equals(schemaClass.getAbsoluteName())) {
+                return schemaClass;
+            }
+        }
+        return null;
     }
 
     private void addChildClasses(SchemaTreeNode parentNode, DOSchemaClass parentClass,

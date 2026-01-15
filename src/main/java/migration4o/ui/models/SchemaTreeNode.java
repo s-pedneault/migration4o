@@ -11,7 +11,8 @@ public class SchemaTreeNode extends DefaultMutableTreeNode {
         ROOT,
         MODULE,
         CLASS,
-        FIELD
+        FIELD,
+        FOLDER
     }
 
     private final NodeType nodeType;
