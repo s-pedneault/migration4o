@@ -1541,7 +1541,7 @@ public class MigrationCoveragePanel extends JPanel {
                         if (obj != null) {
                             // Activate the object to ensure all fields are loaded
                             ObjectResolverUtil.activateObject(container, obj, objectId);
-                            
+
                             Object[] rowData = new Object[fields.size() + 1];
                             rowData[0] = objectId;
 
@@ -1637,7 +1637,7 @@ public class MigrationCoveragePanel extends JPanel {
             try {
                 // Start with the object's immediate class
                 com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
-                
+
                 // Search up the hierarchy for the field
                 while (storedClass != null) {
                     com.db4o.ext.StoredField[] fields = storedClass.getStoredFields();
@@ -1649,7 +1649,7 @@ public class MigrationCoveragePanel extends JPanel {
                             }
                         }
                     }
-                    
+
                     // Move to parent class
                     storedClass = storedClass.getParentStoredClass();
                 }
@@ -1666,22 +1666,21 @@ public class MigrationCoveragePanel extends JPanel {
             if (value == null) {
                 return "";
             }
-            
+
             // Handle collections
             if (value instanceof java.util.Collection) {
                 java.util.Collection<?> collection = (java.util.Collection<?>) value;
-                
+
                 // Empty collection
                 if (collection.isEmpty()) {
                     return "[]";
                 }
-                
+
                 // Check if it's a collection of IDEntite objects
                 Object firstItem = collection.iterator().next();
                 if (firstItem instanceof com.db4o.reflect.generic.GenericObject) {
-                    com.db4o.reflect.generic.GenericObject firstGenericObj = 
-                        (com.db4o.reflect.generic.GenericObject) firstItem;
-                    
+                    com.db4o.reflect.generic.GenericObject firstGenericObj = (com.db4o.reflect.generic.GenericObject) firstItem;
+
                     if (isIDEntiteType(container, firstGenericObj)) {
                         // Extract mID values from all IDEntite objects in the collection
                         StringBuilder sb = new StringBuilder("[");
@@ -1689,7 +1688,7 @@ public class MigrationCoveragePanel extends JPanel {
                         for (Object item : collection) {
                             if (item instanceof com.db4o.reflect.generic.GenericObject) {
                                 Long mID = extractMIDFromIDEntite(container,
-                                    (com.db4o.reflect.generic.GenericObject) item);
+                                        (com.db4o.reflect.generic.GenericObject) item);
                                 if (mID != null) {
                                     if (!first) {
                                         sb.append(", ");
@@ -1703,16 +1702,15 @@ public class MigrationCoveragePanel extends JPanel {
                         return sb.toString();
                     }
                 }
-                
+
                 // Non-IDEntite collection - show size
                 return "[Collection: " + collection.size() + " items]";
             }
-            
+
             // Handle GenericObject (potential IDEntite)
             if (value instanceof com.db4o.reflect.generic.GenericObject) {
-                com.db4o.reflect.generic.GenericObject genericObj = 
-                    (com.db4o.reflect.generic.GenericObject) value;
-                
+                com.db4o.reflect.generic.GenericObject genericObj = (com.db4o.reflect.generic.GenericObject) value;
+
                 if (isIDEntiteType(container, genericObj)) {
                     // Extract mID value
                     Long mID = extractMIDFromIDEntite(container, genericObj);
@@ -1723,27 +1721,27 @@ public class MigrationCoveragePanel extends JPanel {
                     } catch (Exception e) {
                         // Could not get object ID
                     }
-                    
+
                     if (mID != null && objectId != null && objectId > 0) {
                         return mID + " (" + objectId + ")";
                     } else if (mID != null) {
                         return String.valueOf(mID);
                     }
                 }
-                
+
                 return "[Object]";
             }
-            
+
             return value.toString();
         }
-        
+
         /**
          * Check if a GenericObject is an IDEntite type by checking its class hierarchy.
          */
         private boolean isIDEntiteType(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj) {
             try {
                 com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
-                
+
                 while (storedClass != null) {
                     String className = storedClass.getName();
                     if (className != null && className.equals("gest.gen.IDEntite")) {
@@ -1756,7 +1754,7 @@ public class MigrationCoveragePanel extends JPanel {
             }
             return false;
         }
-        
+
         /**
          * Extract mID field value from an IDEntite GenericObject.
          */
@@ -1764,7 +1762,7 @@ public class MigrationCoveragePanel extends JPanel {
             try {
                 // Activate the object to ensure mID is loaded
                 container.activate(obj, 2);
-                
+
                 // Search for mID field in the object's class hierarchy
                 com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
                 while (storedClass != null) {
