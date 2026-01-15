@@ -102,24 +102,41 @@ public class SchemaStructurePanel extends JPanel {
             }
         }
 
-        // Sort by name for easier navigation
-        entiteContientIDClasses.sort(Comparator.comparing(c -> getSimpleName(c.getAbsoluteName())));
-
-        // Add each class to the tree
+        // Group by package
+        Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteContientIDClasses) {
-            String simpleName = getSimpleName(schemaClass.getAbsoluteName());
-            DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
-            parentNode.add(classNode);
+            String packageName = getPackageName(schemaClass.getAbsoluteName());
+            packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
+        }
 
-            // Mark this class as reached
-            unreachedClasses.remove(schemaClass.getAbsoluteName());
+        // Add package nodes and classes under them
+        for (Map.Entry<String, List<DOSchemaClass>> entry : packageMap.entrySet()) {
+            String packageName = entry.getKey();
+            List<DOSchemaClass> packageClasses = entry.getValue();
 
-            // Clear visited set for each top-level class to allow full exploration
-            visitedClasses.clear();
-            visitedClasses.add(schemaClass.getAbsoluteName());
+            // Create package node
+            DefaultMutableTreeNode packageNode = new DefaultMutableTreeNode(packageName);
+            parentNode.add(packageNode);
 
-            // Expand this class's fields
-            expandClassFields(classNode, schemaClass);
+            // Sort classes within package by simple name
+            packageClasses.sort(Comparator.comparing(c -> getSimpleName(c.getAbsoluteName())));
+
+            // Add each class to the package node
+            for (DOSchemaClass schemaClass : packageClasses) {
+                String simpleName = getSimpleName(schemaClass.getAbsoluteName());
+                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
+                packageNode.add(classNode);
+
+                // Mark this class as reached
+                unreachedClasses.remove(schemaClass.getAbsoluteName());
+
+                // Clear visited set for each top-level class to allow full exploration
+                visitedClasses.clear();
+                visitedClasses.add(schemaClass.getAbsoluteName());
+
+                // Expand this class's fields
+                expandClassFields(classNode, schemaClass);
+            }
         }
     }
 
@@ -137,24 +154,41 @@ public class SchemaStructurePanel extends JPanel {
             }
         }
 
-        // Sort by name for easier navigation
-        entiteParamClasses.sort(Comparator.comparing(c -> getSimpleName(c.getAbsoluteName())));
-
-        // Add each class to the tree
+        // Group by package
+        Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteParamClasses) {
-            String simpleName = getSimpleName(schemaClass.getAbsoluteName());
-            DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
-            parentNode.add(classNode);
+            String packageName = getPackageName(schemaClass.getAbsoluteName());
+            packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
+        }
 
-            // Mark this class as reached
-            unreachedClasses.remove(schemaClass.getAbsoluteName());
+        // Add package nodes and classes under them
+        for (Map.Entry<String, List<DOSchemaClass>> entry : packageMap.entrySet()) {
+            String packageName = entry.getKey();
+            List<DOSchemaClass> packageClasses = entry.getValue();
 
-            // Clear visited set for each top-level class to allow full exploration
-            visitedClasses.clear();
-            visitedClasses.add(schemaClass.getAbsoluteName());
+            // Create package node
+            DefaultMutableTreeNode packageNode = new DefaultMutableTreeNode(packageName);
+            parentNode.add(packageNode);
 
-            // Expand this class's fields
-            expandClassFields(classNode, schemaClass);
+            // Sort classes within package by simple name
+            packageClasses.sort(Comparator.comparing(c -> getSimpleName(c.getAbsoluteName())));
+
+            // Add each class to the package node
+            for (DOSchemaClass schemaClass : packageClasses) {
+                String simpleName = getSimpleName(schemaClass.getAbsoluteName());
+                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
+                packageNode.add(classNode);
+
+                // Mark this class as reached
+                unreachedClasses.remove(schemaClass.getAbsoluteName());
+
+                // Clear visited set for each top-level class to allow full exploration
+                visitedClasses.clear();
+                visitedClasses.add(schemaClass.getAbsoluteName());
+
+                // Expand this class's fields
+                expandClassFields(classNode, schemaClass);
+            }
         }
     }
 
@@ -516,6 +550,20 @@ public class SchemaStructurePanel extends JPanel {
             return fullyQualifiedName.substring(lastDot + 1);
         }
         return fullyQualifiedName;
+    }
+
+    /**
+     * Gets the package name from a fully qualified class name.
+     */
+    private String getPackageName(String fullyQualifiedName) {
+        if (fullyQualifiedName == null) {
+            return "(default package)";
+        }
+        int lastDot = fullyQualifiedName.lastIndexOf('.');
+        if (lastDot > 0) {
+            return fullyQualifiedName.substring(0, lastDot);
+        }
+        return "(default package)";
     }
 
     /**

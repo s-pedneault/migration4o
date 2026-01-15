@@ -50,18 +50,7 @@
             <classRef sourceName="gest.dossPrev.DossPrevSuppr"/>
             <classRef sourceName="gest.dossPrev.PersonneRess"/>
             <classRef sourceName="gest.dossPrev.ProdDang"/>
-            <classRef sourceName="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere"/>
-            <classRef sourceName="gest.parement.Parement"/>
-            <classRef sourceName="gest.plancher.Plancher"/>
-            <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
-            <classRef sourceName="gest.typeChauffage.TypeChauffage"/>
-            <classRef sourceName="gest.typeCheminee.TypeCheminee"/>
-            <classRef sourceName="gest.typeToit.TypeToit"/>
-            <classRef sourceName="gest.dossPrev.ParamDossPrev$NValRempl"/>
-            <classRef sourceName="gest.dossPrev.PeriodiciteDossPrev"/>
-            <classRef sourceName="gest.dossPrev.Chauffage"/>
-            <classRef sourceName="gest.dossPrev.Energie"/>
-            <classRef sourceName="gest.dossPrev.Protection"/>
+            <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
         </module>
         <module name="Prévention" id="Prévention">
             <classRef sourceName="gest.prevention.Prevention"/>
