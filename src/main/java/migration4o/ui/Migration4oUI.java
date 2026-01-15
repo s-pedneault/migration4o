@@ -4,6 +4,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.schema.DODatabaseSchemaReader;
 import migration4o.ui.editors.schema.SchemaEditorPanel;
 import migration4o.ui.main.MainWindow;
+import migration4o.ui.schema.MigrationStructurePanel;
 import migration4o.ui.schema.SchemaStructurePanel;
 
 import javax.swing.*;
@@ -41,6 +42,10 @@ public class Migration4oUI {
                 // Add schema structure tab right after reference schema
                 SchemaStructurePanel schemaStructurePanel = new SchemaStructurePanel(schema);
                 mainWindow.addTab("Schema structure", schemaStructurePanel);
+
+                // Add migration structure tab
+                MigrationStructurePanel migrationStructurePanel = new MigrationStructurePanel(schema);
+                mainWindow.addTab("Migration structure", migrationStructurePanel);
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(null,

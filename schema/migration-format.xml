@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <modules>
-        <module name="Paramètres">
+        <module name="Paramètres" id="Paramètres">
             <classRef sourceName="gest.config.ParamConfig"/>
             <classRef sourceName="gest.config.ParamConfigGeneral"/>
             <classRef sourceName="gest.config.ParamConfigSSI"/>
@@ -29,7 +29,7 @@
             <classRef sourceName="gest.schema.ParamSchema"/>
             <classRef sourceName="gest.secCiv.ParamSecCiv"/>
         </module>
-        <module name="Organisation">
+        <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
             <classRef sourceName="gest.equipe.Equipe"/>
             <classRef sourceName="gest.employe.Employe"/>
@@ -45,7 +45,7 @@
             <classRef sourceName="gest.employe.EmployeNomin"/>
             <classRef sourceName="gest.employe.EmployeTaux"/>
         </module>
-        <module name="Dossier adresse">
+        <module name="Dossier adresse" id="Dossier adresse">
             <classRef sourceName="gest.dossPrev.DossPrev"/>
             <classRef sourceName="gest.dossPrev.DossPrevSuppr"/>
             <classRef sourceName="gest.dossPrev.PersonneRess"/>
@@ -63,7 +63,7 @@
             <classRef sourceName="gest.dossPrev.Energie"/>
             <classRef sourceName="gest.dossPrev.Protection"/>
         </module>
-        <module name="Prévention">
+        <module name="Prévention" id="Prévention">
             <classRef sourceName="gest.prevention.Prevention"/>
             <classRef sourceName="gest.classif.Classif"/>
             <classRef sourceName="gest.codeRef.CodeRef"/>
@@ -77,7 +77,7 @@
             <classRef sourceName="gest.prevention.PrevAvis"/>
             <classRef sourceName="gest.prevention.PrevForm"/>
         </module>
-        <module name="Intervention">
+        <module name="Intervention" id="Intervention">
             <classRef sourceName="gest.intervention.Intervention"/>
             <classRef sourceName="gest.codeAppel.CodeAppel"/>
             <classRef sourceName="gest.intervention.FournSAAQ"/>
@@ -119,7 +119,7 @@
             <classRef sourceName="gest.intervention.IntervVehFeu"/>
             <classRef sourceName="gest.intervention.IntervVieHumaine"/>
         </module>
-        <module name="RCCI">
+        <module name="RCCI" id="RCCI">
             <classRef sourceName="gest.rci.Rci"/>
             <classRef sourceName="gest.rci.Combustible"/>
             <classRef sourceName="gest.rci.Constat"/>
@@ -149,10 +149,10 @@
             <classRef sourceName="gest.rci.RciInfluence"/>
             <classRef sourceName="gest.rci.RciRapportEnquete"/>
         </module>
-        <module name="Travail">
+        <module name="Travail" id="Travail">
             <classRef sourceName="gest.quart.Quart"/>
         </module>
-        <module name="Bornes">
+        <module name="Bornes" id="Bornes">
             <classRef sourceName="gest.borne.Borne"/>
             <classRef sourceName="gest.borne.AnomBorne"/>
             <classRef sourceName="gest.borne.ModeleBorne"/>
@@ -163,7 +163,7 @@
             <classRef sourceName="gest.borne.UsageBorne"/>
             <classRef sourceName="gest.borne.TypeActivMaintBorne"/>
         </module>
-        <module name="Plan d'intervention">
+        <module name="Plan d&apos;intervention" id="Plan d&apos;intervention">
             <classRef sourceName="gest.planInterv.PlanInterv"/>
             <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
             <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
@@ -183,7 +183,7 @@
             <classRef sourceName="gest.planInterv.PlanSecurite"/>
             <classRef sourceName="gest.planInterv.PlanServPub"/>
         </module>
-        <module name="Formation">
+        <module name="Formation" id="Formation">
             <classRef sourceName="gest.formation.Formation"/>
             <classRef sourceName="gest.cours.CoursInterne"/>
             <classRef sourceName="gest.cours.Programme"/>
@@ -191,8 +191,7 @@
             <classRef sourceName="gest.formation.InfoEtudiant"/>
             <classRef sourceName="gest.formation.TypeActivFormation"/>
         </module>
-        <module name="Équipements">
-            <classRef sourceName="gest.equipement.Equipement"/>
+        <module name="Équipements" id="Équipements">
             <classRef sourceName="gest.equipement.EquipExist"/>
             <classRef sourceName="gest.equipement.TypeEquipement"/>
             <classRef sourceName="gest.maintEquip.MaintEquip"/>
@@ -204,14 +203,14 @@
             <classRef sourceName="gest.equipement.QteRequise"/>
             <classRef sourceName="gest.equipement.SituationEquipement"/>
         </module>
-        <module name="Sécurité civile">
+        <module name="Sécurité civile" id="Sécurité civile">
             <classRef sourceName="gest.docum.Docum"/>
             <classRef sourceName="gest.secCiv.LogSinistre"/>
             <classRef sourceName="gest.secCiv.NivAlerte"/>
             <classRef sourceName="gest.secCiv.RessSecCiv"/>
             <classRef sourceName="gest.secCiv.Sinistre"/>
         </module>
-        <module name="Horaires">
+        <module name="Horaires" id="Horaires">
             <classRef sourceName="gest.horaire.Horaire"/>
             <classRef sourceName="gest.horaire.HorQuart"/>
             <classRef sourceName="gest.horaire.ModeleHorQuart"/>
@@ -220,7 +219,7 @@
             <classRef sourceName="gest.horaire.ListeEmployesParCaserne"/>
             <classRef sourceName="gest.horaire.TypeActivHoraire"/>
         </module>
-        <module name="Rapports">
+        <module name="Rapports" id="Rapports">
             <classRef sourceName="gest.centreDesRapports.RapportCentral"/>
         </module>
     </modules>
