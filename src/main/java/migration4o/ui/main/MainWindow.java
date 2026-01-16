@@ -87,6 +87,23 @@ public class MainWindow extends JFrame {
         tabbedPane = new JTabbedPane();
         tabbedPane.setFont(new Font("Arial", Font.PLAIN, 14));
 
+        // Add mouse listener for tab context menu (tear-off)
+        tabbedPane.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mousePressed(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showTabContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(java.awt.event.MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showTabContextMenu(e);
+                }
+            }
+        });
+
         // Add tabs (for now just placeholder, will add schema editor next)
         addTabs();
 
@@ -360,6 +377,64 @@ public class MainWindow extends JFrame {
 
         // Set up listener to refresh comparisons when this schema is reloaded
         editor.setOnSchemaReloaded(() -> refreshComparisonsForEditor(editor));
+    }
+
+    private void showTabContextMenu(java.awt.event.MouseEvent e) {
+        int tabIndex = tabbedPane.indexAtLocation(e.getX(), e.getY());
+        if (tabIndex < 0) {
+            return;
+        }
+
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem tearOffItem = new JMenuItem("Open in New Window");
+        tearOffItem.addActionListener(ev -> tearOffTab(tabIndex));
+        popup.add(tearOffItem);
+        popup.show(e.getComponent(), e.getX(), e.getY());
+    }
+
+    private void tearOffTab(int tabIndex) {
+        if (tabIndex < 0 || tabIndex >= tabbedPane.getTabCount()) {
+            return;
+        }
+
+        String title = tabbedPane.getTitleAt(tabIndex);
+        Component component = tabbedPane.getComponentAt(tabIndex);
+
+        // Don't allow tearing off the Welcome tab
+        if (component == welcomePanel) {
+            JOptionPane.showMessageDialog(this,
+                    "The Welcome tab cannot be detached.",
+                    "Cannot Detach Tab",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Remove from main window
+        tabbedPane.removeTabAt(tabIndex);
+
+        // Create new window
+        JFrame detachedWindow = new JFrame(title + " - Migration4o");
+        detachedWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        detachedWindow.setSize(1200, 800);
+        detachedWindow.setLocationRelativeTo(this);
+
+        // Add component to new window
+        detachedWindow.add(component, BorderLayout.CENTER);
+
+        // Add toolbar with "Reattach" button
+        JToolBar toolbar = new JToolBar();
+        toolbar.setFloatable(false);
+        JButton reattachButton = new JButton("Reattach to Main Window");
+        reattachButton.addActionListener(e -> {
+            detachedWindow.dispose();
+            tabbedPane.addTab(title, component);
+            tabbedPane.setSelectedComponent(component);
+        });
+        toolbar.add(reattachButton);
+        detachedWindow.add(toolbar, BorderLayout.NORTH);
+
+        // Show the new window
+        detachedWindow.setVisible(true);
     }
 
     private void compareSchemas() {

@@ -25,37 +25,49 @@ public class MigrationFormatReader {
         Document doc = builder.parse(file);
         doc.getDocumentElement().normalize();
 
-        NodeList moduleNodes = doc.getElementsByTagName("module");
-
-        for (int i = 0; i < moduleNodes.getLength(); i++) {
-            Node moduleNode = moduleNodes.item(i);
-            if (moduleNode.getNodeType() == Node.ELEMENT_NODE) {
-                Element moduleElement = (Element) moduleNode;
-
-                String name = moduleElement.getAttribute("name");
-                String id = moduleElement.getAttribute("id");
-                if (id == null || id.isEmpty()) {
-                    id = name; // Use name as ID if no ID specified
+        // Get only top-level module nodes (direct children of <modules>)
+        Element modulesElement = (Element) doc.getElementsByTagName("modules").item(0);
+        if (modulesElement != null) {
+            NodeList children = modulesElement.getChildNodes();
+            for (int i = 0; i < children.getLength(); i++) {
+                Node node = children.item(i);
+                if (node.getNodeType() == Node.ELEMENT_NODE && "module".equals(node.getNodeName())) {
+                    modules.add(parseModule((Element) node));
                 }
-
-                List<String> classNames = new ArrayList<>();
-                NodeList classRefs = moduleElement.getElementsByTagName("classRef");
-
-                for (int j = 0; j < classRefs.getLength(); j++) {
-                    Node classRefNode = classRefs.item(j);
-                    if (classRefNode.getNodeType() == Node.ELEMENT_NODE) {
-                        Element classRefElement = (Element) classRefNode;
-                        String sourceName = classRefElement.getAttribute("sourceName");
-                        if (sourceName != null && !sourceName.isEmpty()) {
-                            classNames.add(sourceName);
-                        }
-                    }
-                }
-
-                modules.add(new MigrationModule(name, id, classNames));
             }
         }
 
         return modules;
+    }
+
+    private MigrationModule parseModule(Element moduleElement) {
+        String name = moduleElement.getAttribute("name");
+        String id = moduleElement.getAttribute("id");
+        if (id == null || id.isEmpty()) {
+            id = name; // Use name as ID if no ID specified
+        }
+
+        List<String> classNames = new ArrayList<>();
+        List<MigrationModule> childModules = new ArrayList<>();
+
+        // Parse direct children only
+        NodeList children = moduleElement.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node childNode = children.item(i);
+            if (childNode.getNodeType() == Node.ELEMENT_NODE) {
+                Element childElement = (Element) childNode;
+                if ("classRef".equals(childElement.getNodeName())) {
+                    String sourceName = childElement.getAttribute("sourceName");
+                    if (sourceName != null && !sourceName.isEmpty()) {
+                        classNames.add(sourceName);
+                    }
+                } else if ("module".equals(childElement.getNodeName())) {
+                    // Recursive call for nested modules
+                    childModules.add(parseModule(childElement));
+                }
+            }
+        }
+
+        return new MigrationModule(name, id, classNames, childModules);
     }
 }

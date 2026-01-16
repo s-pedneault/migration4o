@@ -31,19 +31,16 @@
         </module>
         <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
-            <classRef sourceName="gest.equipe.Equipe"/>
-            <classRef sourceName="gest.employe.Employe"/>
             <classRef sourceName="gest.grade.Grade"/>
-            <classRef sourceName="gest.utilGroupe.Groupe"/>
-            <classRef sourceName="gest.utilGroupe.Utilisateur"/>
             <classRef sourceName="gest.fournisseur.Fournisseur"/>
             <classRef sourceName="gest.vehicule.Compartiment"/>
             <classRef sourceName="gest.vehicule.Vehicule"/>
-            <classRef sourceName="gest.employe.ContactUrgence"/>
-            <classRef sourceName="gest.employe.Employe$NNonDispo"/>
-            <classRef sourceName="gest.employe.EmployeDateTaux"/>
-            <classRef sourceName="gest.employe.EmployeNomin"/>
-            <classRef sourceName="gest.employe.EmployeTaux"/>
+            <module name="Personnel" id="personnel">
+                <classRef sourceName="gest.employe.Employe"/>
+                <classRef sourceName="gest.equipe.Equipe"/>
+                <classRef sourceName="gest.utilGroupe.Groupe"/>
+                <classRef sourceName="gest.utilGroupe.Utilisateur"/>
+            </module>
         </module>
         <module name="Dossier adresse" id="Dossier adresse">
             <classRef sourceName="gest.dossPrev.DossPrev"/>

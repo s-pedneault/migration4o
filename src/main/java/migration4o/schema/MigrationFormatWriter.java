@@ -55,17 +55,29 @@ public class MigrationFormatWriter {
     }
 
     private void writeModule(FileWriter writer, MigrationModule module) throws IOException {
-        writer.write("        <module name=\"" + escapeXml(module.getName()) + "\"");
+        writeModule(writer, module, 2);
+    }
+
+    private void writeModule(FileWriter writer, MigrationModule module, int indentLevel) throws IOException {
+        String indent = "    ".repeat(indentLevel);
+        
+        writer.write(indent + "<module name=\"" + escapeXml(module.getName()) + "\"");
         if (module.getId() != null && !module.getId().isEmpty()) {
             writer.write(" id=\"" + escapeXml(module.getId()) + "\"");
         }
         writer.write(">\n");
 
+        // Write classes
         for (String className : module.getClassNames()) {
-            writer.write("            <classRef sourceName=\"" + escapeXml(className) + "\"/>\n");
+            writer.write(indent + "    <classRef sourceName=\"" + escapeXml(className) + "\"/>\n");
         }
 
-        writer.write("        </module>\n");
+        // Write child modules recursively
+        for (MigrationModule childModule : module.getChildModules()) {
+            writeModule(writer, childModule, indentLevel + 1);
+        }
+
+        writer.write(indent + "</module>\n");
     }
 
     private String escapeXml(String text) {
