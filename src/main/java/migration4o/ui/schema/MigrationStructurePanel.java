@@ -278,7 +278,8 @@ public class MigrationStructurePanel extends JPanel {
                                 }
                                 // Save expanded state
                                 List<TreePath> expandedPaths = new ArrayList<>();
-                                Enumeration<TreePath> expandedEnum = exportTree.getExpandedDescendants(new TreePath(exportModel.getRoot()));
+                                Enumeration<TreePath> expandedEnum = exportTree
+                                        .getExpandedDescendants(new TreePath(exportModel.getRoot()));
                                 if (expandedEnum != null) {
                                     while (expandedEnum.hasMoreElements()) {
                                         expandedPaths.add(expandedEnum.nextElement());
