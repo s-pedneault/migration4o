@@ -28,7 +28,9 @@ import java.util.TreeMap;
  * modules.
  */
 public class MigrationStructurePanel extends JPanel {
-    private DOSchema schema;
+    private DOSchema schema; // Reference schema with class definitions
+    private DOSchema databaseSchema; // Database schema with actual object IDs
+    private String databasePath; // Path to the currently opened database
     private JTree availableTree;
     private JTree exportTree;
     private DefaultTreeModel availableModel;
@@ -53,8 +55,27 @@ public class MigrationStructurePanel extends JPanel {
 
     public MigrationStructurePanel(DOSchema schema) {
         this.schema = schema;
+        this.databaseSchema = null;
+        this.databasePath = null;
         initializeUI();
         loadMigrationStructure();
+        populateAvailableTree();
+    }
+
+    /**
+     * Updates the database path when a database is opened
+     */
+    public void setDatabasePath(String databasePath) {
+        this.databasePath = databasePath;
+    }
+
+    /**
+     * Sets the database schema which contains actual object IDs from the opened
+     * database
+     */
+    public void setDatabaseSchema(DOSchema databaseSchema) {
+        this.databaseSchema = databaseSchema;
+        // Refresh tree to show updated object counts
         populateAvailableTree();
     }
 
@@ -338,6 +359,20 @@ public class MigrationStructurePanel extends JPanel {
                             removeClassFromExport(node);
                         }
                     }
+                }
+            }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showExportContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showExportContextMenu(e);
                 }
             }
         });
@@ -768,6 +803,209 @@ public class MigrationStructurePanel extends JPanel {
         return absoluteName;
     }
 
+    /**
+     * Shows context menu for export tree with Export option
+     */
+    private void showExportContextMenu(MouseEvent e) {
+        TreePath path = exportTree.getPathForLocation(e.getX(), e.getY());
+        if (path == null) {
+            return;
+        }
+
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        exportTree.setSelectionPath(path);
+
+        JPopupMenu contextMenu = new JPopupMenu();
+
+        // Export option for modules
+        if (node.getUserObject() instanceof ModuleNode) {
+            ModuleNode moduleNode = (ModuleNode) node.getUserObject();
+            JMenuItem exportModuleItem = new JMenuItem("Export Module to XML...");
+            exportModuleItem.addActionListener(evt -> exportModule(node, moduleNode));
+            contextMenu.add(exportModuleItem);
+        }
+        // Export option for classes
+        else if (node.getUserObject() instanceof ClassNode) {
+            ClassNode classNode = (ClassNode) node.getUserObject();
+            JMenuItem exportClassItem = new JMenuItem("Export Class to XML...");
+            exportClassItem.addActionListener(evt -> exportClass(classNode));
+            contextMenu.add(exportClassItem);
+        }
+
+        if (contextMenu.getComponentCount() > 0) {
+            contextMenu.show(exportTree, e.getX(), e.getY());
+        }
+    }
+
+    /**
+     * Exports a single class to XML
+     */
+    private void exportClass(ClassNode classNode) {
+        if (databasePath == null || databasePath.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No database is currently open. Please open a database first.",
+                    "No Database",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (databaseSchema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "No database schema available. Please open a database first.",
+                    "No Database Schema",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        DOSchemaClass schemaClass = classNode.getSchemaClass();
+        String className = schemaClass.getAbsoluteName();
+        String simpleName = getSimpleName(className);
+
+        // Ask user for output file
+        JFileChooser fileChooser = new JFileChooser("output/migration");
+        fileChooser.setDialogTitle("Export " + simpleName + " to XML");
+        fileChooser.setSelectedFile(new java.io.File(simpleName + "_export.xml"));
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
+
+            // Run export in background
+            SwingWorker<Void, String> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    publish("Exporting " + simpleName + "...");
+                    migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
+                            schema, databaseSchema, databasePath);
+                    exporter.exportClass(className, outputPath);
+                    return null;
+                }
+
+                @Override
+                protected void process(List<String> chunks) {
+                    for (String message : chunks) {
+                        System.out.println(message);
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        get();
+                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                                "Successfully exported " + simpleName + " to:\n" + outputPath,
+                                "Export Complete",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                                "Error during export: " + e.getMessage(),
+                                "Export Error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            };
+
+            worker.execute();
+        }
+    }
+
+    /**
+     * Exports an entire module (with all its classes and nested modules) to XML
+     */
+    private void exportModule(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
+        if (databasePath == null || databasePath.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No database is currently open. Please open a database first.",
+                    "No Database",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (databaseSchema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "No database schema available. Please open a database first.",
+                    "No Database Schema",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Collect all class names in this module and its children
+        List<String> classNames = new ArrayList<>();
+        collectClassNamesFromModule(moduleTreeNode, classNames);
+
+        if (classNames.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Module '" + moduleNode.getName() + "' contains no classes.",
+                    "Empty Module",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Ask user for output file
+        JFileChooser fileChooser = new JFileChooser("output/migration");
+        fileChooser.setDialogTitle("Export Module: " + moduleNode.getName());
+        fileChooser.setSelectedFile(new java.io.File(moduleNode.getId() + "_export.xml"));
+
+        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
+
+            // Run export in background
+            SwingWorker<Void, String> worker = new SwingWorker<>() {
+                @Override
+                protected Void doInBackground() throws Exception {
+                    publish("Exporting module " + moduleNode.getName() + " (" + classNames.size() + " classes)...");
+                    migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
+                            schema, databaseSchema, databasePath);
+                    exporter.exportModule(classNames, moduleNode.getName(), outputPath);
+                    return null;
+                }
+
+                @Override
+                protected void process(List<String> chunks) {
+                    for (String message : chunks) {
+                        System.out.println(message);
+                    }
+                }
+
+                @Override
+                protected void done() {
+                    try {
+                        get();
+                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                                "Successfully exported module '" + moduleNode.getName() + "' to:\n" + outputPath,
+                                "Export Complete",
+                                JOptionPane.INFORMATION_MESSAGE);
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                                "Error during export: " + e.getMessage(),
+                                "Export Error",
+                                JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            };
+
+            worker.execute();
+        }
+    }
+
+    /**
+     * Recursively collects all class names from a module and its children
+     */
+    private void collectClassNamesFromModule(DefaultMutableTreeNode moduleNode, List<String> classNames) {
+        Enumeration<?> children = moduleNode.children();
+        while (children.hasMoreElements()) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            if (child.getUserObject() instanceof ClassNode) {
+                ClassNode classNode = (ClassNode) child.getUserObject();
+                classNames.add(classNode.getSchemaClass().getAbsoluteName());
+            } else if (child.getUserObject() instanceof ModuleNode) {
+                // Recursively collect from child modules
+                collectClassNamesFromModule(child, classNames);
+            }
+        }
+    }
+
     private void loadMigrationStructure() {
         try {
             MigrationFormatReader reader = new MigrationFormatReader();
@@ -1097,7 +1335,12 @@ public class MigrationStructurePanel extends JPanel {
             if (simpleName.contains(".")) {
                 simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
             }
-            return simpleName + " (" + schemaClass.getUniqueObjectCount() + " objects)";
+            int objectCount = schemaClass.getUniqueObjectCount();
+            if (objectCount > 0) {
+                return simpleName + " (" + objectCount + " objects)";
+            } else {
+                return simpleName;
+            }
         }
     }
 

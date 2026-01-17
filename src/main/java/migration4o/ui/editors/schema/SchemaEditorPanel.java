@@ -1446,6 +1446,7 @@ public class SchemaEditorPanel extends JPanel {
                     dialog.getFieldChildrenType(),
                     dialog.getFieldTitle(),
                     dialog.getFieldDescription(),
+                    dialog.getFieldPointsTo(),
                     null,
                     null);
 
@@ -1610,10 +1611,12 @@ public class SchemaEditorPanel extends JPanel {
             // description
             String title = null;
             String description = null;
+            String pointsTo = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
             if (originalField != null) {
                 title = originalField.getTitle();
                 description = originalField.getDescription();
+                pointsTo = originalField.getPointsTo();
             }
 
             newFields[i] = new DOSchemaField(
@@ -1627,6 +1630,7 @@ public class SchemaEditorPanel extends JPanel {
                     childrenType != null ? childrenType : "",
                     title,
                     description,
+                    pointsTo,
                     null, // databaseClass
                     null // childrenSchemaClass
             );

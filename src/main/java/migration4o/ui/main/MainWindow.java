@@ -238,6 +238,9 @@ public class MainWindow extends JFrame {
                     // Create migration coverage tab
                     createMigrationCoverageTab(inferredSchema);
 
+                    // Notify all tabs that a database has been opened
+                    notifyTabsDatabaseOpened(currentDatabasePath, inferredSchema);
+
                     // Update welcome panel state
                     welcomePanel.setDatabaseOpen(true);
 
@@ -359,6 +362,21 @@ public class MainWindow extends JFrame {
 
         // Switch to welcome tab
         tabbedPane.setSelectedIndex(0);
+    }
+
+    /**
+     * Notifies all tabs that a database has been opened
+     */
+    private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
+        // Iterate through all tabs and notify those that need to know
+        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+            Component component = tabbedPane.getComponentAt(i);
+            if (component instanceof migration4o.ui.schema.MigrationStructurePanel) {
+                migration4o.ui.schema.MigrationStructurePanel migrationPanel = (migration4o.ui.schema.MigrationStructurePanel) component;
+                migrationPanel.setDatabasePath(databasePath);
+                migrationPanel.setDatabaseSchema(inferredSchema);
+            }
+        }
     }
 
     /**

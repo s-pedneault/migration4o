@@ -14,6 +14,7 @@ public class DOSchemaField {
     private final String childrenType;
     private final String title;
     private final String description;
+    private final String pointsTo;
 
     private DODatabaseClass databaseClass;
     private DOSchemaClass childrenSchemaClass;
@@ -23,7 +24,7 @@ public class DOSchemaField {
             String childrenType,
             DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
-                childrenType, null, null, databaseClass, childrenSchemaClass);
+                childrenType, null, null, null, databaseClass, childrenSchemaClass);
     }
 
     public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
@@ -31,12 +32,20 @@ public class DOSchemaField {
             String childrenType, String description,
             DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
-                childrenType, null, description, databaseClass, childrenSchemaClass);
+                childrenType, null, description, null, databaseClass, childrenSchemaClass);
     }
 
     public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
             boolean isCollection, boolean embedContents,
             String childrenType, String title, String description,
+            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
+        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
+                childrenType, title, description, null, databaseClass, childrenSchemaClass);
+    }
+
+    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
+            boolean isCollection, boolean embedContents,
+            String childrenType, String title, String description, String pointsTo,
             DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
         this.source = source;
         this.destinationName = destinationName;
@@ -48,6 +57,7 @@ public class DOSchemaField {
         this.childrenType = childrenType;
         this.title = title;
         this.description = description;
+        this.pointsTo = pointsTo;
         this.databaseClass = databaseClass;
         this.childrenSchemaClass = childrenSchemaClass;
     }
@@ -82,6 +92,10 @@ public class DOSchemaField {
 
     public String getChildrenType() {
         return childrenType;
+    }
+
+    public String getPointsTo() {
+        return pointsTo;
     }
 
     public String getTitle() {

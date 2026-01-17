@@ -19,10 +19,12 @@ public class FieldEditorDialog extends JDialog {
     private final JTextField destField;
     private final JPanel typePanel;
     private final JLabel typeLabel;
+    private final JPanel pointsToPanel;
+    private final JLabel pointsToLabel;
     private final JCheckBox exportedCheckBox;
     private final JCheckBox skipIfEmptyCheckBox;
-    private final JCheckBox collectionCheckBox;
     private final JCheckBox embedContentsCheckBox;
+    private final JCheckBox collectionCheckBox;
     private final JPanel childrenTypePanel;
     private final JLabel childrenTypeLabel;
     private final JLabel childrenTypeStatusLabel;
@@ -61,9 +63,40 @@ public class FieldEditorDialog extends JDialog {
             String selected = ClassFinderDialog.showDialog(owner, schema, typeLabel.getText());
             if (selected != null) {
                 typeLabel.setText(selected);
+                updateEmbedContentsState(); // Update embed contents state when type changes
             }
         });
         typePanel.add(editTypeButton, BorderLayout.EAST);
+
+        // Points To - show as text with Edit button
+        pointsToPanel = new JPanel(new BorderLayout(5, 0));
+        pointsToLabel = new JLabel(field.getPointsTo() != null ? field.getPointsTo() : "");
+        pointsToLabel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY),
+                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+        pointsToPanel.add(pointsToLabel, BorderLayout.CENTER);
+
+        JButton editPointsToButton = new JButton("Edit");
+        editPointsToButton.addActionListener(e -> {
+            String selected = ClassFinderDialog.showDialog(owner, schema, pointsToLabel.getText());
+            if (selected != null) {
+                pointsToLabel.setText(selected);
+            }
+        });
+        pointsToPanel.add(editPointsToButton, BorderLayout.EAST);
+
+        embedContentsCheckBox = new JCheckBox();
+        embedContentsCheckBox.setSelected(field.isEmbedContents());
+
+        collectionCheckBox = new JCheckBox();
+        collectionCheckBox.setSelected(field.isCollection());
+
+        // Add listener to collection checkbox to update embed contents state and
+        // rebuild form
+        collectionCheckBox.addActionListener(e -> {
+            updateEmbedContentsState();
+            rebuildForm();
+        });
 
         titleField = new JTextField(field.getTitle() != null ? field.getTitle() : "", 30);
         descField = new JTextField(field.getDescription() != null ? field.getDescription() : "", 30);
@@ -73,15 +106,6 @@ public class FieldEditorDialog extends JDialog {
 
         skipIfEmptyCheckBox = new JCheckBox();
         skipIfEmptyCheckBox.setSelected(field.isSkipIfEmpty());
-
-        collectionCheckBox = new JCheckBox();
-        collectionCheckBox.setSelected(field.isCollection());
-
-        // Add listener to collection checkbox to show/hide related fields
-        collectionCheckBox.addActionListener(e -> rebuildForm());
-
-        embedContentsCheckBox = new JCheckBox();
-        embedContentsCheckBox.setSelected(field.isEmbedContents());
 
         // Children Type - show as text with Edit button and status
         childrenTypePanel = new JPanel(new BorderLayout(5, 0));
@@ -122,6 +146,7 @@ public class FieldEditorDialog extends JDialog {
 
         // Create button panel
         add(createButtonPanel(), BorderLayout.SOUTH);
+        updateEmbedContentsState();
 
         // Update initial status
         updateChildrenTypeStatus();
@@ -147,17 +172,17 @@ public class FieldEditorDialog extends JDialog {
 
         // Add fields in order
         addFormRow(innerPanel, gbc, "Source:", sourceField);
-        addFormRow(innerPanel, gbc, "Destination:", destField);
         addFormRow(innerPanel, gbc, "Type:", typePanel);
+        addFormRow(innerPanel, gbc, "Points To:", pointsToPanel);
         addFormRow(innerPanel, gbc, "Title:", titleField);
         addFormRow(innerPanel, gbc, "Description:", descField);
         addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
         addFormRow(innerPanel, gbc, "Skip If Empty:", skipIfEmptyCheckBox);
+        addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
         addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
 
         // Only add collection-related fields if collection is checked
         if (collectionCheckBox.isSelected()) {
-            addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
             addFormRow(innerPanel, gbc, "Children Type:", childrenTypePanel);
         }
 
@@ -199,6 +224,68 @@ public class FieldEditorDialog extends JDialog {
         panel.add(component, gbc);
 
         gbc.gridy++;
+    }
+
+    private void updateEmbedContentsState() {
+        // Embed Contents is enabled if:
+        // 1. Collection checkbox is checked, OR
+        // 2. The selected type is an IDEntite or EntiteContientID descendant
+
+        boolean shouldEnable = collectionCheckBox.isSelected();
+
+        if (!shouldEnable) {
+            // Check if the type is an IDEntite or EntiteContientID descendant
+            String typeName = typeLabel.getText();
+            if (typeName != null && !typeName.isEmpty() && schema != null) {
+                DOSchemaClass typeClass = findClassByName(typeName);
+                if (typeClass != null) {
+                    shouldEnable = isDescendantOf(typeClass, "gest.gen.IDEntite") ||
+                            isDescendantOf(typeClass, "gest.gen.EntiteContientID");
+                }
+            }
+        }
+
+        embedContentsCheckBox.setEnabled(shouldEnable);
+
+        // If being disabled, uncheck it
+        if (!shouldEnable && embedContentsCheckBox.isSelected()) {
+            embedContentsCheckBox.setSelected(false);
+        }
+    }
+
+    private DOSchemaClass findClassByName(String className) {
+        if (schema == null || schema.getClasses() == null || className == null) {
+            return null;
+        }
+
+        for (DOSchemaClass cls : schema.getClasses()) {
+            if (cls.getAbsoluteName().equals(className) || cls.getShortName().equals(className)) {
+                return cls;
+            }
+        }
+        return null;
+    }
+
+    private boolean isDescendantOf(DOSchemaClass schemaClass, String parentClassName) {
+        if (schemaClass == null || parentClassName == null) {
+            return false;
+        }
+
+        String currentParent = schemaClass.getParentClass();
+        while (currentParent != null && !currentParent.isEmpty() && !currentParent.equals("Undetermined")) {
+            if (currentParent.equals(parentClassName)) {
+                return true;
+            }
+
+            // Find parent class and continue up the hierarchy
+            DOSchemaClass parentClass = findClassByName(currentParent);
+            if (parentClass == null) {
+                break;
+            }
+            currentParent = parentClass.getParentClass();
+        }
+
+        return false;
     }
 
     private void updateChildrenTypeStatus() {
@@ -352,6 +439,11 @@ public class FieldEditorDialog extends JDialog {
 
     public String getFieldDescription() {
         return descField.getText();
+    }
+
+    public String getFieldPointsTo() {
+        String pointsTo = pointsToLabel.getText();
+        return (pointsTo != null && !pointsTo.isEmpty()) ? pointsTo : null;
     }
 
     /**
