@@ -16,11 +16,11 @@
     <properties>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
+        <maven.compiler.release>25</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <main.class>ui.assistant.AssistantLauncher</main.class>
+        <main.class>migration4o.ui.main.MainWindow</main.class>
     </properties>
     
-    <!-- Dependencies for IDE reference only - actual JARs are in lib/ directory -->
     <dependencies>
         <!-- DB4O Dependencies (local JARs) -->
         <dependency>
@@ -31,7 +31,23 @@
             <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-java5.jar</systemPath>
         </dependency>
         
-        <!-- Apache POI Dependencies (local JARs) -->
+        <dependency>
+            <groupId>com.db4o</groupId>
+            <artifactId>db4o-instrumentation</artifactId>
+            <version>7.4.106</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-instrumentation.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>com.db4o</groupId>
+            <artifactId>db4o-taj</artifactId>
+            <version>7.4.106</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/db4o-7.4.106.13438-taj.jar</systemPath>
+        </dependency>
+        
+        <!-- Apache POI Dependencies -->
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi</artifactId>
@@ -48,13 +64,29 @@
             <systemPath>${project.basedir}/lib/poi-ooxml-5.2.4.jar</systemPath>
         </dependency>
         
-        <!-- Other local dependencies -->
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-ooxml-lite</artifactId>
+            <version>5.2.4</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/poi-ooxml-lite-5.2.4.jar</systemPath>
+        </dependency>
+        
+        <!-- Apache Commons -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-collections4</artifactId>
             <version>4.4</version>
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/commons-collections4-4.4.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.21</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/commons-compress-1.21.jar</systemPath>
         </dependency>
         
         <dependency>
@@ -65,6 +97,7 @@
             <systemPath>${project.basedir}/lib/commons-io-2.15.1.jar</systemPath>
         </dependency>
         
+        <!-- Log4j -->
         <dependency>
             <groupId>org.apache.logging.log4j</groupId>
             <artifactId>log4j-api</artifactId>
@@ -72,10 +105,102 @@
             <scope>system</scope>
             <systemPath>${project.basedir}/lib/log4j-api-2.20.0.jar</systemPath>
         </dependency>
+        
+        <dependency>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.20.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/log4j-core-2.20.0.jar</systemPath>
+        </dependency>
+        
+        <!-- Other dependencies -->
+        <dependency>
+            <groupId>org.apache.xmlbeans</groupId>
+            <artifactId>xmlbeans</artifactId>
+            <version>5.1.1</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/xmlbeans-5.1.1.jar</systemPath>
+        </dependency>
+        
+        <dependency>
+            <groupId>edu.purdue.cs</groupId>
+            <artifactId>bloat</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/lib/bloat-1.0.jar</systemPath>
+        </dependency>
     </dependencies>
     
-    <!-- Note: This project uses a custom build script (build.sh) instead of Maven -->
-    <!-- Dependencies are managed via lib/ directory -->
-    <!-- This pom.xml is kept minimal for IDE compatibility -->
+    <build>
+        <!-- Output compiled classes to classes/ directory (like build.sh) -->
+        <outputDirectory>${project.basedir}/classes</outputDirectory>
+        
+        <plugins>
+            <!-- Maven Compiler Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+                <configuration>
+                    <source>25</source>
+                    <target>25</target>
+                    <release>25</release>
+                    <encoding>UTF-8</encoding>
+                    <compilerArgs>
+                        <arg>-Xlint:unchecked</arg>
+                    </compilerArgs>
+                    <!-- Exclude deprecated files from compilation -->
+                    <excludes>
+                        <exclude>**/deprecated/**</exclude>
+                    </excludes>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Resources Plugin - Copy resources to classes/ -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <version>3.3.1</version>
+                <configuration>
+                    <outputDirectory>${project.basedir}/classes</outputDirectory>
+                </configuration>
+            </plugin>
+            
+            <!-- Maven Clean Plugin - Clean classes/ and target/ directories -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <version>3.3.2</version>
+                <configuration>
+                    <filesets>
+                        <fileset>
+                            <directory>${project.basedir}/classes</directory>
+                            <includes>
+                                <include>**/*</include>
+                            </includes>
+                        </fileset>
+                        <fileset>
+                            <directory>${project.basedir}/target</directory>
+                            <includes>
+                                <include>**/*</include>
+                            </includes>
+                        </fileset>
+                    </filesets>
+                </configuration>
+            </plugin>
+            
+            <!-- Exec Maven Plugin - For running the application -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <configuration>
+                    <mainClass>${main.class}</mainClass>
+                    <classpathScope>compile</classpathScope>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
     
 </project>
