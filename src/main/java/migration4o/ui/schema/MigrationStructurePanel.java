@@ -75,8 +75,9 @@ public class MigrationStructurePanel extends JPanel {
      */
     public void setDatabaseSchema(DOSchema databaseSchema) {
         this.databaseSchema = databaseSchema;
-        // Refresh tree to show updated object counts
-        populateAvailableTree();
+        // Refresh trees to show updated object counts
+        refreshAvailableTree();
+        reloadExportTree();
     }
 
     private void initializeUI() {
@@ -484,7 +485,10 @@ public class MigrationStructurePanel extends JPanel {
         java.util.List<DOSchemaClass> exportedParams = new ArrayList<>();
         java.util.List<DOSchemaClass> exportedOthers = new ArrayList<>();
 
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
+        // Use databaseSchema if available (has object counts), otherwise use reference
+        // schema
+        DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
+        for (DOSchemaClass schemaClass : sourceSchema.getClasses()) {
             if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
                 // Add to Exported section
                 if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
@@ -1050,6 +1054,38 @@ public class MigrationStructurePanel extends JPanel {
         }
     }
 
+    /**
+     * Reloads the export tree to refresh object counts when database changes
+     */
+    private void reloadExportTree() {
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+        updateNodeCounts(root);
+        exportModel.reload();
+    }
+
+    /**
+     * Recursively updates object counts in tree nodes
+     */
+    private void updateNodeCounts(DefaultMutableTreeNode node) {
+        Object userObject = node.getUserObject();
+        if (userObject instanceof ClassNode) {
+            ClassNode classNode = (ClassNode) userObject;
+            // Find the class with updated counts from databaseSchema
+            DOSchemaClass updatedClass = findClassByName(classNode.getSchemaClass().getAbsoluteName());
+            if (updatedClass != null) {
+                // Create new ClassNode with updated class data
+                node.setUserObject(new ClassNode(updatedClass));
+            }
+        }
+
+        // Recursively update children
+        Enumeration<?> children = node.children();
+        while (children.hasMoreElements()) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
+            updateNodeCounts(child);
+        }
+    }
+
     private void saveMigrationStructure() {
         try {
             List<MigrationModule> modules = new ArrayList<>();
@@ -1101,6 +1137,16 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private DOSchemaClass findClassByName(String className) {
+        // Try databaseSchema first if available (has object counts)
+        if (databaseSchema != null && databaseSchema.getClasses() != null) {
+            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                if (schemaClass.getAbsoluteName().equals(className)) {
+                    return schemaClass;
+                }
+            }
+        }
+
+        // Fall back to reference schema
         if (schema == null || schema.getClasses() == null) {
             return null;
         }
