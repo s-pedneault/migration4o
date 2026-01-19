@@ -180,9 +180,11 @@ public class XMLExportEngine {
             String className = getClassName(obj);
             ObjectResolverUtil.activateObject(container, obj, objectId);
 
-            // Write object opening tag
+            // Write object opening tag using destination class name as element name
+            DOSchemaClass schemaClass = findClassByName(className);
+            String elementName = schemaClass != null ? schemaClass.getDestinationName() : getSimpleClassName(className);
             writeIndent(indentLevel);
-            writer.write("<object id=\"" + objectId + "\" class=\"" + xmlEscape(className) + "\">\n");
+            writer.write("<" + elementName + ">\n");
 
             // If it's a GenericObject, export all its fields
             if (obj instanceof GenericObject) {
@@ -195,7 +197,7 @@ public class XMLExportEngine {
 
             // Write object closing tag
             writeIndent(indentLevel);
-            writer.write("</object>\n");
+            writer.write("</" + elementName + ">\n");
         } catch (Exception e) {
             System.err.println("Error exporting object " + objectId + ": " + e.getMessage());
         }
@@ -216,55 +218,71 @@ public class XMLExportEngine {
             for (StoredField field : fields) {
                 try {
                     Object fieldValue = field.get(obj);
-                    String fieldName = field.getName();
+                    String sourceFieldName = field.getName();
 
-                    writeIndent(indentLevel);
-                    writer.write("<field name=\"" + xmlEscape(fieldName) + "\"");
+                    // Get destination field name from schema
+                    DOSchemaField schemaField = findSchemaField(parentClassName, sourceFieldName);
+                    String fieldName = schemaField != null ? schemaField.getDestinationName() : sourceFieldName;
 
                     if (fieldValue == null) {
-                        writer.write("/>");
+                        writeIndent(indentLevel);
+                        writer.write("<" + fieldName + "/>\n");
                         continue;
                     }
 
                     // Handle collections
                     if (fieldValue instanceof Collection) {
-                        writer.write(">");
                         Collection<?> collection = (Collection<?>) fieldValue;
-                        for (Object item : collection) {
-                            if (item != null) {
-                                exportFieldValue(container, item, fieldName, parentClassName, indentLevel + 1);
+                        if (collection.isEmpty()) {
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + "/>\n");
+                        } else {
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + ">\n");
+                            for (Object item : collection) {
+                                if (item != null) {
+                                    exportFieldValue(container, item, fieldName, parentClassName, indentLevel + 1);
+                                }
                             }
+                            writeIndent(indentLevel);
+                            writer.write("</" + fieldName + ">\n");
                         }
-                        writeIndent(indentLevel);
-                        writer.write("</field>\n");
                     }
                     // Handle arrays
                     else if (fieldValue.getClass().isArray()) {
-                        writer.write(">");
                         int length = java.lang.reflect.Array.getLength(fieldValue);
-                        for (int i = 0; i < length; i++) {
-                            Object item = java.lang.reflect.Array.get(fieldValue, i);
-                            if (item != null) {
-                                exportFieldValue(container, item, fieldName, parentClassName, indentLevel + 1);
+                        if (length == 0) {
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + "/>\n");
+                        } else {
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + ">\n");
+                            for (int i = 0; i < length; i++) {
+                                Object item = java.lang.reflect.Array.get(fieldValue, i);
+                                if (item != null) {
+                                    exportFieldValue(container, item, fieldName, parentClassName, indentLevel + 1);
+                                }
                             }
+                            writeIndent(indentLevel);
+                            writer.write("</" + fieldName + ">\n");
                         }
-                        writeIndent(indentLevel);
-                        writer.write("</field>\n");
                     }
                     // Handle single values
                     else {
                         long refId = container.ext().getID(fieldValue);
                         if (refId > 0) {
                             // This is a persistent object reference
-                            writer.write(">");
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + ">\n");
                             exportFieldValue(container, fieldValue, fieldName, parentClassName, indentLevel + 1);
                             writeIndent(indentLevel);
-                            writer.write("</field>\n");
+                            writer.write("</" + fieldName + ">\n");
                         } else {
-                            // Primitive or non-persistent value
-                            writer.write(">");
+                            // Primitive or non-persistent value - write inline
+                            writeIndent(indentLevel);
+                            writer.write("<" + fieldName + ">");
                             writer.write(xmlEscape(fieldValue.toString()));
-                            writer.write("</field>\n");
+                            writer.write("</" + fieldName + ">\n");
                         }
                     }
                 } catch (Exception e) {
@@ -524,6 +542,18 @@ public class XMLExportEngine {
     }
 
     /**
+     * Gets the simple class name from a fully qualified class name.
+     * Used for element names in the XML output.
+     */
+    private String getSimpleClassName(String fullClassName) {
+        if (fullClassName == null) {
+            return "Unknown";
+        }
+        int lastDot = fullClassName.lastIndexOf('.');
+        return lastDot >= 0 ? fullClassName.substring(lastDot + 1) : fullClassName;
+    }
+
+    /**
      * Generates an XSD schema file for the exported XML.
      * The schema defines the structure and data types based on the class
      * definition.
@@ -544,7 +574,14 @@ public class XMLExportEngine {
             xsdWriter.write("    <xs:complexType>\n");
             xsdWriter.write("      <xs:sequence>\n");
             xsdWriter.write("        <xs:element name=\"metadata\" type=\"MetadataType\"/>\n");
-            xsdWriter.write("        <xs:element name=\"objects\" type=\"ObjectsType\"/>\n");
+            xsdWriter.write("        <xs:element name=\"objects\">\n");
+            xsdWriter.write("          <xs:complexType>\n");
+            xsdWriter.write("            <xs:sequence>\n");
+            xsdWriter.write("              <xs:element ref=\"" + schemaClass.getDestinationName()
+                    + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+            xsdWriter.write("            </xs:sequence>\n");
+            xsdWriter.write("          </xs:complexType>\n");
+            xsdWriter.write("        </xs:element>\n");
             xsdWriter.write("      </xs:sequence>\n");
             xsdWriter.write("    </xs:complexType>\n");
             xsdWriter.write("  </xs:element>\n\n");
@@ -557,33 +594,9 @@ public class XMLExportEngine {
             xsdWriter.write("    </xs:sequence>\n");
             xsdWriter.write("  </xs:complexType>\n\n");
 
-            // Objects container type
-            xsdWriter.write("  <xs:complexType name=\"ObjectsType\">\n");
-            xsdWriter.write("    <xs:sequence>\n");
-            xsdWriter.write(
-                    "      <xs:element name=\"object\" type=\"ObjectType\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            xsdWriter.write("    </xs:sequence>\n");
-            xsdWriter.write("  </xs:complexType>\n\n");
-
-            // Generic object type
-            xsdWriter.write("  <xs:complexType name=\"ObjectType\">\n");
-            xsdWriter.write("    <xs:sequence>\n");
-            xsdWriter.write("      <xs:element name=\"field\" minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
-            xsdWriter.write("        <xs:complexType mixed=\"true\">\n");
-            xsdWriter.write("          <xs:sequence>\n");
-            xsdWriter.write(
-                    "            <xs:element name=\"object\" type=\"ObjectType\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            xsdWriter.write("          </xs:sequence>\n");
-            xsdWriter.write("          <xs:attribute name=\"name\" type=\"xs:string\" use=\"required\"/>\n");
-            xsdWriter.write("        </xs:complexType>\n");
-            xsdWriter.write("      </xs:element>\n");
-            xsdWriter.write("    </xs:sequence>\n");
-            xsdWriter.write("    <xs:attribute name=\"class\" type=\"xs:string\" use=\"required\"/>\n");
-            xsdWriter.write("    <xs:attribute name=\"id\" type=\"xs:long\" use=\"required\"/>\n");
-            xsdWriter.write("  </xs:complexType>\n\n");
-
-            // Add specific class types with field definitions
-            writeClassTypeDefinition(xsdWriter, schemaClass, new HashSet<>());
+            // Generate class type definitions
+            Set<String> processedClasses = new HashSet<>();
+            writeClassTypeDefinition(xsdWriter, schemaClass, processedClasses);
 
             xsdWriter.write("</xs:schema>\n");
         } finally {
@@ -605,28 +618,49 @@ public class XMLExportEngine {
         }
         processedClasses.add(className);
 
-        xsdWriter.write("  <!-- Class: " + className + " -->\n");
-        xsdWriter.write("  <xs:complexType name=\"" + getTypeNameFromClass(className) + "\">\n");
-        xsdWriter.write("    <xs:annotation>\n");
-        xsdWriter.write("      <xs:documentation>\n");
+        String destClassName = schemaClass.getDestinationName();
 
-        // Add field documentation
+        // Write element definition
+        xsdWriter.write("  <!-- Class: " + className + " (exported as " + destClassName + ") -->\n");
+        xsdWriter.write("  <xs:element name=\"" + destClassName + "\">\n");
+        xsdWriter.write("    <xs:complexType>\n");
+        xsdWriter.write("      <xs:sequence>\n");
+
+        // Write field elements
         for (DOSchemaField field : schemaClass.getFields()) {
-            String fieldType = field.getType() != null ? field.getType() : "unknown";
-            String fieldDesc = field.getDescription() != null ? field.getDescription() : "";
-            xsdWriter.write("        Field '" + field.getSource() + "': " + fieldType);
-            if (field.isCollection()) {
-                xsdWriter.write(" (collection)");
+            String fieldName = field.getDestinationName(); // Use destination name
+            String fieldType = field.getType();
+            boolean isCollection = field.isCollection();
+
+            if (fieldType == null || fieldType.isEmpty()) {
+                continue;
             }
-            if (!fieldDesc.isEmpty()) {
-                xsdWriter.write(" - " + fieldDesc);
+
+            String xsdType = getXSDType(fieldType);
+            String maxOccurs = isCollection ? "unbounded" : "1";
+
+            if (isPrimitiveType(fieldType)) {
+                // Primitive field - use element with type
+                xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                        + "\" minOccurs=\"0\" maxOccurs=\"" + maxOccurs + "\"/>\n");
+            } else {
+                // Reference to another class - use element with ref to destination class name
+                DOSchemaClass refClass = findClassByName(fieldType);
+                String refClassName = refClass != null ? refClass.getDestinationName() : getSimpleClassName(fieldType);
+                xsdWriter.write("        <xs:element name=\"" + fieldName + "\">\n");
+                xsdWriter.write("          <xs:complexType>\n");
+                xsdWriter.write("            <xs:sequence>\n");
+                xsdWriter.write("              <xs:element ref=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\""
+                        + maxOccurs + "\"/>\n");
+                xsdWriter.write("            </xs:sequence>\n");
+                xsdWriter.write("          </xs:complexType>\n");
+                xsdWriter.write("        </xs:element>\n");
             }
-            xsdWriter.write("\n");
         }
 
-        xsdWriter.write("      </xs:documentation>\n");
-        xsdWriter.write("    </xs:annotation>\n");
-        xsdWriter.write("  </xs:complexType>\n\n");
+        xsdWriter.write("      </xs:sequence>\n");
+        xsdWriter.write("    </xs:complexType>\n");
+        xsdWriter.write("  </xs:element>\n\n");
 
         // Recursively process referenced classes
         for (DOSchemaField field : schemaClass.getFields()) {
@@ -640,10 +674,24 @@ public class XMLExportEngine {
     }
 
     /**
-     * Converts a fully qualified class name to an XSD type name.
+     * Maps Java types to XSD types.
      */
-    private String getTypeNameFromClass(String className) {
-        return className.replace(".", "_") + "Type";
+    private String getXSDType(String javaType) {
+        if (javaType.equals("java.lang.String"))
+            return "xs:string";
+        if (javaType.equals("java.lang.Integer") || javaType.equals("int"))
+            return "xs:int";
+        if (javaType.equals("java.lang.Long") || javaType.equals("long"))
+            return "xs:long";
+        if (javaType.equals("java.lang.Boolean") || javaType.equals("boolean"))
+            return "xs:boolean";
+        if (javaType.equals("java.lang.Double") || javaType.equals("double"))
+            return "xs:double";
+        if (javaType.equals("java.lang.Float") || javaType.equals("float"))
+            return "xs:float";
+        if (javaType.equals("java.util.Date"))
+            return "xs:dateTime";
+        return "xs:string"; // Default to string for unknown types
     }
 
     /**
