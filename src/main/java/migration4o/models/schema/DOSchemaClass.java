@@ -8,20 +8,20 @@ import migration4o.models.DOReference;
 import migration4o.models.database.DODatabaseClass;
 
 public class DOSchemaClass {
-    private String source;
-    private String destinationName;
-    private String parentClassName;
-    private boolean migrate;
-    private String title;
-    private String description;
-    private DOSchemaField[] fields;
-    private DOSchemaReference[] schemaReferences;
-    private final List<DOReference> referenceList;
-    private DODatabaseClass databaseClass;
-    private long[] objectIds; // Object IDs from database
-    private long[] uniqueObjectIds; // Unique object IDs after deduplication
-    private long[] reachedObjectIds; // Object IDs reached during reach analysis
-    private String pointsTo; // For IDEntite classes: the target class name this points to
+    public String source;
+    public String destinationName;
+    public String parentClassName;
+    public boolean migrate;
+    public String title;
+    public String description;
+    public DOSchemaField[] fields;
+    public DOSchemaReference[] schemaReferences;
+    public List<DOReference> referenceList;
+    public DODatabaseClass databaseClass;
+    public long[] objectIds; // Object IDs from database
+    public long[] uniqueObjectIds; // Unique object IDs after deduplication
+    public long[] reachedObjectIds; // Object IDs reached during reach analysis
+    public String pointsTo; // For IDEntite classes: the target class name this points to
 
     public DOSchemaClass(String source, String destinationName, String parentClassName,
             boolean migrate, String title, DOSchemaField[] fields) {

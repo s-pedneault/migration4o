@@ -4,20 +4,20 @@ package migration4o.models.schema;
 import migration4o.models.database.DODatabaseClass;
 
 public class DOSchemaField {
-    private final String source;
-    private final String destinationName;
-    private final String type;
-    private final boolean isExported;
-    private final boolean skipIfEmpty;
-    private final boolean isCollection;
-    private final boolean embedContents;
-    private final String childrenType;
-    private final String title;
-    private final String description;
-    private final String pointsTo;
+    public String source;
+    public String destinationName;
+    public String type;
+    public boolean isExported;
+    public boolean skipIfEmpty;
+    public boolean isCollection;
+    public boolean embedContents;
+    public String childrenType;
+    public String title;
+    public String description;
+    public String pointsTo;
 
-    private DODatabaseClass databaseClass;
-    private DOSchemaClass childrenSchemaClass;
+    public DODatabaseClass databaseClass;
+    public DOSchemaClass childrenSchemaClass;
 
     public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
             boolean isCollection, boolean embedContents,

@@ -1,4 +1,7 @@
+
 package migration4o.ui.schema;
+
+import migration4o.ui.schema.MigrationStructureUtils;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -395,18 +398,18 @@ public class MigrationStructurePanel extends JPanel {
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
                 // Add to Exported section
-                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     exportedEntities.add(schemaClass);
-                } else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                } else if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteParam", schema)) {
                     exportedParams.add(schemaClass);
                 } else {
                     exportedOthers.add(schemaClass);
                 }
             } else {
                 // Add to Available section
-                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     availableEntities.add(schemaClass);
-                } else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                } else if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteParam", schema)) {
                     availableParams.add(schemaClass);
                 } else {
                     availableOthers.add(schemaClass);
@@ -435,7 +438,7 @@ public class MigrationStructurePanel extends JPanel {
         Map<String, java.util.List<DOSchemaClass>> packageMap = new TreeMap<>();
 
         for (DOSchemaClass schemaClass : classes) {
-            String packageName = getPackageName(schemaClass.getAbsoluteName());
+            String packageName = MigrationStructureUtils.getPackageName(schemaClass.getAbsoluteName());
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -449,7 +452,7 @@ public class MigrationStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> getSimpleName(c.getAbsoluteName())));
+            packageClasses.sort(Comparator.comparing(c -> MigrationStructureUtils.getSimpleName(c.getAbsoluteName())));
 
             // Add classes to package node
             for (DOSchemaClass schemaClass : packageClasses) {
@@ -458,14 +461,6 @@ public class MigrationStructurePanel extends JPanel {
                 packageNode.add(treeNode);
             }
         }
-    }
-
-    private String getPackageName(String absoluteName) {
-        int lastDot = absoluteName.lastIndexOf('.');
-        if (lastDot > 0) {
-            return absoluteName.substring(0, lastDot);
-        }
-        return "(default package)";
     }
 
     private void refreshAvailableTree() {
@@ -491,18 +486,18 @@ public class MigrationStructurePanel extends JPanel {
         for (DOSchemaClass schemaClass : sourceSchema.getClasses()) {
             if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
                 // Add to Exported section
-                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     exportedEntities.add(schemaClass);
-                } else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                } else if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteParam", schema)) {
                     exportedParams.add(schemaClass);
                 } else {
                     exportedOthers.add(schemaClass);
                 }
             } else {
                 // Add to Available section
-                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     availableEntities.add(schemaClass);
-                } else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                } else if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteParam", schema)) {
                     availableParams.add(schemaClass);
                 } else {
                     availableOthers.add(schemaClass);
@@ -661,7 +656,7 @@ public class MigrationStructurePanel extends JPanel {
 
         Object[] options = modules.toArray();
         Object selected = JOptionPane.showInputDialog(this,
-                "Select module for " + getSimpleName(schemaClass.getAbsoluteName()),
+                "Select module for " + MigrationStructureUtils.getSimpleName(schemaClass.getAbsoluteName()),
                 "Add to Module",
                 JOptionPane.QUESTION_MESSAGE,
                 null,
@@ -678,7 +673,8 @@ public class MigrationStructurePanel extends JPanel {
         // Check if already exported
         if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
             JOptionPane.showMessageDialog(this,
-                    "Class '" + getSimpleName(schemaClass.getAbsoluteName()) + "' is already in the export structure.",
+                    "Class '" + MigrationStructureUtils.getSimpleName(schemaClass.getAbsoluteName())
+                            + "' is already in the export structure.",
                     "Already Exported",
                     JOptionPane.INFORMATION_MESSAGE);
             return;
@@ -741,37 +737,6 @@ public class MigrationStructurePanel extends JPanel {
         refreshAvailableTree();
     }
 
-    private boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName) {
-        if (schemaClass == null || ancestorClassName == null) {
-            return false;
-        }
-
-        String currentClassName = schemaClass.getAbsoluteName();
-        if (currentClassName.equals(ancestorClassName)) {
-            return true;
-        }
-
-        String parentClassName = schemaClass.getParentClass();
-        if (parentClassName == null || parentClassName.isEmpty()) {
-            return false;
-        }
-
-        if (parentClassName.equals(ancestorClassName)) {
-            return true;
-        }
-
-        // Look up parent class and recurse
-        if (schema != null && schema.getClasses() != null) {
-            for (DOSchemaClass candidate : schema.getClasses()) {
-                if (candidate.getAbsoluteName().equals(parentClassName)) {
-                    return isDescendantOf(candidate, ancestorClassName);
-                }
-            }
-        }
-
-        return false;
-    }
-
     private boolean isClassNode(DefaultMutableTreeNode node) {
         return node.getUserObject() instanceof ClassNode;
     }
@@ -798,13 +763,6 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         return null;
-    }
-
-    private String getSimpleName(String absoluteName) {
-        if (absoluteName.contains(".")) {
-            return absoluteName.substring(absoluteName.lastIndexOf('.') + 1);
-        }
-        return absoluteName;
     }
 
     /**
@@ -863,7 +821,7 @@ public class MigrationStructurePanel extends JPanel {
 
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String className = schemaClass.getAbsoluteName();
-        String simpleName = getSimpleName(className);
+        String simpleName = MigrationStructureUtils.getSimpleName(className);
 
         // Ask user for output file
         JFileChooser fileChooser = new JFileChooser("output/migration");
@@ -1364,7 +1322,7 @@ public class MigrationStructurePanel extends JPanel {
     /**
      * Inner class to represent a class node with proper display
      */
-    private static class ClassNode {
+    public static class ClassNode {
         private DOSchemaClass schemaClass;
 
         public ClassNode(DOSchemaClass schemaClass) {
@@ -1393,7 +1351,7 @@ public class MigrationStructurePanel extends JPanel {
     /**
      * Inner class to represent a module with name and ID
      */
-    private static class ModuleNode {
+    public static class ModuleNode {
         private String name;
         private String id;
 
