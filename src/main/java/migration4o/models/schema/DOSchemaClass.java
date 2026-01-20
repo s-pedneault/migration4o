@@ -23,42 +23,8 @@ public class DOSchemaClass {
     public long[] reachedObjectIds; // Object IDs reached during reach analysis
     public String pointsTo; // For IDEntite classes: the target class name this points to
 
-    public DOSchemaClass(String source, String destinationName, String parentClassName,
-            boolean migrate, String title, DOSchemaField[] fields) {
-        this(source, destinationName, null, title, parentClassName, fields, null, migrate, null, null);
-    }
-
-    public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
-            String parentClassName,
-            DOSchemaField[] fields, String exportName) {
-        this(absoluteName, exportName != null ? exportName : simpleName, description, title,
-                parentClassName, fields, null, true, null, null);
-    }
-
-    public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
-            String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate) {
-        this(absoluteName, simpleName, description, title, parentClassName, fields, schemaReferences, migrate, null,
-                null);
-    }
-
-    public DOSchemaClass(String absoluteName, String simpleName, String description, String title,
-            String parentClassName, DOSchemaField[] fields, DOSchemaReference[] schemaReferences, boolean migrate,
-            long[] objectIds, String pointsTo) {
-        this.source = absoluteName;
-        this.destinationName = simpleName;
-        this.description = description;
-        this.parentClassName = parentClassName;
-        this.migrate = migrate;
-        this.title = title;
-        this.fields = fields != null ? fields : new DOSchemaField[0];
-        this.schemaReferences = schemaReferences != null ? schemaReferences : new DOSchemaReference[0];
-        this.referenceList = new ArrayList<>();
-        this.objectIds = objectIds;
-        // Initialize uniqueObjectIds as a copy of objectIds (will be deduplicated later
-        // if needed)
-        this.uniqueObjectIds = objectIds != null ? objectIds.clone() : null;
-        this.reachedObjectIds = new long[0]; // Start with empty array
-        this.pointsTo = pointsTo;
+    public DOSchemaClass() {
+        // All fields are public and default to null/false
     }
 
     public String getSourceName() {

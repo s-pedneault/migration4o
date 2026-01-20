@@ -123,15 +123,15 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         // Create a new class copying all properties from the source
-        DOSchemaClass newClass = new DOSchemaClass(
-                sourceClass.getSourceName(),
-                sourceClass.getDestinationName(),
-                sourceClass.getDescription(),
-                sourceClass.getTitle(),
-                sourceClass.getParentClass(),
-                sourceClass.getFields() != null ? sourceClass.getFields().clone() : new DOSchemaField[0],
-                sourceClass.getSchemaReferences(),
-                sourceClass.isMigrate());
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = sourceClass.getSourceName();
+        newClass.destinationName = sourceClass.getDestinationName();
+        newClass.description = sourceClass.getDescription();
+        newClass.title = sourceClass.getTitle();
+        newClass.parentClassName = sourceClass.getParentClass();
+        newClass.fields = sourceClass.getFields() != null ? sourceClass.getFields().clone() : new DOSchemaField[0];
+        newClass.schemaReferences = sourceClass.getSchemaReferences();
+        newClass.migrate = sourceClass.isMigrate();
 
         // Create new schema with the added class
         DOSchemaClass[] existingClasses = schema.getClasses();
@@ -243,15 +243,15 @@ public class SchemaEditorPanel extends JPanel {
         newFields[oldFields.length] = field;
 
         // Create new class with updated fields
-        DOSchemaClass newClass = new DOSchemaClass(
-                targetClass.getSourceName(),
-                targetClass.getDestinationName(),
-                targetClass.getDescription(),
-                targetClass.getTitle(),
-                targetClass.getParentClass(),
-                newFields,
-                targetClass.getSchemaReferences(),
-                targetClass.isMigrate());
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = targetClass.getSourceName();
+        newClass.destinationName = targetClass.getDestinationName();
+        newClass.description = targetClass.getDescription();
+        newClass.title = targetClass.getTitle();
+        newClass.parentClassName = targetClass.getParentClass();
+        newClass.fields = newFields;
+        newClass.schemaReferences = targetClass.getSchemaReferences();
+        newClass.migrate = targetClass.isMigrate();
 
         // Replace the class in the schema
         classes[classIndex] = newClass;
@@ -1416,8 +1416,17 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         // Create a new empty field
-        DOSchemaField newField = new DOSchemaField("", "", "java.lang.String", true, true, false, false, "", null,
-                null);
+        DOSchemaField newField = new DOSchemaField();
+        newField.source = "";
+        newField.destinationName = "";
+        newField.type = "java.lang.String";
+        newField.isExported = true;
+        newField.skipIfEmpty = true;
+        newField.isCollection = false;
+        newField.embedContents = false;
+        newField.childrenType = "";
+        newField.databaseClass = null;
+        newField.childrenSchemaClass = null;
 
         // Show field editor dialog
         Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -1435,20 +1444,20 @@ public class SchemaEditorPanel extends JPanel {
             }
 
             // Create the new field object with all properties
-            DOSchemaField newFieldWithData = new DOSchemaField(
-                    dialog.getFieldSource(),
-                    dialog.getFieldDestination(),
-                    dialog.getFieldType(),
-                    dialog.isFieldExported(),
-                    dialog.isFieldSkipIfEmpty(),
-                    dialog.isFieldCollection(),
-                    dialog.isFieldEmbedContents(),
-                    dialog.getFieldChildrenType(),
-                    dialog.getFieldTitle(),
-                    dialog.getFieldDescription(),
-                    dialog.getFieldPointsTo(),
-                    null,
-                    null);
+            DOSchemaField newFieldWithData = new DOSchemaField();
+            newFieldWithData.source = dialog.getFieldSource();
+            newFieldWithData.destinationName = dialog.getFieldDestination();
+            newFieldWithData.type = dialog.getFieldType();
+            newFieldWithData.isExported = dialog.isFieldExported();
+            newFieldWithData.skipIfEmpty = dialog.isFieldSkipIfEmpty();
+            newFieldWithData.isCollection = dialog.isFieldCollection();
+            newFieldWithData.embedContents = dialog.isFieldEmbedContents();
+            newFieldWithData.childrenType = dialog.getFieldChildrenType();
+            newFieldWithData.title = dialog.getFieldTitle();
+            newFieldWithData.description = dialog.getFieldDescription();
+            newFieldWithData.pointsTo = dialog.getFieldPointsTo();
+            newFieldWithData.databaseClass = null;
+            newFieldWithData.childrenSchemaClass = null;
 
             // Add the new field to the table
             Object[] rowData = {
@@ -1544,16 +1553,15 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         // Create a new class with minimal fields
-        DOSchemaClass newClass = new DOSchemaClass(
-                className, // absoluteName
-                className, // simpleName (use same name)
-                null, // description
-                null, // title
-                null, // parentClassName
-                new DOSchemaField[0], // empty fields array
-                null, // schemaReferences
-                true // migrate
-        );
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = className;
+        newClass.destinationName = className;
+        newClass.description = null;
+        newClass.title = null;
+        newClass.parentClassName = null;
+        newClass.fields = new DOSchemaField[0];
+        newClass.schemaReferences = null;
+        newClass.migrate = true;
 
         // Create new schema with the added class
         DOSchemaClass[] existingClasses = schema.getClasses();
@@ -1619,33 +1627,33 @@ public class SchemaEditorPanel extends JPanel {
                 pointsTo = originalField.getPointsTo();
             }
 
-            newFields[i] = new DOSchemaField(
-                    source != null ? source : "",
-                    destination != null ? destination : "",
-                    type != null ? type : "",
-                    exported != null ? exported : false,
-                    skipIfEmpty != null ? skipIfEmpty : true,
-                    collection != null ? collection : false,
-                    embedContents != null ? embedContents : false,
-                    childrenType != null ? childrenType : "",
-                    title,
-                    description,
-                    pointsTo,
-                    null, // databaseClass
-                    null // childrenSchemaClass
-            );
+            DOSchemaField field = new DOSchemaField();
+            field.source = source != null ? source : "";
+            field.destinationName = destination != null ? destination : "";
+            field.type = type != null ? type : "";
+            field.isExported = exported != null ? exported : false;
+            field.skipIfEmpty = skipIfEmpty != null ? skipIfEmpty : true;
+            field.isCollection = collection != null ? collection : false;
+            field.embedContents = embedContents != null ? embedContents : false;
+            field.childrenType = childrenType != null ? childrenType : "";
+            field.title = title;
+            field.description = description;
+            field.pointsTo = pointsTo;
+            field.databaseClass = null;
+            field.childrenSchemaClass = null;
+            newFields[i] = field;
         }
 
         // Create new class with updated fields
-        DOSchemaClass newClass = new DOSchemaClass(
-                oldClass.getSourceName(),
-                oldClass.getDestinationName(),
-                oldClass.getDescription(),
-                oldClass.getTitle(),
-                oldClass.getParentClass(),
-                newFields,
-                oldClass.getSchemaReferences(),
-                oldClass.isMigrate());
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = oldClass.getSourceName();
+        newClass.destinationName = oldClass.getDestinationName();
+        newClass.description = oldClass.getDescription();
+        newClass.title = oldClass.getTitle();
+        newClass.parentClassName = oldClass.getParentClass();
+        newClass.fields = newFields;
+        newClass.schemaReferences = oldClass.getSchemaReferences();
+        newClass.migrate = oldClass.isMigrate();
 
         // Replace the class in the schema
         if (schema != null && schema.getClasses() != null) {

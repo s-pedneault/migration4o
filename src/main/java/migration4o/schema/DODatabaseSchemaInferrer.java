@@ -111,17 +111,18 @@ public class DODatabaseSchemaInferrer {
         long[] objectIds = dbClass.getObjectIds();
 
         // Create schema class - all database classes are marked as migrate=true
-        return new DOSchemaClass(
-                absoluteName,
-                simpleName,
-                description,
-                title,
-                parentClassName,
-                schemaFields,
-                null, // schemaReferences - not available from database
-                true, // migrate - assume all database classes should be migrated
-                objectIds,
-                null); // pointsTo - not available from database inference
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = absoluteName;
+        newClass.destinationName = simpleName;
+        newClass.description = description;
+        newClass.title = title;
+        newClass.parentClassName = parentClassName;
+        newClass.fields = schemaFields;
+        newClass.schemaReferences = null;
+        newClass.migrate = true;
+        newClass.objectIds = objectIds;
+        newClass.pointsTo = null;
+        return newClass;
     }
 
     /**
@@ -171,20 +172,21 @@ public class DODatabaseSchemaInferrer {
         boolean embedContents = false; // Default - don't embed
         String childrenType = determineChildrenType(dbField, databaseClassMap, container, className);
 
-        return new DOSchemaField(
-                source,
-                destination,
-                type,
-                isExported,
-                skipIfEmpty,
-                isCollection,
-                embedContents,
-                childrenType,
-                null, // title
-                dbField.getDescription(),
-                null, // databaseClass - will be linked later
-                null // childrenSchemaClass - will be linked later
-        );
+        DOSchemaField field = new DOSchemaField();
+        field.source = source;
+        field.destinationName = destination;
+        field.type = type;
+        field.isExported = isExported;
+        field.skipIfEmpty = skipIfEmpty;
+        field.isCollection = isCollection;
+        field.embedContents = embedContents;
+        field.childrenType = childrenType;
+        field.title = null;
+        field.description = dbField.getDescription();
+        field.pointsTo = null;
+        field.databaseClass = null; // will be linked later
+        field.childrenSchemaClass = null; // will be linked later
+        return field;
     }
 
     /**

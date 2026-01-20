@@ -19,47 +19,7 @@ public class DOSchemaField {
     public DODatabaseClass databaseClass;
     public DOSchemaClass childrenSchemaClass;
 
-    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
-            boolean isCollection, boolean embedContents,
-            String childrenType,
-            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
-        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
-                childrenType, null, null, null, databaseClass, childrenSchemaClass);
-    }
-
-    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
-            boolean isCollection, boolean embedContents,
-            String childrenType, String description,
-            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
-        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
-                childrenType, null, description, null, databaseClass, childrenSchemaClass);
-    }
-
-    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
-            boolean isCollection, boolean embedContents,
-            String childrenType, String title, String description,
-            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
-        this(source, destinationName, type, isExported, skipIfEmpty, isCollection, embedContents,
-                childrenType, title, description, null, databaseClass, childrenSchemaClass);
-    }
-
-    public DOSchemaField(String source, String destinationName, String type, boolean isExported, boolean skipIfEmpty,
-            boolean isCollection, boolean embedContents,
-            String childrenType, String title, String description, String pointsTo,
-            DODatabaseClass databaseClass, DOSchemaClass childrenSchemaClass) {
-        this.source = source;
-        this.destinationName = destinationName;
-        this.type = type;
-        this.isExported = isExported;
-        this.skipIfEmpty = skipIfEmpty;
-        this.isCollection = isCollection;
-        this.embedContents = embedContents;
-        this.childrenType = childrenType;
-        this.title = title;
-        this.description = description;
-        this.pointsTo = pointsTo;
-        this.databaseClass = databaseClass;
-        this.childrenSchemaClass = childrenSchemaClass;
+    public DOSchemaField() {
     }
 
     public String getSource() {

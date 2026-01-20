@@ -116,8 +116,17 @@ public class DODatabaseSchemaReader {
         DOSchemaReference[] references = referenceList.toArray(new DOSchemaReference[0]);
 
         // Create new constructor that accepts references and pointsTo
-        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClassName, fields, references,
-                migrate, null, pointsToValue);
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = absoluteName;
+        newClass.destinationName = simpleName;
+        newClass.description = description;
+        newClass.title = title;
+        newClass.parentClassName = parentClassName;
+        newClass.fields = fields;
+        newClass.schemaReferences = references;
+        newClass.migrate = migrate;
+        newClass.pointsTo = pointsToValue;
+        return newClass;
     }
 
     private DOSchemaField parseField(Element fieldElement) {
@@ -141,10 +150,21 @@ public class DODatabaseSchemaReader {
         // Children class name
         String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
 
-        return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
-                isCollection, isEmbedContents, childrenClassName,
-                title.isEmpty() ? null : title,
-                description.isEmpty() ? null : description, null, null);
+        DOSchemaField field = new DOSchemaField();
+        field.source = source;
+        field.destinationName = destinationName;
+        field.type = type;
+        field.isExported = isExported;
+        field.skipIfEmpty = isSkipIfEmpty;
+        field.isCollection = isCollection;
+        field.embedContents = isEmbedContents;
+        field.childrenType = childrenClassName;
+        field.title = title.isEmpty() ? null : title;
+        field.description = description.isEmpty() ? null : description;
+        field.pointsTo = null;
+        field.databaseClass = null;
+        field.childrenSchemaClass = null;
+        return field;
     }
 
     private String getSimpleClassName(String absoluteName) {

@@ -775,19 +775,19 @@ public class SchemaComparisonPanel extends JPanel {
 
         if (dialog != null && dialog.isOkClicked()) {
             // Create new field with updated values (fields are immutable)
-            DOSchemaField newField = new DOSchemaField(
-                    dialog.getFieldSource(),
-                    dialog.getFieldDestination(),
-                    dialog.getFieldType(),
-                    dialog.isFieldExported(),
-                    dialog.isFieldSkipIfEmpty(),
-                    dialog.isFieldCollection(),
-                    dialog.isFieldEmbedContents(),
-                    dialog.getFieldChildrenType(),
-                    dialog.getFieldTitle(),
-                    dialog.getFieldDescription(),
-                    oldField.getDatabaseClass(),
-                    oldField.getChildrenSchemaClass());
+            DOSchemaField newField = new DOSchemaField();
+            newField.source = dialog.getFieldSource();
+            newField.destinationName = dialog.getFieldDestination();
+            newField.type = dialog.getFieldType();
+            newField.isExported = dialog.isFieldExported();
+            newField.skipIfEmpty = dialog.isFieldSkipIfEmpty();
+            newField.isCollection = dialog.isFieldCollection();
+            newField.embedContents = dialog.isFieldEmbedContents();
+            newField.childrenType = dialog.getFieldChildrenType();
+            newField.title = dialog.getFieldTitle();
+            newField.description = dialog.getFieldDescription();
+            newField.databaseClass = oldField.getDatabaseClass();
+            newField.childrenSchemaClass = oldField.getChildrenSchemaClass();
 
             // Replace the field in the class's field array
             DOSchemaField[] oldFields = oldClass.getFields();
@@ -801,15 +801,15 @@ public class SchemaComparisonPanel extends JPanel {
             }
 
             // Create new class with updated fields array
-            DOSchemaClass newClass = new DOSchemaClass(
-                    oldClass.getSourceName(),
-                    oldClass.getDestinationName(),
-                    oldClass.getDescription(),
-                    oldClass.getTitle(),
-                    oldClass.getParentClass(),
-                    newFields,
-                    oldClass.getSchemaReferences(),
-                    oldClass.isMigrate());
+            DOSchemaClass newClass = new DOSchemaClass();
+            newClass.source = oldClass.getSourceName();
+            newClass.destinationName = oldClass.getDestinationName();
+            newClass.description = oldClass.getDescription();
+            newClass.title = oldClass.getTitle();
+            newClass.parentClassName = oldClass.getParentClass();
+            newClass.fields = newFields;
+            newClass.schemaReferences = oldClass.getSchemaReferences();
+            newClass.migrate = oldClass.isMigrate();
 
             // Replace the class in the schema
             DOSchemaClass[] classes = referenceSchema.getClasses();

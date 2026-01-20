@@ -111,8 +111,15 @@ public class DOSchemaReader {
 
         DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
 
-        return new DOSchemaClass(absoluteName, simpleName, description, title, parentClassName, fields,
-                exportName);
+        DOSchemaClass newClass = new DOSchemaClass();
+        newClass.source = absoluteName;
+        newClass.destinationName = simpleName;
+        newClass.description = description;
+        newClass.title = title;
+        newClass.parentClassName = parentClassName;
+        newClass.fields = fields;
+        // newClass.exportName = exportName; // No exportName field in DOSchemaClass
+        return newClass;
     }
 
     private DOSchemaField parseField(Element fieldElement) {
@@ -140,8 +147,21 @@ public class DOSchemaReader {
 
         String childrenClassName = !childrenClass.isEmpty() ? childrenClass : (!children.isEmpty() ? children : null);
 
-        return new DOSchemaField(source, destinationName, type, isExported, isSkipIfEmpty,
-                isCollection, isEmbedContents, childrenClassName, null, null);
+        DOSchemaField field = new DOSchemaField();
+        field.source = source;
+        field.destinationName = destinationName;
+        field.type = type;
+        field.isExported = isExported;
+        field.skipIfEmpty = isSkipIfEmpty;
+        field.isCollection = isCollection;
+        field.embedContents = isEmbedContents;
+        field.childrenType = childrenClassName;
+        field.title = null;
+        field.description = null;
+        field.pointsTo = null;
+        field.databaseClass = null;
+        field.childrenSchemaClass = null;
+        return field;
     }
 
     private DOSchemaClass[] extractAllClasses(DOSchemaModule[] modules, DOSchemaClass[] foundationClasses) {
