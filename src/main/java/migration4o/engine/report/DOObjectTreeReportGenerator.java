@@ -449,18 +449,18 @@ public class DOObjectTreeReportGenerator {
         int unreachableObjects = 0;
 
         for (DOSchemaClass clazz : schema.getClasses()) {
-            if (clazz.getDatabaseClass() != null) {
-                DODatabaseObject[] resolved = clazz.getDatabaseClass().getResolvedObjects();
+            if (clazz.databaseClass != null) {
+                DODatabaseObject[] resolved = clazz.databaseClass.getResolvedObjects();
                 if (resolved != null) {
                     totalObjects += resolved.length;
                 }
 
-                DODatabaseObject[] reachable = clazz.getDatabaseClass().getReachableObjects();
+                DODatabaseObject[] reachable = clazz.databaseClass.getReachableObjects();
                 if (reachable != null) {
                     reachableObjects += reachable.length;
                 }
 
-                DODatabaseObject[] orphaned = clazz.getDatabaseClass().getOrphanedObjects();
+                DODatabaseObject[] orphaned = clazz.databaseClass.getOrphanedObjects();
                 if (orphaned != null) {
                     unreachableObjects += orphaned.length;
                 }
@@ -529,8 +529,8 @@ public class DOObjectTreeReportGenerator {
         // Count objects in this module
         int totalObjectsInModule = 0;
         for (DOSchemaClass clazz : moduleClasses) {
-            if (clazz.getDatabaseClass() != null && clazz.getDatabaseClass().getReachableObjects() != null) {
-                totalObjectsInModule += clazz.getDatabaseClass().getReachableObjects().length;
+            if (clazz.databaseClass != null && clazz.databaseClass.getReachableObjects() != null) {
+                totalObjectsInModule += clazz.databaseClass.getReachableObjects().length;
             }
         }
 
@@ -547,8 +547,8 @@ public class DOObjectTreeReportGenerator {
 
         // Generate tree for each class in the module, including those with 0 objects
         for (DOSchemaClass clazz : moduleClasses) {
-            if (clazz.getDatabaseClass() != null) {
-                DODatabaseObject[] reachableObjects = clazz.getDatabaseClass().getReachableObjects();
+            if (clazz.databaseClass != null) {
+                DODatabaseObject[] reachableObjects = clazz.databaseClass.getReachableObjects();
                 if (reachableObjects != null && reachableObjects.length > 0) {
                     generateClassTree(html, clazz, reachableObjects, schema, visitedObjects, depth);
                 } else {
@@ -572,7 +572,9 @@ public class DOObjectTreeReportGenerator {
         html.openTag("span", "class", "tree-toggle");
         html.inlineText("+");
         html.closeTag("span");
-        html.element("span", escapeHtml(clazz.getShortName()), "class", "class-name");
+        String shortName = clazz.source.contains(".") ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
+        html.element("span", escapeHtml(shortName), "class", "class-name");
         html.element("span", " (" + objects.length + " objects)", "class", "object-count");
         html.closeTag("div");
 
@@ -782,8 +784,8 @@ public class DOObjectTreeReportGenerator {
         DOSchemaClass[] schemaClasses = schema.getClasses();
         if (schemaClasses != null) {
             for (DOSchemaClass schemaClass : schemaClasses) {
-                if (schemaClass.getDatabaseClass() != null) {
-                    DODatabaseObject[] resolvedObjects = schemaClass.getDatabaseClass().getResolvedObjects();
+                if (schemaClass.databaseClass != null) {
+                    DODatabaseObject[] resolvedObjects = schemaClass.databaseClass.getResolvedObjects();
                     if (resolvedObjects != null) {
                         for (DODatabaseObject obj : resolvedObjects) {
                             if (obj != null) {
@@ -815,10 +817,10 @@ public class DOObjectTreeReportGenerator {
 
         // Check schema classes
         for (DOSchemaClass clazz : schema.getClasses()) {
-            if (clazz.getDatabaseClass() != null) {
-                DODatabaseObject[] orphaned = clazz.getDatabaseClass().getOrphanedObjects();
+            if (clazz.databaseClass != null) {
+                DODatabaseObject[] orphaned = clazz.databaseClass.getOrphanedObjects();
                 if (orphaned != null && orphaned.length > 0) {
-                    unreachableByClass.put(clazz.getAbsoluteName(), Arrays.asList(orphaned));
+                    unreachableByClass.put(clazz.source, Arrays.asList(orphaned));
                     totalUnreachable += orphaned.length;
                 }
             }
@@ -828,7 +830,7 @@ public class DOObjectTreeReportGenerator {
         for (DODatabaseClass dbClass : database.getClasses()) {
             boolean hasSchemaMapping = false;
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass.getDatabaseClass() == dbClass) {
+                if (schemaClass.databaseClass == dbClass) {
                     hasSchemaMapping = true;
                     break;
                 }
@@ -920,7 +922,9 @@ public class DOObjectTreeReportGenerator {
         html.openTag("span", "class", "tree-toggle");
         html.inlineText("○"); // Empty circle for empty classes
         html.closeTag("span");
-        html.element("span", escapeHtml(clazz.getShortName()) + " (0 objects)", "class", "class-name empty-class");
+        String shortName = clazz.source.contains(".") ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
+        html.element("span", escapeHtml(shortName) + " (0 objects)", "class", "class-name empty-class");
         html.closeTag("div");
         html.closeTag("div");
     }
@@ -931,7 +935,9 @@ public class DOObjectTreeReportGenerator {
         html.openTag("span", "class", "tree-toggle");
         html.inlineText("◌"); // Hollow circle for schema-only classes
         html.closeTag("span");
-        html.element("span", escapeHtml(clazz.getShortName()) + " (not in database)", "class",
+        String shortName = clazz.source.contains(".") ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
+        html.element("span", escapeHtml(shortName) + " (not in database)", "class",
                 "class-name schema-only");
         html.closeTag("div");
         html.closeTag("div");

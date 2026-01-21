@@ -179,24 +179,36 @@ public class SchemaComparison {
         Map<String, DOSchemaClass> map = new HashMap<>();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                String key = schemaClass.getSourceName();
+                String key = schemaClass.source;
 
                 // Debug ParamConfig specifically
-                if ("ParamConfig".equals(schemaClass.getShortName())) {
+                if ("ParamConfig".equals(schemaClass.destinationName)) {
+                    String shortName1 = schemaClass.source != null && schemaClass.source.contains(".")
+                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
+                            : schemaClass.source;
                     System.out.println("DEBUG buildClassMap: Found ParamConfig - source='" + key + "', dest='" +
-                            schemaClass.getShortName() + "'");
+                            shortName1 + "'");
                 }
 
                 // Skip classes with null or empty source name
                 if (key == null || key.trim().isEmpty()) {
+                    String shortName2 = schemaClass.source != null && schemaClass.source.contains(".")
+                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
+                            : schemaClass.source;
                     System.out.println(
-                            "WARNING: Skipping class with null/empty source name: " + schemaClass.getShortName());
+                            "WARNING: Skipping class with null/empty source name: " + shortName2);
                     continue;
                 }
 
                 if (map.containsKey(key)) {
+                    String shortName3 = map.get(key).source != null && map.get(key).source.contains(".")
+                            ? map.get(key).source.substring(map.get(key).source.lastIndexOf('.') + 1)
+                            : map.get(key).source;
+                    String shortName4 = schemaClass.source != null && schemaClass.source.contains(".")
+                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
+                            : schemaClass.source;
                     System.out.println("WARNING: Duplicate class key '" + key + "' - overwriting " +
-                            map.get(key).getShortName() + " with " + schemaClass.getShortName());
+                            shortName3 + " with " + shortName4);
                 }
                 map.put(key, schemaClass);
             }
@@ -206,8 +218,8 @@ public class SchemaComparison {
 
     private Map<String, DOSchemaField> buildFieldMap(DOSchemaClass schemaClass) {
         Map<String, DOSchemaField> map = new HashMap<>();
-        if (schemaClass.getFields() != null) {
-            for (DOSchemaField field : schemaClass.getFields()) {
+        if (schemaClass.fields != null) {
+            for (DOSchemaField field : schemaClass.fields) {
                 map.put(field.source, field);
             }
         }

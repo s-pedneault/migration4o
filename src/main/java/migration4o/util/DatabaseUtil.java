@@ -51,7 +51,7 @@ public class DatabaseUtil {
         }
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (className.equals(schemaClass.getAbsoluteName())) {
+            if (className.equals(schemaClass.source)) {
                 return schemaClass;
             }
         }
@@ -62,11 +62,11 @@ public class DatabaseUtil {
      * Finds a schema field by its name within a schema class.
      */
     public static DOSchemaField findSchemaFieldByName(DOSchemaClass schemaClass, String fieldName) {
-        if (schemaClass == null || schemaClass.getFields() == null) {
+        if (schemaClass == null || schemaClass.fields == null) {
             return null;
         }
 
-        for (DOSchemaField field : schemaClass.getFields()) {
+        for (DOSchemaField field : schemaClass.fields) {
             if (fieldName.equals(field.source)) {
                 return field;
             }

@@ -231,7 +231,7 @@ public class ReachabilityReportGenerator {
             int totalModuleObjects = 0;
 
             for (DOSchemaClass schemaClass : module.getClasses()) {
-                String className = schemaClass.getAbsoluteName();
+                String className = schemaClass.source;
 
                 // Find matching database class
                 DODatabaseClass dbClass = null;

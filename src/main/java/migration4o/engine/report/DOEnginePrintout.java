@@ -86,8 +86,8 @@ public class DOEnginePrintout {
         for (int i = 0; i < classes.length; i++) {
             DOSchemaClass schemaClass = classes[i];
             System.out.println("[" + (i + 1) + "/" + classes.length + "] Schema Class:");
-            if (schemaClass.getDatabaseClass() != null) {
-                printClass(schemaClass.getDatabaseClass(), "  ");
+            if (schemaClass.databaseClass != null) {
+                printClass(schemaClass.databaseClass, "  ");
             }
 
             // Print schema-specific information
@@ -280,10 +280,10 @@ public class DOEnginePrintout {
         }
 
         System.out.println(indent + "Schema Info:");
-        System.out.println(indent + "  Export Name: " + schemaClass.getExportName());
+        System.out.println(indent + "  Export Name: " + schemaClass.destinationName);
 
         // Check if database class is resolved
-        DODatabaseClass databaseClass = schemaClass.getDatabaseClass();
+        DODatabaseClass databaseClass = schemaClass.databaseClass;
         if (databaseClass != null) {
             System.out.println(indent + "  ✅ Database Class Resolved: " + databaseClass.getAbsoluteName());
             System.out.println(indent + "    Database Objects: " + databaseClass.getTotalObjectCount());

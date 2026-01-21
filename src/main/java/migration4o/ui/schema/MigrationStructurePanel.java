@@ -293,7 +293,7 @@ public class MigrationStructurePanel extends JPanel {
                         if (dtde.getDropAction() == DnDConstants.ACTION_MOVE) {
                             // Find and remove the class from its current module
                             DefaultMutableTreeNode sourceNode = findClassNodeInExportTree(
-                                    schemaClass.getAbsoluteName());
+                                    schemaClass.source);
                             if (sourceNode != null) {
                                 DefaultMutableTreeNode sourceParent = (DefaultMutableTreeNode) sourceNode.getParent();
                                 // Don't move if dropping on the same module
@@ -396,7 +396,7 @@ public class MigrationStructurePanel extends JPanel {
         java.util.List<DOSchemaClass> exportedOthers = new ArrayList<>();
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
+            if (exportedClasses.contains(schemaClass.source)) {
                 // Add to Exported section
                 if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     exportedEntities.add(schemaClass);
@@ -438,7 +438,7 @@ public class MigrationStructurePanel extends JPanel {
         Map<String, java.util.List<DOSchemaClass>> packageMap = new TreeMap<>();
 
         for (DOSchemaClass schemaClass : classes) {
-            String packageName = MigrationStructureUtils.getPackageName(schemaClass.getAbsoluteName());
+            String packageName = MigrationStructureUtils.getPackageName(schemaClass.source);
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -452,7 +452,7 @@ public class MigrationStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> MigrationStructureUtils.getSimpleName(c.getAbsoluteName())));
+            packageClasses.sort(Comparator.comparing(c -> MigrationStructureUtils.getSimpleName(c.source)));
 
             // Add classes to package node
             for (DOSchemaClass schemaClass : packageClasses) {
@@ -484,7 +484,7 @@ public class MigrationStructurePanel extends JPanel {
         // schema
         DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
         for (DOSchemaClass schemaClass : sourceSchema.getClasses()) {
-            if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
+            if (exportedClasses.contains(schemaClass.source)) {
                 // Add to Exported section
                 if (MigrationStructureUtils.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
                     exportedEntities.add(schemaClass);
@@ -616,7 +616,7 @@ public class MigrationStructurePanel extends JPanel {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
             if (child.getUserObject() instanceof ClassNode) {
                 ClassNode classNode = (ClassNode) child.getUserObject();
-                exportedClasses.remove(classNode.getSchemaClass().getAbsoluteName());
+                exportedClasses.remove(classNode.getSchemaClass().source);
             }
         }
         refreshAvailableTree();
@@ -656,7 +656,7 @@ public class MigrationStructurePanel extends JPanel {
 
         Object[] options = modules.toArray();
         Object selected = JOptionPane.showInputDialog(this,
-                "Select module for " + MigrationStructureUtils.getSimpleName(schemaClass.getAbsoluteName()),
+                "Select module for " + MigrationStructureUtils.getSimpleName(schemaClass.source),
                 "Add to Module",
                 JOptionPane.QUESTION_MESSAGE,
                 null,
@@ -671,9 +671,9 @@ public class MigrationStructurePanel extends JPanel {
 
     private void addClassToModule(DOSchemaClass schemaClass, DefaultMutableTreeNode targetModule) {
         // Check if already exported
-        if (exportedClasses.contains(schemaClass.getAbsoluteName())) {
+        if (exportedClasses.contains(schemaClass.source)) {
             JOptionPane.showMessageDialog(this,
-                    "Class '" + MigrationStructureUtils.getSimpleName(schemaClass.getAbsoluteName())
+                    "Class '" + MigrationStructureUtils.getSimpleName(schemaClass.source)
                             + "' is already in the export structure.",
                     "Already Exported",
                     JOptionPane.INFORMATION_MESSAGE);
@@ -686,7 +686,7 @@ public class MigrationStructurePanel extends JPanel {
         targetModule.add(newTreeNode);
 
         // Mark as exported
-        exportedClasses.add(schemaClass.getAbsoluteName());
+        exportedClasses.add(schemaClass.source);
 
         // Refresh trees
         exportModel.reload();
@@ -715,7 +715,7 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
 
         // Remove from exported set
-        exportedClasses.remove(schemaClass.getAbsoluteName());
+        exportedClasses.remove(schemaClass.source);
 
         // Remove from export tree
         DefaultMutableTreeNode parent = (DefaultMutableTreeNode) treeNode.getParent();
@@ -749,7 +749,7 @@ public class MigrationStructurePanel extends JPanel {
     private DefaultMutableTreeNode findClassNodeInTree(DefaultMutableTreeNode node, String className) {
         if (node.getUserObject() instanceof ClassNode) {
             ClassNode classNode = (ClassNode) node.getUserObject();
-            if (classNode.getSchemaClass().getAbsoluteName().equals(className)) {
+            if (classNode.getSchemaClass().source.equals(className)) {
                 return node;
             }
         }
@@ -820,7 +820,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         DOSchemaClass schemaClass = classNode.getSchemaClass();
-        String className = schemaClass.getAbsoluteName();
+        String className = schemaClass.source;
         String simpleName = MigrationStructureUtils.getSimpleName(className);
 
         // Ask user for output file
@@ -960,7 +960,7 @@ public class MigrationStructurePanel extends JPanel {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
             if (child.getUserObject() instanceof ClassNode) {
                 ClassNode classNode = (ClassNode) child.getUserObject();
-                classNames.add(classNode.getSchemaClass().getAbsoluteName());
+                classNames.add(classNode.getSchemaClass().source);
             } else if (child.getUserObject() instanceof ModuleNode) {
                 // Recursively collect from child modules
                 collectClassNamesFromModule(child, classNames);
@@ -1029,7 +1029,7 @@ public class MigrationStructurePanel extends JPanel {
         if (userObject instanceof ClassNode) {
             ClassNode classNode = (ClassNode) userObject;
             // Find the class with updated counts from databaseSchema
-            DOSchemaClass updatedClass = findClassByName(classNode.getSchemaClass().getAbsoluteName());
+            DOSchemaClass updatedClass = findClassByName(classNode.getSchemaClass().source);
             if (updatedClass != null) {
                 // Create new ClassNode with updated class data
                 node.setUserObject(new ClassNode(updatedClass));
@@ -1085,7 +1085,7 @@ public class MigrationStructurePanel extends JPanel {
             DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) children.nextElement();
             if (childNode.getUserObject() instanceof ClassNode) {
                 ClassNode classNode = (ClassNode) childNode.getUserObject();
-                classNames.add(classNode.getSchemaClass().getAbsoluteName());
+                classNames.add(classNode.getSchemaClass().source);
             } else if (childNode.getUserObject() instanceof ModuleNode) {
                 childModules.add(extractModule(childNode));
             }
@@ -1098,7 +1098,7 @@ public class MigrationStructurePanel extends JPanel {
         // Try databaseSchema first if available (has object counts)
         if (databaseSchema != null && databaseSchema.getClasses() != null) {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (schemaClass.getAbsoluteName().equals(className)) {
+                if (schemaClass.source.equals(className)) {
                     return schemaClass;
                 }
             }
@@ -1110,7 +1110,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.getAbsoluteName().equals(className)) {
+            if (schemaClass.source.equals(className)) {
                 return schemaClass;
             }
         }
@@ -1335,11 +1335,11 @@ public class MigrationStructurePanel extends JPanel {
 
         @Override
         public String toString() {
-            String simpleName = schemaClass.getAbsoluteName();
+            String simpleName = schemaClass.source;
             if (simpleName.contains(".")) {
                 simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
             }
-            int objectCount = schemaClass.getUniqueObjectCount();
+            int objectCount = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
             if (objectCount > 0) {
                 return simpleName + " (" + objectCount + " objects)";
             } else {

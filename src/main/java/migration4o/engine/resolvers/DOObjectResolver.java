@@ -401,7 +401,7 @@ public class DOObjectResolver {
         DODatabaseClass resolvedClass = null;
         DOSchemaClass schemaClass = genericObjectResolver.resolveClass(genericObj, schema);
         if (schemaClass != null) {
-            resolvedClass = schemaClass.getDatabaseClass();
+            resolvedClass = schemaClass.databaseClass;
         }
         if (resolvedClass == null) {
             resolvedClass = genericObjectResolver.resolveClass(genericObj, database);

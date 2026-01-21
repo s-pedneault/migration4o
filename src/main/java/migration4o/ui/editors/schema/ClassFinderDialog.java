@@ -136,7 +136,7 @@ public class ClassFinderDialog extends JDialog {
         // Add matching schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                String className = cls.getAbsoluteName();
+                String className = cls.source;
                 if (className.toLowerCase().contains(lowerPattern)) {
                     matches.add(className);
                 }

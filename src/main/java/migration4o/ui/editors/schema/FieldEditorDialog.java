@@ -259,7 +259,9 @@ public class FieldEditorDialog extends JDialog {
         }
 
         for (DOSchemaClass cls : schema.getClasses()) {
-            if (cls.getAbsoluteName().equals(className) || cls.getShortName().equals(className)) {
+            String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
+                    : cls.source;
+            if (cls.source.equals(className) || shortName.equals(className)) {
                 return cls;
             }
         }
@@ -271,7 +273,7 @@ public class FieldEditorDialog extends JDialog {
             return false;
         }
 
-        String currentParent = schemaClass.getParentClass();
+        String currentParent = schemaClass.parentClassName;
         while (currentParent != null && !currentParent.isEmpty() && !currentParent.equals("Undetermined")) {
             if (currentParent.equals(parentClassName)) {
                 return true;
@@ -282,7 +284,7 @@ public class FieldEditorDialog extends JDialog {
             if (parentClass == null) {
                 break;
             }
-            currentParent = parentClass.getParentClass();
+            currentParent = parentClass.parentClassName;
         }
 
         return false;
@@ -310,7 +312,9 @@ public class FieldEditorDialog extends JDialog {
         boolean isResolved = false;
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                if (cls.getAbsoluteName().equals(childrenType) || cls.getShortName().equals(childrenType)) {
+                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
+                        : cls.source;
+                if (cls.source.equals(childrenType) || shortName.equals(childrenType)) {
                     isResolved = true;
                     break;
                 }

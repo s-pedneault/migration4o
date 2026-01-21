@@ -91,8 +91,8 @@ public class ObjectResolverUtil {
         // Try schema first
         if (schema != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (className.equals(schemaClass.getAbsoluteName())) {
-                    return schemaClass.getDatabaseClass();
+                if (className.equals(schemaClass.source)) {
+                    return schemaClass.databaseClass;
                 }
             }
         }

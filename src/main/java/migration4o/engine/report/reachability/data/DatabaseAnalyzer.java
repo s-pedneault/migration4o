@@ -113,7 +113,7 @@ public class DatabaseAnalyzer {
         }
 
         List<String> references = new ArrayList<>();
-        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+        DODatabaseClass dbClass = schemaClass.databaseClass;
         DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
 
         if (fields != null) {
@@ -139,7 +139,7 @@ public class DatabaseAnalyzer {
     private DOSchemaClass findSchemaClass(DOSchema schema, String className) {
         DOSchemaClass[] classes = schema.getClasses();
         for (DOSchemaClass schemaClass : classes) {
-            if (className.equals(schemaClass.getAbsoluteName())) {
+            if (className.equals(schemaClass.source)) {
                 return schemaClass;
             }
         }

@@ -312,7 +312,7 @@ public class SynchronizedTreePanel extends JPanel {
 
             for (SchemaComparison.ClassDifference diff : classes) {
                 // Check if this class is not exported (grey) - based on reference schema
-                boolean isNotExported = (diff.getReferenceClass() != null && !diff.getReferenceClass().isMigrate());
+                boolean isNotExported = (diff.getReferenceClass() != null && !diff.getReferenceClass().migrate);
 
                 if (!isNotExported) {
                     // At least one exported class exists, so package is not "only grey"
@@ -447,8 +447,8 @@ public class SynchronizedTreePanel extends JPanel {
 
         // Get reference fields
         Map<String, DOSchemaField> refFieldMap = new HashMap<>();
-        if (diff.getReferenceClass() != null && diff.getReferenceClass().getFields() != null) {
-            for (DOSchemaField field : diff.getReferenceClass().getFields()) {
+        if (diff.getReferenceClass() != null && diff.getReferenceClass().fields != null) {
+            for (DOSchemaField field : diff.getReferenceClass().fields) {
                 refFieldMap.put(field.source, field);
                 allFieldNames.add(field.source);
             }
@@ -456,8 +456,8 @@ public class SynchronizedTreePanel extends JPanel {
 
         // Get compared fields
         Map<String, DOSchemaField> cmpFieldMap = new HashMap<>();
-        if (diff.getComparedClass() != null && diff.getComparedClass().getFields() != null) {
-            for (DOSchemaField field : diff.getComparedClass().getFields()) {
+        if (diff.getComparedClass() != null && diff.getComparedClass().fields != null) {
+            for (DOSchemaField field : diff.getComparedClass().fields) {
                 cmpFieldMap.put(field.source, field);
                 allFieldNames.add(field.source);
             }
@@ -513,7 +513,7 @@ public class SynchronizedTreePanel extends JPanel {
 
         // Check if class is not exported (isMigrate=false in reference schema)
         boolean isNotExported = false;
-        if (diff.getReferenceClass() != null && !diff.getReferenceClass().isMigrate()) {
+        if (diff.getReferenceClass() != null && !diff.getReferenceClass().migrate) {
             isNotExported = true;
             className += " (not exported)";
         }
@@ -531,9 +531,9 @@ public class SynchronizedTreePanel extends JPanel {
 
     private String getParentClassName(SchemaComparison.ClassDifference diff) {
         DOSchemaClass cls = diff.getReferenceClass() != null ? diff.getReferenceClass() : diff.getComparedClass();
-        if (cls != null && cls.getParentClass() != null && !cls.getParentClass().isEmpty()
-                && !cls.getParentClass().equals("Undetermined")) {
-            return cls.getParentClass();
+        if (cls != null && cls.parentClassName != null && !cls.parentClassName.isEmpty()
+                && !cls.parentClassName.equals("Undetermined")) {
+            return cls.parentClassName;
         }
         return null;
     }

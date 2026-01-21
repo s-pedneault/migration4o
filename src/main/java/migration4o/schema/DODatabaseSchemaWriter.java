@@ -31,7 +31,7 @@ public class DODatabaseSchemaWriter {
             // Sort classes alphabetically by absolute name before writing
             if (schema.getClasses() != null) {
                 DOSchemaClass[] sortedClasses = Arrays.copyOf(schema.getClasses(), schema.getClasses().length);
-                Arrays.sort(sortedClasses, Comparator.comparing(DOSchemaClass::getAbsoluteName));
+                Arrays.sort(sortedClasses, Comparator.comparing(c -> c.source));
 
                 for (DOSchemaClass schemaClass : sortedClasses) {
                     writeClass(writer, schemaClass, 1);
@@ -66,23 +66,23 @@ public class DODatabaseSchemaWriter {
         String indent = getIndent(indentLevel);
 
         writer.write(indent + "<class");
-        writeAttribute(writer, "source", schemaClass.getAbsoluteName());
-        writeAttribute(writer, "destinationName", schemaClass.getShortName());
-        writeAttribute(writer, "isExported", String.valueOf(schemaClass.isMigrate()));
+        writeAttribute(writer, "source", schemaClass.source);
+        writeAttribute(writer, "destinationName", schemaClass.destinationName);
+        writeAttribute(writer, "isExported", String.valueOf(schemaClass.migrate));
 
-        if (schemaClass.getTitle() != null && !schemaClass.getTitle().isEmpty()) {
-            writeAttribute(writer, "title", schemaClass.getTitle());
+        if (schemaClass.title != null && !schemaClass.title.isEmpty()) {
+            writeAttribute(writer, "title", schemaClass.title);
         }
 
-        if (schemaClass.getParentClass() != null && !schemaClass.getParentClass().isEmpty()
-                && !"Undetermined".equals(schemaClass.getParentClass())) {
-            writeAttribute(writer, "parentClass", schemaClass.getParentClass());
+        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty()
+                && !"Undetermined".equals(schemaClass.parentClassName)) {
+            writeAttribute(writer, "parentClass", schemaClass.parentClassName);
         }
 
         // Check if we have fields, references or nested content
-        boolean hasFields = schemaClass.getFields() != null && schemaClass.getFields().length > 0;
-        boolean hasReferences = schemaClass.getSchemaReferences() != null
-                && schemaClass.getSchemaReferences().length > 0;
+        boolean hasFields = schemaClass.fields != null && schemaClass.fields.length > 0;
+        boolean hasReferences = schemaClass.schemaReferences != null
+                && schemaClass.schemaReferences.length > 0;
 
         if (!hasFields && !hasReferences) {
             writer.write(">\n");
@@ -92,14 +92,14 @@ public class DODatabaseSchemaWriter {
 
             // Write references first (as in original format)
             if (hasReferences) {
-                for (DOSchemaReference ref : schemaClass.getSchemaReferences()) {
+                for (DOSchemaReference ref : schemaClass.schemaReferences) {
                     writeReference(writer, ref, indentLevel + 1);
                 }
             }
 
             // Write fields after references
             if (hasFields) {
-                for (DOSchemaField field : schemaClass.getFields()) {
+                for (DOSchemaField field : schemaClass.fields) {
                     writeField(writer, field, indentLevel + 1);
                 }
             }

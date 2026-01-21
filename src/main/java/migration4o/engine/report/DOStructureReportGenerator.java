@@ -640,8 +640,8 @@ public class DOStructureReportGenerator {
                 // Count objects in this module
                 int totalObjects = 0;
                 for (DOSchemaClass clazz : moduleClasses != null ? moduleClasses : new DOSchemaClass[0]) {
-                    if (clazz.getDatabaseClass() != null) {
-                        totalObjects += clazz.getDatabaseClass().getTotalObjectCount();
+                    if (clazz.databaseClass != null) {
+                        totalObjects += clazz.databaseClass.getTotalObjectCount();
                     }
                 }
 
@@ -671,8 +671,8 @@ public class DOStructureReportGenerator {
         Set<String> allClasses = new HashSet<>();
 
         for (DOSchemaClass clazz : schema.getClasses()) {
-            allClasses.add(clazz.getAbsoluteName());
-            String superClass = clazz.getSuperClassAbsoluteName();
+            allClasses.add(clazz.source);
+            String superClass = clazz.parentClassName;
             if (superClass != null && !superClass.isEmpty()) {
                 inheritanceMap.computeIfAbsent(superClass, k -> new ArrayList<>()).add(clazz);
             }
@@ -682,7 +682,7 @@ public class DOStructureReportGenerator {
         // schema)
         List<DOSchemaClass> rootClasses = Arrays.stream(schema.getClasses())
                 .filter(clazz -> {
-                    String superClass = clazz.getSuperClassAbsoluteName();
+                    String superClass = clazz.parentClassName;
                     return superClass == null || superClass.isEmpty() || !allClasses.contains(superClass);
                 })
                 .collect(Collectors.toList());
@@ -708,18 +708,21 @@ public class DOStructureReportGenerator {
     private void generateClassHierarchyNode(StringBuilder html, DOSchemaClass clazz,
             Map<String, List<DOSchemaClass>> inheritanceMap, int depth) {
         String indent = "    ".repeat(depth);
+        String clazzShortName = clazz.source != null && clazz.source.contains(".")
+                ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
         html.append(indent).append("                        <li>\n")
-                .append(indent).append("                            <strong>").append(escapeHtml(clazz.getShortName()))
+                .append(indent).append("                            <strong>").append(escapeHtml(clazzShortName))
                 .append("</strong>\n")
                 .append(indent).append("                            <span class=\"object-id\">(")
-                .append(escapeHtml(clazz.getAbsoluteName())).append(")</span>\n");
+                .append(escapeHtml(clazz.source)).append(")</span>\n");
 
-        if (clazz.getDatabaseClass() != null) {
+        if (clazz.databaseClass != null) {
             html.append(indent).append("                            - <em>")
-                    .append(clazz.getDatabaseClass().getTotalObjectCount()).append(" objects</em>\n");
+                    .append(clazz.databaseClass.getTotalObjectCount()).append(" objects</em>\n");
         }
 
-        List<DOSchemaClass> subClasses = inheritanceMap.get(clazz.getAbsoluteName());
+        List<DOSchemaClass> subClasses = inheritanceMap.get(clazz.source);
         if (subClasses != null && !subClasses.isEmpty()) {
             html.append(indent).append("                            <ul>\n");
             for (DOSchemaClass subClass : subClasses) {
@@ -777,9 +780,12 @@ public class DOStructureReportGenerator {
     }
 
     private void generateClassCard(StringBuilder html, DOSchemaClass clazz, DOSchema schema) {
+        String clazzShortName = clazz.source != null && clazz.source.contains(".")
+                ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
         html.append("            <div class=\"class-card\">\n")
                 .append("                <div class=\"class-header\">\n")
-                .append("                    <span>").append(escapeHtml(clazz.getShortName())).append("</span>\n")
+                .append("                    <span>").append(escapeHtml(clazzShortName)).append("</span>\n")
                 .append("                    <span class=\"expand-icon\">▼</span>\n")
                 .append("                </div>\n")
                 .append("                <div class=\"class-content\">\n");
@@ -787,43 +793,43 @@ public class DOStructureReportGenerator {
         // Basic class information
         html.append("                    <div class=\"inheritance-info\">\n")
                 .append("                        <strong>Full Name:</strong> ")
-                .append(escapeHtml(clazz.getAbsoluteName())).append("<br>\n");
+                .append(escapeHtml(clazz.source)).append("<br>\n");
 
-        if (clazz.getDescription() != null && !clazz.getDescription().isEmpty()) {
+        if (clazz.description != null && !clazz.description.isEmpty()) {
             html.append("                        <strong>Description:</strong> ")
-                    .append(escapeHtml(clazz.getDescription())).append("<br>\n");
+                    .append(escapeHtml(clazz.description)).append("<br>\n");
         }
 
-        if (clazz.getTitle() != null && !clazz.getTitle().isEmpty()) {
-            html.append("                        <strong>Title:</strong> ").append(escapeHtml(clazz.getTitle()))
+        if (clazz.title != null && !clazz.title.isEmpty()) {
+            html.append("                        <strong>Title:</strong> ").append(escapeHtml(clazz.title))
                     .append("<br>\n");
         }
 
-        if (clazz.getSuperClassAbsoluteName() != null && !clazz.getSuperClassAbsoluteName().isEmpty()) {
+        if (clazz.parentClassName != null && !clazz.parentClassName.isEmpty()) {
             html.append("                        <strong>Extends:</strong> ")
-                    .append(escapeHtml(clazz.getSuperClassAbsoluteName())).append("<br>\n");
+                    .append(escapeHtml(clazz.parentClassName)).append("<br>\n");
         }
 
-        if (clazz.getExportName() != null && !clazz.getExportName().isEmpty()) {
+        if (clazz.destinationName != null && !clazz.destinationName.isEmpty()) {
             html.append("                        <strong>Export Name:</strong> ")
-                    .append(escapeHtml(clazz.getExportName())).append("<br>\n");
+                    .append(escapeHtml(clazz.destinationName)).append("<br>\n");
         }
 
         html.append("                    </div>\n");
 
         // Fields information
-        if (clazz.getDatabaseClass() != null) {
-            generateFieldsTable(html, clazz.getDatabaseClass(), schema);
+        if (clazz.databaseClass != null) {
+            generateFieldsTable(html, clazz.databaseClass, schema);
         }
 
         // References information
-        if (clazz.getDatabaseClass() != null) {
-            generateReferencesTable(html, clazz.getDatabaseClass());
+        if (clazz.databaseClass != null) {
+            generateReferencesTable(html, clazz.databaseClass);
         }
 
         // Database class information (objects)
-        if (clazz.getDatabaseClass() != null) {
-            generateDatabaseClassInfo(html, clazz.getDatabaseClass());
+        if (clazz.databaseClass != null) {
+            generateDatabaseClassInfo(html, clazz.databaseClass);
         }
 
         html.append("                </div>\n")
@@ -1020,7 +1026,7 @@ public class DOStructureReportGenerator {
             // Fallback: show all classes without module grouping
             html.append("            <h3>All Object Classes (No Module Grouping)</h3>\n");
             for (DOSchemaClass clazz : schema.getClasses()) {
-                if (clazz.getDatabaseClass() != null && clazz.getDatabaseClass().getResolvedObjects() != null) {
+                if (clazz.databaseClass != null && clazz.databaseClass.getResolvedObjects() != null) {
                     HtmlBuilder classBuilder = new HtmlBuilder(html);
                     generateClassObjectAnalysis(classBuilder, clazz);
                 }
@@ -1040,10 +1046,10 @@ public class DOStructureReportGenerator {
         int classesWithObjects = 0;
         int totalObjectsInModule = 0;
         for (DOSchemaClass clazz : moduleClasses) {
-            if (clazz.getDatabaseClass() != null && clazz.getDatabaseClass().getResolvedObjects() != null
-                    && clazz.getDatabaseClass().getResolvedObjects().length > 0) {
+            if (clazz.databaseClass != null && clazz.databaseClass.getResolvedObjects() != null
+                    && clazz.databaseClass.getResolvedObjects().length > 0) {
                 classesWithObjects++;
-                totalObjectsInModule += clazz.getDatabaseClass().getResolvedObjects().length;
+                totalObjectsInModule += clazz.databaseClass.getResolvedObjects().length;
             }
         }
 
@@ -1063,7 +1069,7 @@ public class DOStructureReportGenerator {
 
         // Generate object analysis for classes in this module that have objects
         for (DOSchemaClass clazz : moduleClasses) {
-            if (clazz.getDatabaseClass() != null && clazz.getDatabaseClass().getResolvedObjects() != null) {
+            if (clazz.databaseClass != null && clazz.databaseClass.getResolvedObjects() != null) {
                 generateClassObjectAnalysis(html, clazz);
             }
         }
@@ -1081,14 +1087,14 @@ public class DOStructureReportGenerator {
         int unresolvedCollections = 0;
 
         for (DOSchemaClass clazz : schema.getClasses()) {
-            if (clazz.getDatabaseClass() != null) {
-                DODatabaseObject[] resolved = clazz.getDatabaseClass().getResolvedObjects();
+            if (clazz.databaseClass != null) {
+                DODatabaseObject[] resolved = clazz.databaseClass.getResolvedObjects();
                 if (resolved != null && resolved.length > 0) {
                     classesWithObjects++;
                     totalObjects += resolved.length;
 
-                    DODatabaseObject[] reachable = clazz.getDatabaseClass().getReachableObjects();
-                    DODatabaseObject[] orphaned = clazz.getDatabaseClass().getOrphanedObjects();
+                    DODatabaseObject[] reachable = clazz.databaseClass.getReachableObjects();
+                    DODatabaseObject[] orphaned = clazz.databaseClass.getOrphanedObjects();
 
                     if (reachable != null)
                         reachableObjects += reachable.length;
@@ -1097,7 +1103,7 @@ public class DOStructureReportGenerator {
                 }
 
                 // Check for collection fields
-                DODatabaseClass dbClass = clazz.getDatabaseClass();
+                DODatabaseClass dbClass = clazz.databaseClass;
                 if (dbClass != null) {
                     for (DODatabaseField field : dbClass.getFields()) {
                         if (field.isArray()) {
@@ -1185,22 +1191,25 @@ public class DOStructureReportGenerator {
     }
 
     private void generateClassObjectAnalysis(HtmlBuilder html, DOSchemaClass clazz) {
-        DODatabaseObject[] objects = clazz.getDatabaseClass().getResolvedObjects();
+        DODatabaseObject[] objects = clazz.databaseClass.getResolvedObjects();
         if (objects == null || objects.length == 0) {
             return; // Skip classes with no objects
         }
 
+        String clazzShortName = clazz.source != null && clazz.source.contains(".")
+                ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
         html.openTag("div", "class", "class-object-card");
         html.openTag("div", "class", "class-object-header");
-        html.element("span", escapeHtml(clazz.getShortName()) + " (" + objects.length + " objects)");
+        html.element("span", escapeHtml(clazzShortName) + " (" + objects.length + " objects)");
         html.element("span", "▼", "class", "expand-icon");
         html.closeTag("div"); // class-object-header
 
         html.openTag("div", "class", "class-object-content");
 
         // Object reachability stats
-        DODatabaseObject[] reachableObjects = clazz.getDatabaseClass().getReachableObjects();
-        DODatabaseObject[] orphanedObjects = clazz.getDatabaseClass().getOrphanedObjects();
+        DODatabaseObject[] reachableObjects = clazz.databaseClass.getReachableObjects();
+        DODatabaseObject[] orphanedObjects = clazz.databaseClass.getOrphanedObjects();
 
         html.openTag("div", "class", "object-stats");
         html.openTag("div", "class", "object-stat");
@@ -1391,13 +1400,13 @@ public class DOStructureReportGenerator {
 
         // First, check schema classes
         for (DOSchemaClass clazz : schema.getClasses()) {
-            if (clazz.getDatabaseClass() != null) {
-                DODatabaseObject[] orphanedObjects = clazz.getDatabaseClass().getOrphanedObjects();
+            if (clazz.databaseClass != null) {
+                DODatabaseObject[] orphanedObjects = clazz.databaseClass.getOrphanedObjects();
                 if (orphanedObjects != null && orphanedObjects.length > 0) {
                     // System.out.println("DEBUG: Found " + orphanedObjects.length + " orphaned
                     // objects in schema class: "
                     // + clazz.getShortName());
-                    orphanClasses.add(clazz.getDatabaseClass());
+                    orphanClasses.add(clazz.databaseClass);
                     totalOrphanObjects += orphanedObjects.length;
                 }
             }
@@ -1409,7 +1418,7 @@ public class DOStructureReportGenerator {
                 // Check if this database class already has a schema mapping
                 boolean hasSchemaMapping = false;
                 for (DOSchemaClass schemaClass : schema.getClasses()) {
-                    if (schemaClass.getDatabaseClass() == dbClass) {
+                    if (schemaClass.databaseClass == dbClass) {
                         hasSchemaMapping = true;
                         break;
                     }
@@ -1440,7 +1449,7 @@ public class DOStructureReportGenerator {
 
             // Debug: Check each schema class individually
             for (DOSchemaClass clazz : schema.getClasses()) {
-                DODatabaseClass dbClass = clazz.getDatabaseClass();
+                DODatabaseClass dbClass = clazz.databaseClass;
                 if (dbClass != null) {
                     // DODatabaseObject[] resolved = dbClass.getResolvedObjects();
                     // DODatabaseObject[] orphaned = dbClass.getOrphanedObjects();
@@ -1516,7 +1525,7 @@ public class DOStructureReportGenerator {
      */
     private DOSchemaClass findSchemaClassForDatabaseClass(DOSchema schema, DODatabaseClass dbClass) {
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.getDatabaseClass() == dbClass) {
+            if (schemaClass.databaseClass == dbClass) {
                 return schemaClass;
             }
         }
@@ -1642,7 +1651,7 @@ public class DOStructureReportGenerator {
     }
 
     private void generateOrphanClassSection(HtmlBuilder builder, DOSchemaClass clazz, DOSchema schema) {
-        DODatabaseObject[] orphanedObjects = clazz.getDatabaseClass().getOrphanedObjects();
+        DODatabaseObject[] orphanedObjects = clazz.databaseClass.getOrphanedObjects();
         if (orphanedObjects == null || orphanedObjects.length == 0) {
             return;
         }
@@ -1656,7 +1665,10 @@ public class DOStructureReportGenerator {
         html.append("                    <div class=\"class-object-card\">\n")
                 .append("                        <div class=\"class-object-header\" style=\"background: ")
                 .append(headerColor).append(";\">\n")
-                .append("                            <span>").append(escapeHtml(clazz.getShortName()))
+                .append("                            <span>")
+                .append(escapeHtml(
+                        clazz.source.contains(".") ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                                : clazz.source))
                 .append(collectionIndicator)
                 .append(" (").append(orphanedObjects.length).append(" orphaned objects)</span>\n")
                 .append("                            <span class=\"expand-icon\">▼</span>\n")
@@ -1666,13 +1678,13 @@ public class DOStructureReportGenerator {
         // Class basic info
         html.append("                            <div class=\"inheritance-info\">\n")
                 .append("                                <strong>Full Class Name:</strong> ")
-                .append(escapeHtml(clazz.getAbsoluteName())).append("<br>\n");
+                .append(escapeHtml(clazz.source)).append("<br>\n");
 
-        if (clazz.getSuperClassAbsoluteName() != null && !clazz.getSuperClassAbsoluteName().isEmpty()) {
-            String superClassStyle = getClassTypeStyleClass(clazz.getSuperClassAbsoluteName(), schema);
+        if (clazz.parentClassName != null && !clazz.parentClassName.isEmpty()) {
+            String superClassStyle = getClassTypeStyleClass(clazz.parentClassName, schema);
             html.append("                                <strong>Extends:</strong> ")
                     .append("<span class=\"").append(superClassStyle).append("\">")
-                    .append(escapeHtml(clazz.getSuperClassAbsoluteName())).append("</span><br>\n");
+                    .append(escapeHtml(clazz.parentClassName)).append("</span><br>\n");
         }
 
         html.append("                            </div>\n");
@@ -1699,7 +1711,7 @@ public class DOStructureReportGenerator {
     }
 
     private void generateIncomingReferencesInfo(StringBuilder html, DOSchemaClass clazz, DOSchema schema) {
-        DOReference[] references = clazz.getReferences();
+        DOReference[] references = clazz.referenceList.toArray(new DOReference[0]);
 
         if (references != null && references.length > 0) {
             html.append("                            <h4>Known References from Other Classes</h4>\n")
@@ -1849,8 +1861,9 @@ public class DOStructureReportGenerator {
             return false;
         }
 
-        String className = clazz.getAbsoluteName();
-        String simpleName = clazz.getShortName();
+        String className = clazz.source;
+        String simpleName = clazz.source.contains(".") ? clazz.source.substring(clazz.source.lastIndexOf('.') + 1)
+                : clazz.source;
 
         // Check class name patterns
         if (className != null && (className.contains("Vector") || className.contains("Collection") ||
@@ -1868,7 +1881,7 @@ public class DOStructureReportGenerator {
         }
 
         // Check if the class has collection fields
-        DODatabaseClass dbClass = clazz.getDatabaseClass();
+        DODatabaseClass dbClass = clazz.databaseClass;
         DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
         if (fields != null) {
             for (DODatabaseField field : fields) {
@@ -2192,7 +2205,7 @@ public class DOStructureReportGenerator {
         // Check if the class exists in the schema
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             // Only match by absolute name for reliable resolution
-            if (className.equals(schemaClass.getAbsoluteName())) {
+            if (className.equals(schemaClass.source)) {
                 return true;
             }
         }

@@ -118,21 +118,21 @@ public class SchemaAnalyzer {
             ClassInfo classInfo = createClassInfo(schemaClass);
 
             // Find which module this class belongs to (if any)
-            classInfo.moduleName = findModuleForClass(schemaClass.getAbsoluteName());
+            classInfo.moduleName = findModuleForClass(schemaClass.source);
 
-            allClasses.put(schemaClass.getAbsoluteName(), classInfo);
+            allClasses.put(schemaClass.source, classInfo);
         }
 
         return allClasses;
     }
 
     private ClassInfo createClassInfo(DOSchemaClass schemaClass) {
-        ClassInfo classInfo = new ClassInfo(schemaClass.getAbsoluteName());
-        classInfo.description = schemaClass.getDescription();
-        classInfo.superClass = schemaClass.getSuperClassAbsoluteName();
+        ClassInfo classInfo = new ClassInfo(schemaClass.source);
+        classInfo.description = schemaClass.description;
+        classInfo.superClass = schemaClass.parentClassName;
 
         // Analyze fields
-        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+        DODatabaseClass dbClass = schemaClass.databaseClass;
         DODatabaseField[] fields = dbClass != null ? dbClass.getFields() : null;
         if (fields != null) {
             for (DODatabaseField field : fields) {
@@ -151,7 +151,7 @@ public class SchemaAnalyzer {
         for (DOSchemaModule module : modules) {
             DOSchemaClass[] classes = module.getClasses();
             for (DOSchemaClass schemaClass : classes) {
-                if (className.equals(schemaClass.getAbsoluteName())) {
+                if (className.equals(schemaClass.source)) {
                     return module.getName();
                 }
             }

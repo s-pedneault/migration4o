@@ -332,16 +332,16 @@ public class DODatabaseSchemaInferrer {
         // Build class map for quick lookup
         Map<String, DOSchemaClass> classMap = new HashMap<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+            classMap.put(schemaClass.source, schemaClass);
         }
 
         // Build subclass map to identify leaf classes
         Map<String, List<String>> subclassMap = new HashMap<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String parentName = schemaClass.getSuperClassAbsoluteName();
+            String parentName = schemaClass.parentClassName;
             if (parentName != null && !parentName.isEmpty()) {
                 subclassMap.computeIfAbsent(parentName, k -> new ArrayList<>())
-                        .add(schemaClass.getAbsoluteName());
+                        .add(schemaClass.source);
             }
         }
 
@@ -353,7 +353,7 @@ public class DODatabaseSchemaInferrer {
 
         // Process each class
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String className = schemaClass.getAbsoluteName();
+            String className = schemaClass.source;
 
             // Check if this is a leaf class (no subclasses)
             boolean isLeaf = !subclassMap.containsKey(className);
@@ -366,11 +366,11 @@ public class DODatabaseSchemaInferrer {
 
             // Process ALL classes (leaf and non-leaf) to ensure proper deduplication
             // Each class's object IDs should be removed from all its ancestors
-            if (schemaClass.getObjectIds() != null) {
+            if (schemaClass.objectIds != null) {
                 // For each object ID in this class
-                for (long objectId : schemaClass.getObjectIds()) {
+                for (long objectId : schemaClass.objectIds) {
                     // Walk up the parent chain and mark this ID for removal
-                    String currentParent = schemaClass.getSuperClassAbsoluteName();
+                    String currentParent = schemaClass.parentClassName;
                     while (currentParent != null && !currentParent.isEmpty()) {
                         idsToRemove.computeIfAbsent(currentParent, k -> new java.util.HashSet<>())
                                 .add(objectId);
@@ -379,7 +379,7 @@ public class DODatabaseSchemaInferrer {
                         if (parentClass == null) {
                             break;
                         }
-                        currentParent = parentClass.getSuperClassAbsoluteName();
+                        currentParent = parentClass.parentClassName;
                     }
                 }
             }
@@ -387,12 +387,12 @@ public class DODatabaseSchemaInferrer {
 
         // Update uniqueObjectIds in classes based on deduplication
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String className = schemaClass.getAbsoluteName();
+            String className = schemaClass.source;
             java.util.Set<Long> toRemove = idsToRemove.get(className);
 
-            if (toRemove != null && !toRemove.isEmpty() && schemaClass.getObjectIds() != null) {
+            if (toRemove != null && !toRemove.isEmpty() && schemaClass.objectIds != null) {
                 // Filter out the IDs that belong to derived classes
-                long[] originalIds = schemaClass.getObjectIds();
+                long[] originalIds = schemaClass.objectIds;
                 List<Long> filteredIds = new ArrayList<>();
 
                 for (long id : originalIds) {
@@ -406,7 +406,7 @@ public class DODatabaseSchemaInferrer {
                 for (int i = 0; i < filteredIds.size(); i++) {
                     uniqueIds[i] = filteredIds.get(i);
                 }
-                schemaClass.setUniqueObjectIds(uniqueIds);
+                schemaClass.uniqueObjectIds = uniqueIds;
 
                 int removedCount = originalIds.length - uniqueIds.length;
                 if (removedCount > 0) {

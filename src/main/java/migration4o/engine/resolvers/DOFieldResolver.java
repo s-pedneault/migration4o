@@ -25,9 +25,9 @@ public class DOFieldResolver {
         DOSchema schema = engine.getSchema();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass != null && schemaClass.getAbsoluteName() != null
-                        && schemaClass.getDatabaseClass() != null) {
-                    classMap.put(schemaClass.getAbsoluteName(), schemaClass.getDatabaseClass());
+                if (schemaClass != null && schemaClass.source != null
+                        && schemaClass.databaseClass != null) {
+                    classMap.put(schemaClass.source, schemaClass.databaseClass);
                 }
             }
         }
@@ -46,8 +46,8 @@ public class DOFieldResolver {
         // Resolve field types for schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass.getDatabaseClass() != null) {
-                    resolveFieldTypesForClass(schemaClass.getDatabaseClass(), classMap);
+                if (schemaClass.databaseClass != null) {
+                    resolveFieldTypesForClass(schemaClass.databaseClass, classMap);
                 }
             }
         }

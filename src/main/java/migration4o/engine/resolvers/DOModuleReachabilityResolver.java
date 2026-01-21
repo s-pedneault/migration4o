@@ -124,7 +124,7 @@ public class DOModuleReachabilityResolver {
                 DOSchemaClass[] moduleClasses = module.getClasses();
                 if (moduleClasses != null) {
                     for (DOSchemaClass schemaClass : moduleClasses) {
-                        moduleClassNames.add(schemaClass.getAbsoluteName());
+                        moduleClassNames.add(schemaClass.source);
                     }
                 }
             }

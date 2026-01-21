@@ -290,9 +290,10 @@ public class SchemaComparisonPanel extends JPanel {
             DOSchemaClass comparedClass = diff.getComparedClass();
             if (comparedClass != null) {
                 info.append("Fields: ").append(
-                        comparedClass.getFields() != null ? comparedClass.getFields().length : 0).append("\n");
-                int objectCount = comparedClass.getObjectCount();
-                int uniqueObjectCount = comparedClass.getUniqueObjectCount();
+                        comparedClass.fields != null ? comparedClass.fields.length : 0).append("\n");
+                int objectCount = (comparedClass.objectIds != null ? comparedClass.objectIds.length : 0);
+                int uniqueObjectCount = (comparedClass.uniqueObjectIds != null ? comparedClass.uniqueObjectIds.length
+                        : 0);
                 if (objectCount > 0) {
                     info.append("Objects: ").append(objectCount);
                     if (uniqueObjectCount != objectCount) {
@@ -307,9 +308,9 @@ public class SchemaComparisonPanel extends JPanel {
             DOSchemaClass refClass = diff.getReferenceClass();
             if (refClass != null) {
                 info.append("Fields: ").append(
-                        refClass.getFields() != null ? refClass.getFields().length : 0).append("\n");
-                int objectCount = refClass.getObjectCount();
-                int uniqueObjectCount = refClass.getUniqueObjectCount();
+                        refClass.fields != null ? refClass.fields.length : 0).append("\n");
+                int objectCount = (refClass.objectIds != null ? refClass.objectIds.length : 0);
+                int uniqueObjectCount = (refClass.uniqueObjectIds != null ? refClass.uniqueObjectIds.length : 0);
                 if (objectCount > 0) {
                     info.append("Objects: ").append(objectCount);
                     if (uniqueObjectCount != objectCount) {
@@ -325,10 +326,10 @@ public class SchemaComparisonPanel extends JPanel {
 
         // Show field table if exists in compared schema
         if (diff.isOnlyInCompared() && diff.getComparedClass() != null &&
-                diff.getComparedClass().getFields() != null && diff.getComparedClass().getFields().length > 0) {
+                diff.getComparedClass().fields != null && diff.getComparedClass().fields.length > 0) {
             JPanel fieldsPanel = new JPanel(new BorderLayout());
             fieldsPanel.setBorder(BorderFactory.createTitledBorder("Fields in " + comparison.getComparedLabel()));
-            fieldsPanel.add(createFieldsTable(diff.getComparedClass().getFields()), BorderLayout.CENTER);
+            fieldsPanel.add(createFieldsTable(diff.getComparedClass().fields), BorderLayout.CENTER);
             panel.add(fieldsPanel, BorderLayout.CENTER);
 
             // Add button to add class to reference
@@ -361,12 +362,12 @@ public class SchemaComparisonPanel extends JPanel {
         if (diff.isOnlyInCompared()) {
             info.append("Status: Only exists in ").append(comparison.getComparedLabel()).append("\n");
             info.append("Fields: ").append(
-                    diff.getComparedClass().getFields() != null ? diff.getComparedClass().getFields().length : 0)
+                    diff.getComparedClass().fields != null ? diff.getComparedClass().fields.length : 0)
                     .append("\n");
         } else if (diff.isOnlyInReference()) {
             info.append("Status: Only exists in ").append(comparison.getReferenceLabel()).append("\n");
             info.append("Fields: ").append(
-                    diff.getReferenceClass().getFields() != null ? diff.getReferenceClass().getFields().length : 0)
+                    diff.getReferenceClass().fields != null ? diff.getReferenceClass().fields.length : 0)
                     .append("\n");
         } else {
             info.append("Status: Exists in both schemas\n");
@@ -382,17 +383,17 @@ public class SchemaComparisonPanel extends JPanel {
         panel.add(infoArea, BorderLayout.NORTH);
 
         // Show detailed field list if class only exists in one schema
-        if (diff.isOnlyInCompared() && diff.getComparedClass().getFields() != null
-                && diff.getComparedClass().getFields().length > 0) {
+        if (diff.isOnlyInCompared() && diff.getComparedClass().fields != null
+                && diff.getComparedClass().fields.length > 0) {
             JPanel fieldsPanel = new JPanel(new BorderLayout());
             fieldsPanel.setBorder(BorderFactory.createTitledBorder("Fields in " + comparison.getComparedLabel()));
-            fieldsPanel.add(createFieldsTable(diff.getComparedClass().getFields()), BorderLayout.CENTER);
+            fieldsPanel.add(createFieldsTable(diff.getComparedClass().fields), BorderLayout.CENTER);
             panel.add(fieldsPanel, BorderLayout.CENTER);
-        } else if (diff.isOnlyInReference() && diff.getReferenceClass().getFields() != null
-                && diff.getReferenceClass().getFields().length > 0) {
+        } else if (diff.isOnlyInReference() && diff.getReferenceClass().fields != null
+                && diff.getReferenceClass().fields.length > 0) {
             JPanel fieldsPanel = new JPanel(new BorderLayout());
             fieldsPanel.setBorder(BorderFactory.createTitledBorder("Fields in " + comparison.getReferenceLabel()));
-            fieldsPanel.add(createFieldsTable(diff.getReferenceClass().getFields()), BorderLayout.CENTER);
+            fieldsPanel.add(createFieldsTable(diff.getReferenceClass().fields), BorderLayout.CENTER);
             panel.add(fieldsPanel, BorderLayout.CENTER);
         }
 
@@ -437,7 +438,7 @@ public class SchemaComparisonPanel extends JPanel {
             addButton.addActionListener(e -> {
                 onAddField.accept(parentClass, field);
                 JOptionPane.showMessageDialog(this,
-                        "Field '" + field.source + "' has been added to class '" + parentClass.getSourceName()
+                        "Field '" + field.source + "' has been added to class '" + parentClass.source
                                 + "'.\n" +
                                 "Please save the reference schema to persist changes.",
                         "Field Added", JOptionPane.INFORMATION_MESSAGE);
@@ -495,9 +496,9 @@ public class SchemaComparisonPanel extends JPanel {
 
         DOSchemaClass classToShow = isLeftTree ? diff.getReferenceClass() : diff.getComparedClass();
         if (classToShow != null) {
-            info.append("Fields: ").append(classToShow.getFields() != null ? classToShow.getFields().length : 0);
-            int objectCount = classToShow.getObjectCount();
-            int uniqueObjectCount = classToShow.getUniqueObjectCount();
+            info.append("Fields: ").append(classToShow.fields != null ? classToShow.fields.length : 0);
+            int objectCount = classToShow.databaseClass != null ? classToShow.databaseClass.getTotalObjectCount() : 0;
+            int uniqueObjectCount = classToShow.uniqueObjectIds != null ? classToShow.uniqueObjectIds.length : 0;
             if (objectCount > 0) {
                 info.append("  |  Objects: ").append(objectCount);
                 if (uniqueObjectCount != objectCount) {
@@ -510,9 +511,9 @@ public class SchemaComparisonPanel extends JPanel {
         contentPanel.add(infoArea, BorderLayout.NORTH);
 
         // Fields table
-        if (classToShow != null && classToShow.getFields() != null && classToShow.getFields().length > 0) {
+        if (classToShow != null && classToShow.fields != null && classToShow.fields.length > 0) {
             // Sort fields according to reference schema order
-            DOSchemaField[] sortedFields = sortFieldsByReferenceOrder(classToShow.getFields(),
+            DOSchemaField[] sortedFields = sortFieldsByReferenceOrder(classToShow.fields,
                     diff.getReferenceClass());
 
             // Create table with action buttons if showing compared schema
@@ -619,8 +620,8 @@ public class SchemaComparisonPanel extends JPanel {
 
         // Create a map of field names to their order in reference schema
         Map<String, Integer> referenceOrder = new HashMap<>();
-        if (referenceClass != null && referenceClass.getFields() != null) {
-            DOSchemaField[] refFields = referenceClass.getFields();
+        if (referenceClass != null && referenceClass.fields != null) {
+            DOSchemaField[] refFields = referenceClass.fields;
             for (int i = 0; i < refFields.length; i++) {
                 referenceOrder.put(refFields[i].source, i);
             }
@@ -790,7 +791,7 @@ public class SchemaComparisonPanel extends JPanel {
             newField.childrenSchemaClass = oldField.childrenSchemaClass;
 
             // Replace the field in the class's field array
-            DOSchemaField[] oldFields = oldClass.getFields();
+            DOSchemaField[] oldFields = oldClass.fields;
             DOSchemaField[] newFields = new DOSchemaField[oldFields.length];
             for (int i = 0; i < oldFields.length; i++) {
                 if (oldFields[i] == oldField) {
@@ -802,14 +803,14 @@ public class SchemaComparisonPanel extends JPanel {
 
             // Create new class with updated fields array
             DOSchemaClass newClass = new DOSchemaClass();
-            newClass.source = oldClass.getSourceName();
-            newClass.destinationName = oldClass.getDestinationName();
-            newClass.description = oldClass.getDescription();
-            newClass.title = oldClass.getTitle();
-            newClass.parentClassName = oldClass.getParentClass();
+            newClass.source = oldClass.source;
+            newClass.destinationName = oldClass.destinationName;
+            newClass.description = oldClass.description;
+            newClass.title = oldClass.title;
+            newClass.parentClassName = oldClass.parentClassName;
             newClass.fields = newFields;
-            newClass.schemaReferences = oldClass.getSchemaReferences();
-            newClass.migrate = oldClass.isMigrate();
+            newClass.schemaReferences = oldClass.schemaReferences;
+            newClass.migrate = oldClass.migrate;
 
             // Replace the class in the schema
             DOSchemaClass[] classes = referenceSchema.getClasses();

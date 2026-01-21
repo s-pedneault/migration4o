@@ -128,11 +128,11 @@ public class XMLSchemaGenerator {
         // Each module contains objects from its classes
         if (module.getClasses() != null) {
             for (DOSchemaClass schemaClass : module.getClasses()) {
-                String className = schemaClass.getShortName();
+                String className = schemaClass.destinationName;
                 writer.writeCharacters("\n        ");
                 writer.writeStartElement(XS_PREFIX, "element", XSD_NAMESPACE);
                 writer.writeAttribute("name", sanitizeName(className));
-                writer.writeAttribute("type", getTypeNameForClass(schemaClass.getDatabaseClass()));
+                writer.writeAttribute("type", getTypeNameForClass(schemaClass.databaseClass));
                 writer.writeAttribute("minOccurs", "0");
                 writer.writeAttribute("maxOccurs", "unbounded");
                 writer.writeCharacters("\n        ");
@@ -153,7 +153,9 @@ public class XMLSchemaGenerator {
      * Generate a complex type for a class.
      */
     private void generateComplexType(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
-        String className = schemaClass.getShortName();
+        String className = schemaClass.source.contains(".")
+                ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
+                : schemaClass.source;
 
         if (processedClasses.contains(className)) {
             return; // Already processed
@@ -161,13 +163,13 @@ public class XMLSchemaGenerator {
         processedClasses.add(className);
 
         writer.writeCharacters("\n  ");
-        writer.writeComment(" Type for class: " + schemaClass.getAbsoluteName() + " ");
+        writer.writeComment(" Type for class: " + schemaClass.source + " ");
         writer.writeCharacters("\n  ");
         writer.writeStartElement(XS_PREFIX, "complexType", XSD_NAMESPACE);
-        writer.writeAttribute("name", getTypeNameForClass(schemaClass.getDatabaseClass()));
+        writer.writeAttribute("name", getTypeNameForClass(schemaClass.databaseClass));
 
         // Handle inheritance with extension
-        String superClassName = schemaClass.getSuperClassAbsoluteName();
+        String superClassName = schemaClass.parentClassName;
         if (superClassName != null && !superClassName.equals("java.lang.Object")) {
             writer.writeCharacters("\n    ");
             writer.writeStartElement(XS_PREFIX, "complexContent", XSD_NAMESPACE);
@@ -202,7 +204,7 @@ public class XMLSchemaGenerator {
      * Write the field sequence for a class.
      */
     private void writeFieldSequence(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
-        DODatabaseField[] fields = schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getFields()
+        DODatabaseField[] fields = schemaClass.databaseClass != null ? schemaClass.databaseClass.getFields()
                 : null;
         if (fields == null || fields.length == 0) {
             return;
@@ -368,7 +370,10 @@ public class XMLSchemaGenerator {
      * Get the XSD type name for a class.
      */
     private String getTypeNameForClass(DODatabaseClass clazz) {
-        return sanitizeName(clazz.getShortName()) + "Type";
+        String shortName = clazz.getAbsoluteName().contains(".")
+                ? clazz.getAbsoluteName().substring(clazz.getAbsoluteName().lastIndexOf('.') + 1)
+                : clazz.getAbsoluteName();
+        return sanitizeName(shortName) + "Type";
     }
 
     /**

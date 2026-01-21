@@ -66,15 +66,15 @@ public class XMLDataExporter {
             if (module.getClasses() != null) {
                 for (DOSchemaClass schemaClass : module.getClasses()) {
                     // Only export classes that are marked for migration
-                    if (!schemaClass.isMigrate()) {
+                    if (!schemaClass.migrate) {
                         continue;
                     }
                     writer.writeCharacters("    ");
                     writer.writeStartElement("type");
-                    writer.writeAttribute("name", schemaClass.getShortName());
+                    writer.writeAttribute("name", schemaClass.destinationName);
                     writer.writeAttribute("class",
-                            schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getAbsoluteName()
-                                    : schemaClass.getShortName());
+                            schemaClass.databaseClass != null ? schemaClass.databaseClass.getAbsoluteName()
+                                    : schemaClass.destinationName);
                     writer.writeAttribute("module", XMLExportUtils.sanitizeName(module.getName()));
                     writer.writeEndElement();
                     writer.writeCharacters("\n");
@@ -103,7 +103,7 @@ public class XMLDataExporter {
             if (module.getClasses() != null) {
                 for (DOSchemaClass schemaClass : module.getClasses()) {
                     // Only export classes that are marked for migration
-                    if (schemaClass.isMigrate()) {
+                    if (schemaClass.migrate) {
                         exportClassObjects(writer, schemaClass);
                     }
                 }
@@ -227,7 +227,7 @@ public class XMLDataExporter {
      * Export all objects for a class using schema-compliant format.
      */
     private void exportClassObjects(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
-        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+        DODatabaseClass dbClass = schemaClass.databaseClass;
         if (dbClass == null) {
             return;
         }
@@ -237,7 +237,7 @@ public class XMLDataExporter {
             return;
         }
 
-        String typeName = schemaClass.getShortName();
+        String typeName = schemaClass.destinationName;
 
         // Export ALL objects from this class using new format
         for (DODatabaseObject obj : objects) {
@@ -602,13 +602,13 @@ public class XMLDataExporter {
      * isExported flag.
      */
     private boolean shouldExportField(DODatabaseField dbField, DOSchemaClass schemaClass) {
-        if (schemaClass == null || schemaClass.getFields() == null) {
+        if (schemaClass == null || schemaClass.fields == null) {
             return true; // Export all fields if no schema filtering available
         }
 
         // Try to match database field to schema field by name
         String dbFieldName = dbField.getName();
-        for (DOSchemaField schemaField : schemaClass.getFields()) {
+        for (DOSchemaField schemaField : schemaClass.fields) {
             // Match by source name (the database field name)
             if (schemaField.source.equals(dbFieldName)) {
                 return schemaField.isExported;

@@ -112,7 +112,7 @@ public class DOEngine {
 
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                DODatabaseClass databaseClass = schemaClass.getDatabaseClass();
+                DODatabaseClass databaseClass = schemaClass.databaseClass;
                 if (databaseClass != null) {
                     referenceResolver.resolveReferences(databaseClass, this);
                 }

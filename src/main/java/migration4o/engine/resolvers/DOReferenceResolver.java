@@ -31,8 +31,8 @@ public class DOReferenceResolver {
             DOSchemaClass[] schemaClasses = schema.getClasses();
             if (schemaClasses != null) {
                 for (DOSchemaClass schemaClass : schemaClasses) {
-                    if (schemaClass.getDatabaseClass() != null) {
-                        checkClassForReferences(targetClass, targetClassName, schemaClass.getDatabaseClass());
+                    if (schemaClass.databaseClass != null) {
+                        checkClassForReferences(targetClass, targetClassName, schemaClass.databaseClass);
                     }
                 }
             }

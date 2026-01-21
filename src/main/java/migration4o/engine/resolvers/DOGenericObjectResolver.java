@@ -23,7 +23,7 @@ public class DOGenericObjectResolver {
         // Search in schema classes
         DOSchemaClass[] schemaClasses = schema.getClasses();
         for (DOSchemaClass schemaClass : schemaClasses) {
-            if (className.equals(schemaClass.getAbsoluteName())) {
+            if (className.equals(schemaClass.source)) {
                 return schemaClass;
             }
         }
@@ -61,8 +61,8 @@ public class DOGenericObjectResolver {
         DOSchema schema = engine.getSchema();
         if (schema != null) {
             DOSchemaClass schemaClass = resolveClass(genericObject, schema);
-            if (schemaClass != null && schemaClass.getDatabaseClass() != null) {
-                return schemaClass.getDatabaseClass();
+            if (schemaClass != null && schemaClass.databaseClass != null) {
+                return schemaClass.databaseClass;
             }
         }
 

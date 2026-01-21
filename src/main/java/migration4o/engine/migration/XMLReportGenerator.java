@@ -149,14 +149,14 @@ public class XMLReportGenerator {
     private void writeClass(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
         writer.writeCharacters("      ");
         writer.writeStartElement("class");
-        writer.writeAttribute("name", schemaClass.getShortName());
-        writer.writeAttribute("absoluteName", schemaClass.getAbsoluteName());
+        writer.writeAttribute("name", schemaClass.destinationName);
+        writer.writeAttribute("absoluteName", schemaClass.source);
 
-        if (schemaClass.getExportName() != null && !schemaClass.getExportName().isEmpty()) {
-            writer.writeAttribute("exportName", schemaClass.getExportName());
+        if (schemaClass.destinationName != null && !schemaClass.destinationName.isEmpty()) {
+            writer.writeAttribute("exportName", schemaClass.destinationName);
         }
 
-        String superClass = schemaClass.getSuperClassAbsoluteName();
+        String superClass = schemaClass.parentClassName;
         if (superClass != null && !superClass.equals("java.lang.Object")) {
             writer.writeAttribute("extends", superClass);
         }
@@ -164,7 +164,7 @@ public class XMLReportGenerator {
         writer.writeCharacters("\n");
 
         // Write fields
-        DODatabaseField[] fields = schemaClass.getDatabaseClass() != null ? schemaClass.getDatabaseClass().getFields()
+        DODatabaseField[] fields = schemaClass.databaseClass != null ? schemaClass.databaseClass.getFields()
                 : null;
         if (fields != null && fields.length > 0) {
             writer.writeCharacters("        ");
@@ -351,7 +351,7 @@ public class XMLReportGenerator {
                     // Calculate total objects in this module
                     int totalModuleObjects = 0;
                     for (DOSchemaClass schemaClass : module.getClasses()) {
-                        DODatabaseClass dbClass = schemaClass.getDatabaseClass();
+                        DODatabaseClass dbClass = schemaClass.databaseClass;
                         if (dbClass != null) {
                             totalModuleObjects += engine.getReachabilityTracker().getObjectCountByClass(dbClass);
                         }

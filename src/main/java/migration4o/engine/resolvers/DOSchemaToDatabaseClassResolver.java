@@ -14,7 +14,7 @@ public class DOSchemaToDatabaseClassResolver {
             return;
         }
 
-        String schemaClassName = schemaClass.getAbsoluteName();
+        String schemaClassName = schemaClass.source;
         if (schemaClassName == null || schemaClassName.isEmpty()) {
             return;
         }
@@ -25,7 +25,7 @@ public class DOSchemaToDatabaseClassResolver {
             for (DODatabaseClass databaseClass : databaseClasses) {
                 if (databaseClass != null && schemaClassName.equals(databaseClass.getAbsoluteName())) {
                     // Found a match - set the database class on the schema class
-                    schemaClass.setDatabaseClass(databaseClass);
+                    schemaClass.databaseClass = databaseClass;
 
                     // DEBUG: Log DossierAdresse linkage
                     if (schemaClassName.contains("IDDossPrev")) {

@@ -31,8 +31,8 @@ public class InheritanceUtil {
         Map<String, DOSchemaClass> classMap = new HashMap<>();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass.getAbsoluteName() != null) {
-                    classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+                if (schemaClass.source != null) {
+                    classMap.put(schemaClass.source, schemaClass);
                 }
             }
         }
@@ -71,7 +71,7 @@ public class InheritanceUtil {
     public static String getSuperClassName(DOSchemaClass schemaClass, DODatabaseClass databaseClass) {
         // Try schema first
         if (schemaClass != null) {
-            String schemaSuper = schemaClass.getSuperClassAbsoluteName();
+            String schemaSuper = schemaClass.parentClassName;
             if (schemaSuper != null && !schemaSuper.isEmpty()) {
                 return schemaSuper;
             }
