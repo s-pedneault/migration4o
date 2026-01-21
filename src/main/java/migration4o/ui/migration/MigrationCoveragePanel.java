@@ -1812,4 +1812,76 @@ public class MigrationCoveragePanel extends JPanel {
             }
         }
     }
+
+    /**
+     * Update the reached object counts for exported classes.
+     * This should be called after an export completes successfully.
+     * 
+     * @param exportedClasses Map of class name to number of exported objects
+     */
+    public void updateExportedCounts(Map<String, Integer> exportedClasses) {
+        if (exportedClasses == null || exportedClasses.isEmpty()) {
+            System.out.println("DEBUG MigrationCoveragePanel: No exported classes to update");
+            return;
+        }
+
+        System.out.println("DEBUG MigrationCoveragePanel: Updating " + exportedClasses.size() + " classes");
+
+        // Update the database schema's reachedObjectIds for each exported class
+        for (Map.Entry<String, Integer> entry : exportedClasses.entrySet()) {
+            String className = entry.getKey();
+            int exportedCount = entry.getValue();
+
+            System.out.println("DEBUG: Updating class " + className + " with " + exportedCount + " objects");
+
+            // Find the class in database schema
+            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
+            if (dbClass != null) {
+                System.out.println("DEBUG: Found class in schema, setting reachedObjectIds");
+                // Update the reached count to match exported count
+                // Note: We set the reachedObjectIds length to match the exported count
+                // This is a simplified approach - ideally we'd track actual object IDs
+                if (exportedCount > 0) {
+                    // Create a dummy array of the right size for display purposes
+                    long[] reachedIds = new long[exportedCount];
+                    dbClass.reachedObjectIds = reachedIds;
+                }
+            } else {
+                System.out.println("DEBUG: Class not found in database schema: " + className);
+            }
+        }
+
+        System.out.println("DEBUG: Refreshing table...");
+        // Refresh the table to show updated counts
+        refreshTable();
+    }
+
+    /**
+     * Refresh the table with current data from the schemas.
+     */
+    private void refreshTable() {
+        // Clear existing rows
+        tableModel.setRowCount(0);
+
+        // Re-populate table
+        populateTable(referenceSchema, databaseSchema);
+
+        // Force table repaint
+        table.repaint();
+    }
+
+    /**
+     * Helper method to find a class in a schema.
+     */
+    private DOSchemaClass findClassInSchema(DOSchema schema, String className) {
+        if (schema == null || schema.getClasses() == null) {
+            return null;
+        }
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (schemaClass.source.equals(className)) {
+                return schemaClass;
+            }
+        }
+        return null;
+    }
 }

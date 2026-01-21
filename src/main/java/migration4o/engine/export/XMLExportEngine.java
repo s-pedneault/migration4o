@@ -28,6 +28,7 @@ public class XMLExportEngine {
     private List<ExportError> exportErrors; // Track errors during export
     private int objectsAttempted; // Total objects attempted to export
     private int objectsSucceeded; // Objects successfully exported
+    private Map<String, Integer> exportedClassCounts; // Track number of objects exported per class
 
     public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
         this.schema = schema;
@@ -57,6 +58,7 @@ public class XMLExportEngine {
         exportErrors = new ArrayList<>();
         objectsAttempted = 0;
         objectsSucceeded = 0;
+        exportedClassCounts = new HashMap<>();
 
         ExtObjectContainer container = null;
         try {
@@ -152,6 +154,7 @@ public class XMLExportEngine {
         exportErrors = new ArrayList<>();
         objectsAttempted = 0;
         objectsSucceeded = 0;
+        exportedClassCounts = new HashMap<>();
 
         ExtObjectContainer container = null;
         try {
@@ -268,6 +271,9 @@ public class XMLExportEngine {
             writeIndent(indentLevel);
             writer.write("</" + elementName + ">\n");
             objectsSucceeded++;
+
+            // Track exported class count
+            exportedClassCounts.put(className, exportedClassCounts.getOrDefault(className, 0) + 1);
         } catch (Exception e) {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             exportErrors.add(new ExportError(objectId, className, errorMsg, e));
@@ -1080,7 +1086,14 @@ public class XMLExportEngine {
         // Print summary to console as well
         printExportSummary(outputPath, exportName);
 
-        return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded, publicErrors);
+        // Debug: Print exported class counts
+        System.out.println("DEBUG: Exported class counts:");
+        for (Map.Entry<String, Integer> entry : exportedClassCounts.entrySet()) {
+            System.out.println("  " + entry.getKey() + ": " + entry.getValue() + " objects");
+        }
+
+        return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded, publicErrors,
+                exportedClassCounts);
     }
 
     /**

@@ -411,6 +411,18 @@ public class MainWindow extends JFrame {
     }
 
     /**
+     * Notify the migration coverage panel about exported objects.
+     * 
+     * @param exportedClasses Map of class name to number of exported objects
+     */
+    public void notifyExportCompleted(Map<String, Integer> exportedClasses) {
+        if (migrationCoverageTab instanceof migration4o.ui.migration.MigrationCoveragePanel) {
+            migration4o.ui.migration.MigrationCoveragePanel coveragePanel = (migration4o.ui.migration.MigrationCoveragePanel) migrationCoverageTab;
+            coveragePanel.updateExportedCounts(exportedClasses);
+        }
+    }
+
+    /**
      * Add a tab to the tabbed pane.
      */
     public void addTab(String title, Component component) {

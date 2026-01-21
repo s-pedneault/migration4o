@@ -863,6 +863,23 @@ public class MigrationStructurePanel extends JPanel {
                                 (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
+
+                        // Update migration coverage with exported object counts
+                        if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Notifying MainWindow with " +
+                                    result.getExportedClassCounts().size() + " classes");
+                            java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                            if (window instanceof migration4o.ui.main.MainWindow) {
+                                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
+                                mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                            } else {
+                                System.out.println("DEBUG: Window is not MainWindow: " +
+                                        (window != null ? window.getClass().getName() : "null"));
+                            }
+                        } else {
+                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success=" +
+                                    result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                         JOptionPane.showMessageDialog(MigrationStructurePanel.this,
@@ -936,19 +953,39 @@ public class MigrationStructurePanel extends JPanel {
 
                 @Override
                 protected void done() {
+                    System.out.println("DEBUG: MODULE export done() called");
                     try {
                         migration4o.engine.export.ExportResult result = get();
+                        System.out.println("DEBUG: Got export result, showing dialog...");
                         // Show detailed result dialog
                         migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
                                 (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
+                        System.out.println("DEBUG: Dialog closed, continuing...");
 
                         // Save to history if successful
                         if (result.isSuccess()) {
                             migration4o.engine.export.ExportHistory.saveExport(
                                     migration4o.engine.export.ExportHistory.ExportType.MODULE,
                                     moduleNode.getName(), outputPath, classNames);
+                        }
+
+                        // Update migration coverage with exported object counts
+                        if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                            System.out.println("DEBUG MigrationStructurePanel (MODULE): Notifying MainWindow with " +
+                                    result.getExportedClassCounts().size() + " classes");
+                            java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                            if (window instanceof migration4o.ui.main.MainWindow) {
+                                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
+                                mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                            } else {
+                                System.out.println("DEBUG: Window is not MainWindow: " +
+                                        (window != null ? window.getClass().getName() : "null"));
+                            }
+                        } else {
+                            System.out.println("DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
+                                    result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -1453,14 +1490,34 @@ public class MigrationStructurePanel extends JPanel {
 
             @Override
             protected void done() {
+                System.out.println("DEBUG: REPEAT export done() called");
                 try {
                     migration4o.engine.export.ExportResult result = get();
+                    System.out.println("DEBUG: Got repeat export result, showing dialog...");
                     // Don't save to history again - we're repeating
                     // Show detailed result dialog
                     migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
                             (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                             result);
                     dialog.setVisible(true);
+                    System.out.println("DEBUG: Dialog closed, continuing...");
+
+                    // Update migration coverage with exported object counts
+                    if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                        System.out.println("DEBUG MigrationStructurePanel (REPEAT): Notifying MainWindow with " +
+                                result.getExportedClassCounts().size() + " classes");
+                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                        if (window instanceof migration4o.ui.main.MainWindow) {
+                            migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
+                            mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                        } else {
+                            System.out.println("DEBUG: Window is not MainWindow: " +
+                                    (window != null ? window.getClass().getName() : "null"));
+                        }
+                    } else {
+                        System.out.println("DEBUG MigrationStructurePanel (REPEAT): Not updating coverage - success=" +
+                                result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
+                    }
                 } catch (Exception e) {
                     e.printStackTrace();
                     JOptionPane.showMessageDialog(MigrationStructurePanel.this,
