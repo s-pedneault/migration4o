@@ -413,8 +413,10 @@ public class DODatabaseSchemaInferrer {
                     System.out.println("Deduplicated " + removedCount + " object IDs from " + className +
                             " (" + originalIds.length + " -> " + uniqueIds.length + ")");
                 }
+            } else if (schemaClass.objectIds != null) {
+                // No deduplication needed - copy objectIds to uniqueObjectIds
+                schemaClass.uniqueObjectIds = schemaClass.objectIds;
             }
-            // else: uniqueObjectIds is already initialized as a copy of objectIds
         }
 
         System.out.println("Object ID deduplication complete: " + leafClassCount + " leaf classes, " +

@@ -45,6 +45,9 @@ public class XMLExportEngine {
         // Reset exported object IDs for this export
         exportedObjectIds.clear();
 
+        // Reset XSD builder
+        xsdBuilder = new XSDBuilder();
+
         ExtObjectContainer container = null;
         try {
             // Open database
@@ -64,7 +67,9 @@ public class XMLExportEngine {
             // Get object IDs from the database schema (which has actual object IDs)
             DOSchemaClass dbSchemaClass = findClassByName(databaseSchema, className);
             if (dbSchemaClass != null) {
-                long[] objectIds = dbSchemaClass.uniqueObjectIds;
+                // Use objectIds (not uniqueObjectIds) to get ALL objects for this class,
+                // including those that might be in subclasses
+                long[] objectIds = dbSchemaClass.objectIds;
                 System.out.println("DEBUG: Found " + (objectIds != null ? objectIds.length : 0)
                         + " objects for class " + className);
                 if (objectIds != null) {
@@ -146,7 +151,8 @@ public class XMLExportEngine {
                 if (dbSchemaClass != null) {
                     // XSD: record top-level object type
                     xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
-                    long[] objectIds = dbSchemaClass.uniqueObjectIds;
+                    // Use objectIds (not uniqueObjectIds) to get ALL objects for this class
+                    long[] objectIds = dbSchemaClass.objectIds;
                     if (objectIds != null) {
                         for (long objectId : objectIds) {
                             exportObjectRecursively(container, objectId, 2);
@@ -605,7 +611,8 @@ public class XMLExportEngine {
                         continue; // Skip classes that don't match the expected type
                     }
 
-                    long[] objectIds = schemaClass.uniqueObjectIds;
+                    // Use objectIds (not uniqueObjectIds) to search ALL objects
+                    long[] objectIds = schemaClass.objectIds;
                     if (objectIds != null) {
                         for (long objectId : objectIds) {
                             try {

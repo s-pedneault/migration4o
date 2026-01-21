@@ -101,10 +101,15 @@ public class XMLDataExporter {
 
             // Export objects for each class in the module
             if (module.getClasses() != null) {
+                System.out.println(
+                        "DEBUG: Module '" + module.getName() + "' has " + module.getClasses().length + " classes");
                 for (DOSchemaClass schemaClass : module.getClasses()) {
                     // Only export classes that are marked for migration
                     if (schemaClass.migrate) {
+                        System.out.println("DEBUG: Processing class '" + schemaClass.source + "' (migrate=true)");
                         exportClassObjects(writer, schemaClass);
+                    } else {
+                        System.out.println("DEBUG: Skipping class '" + schemaClass.source + "' (migrate=false)");
                     }
                 }
             }
@@ -229,15 +234,27 @@ public class XMLDataExporter {
     private void exportClassObjects(XMLStreamWriter writer, DOSchemaClass schemaClass) throws XMLStreamException {
         DODatabaseClass dbClass = schemaClass.databaseClass;
         if (dbClass == null) {
+            System.out.println("DEBUG: Skipping class '" + schemaClass.source + "' - no database class linked");
             return;
         }
 
         DODatabaseObject[] objects = dbClass.getResolvedObjects();
         if (objects == null || objects.length == 0) {
+            System.out.println("DEBUG: Skipping class '" + schemaClass.source + "' - no resolved objects (total: "
+                    + dbClass.getTotalObjectCount() + ")");
             return;
         }
 
         String typeName = schemaClass.destinationName;
+
+        int reachableCount = 0;
+        for (DODatabaseObject obj : objects) {
+            if (obj.isReachable()) {
+                reachableCount++;
+            }
+        }
+        System.out.println("DEBUG: Exporting class '" + schemaClass.source + "' - " + reachableCount
+                + " reachable objects out of " + objects.length);
 
         // Export ALL objects from this class using new format
         for (DODatabaseObject obj : objects) {
