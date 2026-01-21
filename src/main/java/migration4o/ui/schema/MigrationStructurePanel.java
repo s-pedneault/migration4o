@@ -855,8 +855,8 @@ public class MigrationStructurePanel extends JPanel {
                         // Save to history if successful
                         if (result.isSuccess()) {
                             migration4o.engine.export.ExportHistory.saveExport(
-                                migration4o.engine.export.ExportHistory.ExportType.CLASS,
-                                className, outputPath, null);
+                                    migration4o.engine.export.ExportHistory.ExportType.CLASS,
+                                    className, outputPath, null);
                         }
                         // Show detailed result dialog
                         migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
@@ -943,12 +943,12 @@ public class MigrationStructurePanel extends JPanel {
                                 (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
-                        
+
                         // Save to history if successful
                         if (result.isSuccess()) {
                             migration4o.engine.export.ExportHistory.saveExport(
-                                migration4o.engine.export.ExportHistory.ExportType.MODULE,
-                                moduleNode.getName(), outputPath, classNames);
+                                    migration4o.engine.export.ExportHistory.ExportType.MODULE,
+                                    moduleNode.getName(), outputPath, classNames);
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -1399,9 +1399,9 @@ public class MigrationStructurePanel extends JPanel {
      * Repeats the last export operation if history exists.
      */
     public void repeatLastExport() {
-        migration4o.engine.export.ExportHistory.ExportParams params = 
-            migration4o.engine.export.ExportHistory.loadLastExport();
-        
+        migration4o.engine.export.ExportHistory.ExportParams params = migration4o.engine.export.ExportHistory
+                .loadLastExport();
+
         if (params == null) {
             JOptionPane.showMessageDialog(this,
                     "No export history found.",
@@ -1409,7 +1409,7 @@ public class MigrationStructurePanel extends JPanel {
                     JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        
+
         if (databasePath == null || databasePath.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "No database is currently open. Please open a database first.",
@@ -1417,7 +1417,7 @@ public class MigrationStructurePanel extends JPanel {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
+
         if (databaseSchema == null) {
             JOptionPane.showMessageDialog(this,
                     "No database schema available. Please open a database first.",
@@ -1425,15 +1425,16 @@ public class MigrationStructurePanel extends JPanel {
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
-        
-        // Execute the export (no confirmation needed - command-line flag is explicit intent)
+
+        // Execute the export (no confirmation needed - command-line flag is explicit
+        // intent)
         System.out.println("Repeating export: " + params.getDescription());
         SwingWorker<migration4o.engine.export.ExportResult, String> worker = new SwingWorker<>() {
             @Override
             protected migration4o.engine.export.ExportResult doInBackground() throws Exception {
-                migration4o.engine.export.XMLExportEngine exporter = 
-                    new migration4o.engine.export.XMLExportEngine(schema, databaseSchema, databasePath);
-                
+                migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
+                        schema, databaseSchema, databasePath);
+
                 if (params.type == migration4o.engine.export.ExportHistory.ExportType.CLASS) {
                     publish("Repeating class export: " + params.targetName);
                     return exporter.exportClass(params.targetName, params.outputPath);
@@ -1442,22 +1443,21 @@ public class MigrationStructurePanel extends JPanel {
                     return exporter.exportModule(params.classNames, params.targetName, params.outputPath);
                 }
             }
-            
+
             @Override
             protected void process(List<String> chunks) {
                 for (String message : chunks) {
                     System.out.println(message);
                 }
             }
-            
+
             @Override
             protected void done() {
                 try {
                     migration4o.engine.export.ExportResult result = get();
                     // Don't save to history again - we're repeating
                     // Show detailed result dialog
-                    migration4o.ui.dialogs.ExportResultDialog dialog = 
-                        new migration4o.ui.dialogs.ExportResultDialog(
+                    migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
                             (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                             result);
                     dialog.setVisible(true);
@@ -1470,7 +1470,7 @@ public class MigrationStructurePanel extends JPanel {
                 }
             }
         };
-        
+
         worker.execute();
     }
 }

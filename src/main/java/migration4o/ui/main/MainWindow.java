@@ -31,7 +31,7 @@ public class MainWindow extends JFrame {
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
-    
+
     private Runnable repeatExportCallback;
     private boolean pendingRepeatExport = false;
 
@@ -271,7 +271,7 @@ public class MainWindow extends JFrame {
 
                     // Switch to the database structure tab
                     tabbedPane.setSelectedComponent(databaseSchemaTab);
-                    
+
                     // Trigger pending repeat export if requested
                     if (pendingRepeatExport) {
                         pendingRepeatExport = false;
@@ -610,7 +610,7 @@ public class MainWindow extends JFrame {
             }
         }
     }
-    
+
     /**
      * Set callback for repeat export functionality (called from Migration4oUI).
      * 
@@ -619,10 +619,11 @@ public class MainWindow extends JFrame {
     public void setRepeatExportCallback(Runnable callback) {
         this.repeatExportCallback = callback;
     }
-    
+
     /**
      * Request repeat export to be triggered after database loads.
-     * If database is already open, triggers immediately. Otherwise, sets flag to trigger after next database open.
+     * If database is already open, triggers immediately. Otherwise, sets flag to
+     * trigger after next database open.
      */
     public void triggerRepeatExport() {
         if (currentDatabaseSchema != null) {

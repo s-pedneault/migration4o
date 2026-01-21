@@ -20,7 +20,7 @@ public class Migration4oUI {
         // Parse command line arguments
         String databasePath = null;
         boolean repeatExport = false;
-        
+
         for (String arg : args) {
             if (arg.equals("--repeat-export")) {
                 repeatExport = true;
@@ -29,7 +29,7 @@ public class Migration4oUI {
                 databasePath = arg;
             }
         }
-        
+
         final String finalDatabasePath = databasePath;
         final boolean finalRepeatExport = repeatExport;
 
@@ -62,7 +62,7 @@ public class Migration4oUI {
                 // Add migration structure tab
                 MigrationStructurePanel migrationStructurePanel = new MigrationStructurePanel(schema);
                 mainWindow.addTab("Migration structure", migrationStructurePanel);
-                
+
                 // Set up repeat export callback
                 mainWindow.setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
             } catch (Exception e) {
@@ -81,12 +81,12 @@ public class Migration4oUI {
                 java.io.File dbFile = new java.io.File(finalDatabasePath);
                 if (dbFile.exists() && dbFile.isFile()) {
                     System.out.println("Auto-opening database: " + finalDatabasePath);
-                    
+
                     // Set up repeat export before opening database
                     if (finalRepeatExport) {
                         mainWindow.triggerRepeatExport();
                     }
-                    
+
                     // Open database - repeat export will trigger automatically after load completes
                     mainWindow.openDatabaseFile(finalDatabasePath);
                 } else {
