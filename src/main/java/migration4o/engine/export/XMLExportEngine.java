@@ -74,9 +74,14 @@ public class XMLExportEngine {
             writer.write("  </metadata>\n");
             writer.write("  <objects>\n");
 
+            // XSD: record root structure
+            xsdBuilder.startExportRoot();
+
             // Get object IDs from the database schema (which has actual object IDs)
             DOSchemaClass dbSchemaClass = findClassByName(databaseSchema, className);
             if (dbSchemaClass != null) {
+                // XSD: record top-level object type
+                xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
                 // Use objectIds (not uniqueObjectIds) to get ALL objects for this class,
                 // including those that might be in subclasses
                 long[] objectIds = dbSchemaClass.objectIds;
@@ -98,9 +103,9 @@ public class XMLExportEngine {
             // Print export summary
             printExportSummary(outputPath, className);
 
-            // Generate XSD schema file
+            // Generate XSD schema file using XSDBuilder
             String xsdPath = outputPath.replace(".xml", ".xsd");
-            generateXSD(className, xsdPath);
+            xsdBuilder.writeXSD(xsdPath);
             System.out.println("Generated XSD schema: " + xsdPath);
 
             // Create and return result
@@ -192,10 +197,13 @@ public class XMLExportEngine {
             writer.write("</export>\n");
             writer.close();
 
-            // Write XSD if requested
-            if (xsdOutputPath != null) {
-                xsdBuilder.writeXSD(xsdOutputPath);
+            // Generate XSD schema file
+            String xsdPath = xsdOutputPath;
+            if (xsdPath == null) {
+                xsdPath = outputPath.replace(".xml", ".xsd");
             }
+            xsdBuilder.writeXSD(xsdPath);
+            System.out.println("Generated XSD schema: " + xsdPath);
 
             // Create and return result
             return createExportResult(moduleName, outputPath);
@@ -526,6 +534,7 @@ public class XMLExportEngine {
 
         private boolean isPrimitiveType(String typeName) {
             return typeName.equals("java.lang.String") ||
+                    typeName.equals("string") || // Simplified schema type
                     typeName.equals("java.lang.Integer") ||
                     typeName.equals("int") ||
                     typeName.equals("java.lang.Long") ||
@@ -536,11 +545,12 @@ public class XMLExportEngine {
                     typeName.equals("double") ||
                     typeName.equals("java.lang.Float") ||
                     typeName.equals("float") ||
-                    typeName.equals("java.util.Date");
+                    typeName.equals("java.util.Date") ||
+                    typeName.equals("date"); // Simplified schema type
         }
 
         private String getXSDType(String javaType) {
-            if (javaType.equals("java.lang.String"))
+            if (javaType.equals("java.lang.String") || javaType.equals("string"))
                 return "xs:string";
             if (javaType.equals("java.lang.Integer") || javaType.equals("int"))
                 return "xs:int";
@@ -552,7 +562,7 @@ public class XMLExportEngine {
                 return "xs:double";
             if (javaType.equals("java.lang.Float") || javaType.equals("float"))
                 return "xs:float";
-            if (javaType.equals("java.util.Date"))
+            if (javaType.equals("java.util.Date") || javaType.equals("date"))
                 return "xs:dateTime";
             return "xs:string";
         }
@@ -958,7 +968,7 @@ public class XMLExportEngine {
      * Maps Java types to XSD types.
      */
     private String getXSDType(String javaType) {
-        if (javaType.equals("java.lang.String"))
+        if (javaType.equals("java.lang.String") || javaType.equals("string"))
             return "xs:string";
         if (javaType.equals("java.lang.Integer") || javaType.equals("int"))
             return "xs:int";
@@ -970,7 +980,7 @@ public class XMLExportEngine {
             return "xs:double";
         if (javaType.equals("java.lang.Float") || javaType.equals("float"))
             return "xs:float";
-        if (javaType.equals("java.util.Date"))
+        if (javaType.equals("java.util.Date") || javaType.equals("date"))
             return "xs:dateTime";
         return "xs:string"; // Default to string for unknown types
     }
@@ -980,12 +990,14 @@ public class XMLExportEngine {
      */
     private boolean isPrimitiveType(String typeName) {
         return typeName.equals("java.lang.String") ||
+                typeName.equals("string") || // Simplified schema type
                 typeName.equals("java.lang.Integer") ||
                 typeName.equals("java.lang.Long") ||
                 typeName.equals("java.lang.Boolean") ||
                 typeName.equals("java.lang.Double") ||
                 typeName.equals("java.lang.Float") ||
                 typeName.equals("java.util.Date") ||
+                typeName.equals("date") || // Simplified schema type
                 typeName.startsWith("java.lang.") ||
                 typeName.startsWith("java.util.");
     }
