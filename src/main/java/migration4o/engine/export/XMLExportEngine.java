@@ -25,6 +25,9 @@ public class XMLExportEngine {
     private Set<Long> exportedObjectIds; // Track exported objects to avoid duplicates
     private FileWriter writer;
     private XSDBuilder xsdBuilder; // In-memory XSD builder to record structure as XML is generated
+    private List<ExportError> exportErrors; // Track errors during export
+    private int objectsAttempted; // Total objects attempted to export
+    private int objectsSucceeded; // Objects successfully exported
 
     public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
         this.schema = schema;
@@ -35,8 +38,10 @@ public class XMLExportEngine {
 
     /**
      * Exports objects of a specific class to XML file
+     * 
+     * @return ExportResult containing statistics and any errors encountered
      */
-    public void exportClass(String className, String outputPath) throws Exception {
+    public ExportResult exportClass(String className, String outputPath) throws Exception {
         DOSchemaClass schemaClass = findClassByName(className);
         if (schemaClass == null) {
             throw new IllegalArgumentException("Class not found: " + className);
@@ -47,6 +52,11 @@ public class XMLExportEngine {
 
         // Reset XSD builder
         xsdBuilder = new XSDBuilder();
+
+        // Reset error tracking
+        exportErrors = new ArrayList<>();
+        objectsAttempted = 0;
+        objectsSucceeded = 0;
 
         ExtObjectContainer container = null;
         try {
@@ -85,11 +95,16 @@ public class XMLExportEngine {
             writer.write("</export>\n");
             writer.close();
 
-            System.out.println("Exported " + exportedObjectIds.size() + " objects to " + outputPath);
+            // Print export summary
+            printExportSummary(outputPath, className);
+
             // Generate XSD schema file
             String xsdPath = outputPath.replace(".xml", ".xsd");
             generateXSD(className, xsdPath);
             System.out.println("Generated XSD schema: " + xsdPath);
+
+            // Create and return result
+            return createExportResult(className, outputPath);
         } finally {
             if (container != null) {
                 container.close();
@@ -106,22 +121,32 @@ public class XMLExportEngine {
 
     /**
      * Exports all objects in a module (all classes in the module) to XML file
+     * 
+     * @return ExportResult containing statistics and any errors encountered
      */
-    public void exportModule(List<String> classNames, String moduleName, String outputPath) throws Exception {
-        exportModule(classNames, moduleName, outputPath, null);
+    public ExportResult exportModule(List<String> classNames, String moduleName, String outputPath) throws Exception {
+        return exportModule(classNames, moduleName, outputPath, null);
     }
 
     /**
      * Exports all objects in a module (all classes in the module) to XML file, and
      * generates XSD in sync.
+     * 
+     * @return ExportResult containing statistics and any errors encountered
      */
-    public void exportModule(List<String> classNames, String moduleName, String outputPath, String xsdOutputPath)
+    public ExportResult exportModule(List<String> classNames, String moduleName, String outputPath,
+            String xsdOutputPath)
             throws Exception {
         // Reset exported object IDs for this export
         exportedObjectIds.clear();
 
         // Reset XSD builder
         xsdBuilder = new XSDBuilder();
+
+        // Reset error tracking
+        exportErrors = new ArrayList<>();
+        objectsAttempted = 0;
+        objectsSucceeded = 0;
 
         ExtObjectContainer container = null;
         try {
@@ -172,7 +197,8 @@ public class XMLExportEngine {
                 xsdBuilder.writeXSD(xsdOutputPath);
             }
 
-            System.out.println("Exported " + exportedObjectIds.size() + " objects to " + outputPath);
+            // Create and return result
+            return createExportResult(moduleName, outputPath);
         } finally {
             if (container != null) {
                 container.close();
@@ -198,6 +224,8 @@ public class XMLExportEngine {
             return;
         }
 
+        objectsAttempted++;
+        String className = null;
         try {
             // Get and activate the object
             Object obj = container.ext().getByID(objectId);
@@ -205,7 +233,7 @@ public class XMLExportEngine {
                 return;
             }
 
-            String className = getClassName(obj);
+            className = getClassName(obj);
             ObjectResolverUtil.activateObject(container, obj, objectId);
 
             // Write object opening tag using destination class name as element name
@@ -231,8 +259,13 @@ public class XMLExportEngine {
             // Write object closing tag
             writeIndent(indentLevel);
             writer.write("</" + elementName + ">\n");
+            objectsSucceeded++;
         } catch (Exception e) {
-            System.err.println("Error exporting object " + objectId + ": " + e.getMessage());
+            String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
+            exportErrors.add(new ExportError(objectId, className, errorMsg, e));
+            // Still write error marker in XML for debugging
+            writeIndent(indentLevel);
+            writer.write("<!-- ERROR exporting object " + objectId + ": " + xmlEscape(errorMsg) + " -->\n");
         }
     }
 
@@ -955,5 +988,103 @@ public class XMLExportEngine {
                 typeName.equals("java.util.Date") ||
                 typeName.startsWith("java.lang.") ||
                 typeName.startsWith("java.util.");
+    }
+
+    /**
+     * Prints a comprehensive export summary including success/failure statistics.
+     */
+    private void printExportSummary(String outputPath, String exportName) {
+        System.out.println("\\n" + "=".repeat(80));
+        System.out.println("EXPORT SUMMARY: " + exportName);
+        System.out.println("=".repeat(80));
+        System.out.println("Output file:       " + outputPath);
+        System.out.println("Objects attempted: " + objectsAttempted);
+        System.out.println("Objects succeeded: " + objectsSucceeded);
+        System.out.println("Objects failed:    " + exportErrors.size());
+
+        if (!exportErrors.isEmpty()) {
+            System.out.println("\\n" + "!".repeat(80));
+            System.out.println("ERRORS ENCOUNTERED:");
+            System.out.println("!".repeat(80));
+
+            // Group errors by error message
+            Map<String, List<ExportError>> errorsByMessage = new LinkedHashMap<>();
+            for (ExportError error : exportErrors) {
+                errorsByMessage.computeIfAbsent(error.errorMessage, k -> new ArrayList<>()).add(error);
+            }
+
+            // Print error groups
+            for (Map.Entry<String, List<ExportError>> entry : errorsByMessage.entrySet()) {
+                String errorMsg = entry.getKey();
+                List<ExportError> errors = entry.getValue();
+                System.out.println("\\n[" + errors.size() + " occurrences] " + errorMsg);
+
+                // Show first few object IDs as examples
+                int showCount = Math.min(5, errors.size());
+                System.out.print("  Object IDs: ");
+                for (int i = 0; i < showCount; i++) {
+                    System.out.print(errors.get(i).objectId);
+                    if (i < showCount - 1)
+                        System.out.print(", ");
+                }
+                if (errors.size() > showCount) {
+                    System.out.print(" ... and " + (errors.size() - showCount) + " more");
+                }
+                System.out.println();
+
+                // Show class names if available
+                Set<String> classNames = errors.stream()
+                        .map(e -> e.className)
+                        .filter(c -> c != null && !c.isEmpty())
+                        .collect(java.util.stream.Collectors.toSet());
+                if (!classNames.isEmpty()) {
+                    System.out.println("  Classes: " + String.join(", ", classNames));
+                }
+            }
+
+            System.out.println("\\n" + "!".repeat(80));
+            System.out.println("WARNING: Export completed with errors. Data may be incomplete!");
+            System.out.println("!".repeat(80));
+        } else {
+            System.out.println("\\nStatus: ✓ All objects exported successfully");
+        }
+        System.out.println("=".repeat(80) + "\\n");
+    }
+
+    /**
+     * Creates an ExportResult from the current export statistics.
+     */
+    private ExportResult createExportResult(String exportName, String outputPath) {
+        // Convert internal errors to public ExportResult.ExportError format
+        List<ExportResult.ExportError> publicErrors = new ArrayList<>();
+        for (ExportError internalError : exportErrors) {
+            publicErrors.add(new ExportResult.ExportError(
+                    internalError.objectId,
+                    internalError.className,
+                    internalError.errorMessage,
+                    internalError.exception));
+        }
+
+        // Print summary to console as well
+        printExportSummary(outputPath, exportName);
+
+        return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded, publicErrors);
+    }
+
+    /**
+     * Represents an error that occurred during object export (internal use).
+     */
+    private static class ExportError {
+        final long objectId;
+        final String className;
+        final String errorMessage;
+        final Exception exception;
+
+        ExportError(long objectId, String className, String errorMessage, Exception exception) {
+            this.objectId = objectId;
+            this.className = className;
+            this.errorMessage = errorMessage;
+            this.exception = exception;
+        }
     }
 }

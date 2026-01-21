@@ -31,6 +31,9 @@ public class MainWindow extends JFrame {
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
+    
+    private Runnable repeatExportCallback;
+    private boolean pendingRepeatExport = false;
 
     // Track database-related tabs for closing
     private Component databaseSchemaTab = null;
@@ -140,6 +143,28 @@ public class MainWindow extends JFrame {
         }
 
         File selectedFile = fileChooser.getSelectedFile();
+        openDatabaseFile(selectedFile.getAbsolutePath());
+    }
+
+    public void openDatabaseFile(String databasePath) {
+        // Don't open if a database is already open
+        if (currentDatabaseSchema != null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please close the current database before opening a new one.",
+                    "Database Already Open",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        File selectedFile = new File(databasePath);
+        if (!selectedFile.exists()) {
+            JOptionPane.showMessageDialog(this,
+                    "Database file does not exist: " + databasePath,
+                    "File Not Found",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
         currentDatabasePath = selectedFile.getAbsolutePath();
 
         // Show loading state on welcome panel
@@ -246,6 +271,12 @@ public class MainWindow extends JFrame {
 
                     // Switch to the database structure tab
                     tabbedPane.setSelectedComponent(databaseSchemaTab);
+                    
+                    // Trigger pending repeat export if requested
+                    if (pendingRepeatExport) {
+                        pendingRepeatExport = false;
+                        SwingUtilities.invokeLater(() -> triggerRepeatExport());
+                    }
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -577,6 +608,31 @@ public class MainWindow extends JFrame {
                 // Update the panel with new comparison
                 info.panel.updateComparison(comparison);
             }
+        }
+    }
+    
+    /**
+     * Set callback for repeat export functionality (called from Migration4oUI).
+     * 
+     * @param callback the callback to execute when repeat export is triggered
+     */
+    public void setRepeatExportCallback(Runnable callback) {
+        this.repeatExportCallback = callback;
+    }
+    
+    /**
+     * Request repeat export to be triggered after database loads.
+     * If database is already open, triggers immediately. Otherwise, sets flag to trigger after next database open.
+     */
+    public void triggerRepeatExport() {
+        if (currentDatabaseSchema != null) {
+            // Database already open, execute immediately
+            if (repeatExportCallback != null) {
+                repeatExportCallback.run();
+            }
+        } else {
+            // Database not yet open, set flag to trigger after load
+            pendingRepeatExport = true;
         }
     }
 

@@ -17,6 +17,22 @@ public class Migration4oUI {
     private static final String DEFAULT_SCHEMA_PATH = "schema/database-schema.xml";
 
     public static void main(String[] args) {
+        // Parse command line arguments
+        String databasePath = null;
+        boolean repeatExport = false;
+        
+        for (String arg : args) {
+            if (arg.equals("--repeat-export")) {
+                repeatExport = true;
+            } else if (!arg.startsWith("--")) {
+                // Assume it's a database path
+                databasePath = arg;
+            }
+        }
+        
+        final String finalDatabasePath = databasePath;
+        final boolean finalRepeatExport = repeatExport;
+
         // Set look and feel before creating any UI components
         SwingUtilities.invokeLater(() -> {
             try {
@@ -46,6 +62,9 @@ public class Migration4oUI {
                 // Add migration structure tab
                 MigrationStructurePanel migrationStructurePanel = new MigrationStructurePanel(schema);
                 mainWindow.addTab("Migration structure", migrationStructurePanel);
+                
+                // Set up repeat export callback
+                mainWindow.setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
             } catch (Exception e) {
                 e.printStackTrace();
                 JOptionPane.showMessageDialog(null,
@@ -56,6 +75,27 @@ public class Migration4oUI {
 
             // Show window
             mainWindow.setVisible(true);
+
+            // Auto-open database if path was provided
+            if (finalDatabasePath != null) {
+                java.io.File dbFile = new java.io.File(finalDatabasePath);
+                if (dbFile.exists() && dbFile.isFile()) {
+                    System.out.println("Auto-opening database: " + finalDatabasePath);
+                    
+                    // Set up repeat export before opening database
+                    if (finalRepeatExport) {
+                        mainWindow.triggerRepeatExport();
+                    }
+                    
+                    // Open database - repeat export will trigger automatically after load completes
+                    mainWindow.openDatabaseFile(finalDatabasePath);
+                } else {
+                    JOptionPane.showMessageDialog(mainWindow,
+                            "Database file not found: " + finalDatabasePath,
+                            "Auto-open Failed",
+                            JOptionPane.WARNING_MESSAGE);
+                }
+            }
         });
     }
 }
