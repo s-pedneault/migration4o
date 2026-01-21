@@ -1592,7 +1592,7 @@ public class MigrationCoveragePanel extends JPanel {
             while (currentClass != null) {
                 if (currentClass.getFields() != null) {
                     for (DOSchemaField field : currentClass.getFields()) {
-                        String fieldName = field.getSource();
+                        String fieldName = field.source;
                         if (!addedFields.contains(fieldName)) {
                             String displayName = currentClass.getAbsoluteName().equals(targetClass.getAbsoluteName())
                                     ? fieldName

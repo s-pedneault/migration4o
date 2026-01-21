@@ -115,42 +115,42 @@ public class DODatabaseSchemaWriter {
 
         // If field has source, use source and destinationName attributes
         // Otherwise use name attribute (for fields without source mapping)
-        if (field.getSource() != null && !field.getSource().isEmpty()) {
-            writeAttribute(writer, "source", field.getSource());
-            if (field.getDestinationName() != null && !field.getDestinationName().isEmpty()) {
-                writeAttribute(writer, "destinationName", field.getDestinationName());
+        if (field.source != null && !field.source.isEmpty()) {
+            writeAttribute(writer, "source", field.source);
+            if (field.destinationName != null && !field.destinationName.isEmpty()) {
+                writeAttribute(writer, "destinationName", field.destinationName);
             }
-            writeAttribute(writer, "isExported", String.valueOf(field.isExported()));
-            writeAttribute(writer, "skipIfEmpty", String.valueOf(field.isSkipIfEmpty()));
+            writeAttribute(writer, "isExported", String.valueOf(field.isExported));
+            writeAttribute(writer, "skipIfEmpty", String.valueOf(field.skipIfEmpty));
         } else {
             // No source - use name attribute
-            if (field.getDestinationName() != null && !field.getDestinationName().isEmpty()) {
-                writeAttribute(writer, "name", field.getDestinationName());
+            if (field.destinationName != null && !field.destinationName.isEmpty()) {
+                writeAttribute(writer, "name", field.destinationName);
             }
         }
 
-        if (field.getType() != null && !field.getType().isEmpty()) {
-            writeAttribute(writer, "type", field.getType());
+        if (field.type != null && !field.type.isEmpty()) {
+            writeAttribute(writer, "type", field.type);
         }
 
-        if (field.isCollection()) {
+        if (field.isCollection) {
             writeAttribute(writer, "collection", "true");
         }
 
-        if (field.isEmbedContents()) {
+        if (field.embedContents) {
             writeAttribute(writer, "embedContents", "true");
         }
 
-        if (field.getChildrenType() != null && !field.getChildrenType().isEmpty()) {
-            writeAttribute(writer, "childrenType", field.getChildrenType());
+        if (field.childrenType != null && !field.childrenType.isEmpty()) {
+            writeAttribute(writer, "childrenType", field.childrenType);
         }
 
-        if (field.getTitle() != null && !field.getTitle().isEmpty()) {
-            writeAttribute(writer, "title", field.getTitle());
+        if (field.title != null && !field.title.isEmpty()) {
+            writeAttribute(writer, "title", field.title);
         }
 
-        if (field.getDescription() != null && !field.getDescription().isEmpty()) {
-            writeAttribute(writer, "description", field.getDescription());
+        if (field.description != null && !field.description.isEmpty()) {
+            writeAttribute(writer, "description", field.description);
         }
 
         writer.write(" />\n");

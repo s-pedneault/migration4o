@@ -1,5 +1,9 @@
 package migration4o.engine.export;
 
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
@@ -10,22 +14,17 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import com.db4o.reflect.generic.GenericObject;
-
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.*;
 
-/**
- * XML Export Engine that exports objects using the same reachability logic
- * as the Reach Analysis feature. Follows object references through fields,
- * handles IDEntite relationships, and exports the entire object graph to XML.
- */
 public class XMLExportEngine {
     private DOSchema schema; // Reference schema for class definitions
     private DOSchema databaseSchema; // Database schema with actual object IDs
     private String databasePath;
     private Set<Long> exportedObjectIds; // Track exported objects to avoid duplicates
     private FileWriter writer;
+    private XSDBuilder xsdBuilder; // In-memory XSD builder to record structure as XML is generated
 
     public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
         this.schema = schema;
@@ -104,8 +103,20 @@ public class XMLExportEngine {
      * Exports all objects in a module (all classes in the module) to XML file
      */
     public void exportModule(List<String> classNames, String moduleName, String outputPath) throws Exception {
+        exportModule(classNames, moduleName, outputPath, null);
+    }
+
+    /**
+     * Exports all objects in a module (all classes in the module) to XML file, and
+     * generates XSD in sync.
+     */
+    public void exportModule(List<String> classNames, String moduleName, String outputPath, String xsdOutputPath)
+            throws Exception {
         // Reset exported object IDs for this export
         exportedObjectIds.clear();
+
+        // Reset XSD builder
+        xsdBuilder = new XSDBuilder();
 
         ExtObjectContainer container = null;
         try {
@@ -115,6 +126,7 @@ public class XMLExportEngine {
 
             // Create output file
             writer = new FileWriter(outputPath);
+
             writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
             writer.write("<export>\n");
             writer.write("  <metadata>\n");
@@ -124,11 +136,16 @@ public class XMLExportEngine {
             writer.write("  </metadata>\n");
             writer.write("  <objects>\n");
 
+            // XSD: record root structure
+            xsdBuilder.startExportRoot();
+
             // Export all objects from each class in the module
             for (String className : classNames) {
                 // Get object IDs from the database schema (which has actual object IDs)
                 DOSchemaClass dbSchemaClass = findClassByName(databaseSchema, className);
                 if (dbSchemaClass != null) {
+                    // XSD: record top-level object type
+                    xsdBuilder.addTopLevelObject(dbSchemaClass.getDestinationName(), dbSchemaClass);
                     long[] objectIds = dbSchemaClass.getUniqueObjectIds();
                     if (objectIds != null) {
                         for (long objectId : objectIds) {
@@ -143,6 +160,11 @@ public class XMLExportEngine {
             writer.write("  </objects>\n");
             writer.write("</export>\n");
             writer.close();
+
+            // Write XSD if requested
+            if (xsdOutputPath != null) {
+                xsdBuilder.writeXSD(xsdOutputPath);
+            }
 
             System.out.println("Exported " + exportedObjectIds.size() + " objects to " + outputPath);
         } finally {
@@ -186,6 +208,11 @@ public class XMLExportEngine {
             writeIndent(indentLevel);
             writer.write("<" + elementName + ">\n");
 
+            // XSD: record this class structure
+            if (schemaClass != null) {
+                xsdBuilder.addClass(schemaClass);
+            }
+
             // If it's a GenericObject, export all its fields
             if (obj instanceof GenericObject) {
                 GenericObject genericObj = (GenericObject) obj;
@@ -222,7 +249,12 @@ public class XMLExportEngine {
 
                     // Get destination field name from schema
                     DOSchemaField schemaField = findSchemaField(parentClassName, sourceFieldName);
-                    String fieldName = schemaField != null ? schemaField.getDestinationName() : sourceFieldName;
+                    String fieldName = schemaField != null ? schemaField.destinationName : sourceFieldName;
+
+                    // XSD: record field type
+                    if (schemaField != null) {
+                        xsdBuilder.addField(parentClassName, schemaField);
+                    }
 
                     if (fieldValue == null) {
                         writeIndent(indentLevel);
@@ -247,9 +279,7 @@ public class XMLExportEngine {
                             writeIndent(indentLevel);
                             writer.write("</" + fieldName + ">\n");
                         }
-                    }
-                    // Handle arrays
-                    else if (fieldValue.getClass().isArray()) {
+                    } else if (fieldValue.getClass().isArray()) {
                         int length = java.lang.reflect.Array.getLength(fieldValue);
                         if (length == 0) {
                             writeIndent(indentLevel);
@@ -266,9 +296,7 @@ public class XMLExportEngine {
                             writeIndent(indentLevel);
                             writer.write("</" + fieldName + ">\n");
                         }
-                    }
-                    // Handle single values
-                    else {
+                    } else {
                         long refId = container.ext().getID(fieldValue);
                         if (refId > 0) {
                             // This is a persistent object reference
@@ -295,6 +323,211 @@ public class XMLExportEngine {
     }
 
     /**
+     * Helper to build XSD structure in-memory as XML is generated.
+     */
+    private static class XSDBuilder {
+        private final Set<String> processedClasses = new LinkedHashSet<>();
+        private final Map<String, DOSchemaClass> classMap = new LinkedHashMap<>();
+        private final Map<String, Map<String, DOSchemaField>> fieldsByClass = new LinkedHashMap<>();
+        private final Set<String> topLevelObjects = new LinkedHashSet<>();
+
+        public void startExportRoot() {
+            // No-op for now, but could record root structure if needed
+        }
+
+        public void addTopLevelObject(String destName, DOSchemaClass schemaClass) {
+            topLevelObjects.add(destName);
+            if (schemaClass != null) {
+                classMap.put(schemaClass.getAbsoluteName(), schemaClass);
+            }
+        }
+
+        public void addClass(DOSchemaClass schemaClass) {
+            if (schemaClass == null)
+                return;
+            String absName = schemaClass.getAbsoluteName();
+            if (!classMap.containsKey(absName)) {
+                classMap.put(absName, schemaClass);
+            }
+        }
+
+        public void addField(String parentClassName, DOSchemaField field) {
+            if (field == null)
+                return;
+            fieldsByClass.computeIfAbsent(parentClassName, k -> new LinkedHashMap<>())
+                    .put(field.destinationName, field);
+        }
+
+        public void writeXSD(String xsdPath) throws IOException {
+            try (FileWriter xsdWriter = new FileWriter(xsdPath)) {
+                xsdWriter.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+                xsdWriter.write("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n\n");
+
+                // Root export element
+                xsdWriter.write("  <xs:element name=\"export\">\n");
+                xsdWriter.write("    <xs:complexType>\n");
+                xsdWriter.write("      <xs:sequence>\n");
+                xsdWriter.write("        <xs:element name=\"metadata\" type=\"MetadataType\"/>\n");
+                xsdWriter.write("        <xs:element name=\"objects\">\n");
+                xsdWriter.write("          <xs:complexType>\n");
+                xsdWriter.write("            <xs:sequence>\n");
+                for (String obj : topLevelObjects) {
+                    xsdWriter.write("              <xs:element ref=\"" + obj
+                            + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                }
+                xsdWriter.write("            </xs:sequence>\n");
+                xsdWriter.write("          </xs:complexType>\n");
+                xsdWriter.write("        </xs:element>\n");
+                xsdWriter.write("      </xs:sequence>\n");
+                xsdWriter.write("    </xs:complexType>\n");
+                xsdWriter.write("  </xs:element>\n\n");
+
+                // Metadata type
+                xsdWriter.write("  <xs:complexType name=\"MetadataType\">\n");
+                xsdWriter.write("    <xs:sequence>\n");
+                xsdWriter.write("      <xs:element name=\"moduleName\" type=\"xs:string\"/>\n");
+                xsdWriter.write("      <xs:element name=\"classCount\" type=\"xs:int\"/>\n");
+                xsdWriter.write("      <xs:element name=\"exportDate\" type=\"xs:string\"/>\n");
+                xsdWriter.write("    </xs:sequence>\n");
+                xsdWriter.write("  </xs:complexType>\n\n");
+
+                // Write all class definitions
+                for (DOSchemaClass schemaClass : classMap.values()) {
+                    writeClassTypeDefinition(xsdWriter, schemaClass);
+                }
+
+                xsdWriter.write("</xs:schema>\n");
+            }
+        }
+
+        private void writeClassTypeDefinition(FileWriter xsdWriter, DOSchemaClass schemaClass) throws IOException {
+            String className = schemaClass.getAbsoluteName();
+            String destClassName = schemaClass.getDestinationName();
+
+            // Write element definition
+            xsdWriter.write("  <!-- Class: " + className + " (exported as " + destClassName + ") -->\n");
+            xsdWriter.write("  <xs:element name=\"" + destClassName + "\">\n");
+            xsdWriter.write("    <xs:complexType>\n");
+            xsdWriter.write("      <xs:sequence>\n");
+
+            Map<String, DOSchemaField> fields = fieldsByClass.getOrDefault(className, new LinkedHashMap<>());
+            for (DOSchemaField field : fields.values()) {
+                String fieldName = field.destinationName;
+                String fieldType = field.type;
+                boolean isCollection = field.isCollection;
+                if (fieldType == null || fieldType.isEmpty())
+                    continue;
+                String maxOccurs = isCollection ? "unbounded" : "1";
+                if (isCollection) {
+                    String childrenType = field.childrenType;
+                    if (childrenType == null || childrenType.isEmpty()) {
+                        childrenType = fieldType;
+                    }
+                    if (isPrimitiveType(childrenType)) {
+                        String xsdType = getXSDType(childrenType);
+                        xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                                + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                    } else {
+                        String refClassName = getSimpleClassName(childrenType) + "Type";
+                        xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                                + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                    }
+                } else if (isPrimitiveType(fieldType)) {
+                    String xsdType = getXSDType(fieldType);
+                    xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                } else {
+                    String refClassName = getSimpleClassName(fieldType) + "Type";
+                    xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                }
+            }
+
+            xsdWriter.write("      </xs:sequence>\n");
+            xsdWriter.write("    </xs:complexType>\n");
+            xsdWriter.write("  </xs:element>\n\n");
+
+            // Write type definition for object reference
+            xsdWriter.write("  <xs:complexType name=\"" + getSimpleClassName(className) + "Type\">\n");
+            xsdWriter.write("    <xs:sequence>\n");
+            for (DOSchemaField field : fields.values()) {
+                String fieldName = field.destinationName;
+                String fieldType = field.type;
+                boolean isCollection = field.isCollection;
+                if (fieldType == null || fieldType.isEmpty())
+                    continue;
+                String maxOccurs = isCollection ? "unbounded" : "1";
+                if (isCollection) {
+                    String childrenType = field.childrenType;
+                    if (childrenType == null || childrenType.isEmpty()) {
+                        childrenType = fieldType;
+                    }
+                    if (isPrimitiveType(childrenType)) {
+                        String xsdType = getXSDType(childrenType);
+                        xsdWriter.write("      <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                                + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                    } else {
+                        String refClassName = getSimpleClassName(childrenType) + "Type";
+                        xsdWriter.write("      <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                                + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                    }
+                } else if (isPrimitiveType(fieldType)) {
+                    String xsdType = getXSDType(fieldType);
+                    xsdWriter.write("      <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                } else {
+                    String refClassName = getSimpleClassName(fieldType) + "Type";
+                    xsdWriter.write("      <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                }
+            }
+            xsdWriter.write("    </xs:sequence>\n");
+            xsdWriter.write("  </xs:complexType>\n\n");
+        }
+
+        private boolean isPrimitiveType(String typeName) {
+            return typeName.equals("java.lang.String") ||
+                    typeName.equals("java.lang.Integer") ||
+                    typeName.equals("int") ||
+                    typeName.equals("java.lang.Long") ||
+                    typeName.equals("long") ||
+                    typeName.equals("java.lang.Boolean") ||
+                    typeName.equals("boolean") ||
+                    typeName.equals("java.lang.Double") ||
+                    typeName.equals("double") ||
+                    typeName.equals("java.lang.Float") ||
+                    typeName.equals("float") ||
+                    typeName.equals("java.util.Date");
+        }
+
+        private String getXSDType(String javaType) {
+            if (javaType.equals("java.lang.String"))
+                return "xs:string";
+            if (javaType.equals("java.lang.Integer") || javaType.equals("int"))
+                return "xs:int";
+            if (javaType.equals("java.lang.Long") || javaType.equals("long"))
+                return "xs:long";
+            if (javaType.equals("java.lang.Boolean") || javaType.equals("boolean"))
+                return "xs:boolean";
+            if (javaType.equals("java.lang.Double") || javaType.equals("double"))
+                return "xs:double";
+            if (javaType.equals("java.lang.Float") || javaType.equals("float"))
+                return "xs:float";
+            if (javaType.equals("java.util.Date"))
+                return "xs:dateTime";
+            return "xs:string";
+        }
+
+        private String getSimpleClassName(String fullClassName) {
+            if (fullClassName == null) {
+                return "Unknown";
+            }
+            int lastDot = fullClassName.lastIndexOf('.');
+            return lastDot >= 0 ? fullClassName.substring(lastDot + 1) : fullClassName;
+        }
+    }
+
+    /**
      * Exports a field value (handles references and IDEntite relationships)
      */
     private void exportFieldValue(ExtObjectContainer container, Object item, String fieldName,
@@ -314,12 +547,12 @@ public class XMLExportEngine {
         if (itemClass != null && isDescendantOf(itemClass, "gest.gen.IDEntite")) {
             // This is an IDEntite - check if we should embed its contents
             DOSchemaField schemaField = findSchemaField(parentClassName, fieldName);
-            boolean embedContents = (schemaField != null && schemaField.isEmbedContents());
+            boolean embedContents = (schemaField != null && schemaField.embedContents);
 
             // Get target type from field's pointsTo or extract from field name
             String expectedType = null;
-            if (schemaField != null && schemaField.getPointsTo() != null) {
-                expectedType = schemaField.getPointsTo();
+            if (schemaField != null && schemaField.pointsTo != null) {
+                expectedType = schemaField.pointsTo;
             } else {
                 // Fallback to name extraction
                 expectedType = extractExpectedTypeFromFieldName(fieldName, className);
@@ -490,7 +723,7 @@ public class XMLExportEngine {
             return null;
         }
         for (DOSchemaField field : schemaClass.getFields()) {
-            if (field.getSource() != null && field.getSource().equals(fieldName)) {
+            if (field.source != null && field.source.equals(fieldName)) {
                 return field;
             }
         }
@@ -628,33 +861,41 @@ public class XMLExportEngine {
 
         // Write field elements
         for (DOSchemaField field : schemaClass.getFields()) {
-            String fieldName = field.getDestinationName(); // Use destination name
-            String fieldType = field.getType();
-            boolean isCollection = field.isCollection();
+            String fieldName = field.destinationName;
+            String fieldType = field.type;
+            boolean isCollection = field.isCollection;
 
             if (fieldType == null || fieldType.isEmpty()) {
                 continue;
             }
 
-            String xsdType = getXSDType(fieldType);
             String maxOccurs = isCollection ? "unbounded" : "1";
 
-            if (isPrimitiveType(fieldType)) {
-                // Primitive field - use element with type
+            if (isCollection) {
+                String childrenType = field.childrenType;
+                if (childrenType == null || childrenType.isEmpty()) {
+                    childrenType = fieldType;
+                }
+                if (isPrimitiveType(childrenType)) {
+                    String xsdType = getXSDType(childrenType);
+                    xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                            + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                } else {
+                    DOSchemaClass refClass = findClassByName(childrenType);
+                    String refClassName = refClass != null ? refClass.getDestinationName()
+                            : getSimpleClassName(childrenType);
+                    xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                            + "Type\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                }
+            } else if (isPrimitiveType(fieldType)) {
+                String xsdType = getXSDType(fieldType);
                 xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + xsdType
-                        + "\" minOccurs=\"0\" maxOccurs=\"" + maxOccurs + "\"/>\n");
+                        + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
-                // Reference to another class - use element with ref to destination class name
                 DOSchemaClass refClass = findClassByName(fieldType);
                 String refClassName = refClass != null ? refClass.getDestinationName() : getSimpleClassName(fieldType);
-                xsdWriter.write("        <xs:element name=\"" + fieldName + "\">\n");
-                xsdWriter.write("          <xs:complexType>\n");
-                xsdWriter.write("            <xs:sequence>\n");
-                xsdWriter.write("              <xs:element ref=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\""
-                        + maxOccurs + "\"/>\n");
-                xsdWriter.write("            </xs:sequence>\n");
-                xsdWriter.write("          </xs:complexType>\n");
-                xsdWriter.write("        </xs:element>\n");
+                xsdWriter.write("        <xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                        + "Type\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             }
         }
 
@@ -664,8 +905,8 @@ public class XMLExportEngine {
 
         // Recursively process referenced classes
         for (DOSchemaField field : schemaClass.getFields()) {
-            if (field.getType() != null && !isPrimitiveType(field.getType())) {
-                DOSchemaClass referencedClass = findClassByName(field.getType());
+            if (field.type != null && !isPrimitiveType(field.type)) {
+                DOSchemaClass referencedClass = findClassByName(field.type);
                 if (referencedClass != null) {
                     writeClassTypeDefinition(xsdWriter, referencedClass, processedClasses);
                 }

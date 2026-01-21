@@ -226,9 +226,9 @@ public class SchemaEditorPanel extends JPanel {
         // Check if field already exists
         if (targetClass.getFields() != null) {
             for (DOSchemaField existing : targetClass.getFields()) {
-                if (existing.getSource().equals(field.getSource())) {
+                if (existing.source.equals(field.source)) {
                     JOptionPane.showMessageDialog(this,
-                            "Field '" + field.getSource() + "' already exists in class '" +
+                            "Field '" + field.source + "' already exists in class '" +
                                     targetClass.getSourceName() + "'.",
                             "Field Exists", JOptionPane.WARNING_MESSAGE);
                     return;
@@ -264,7 +264,7 @@ public class SchemaEditorPanel extends JPanel {
 
         markModified();
 
-        setStatus("Added field: " + field.getSource() + " to class: " + targetClass.getSourceName());
+        setStatus("Added field: " + field.source + " to class: " + targetClass.getSourceName());
     }
 
     private void initializeUI() {
@@ -743,7 +743,7 @@ public class SchemaEditorPanel extends JPanel {
                 boolean isReference = false;
 
                 // Check direct field type reference
-                String fieldType = field.getType();
+                String fieldType = field.type;
                 if (fieldType != null) {
                     if (fieldType.equals(targetShortName) || fieldType.equals(targetAbsoluteName)) {
                         isReference = true;
@@ -751,7 +751,7 @@ public class SchemaEditorPanel extends JPanel {
                 }
 
                 // Check collection children type
-                String childrenType = field.getChildrenType();
+                String childrenType = field.childrenType;
                 if (childrenType != null) {
                     if (childrenType.equals(targetShortName) || childrenType.equals(targetAbsoluteName)) {
                         isReference = true;
@@ -769,7 +769,7 @@ public class SchemaEditorPanel extends JPanel {
                             isReference = true;
                         } else if (pointsTo == null) {
                             // Fallback to name extraction if pointsTo not set
-                            String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
+                            String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
                             if (expectedType != null &&
                                     (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
                                 isReference = true;
@@ -779,7 +779,7 @@ public class SchemaEditorPanel extends JPanel {
                 }
 
                 if (isReference) {
-                    String refName = schemaClass.getAbsoluteName() + "." + field.getSource();
+                    String refName = schemaClass.getAbsoluteName() + "." + field.source;
                     references.add(refName);
                 }
             }
@@ -1163,14 +1163,14 @@ public class SchemaEditorPanel extends JPanel {
 
         for (DOSchemaField field : schemaClass.getFields()) {
             Object[] rowData = {
-                    field.getSource(),
-                    field.getDestinationName(),
-                    field.getType() != null ? field.getType() : "",
-                    field.isExported(),
-                    field.isSkipIfEmpty(),
-                    field.isCollection(),
-                    field.isEmbedContents(),
-                    field.getChildrenType() != null ? field.getChildrenType() : ""
+                    field.source,
+                    field.destinationName,
+                    field.type != null ? field.type : "",
+                    field.isExported,
+                    field.skipIfEmpty,
+                    field.isCollection,
+                    field.embedContents,
+                    field.childrenType != null ? field.childrenType : ""
             };
             fieldsTableModel.addRow(rowData);
         }
@@ -1597,7 +1597,7 @@ public class SchemaEditorPanel extends JPanel {
         java.util.Map<String, DOSchemaField> originalFieldsMap = new java.util.HashMap<>();
         if (oldClass.getFields() != null) {
             for (DOSchemaField field : oldClass.getFields()) {
-                originalFieldsMap.put(field.getSource(), field);
+                originalFieldsMap.put(field.source, field);
             }
         }
 
@@ -1622,9 +1622,9 @@ public class SchemaEditorPanel extends JPanel {
             String pointsTo = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
             if (originalField != null) {
-                title = originalField.getTitle();
-                description = originalField.getDescription();
-                pointsTo = originalField.getPointsTo();
+                title = originalField.title;
+                description = originalField.description;
+                pointsTo = originalField.pointsTo;
             }
 
             DOSchemaField field = new DOSchemaField();
@@ -1823,18 +1823,18 @@ public class SchemaEditorPanel extends JPanel {
 
         for (DOSchemaField field : schemaClass.getFields()) {
             // Check the main type field
-            if (isUnresolvedType(field.getType())) {
+            if (isUnresolvedType(field.type)) {
                 return true;
             }
 
             // Check the childrenType field (for collections)
-            if (isUnresolvedType(field.getChildrenType())) {
+            if (isUnresolvedType(field.childrenType)) {
                 return true;
             }
 
             // Check collection/childrenType consistency
-            boolean isCollection = field.isCollection();
-            String childrenType = field.getChildrenType();
+            boolean isCollection = field.isCollection;
+            String childrenType = field.childrenType;
             boolean hasChildrenType = childrenType != null && !childrenType.isEmpty();
 
             // Error: collection is true but childrenType is empty

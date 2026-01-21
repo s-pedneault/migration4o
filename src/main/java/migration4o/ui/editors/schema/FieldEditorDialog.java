@@ -47,12 +47,12 @@ public class FieldEditorDialog extends JDialog {
         setLayout(new BorderLayout(10, 10));
 
         // Initialize all fields first
-        sourceField = new JTextField(field.getSource() != null ? field.getSource() : "", 30);
-        destField = new JTextField(field.getDestinationName() != null ? field.getDestinationName() : "", 30);
+        sourceField = new JTextField(field.source != null ? field.source : "", 30);
+        destField = new JTextField(field.destinationName != null ? field.destinationName : "", 30);
 
         // Type - show as text with Edit button
         typePanel = new JPanel(new BorderLayout(5, 0));
-        typeLabel = new JLabel(field.getType() != null ? field.getType() : "");
+        typeLabel = new JLabel(field.type != null ? field.type : "");
         typeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY),
                 BorderFactory.createEmptyBorder(3, 5, 3, 5)));
@@ -70,7 +70,7 @@ public class FieldEditorDialog extends JDialog {
 
         // Points To - show as text with Edit button
         pointsToPanel = new JPanel(new BorderLayout(5, 0));
-        pointsToLabel = new JLabel(field.getPointsTo() != null ? field.getPointsTo() : "");
+        pointsToLabel = new JLabel(field.pointsTo != null ? field.pointsTo : "");
         pointsToLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY),
                 BorderFactory.createEmptyBorder(3, 5, 3, 5)));
@@ -86,10 +86,10 @@ public class FieldEditorDialog extends JDialog {
         pointsToPanel.add(editPointsToButton, BorderLayout.EAST);
 
         embedContentsCheckBox = new JCheckBox();
-        embedContentsCheckBox.setSelected(field.isEmbedContents());
+        embedContentsCheckBox.setSelected(field.embedContents);
 
         collectionCheckBox = new JCheckBox();
-        collectionCheckBox.setSelected(field.isCollection());
+        collectionCheckBox.setSelected(field.isCollection);
 
         // Add listener to collection checkbox to update embed contents state and
         // rebuild form
@@ -98,20 +98,20 @@ public class FieldEditorDialog extends JDialog {
             rebuildForm();
         });
 
-        titleField = new JTextField(field.getTitle() != null ? field.getTitle() : "", 30);
-        descField = new JTextField(field.getDescription() != null ? field.getDescription() : "", 30);
+        titleField = new JTextField(field.title != null ? field.title : "", 30);
+        descField = new JTextField(field.description != null ? field.description : "", 30);
 
         exportedCheckBox = new JCheckBox();
-        exportedCheckBox.setSelected(field.isExported());
+        exportedCheckBox.setSelected(field.isExported);
 
         skipIfEmptyCheckBox = new JCheckBox();
-        skipIfEmptyCheckBox.setSelected(field.isSkipIfEmpty());
+        skipIfEmptyCheckBox.setSelected(field.skipIfEmpty);
 
         // Children Type - show as text with Edit button and status
         childrenTypePanel = new JPanel(new BorderLayout(5, 0));
         JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
 
-        childrenTypeLabel = new JLabel(field.getChildrenType() != null ? field.getChildrenType() : "");
+        childrenTypeLabel = new JLabel(field.childrenType != null ? field.childrenType : "");
         childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Color.GRAY),
                 BorderFactory.createEmptyBorder(3, 5, 3, 5)));

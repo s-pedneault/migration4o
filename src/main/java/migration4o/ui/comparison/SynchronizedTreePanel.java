@@ -449,8 +449,8 @@ public class SynchronizedTreePanel extends JPanel {
         Map<String, DOSchemaField> refFieldMap = new HashMap<>();
         if (diff.getReferenceClass() != null && diff.getReferenceClass().getFields() != null) {
             for (DOSchemaField field : diff.getReferenceClass().getFields()) {
-                refFieldMap.put(field.getSource(), field);
-                allFieldNames.add(field.getSource());
+                refFieldMap.put(field.source, field);
+                allFieldNames.add(field.source);
             }
         }
 
@@ -458,17 +458,17 @@ public class SynchronizedTreePanel extends JPanel {
         Map<String, DOSchemaField> cmpFieldMap = new HashMap<>();
         if (diff.getComparedClass() != null && diff.getComparedClass().getFields() != null) {
             for (DOSchemaField field : diff.getComparedClass().getFields()) {
-                cmpFieldMap.put(field.getSource(), field);
-                allFieldNames.add(field.getSource());
+                cmpFieldMap.put(field.source, field);
+                allFieldNames.add(field.source);
             }
         }
 
         // Add fields from difference lists
         for (DOSchemaField field : diff.getFieldsOnlyInReference()) {
-            allFieldNames.add(field.getSource());
+            allFieldNames.add(field.source);
         }
         for (DOSchemaField field : diff.getFieldsOnlyInCompared()) {
-            allFieldNames.add(field.getSource());
+            allFieldNames.add(field.source);
         }
 
         // Sort field names for consistent display
@@ -487,14 +487,14 @@ public class SynchronizedTreePanel extends JPanel {
                 // Check if this field has differences
                 leftHasDiff = diff.getFieldsWithDifferences().containsKey(fieldName);
             }
-            String leftDisplay = fieldName + " : " + (refField != null ? refField.getType() : "?");
+            String leftDisplay = fieldName + " : " + (refField != null ? refField.type : "?");
             SyncTreeNode leftFieldNode = new SyncTreeNode(fieldName, leftDisplay, leftIsGhost, leftHasDiff, refField);
             leftParent.add(new DefaultMutableTreeNode(leftFieldNode));
 
             // Right tree (compared/database)
             boolean rightIsGhost = (cmpField == null && diff.getComparedClass() != null);
             boolean rightHasDiff = leftHasDiff; // Same difference status
-            String rightDisplay = fieldName + " : " + (cmpField != null ? cmpField.getType() : "?");
+            String rightDisplay = fieldName + " : " + (cmpField != null ? cmpField.type : "?");
             SyncTreeNode rightFieldNode = new SyncTreeNode(fieldName, rightDisplay, rightIsGhost, rightHasDiff,
                     cmpField);
             rightParent.add(new DefaultMutableTreeNode(rightFieldNode));

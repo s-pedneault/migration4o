@@ -99,19 +99,19 @@ public class SchemaComparison {
         FieldPropertyDifference diff = new FieldPropertyDifference();
 
         // Compare types with normalization
-        String refType = normalizeType(refField.getType());
-        String cmpType = normalizeType(cmpField.getType());
+        String refType = normalizeType(refField.type);
+        String cmpType = normalizeType(cmpField.type);
         if (!Objects.equals(refType, cmpType)) {
-            diff.addDifference("type", refField.getType(), cmpField.getType());
+            diff.addDifference("type", refField.type, cmpField.type);
         }
 
-        if (refField.isCollection() != cmpField.isCollection()) {
-            diff.addDifference("collection", refField.isCollection(), cmpField.isCollection());
+        if (refField.isCollection != cmpField.isCollection) {
+            diff.addDifference("collection", refField.isCollection, cmpField.isCollection);
         }
 
         // Compare childrenType with null/empty tolerance
-        String refChildren = normalizeEmptyString(refField.getChildrenType());
-        String cmpChildren = normalizeEmptyString(cmpField.getChildrenType());
+        String refChildren = normalizeEmptyString(refField.childrenType);
+        String cmpChildren = normalizeEmptyString(cmpField.childrenType);
 
         // Special case: if reference schema defines a proper type and database has
         // java.lang.Object,
@@ -121,7 +121,7 @@ public class SchemaComparison {
                 "java.lang.Object".equals(cmpChildren));
 
         if (!Objects.equals(refChildren, cmpChildren) && !isObjectPlaceholder) {
-            diff.addDifference("childrenType", refField.getChildrenType(), cmpField.getChildrenType());
+            diff.addDifference("childrenType", refField.childrenType, cmpField.childrenType);
         }
 
         return diff;
@@ -208,7 +208,7 @@ public class SchemaComparison {
         Map<String, DOSchemaField> map = new HashMap<>();
         if (schemaClass.getFields() != null) {
             for (DOSchemaField field : schemaClass.getFields()) {
-                map.put(field.getSource(), field);
+                map.put(field.source, field);
             }
         }
         return map;

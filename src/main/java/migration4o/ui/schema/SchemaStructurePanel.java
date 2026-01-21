@@ -203,14 +203,14 @@ public class SchemaStructurePanel extends JPanel {
         }
 
         for (DOSchemaField field : fields) {
-            String fieldType = field.getType();
+            String fieldType = field.type;
             if (fieldType == null) {
                 continue;
             }
 
             // Check if this is a collection - look at childrenType
-            if (field.isCollection()) {
-                String childrenType = field.getChildrenType();
+            if (field.isCollection) {
+                String childrenType = field.childrenType;
                 if (childrenType != null) {
                     DOSchemaClass childClass = findClassInSchemaByName(childrenType);
                     if (childClass != null) {
@@ -255,7 +255,7 @@ public class SchemaStructurePanel extends JPanel {
         String targetClassName = idEntiteClass.getPointsTo();
         if (targetClassName == null) {
             // Fallback: extract from field name or class name
-            targetClassName = extractExpectedTypeFromFieldName(field.getSource(), idEntiteClass.getAbsoluteName());
+            targetClassName = extractExpectedTypeFromFieldName(field.source, idEntiteClass.getAbsoluteName());
         }
 
         if (targetClassName != null) {
@@ -271,7 +271,7 @@ public class SchemaStructurePanel extends JPanel {
                 // Mark the target class as reached
                 unreachedClasses.remove(targetClass.getAbsoluteName());
 
-                String fieldLabel = "Field: " + field.getSource() + " → "
+                String fieldLabel = "Field: " + field.source + " → "
                         + getSimpleName(targetClass.getAbsoluteName());
                 DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
                 classNode.add(fieldNode);
@@ -294,7 +294,7 @@ public class SchemaStructurePanel extends JPanel {
         unreachedClasses.remove(referencedClass.getAbsoluteName());
 
         String referencedSimpleName = getSimpleName(referencedClass.getAbsoluteName());
-        String fieldLabel = "Field: " + field.getSource() + " → " + referencedSimpleName;
+        String fieldLabel = "Field: " + field.source + " → " + referencedSimpleName;
         DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
         classNode.add(fieldNode);
 
@@ -358,7 +358,7 @@ public class SchemaStructurePanel extends JPanel {
             }
 
             for (DOSchemaField field : fields) {
-                String fieldType = field.getType();
+                String fieldType = field.type;
                 if (fieldType == null) {
                     continue;
                 }
@@ -370,8 +370,8 @@ public class SchemaStructurePanel extends JPanel {
                     isMatch = true;
                 }
                 // Check if it's a collection with childrenType matching our target
-                else if (field.isCollection()) {
-                    String childrenType = field.getChildrenType();
+                else if (field.isCollection) {
+                    String childrenType = field.childrenType;
                     if (childrenType != null && childrenType.equals(targetClassName)) {
                         isMatch = true;
                     }
@@ -385,7 +385,7 @@ public class SchemaStructurePanel extends JPanel {
                                 isMatch = true;
                             } else if (pointsTo == null) {
                                 // Fallback to name extraction
-                                String expectedType = extractExpectedTypeFromFieldName(field.getSource(), childrenType);
+                                String expectedType = extractExpectedTypeFromFieldName(field.source, childrenType);
                                 if (expectedType != null) {
                                     String targetSimpleName = getSimpleName(targetClassName);
                                     if (targetSimpleName.equals(expectedType)) {
@@ -406,7 +406,7 @@ public class SchemaStructurePanel extends JPanel {
                             isMatch = true;
                         } else if (pointsTo == null) {
                             // Fallback to name extraction
-                            String expectedType = extractExpectedTypeFromFieldName(field.getSource(), fieldType);
+                            String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
                             if (expectedType != null) {
                                 String targetSimpleName = getSimpleName(targetClassName);
                                 if (targetSimpleName.equals(expectedType)) {
@@ -427,7 +427,7 @@ public class SchemaStructurePanel extends JPanel {
         for (FieldReference ref : references) {
             String refClassName = ref.schemaClass.getAbsoluteName();
             String refSimpleName = getSimpleName(refClassName);
-            String fieldLabel = "← " + refSimpleName + "." + ref.field.getSource();
+            String fieldLabel = "← " + refSimpleName + "." + ref.field.source;
             DefaultMutableTreeNode refNode = new DefaultMutableTreeNode(fieldLabel);
             classNode.add(refNode);
 

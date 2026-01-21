@@ -610,8 +610,8 @@ public class XMLDataExporter {
         String dbFieldName = dbField.getName();
         for (DOSchemaField schemaField : schemaClass.getFields()) {
             // Match by source name (the database field name)
-            if (schemaField.getSource().equals(dbFieldName)) {
-                return schemaField.isExported();
+            if (schemaField.source.equals(dbFieldName)) {
+                return schemaField.isExported;
             }
         }
 
