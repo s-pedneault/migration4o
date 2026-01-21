@@ -877,7 +877,8 @@ public class MigrationStructurePanel extends JPanel {
                                         (window != null ? window.getClass().getName() : "null"));
                             }
                         } else {
-                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success=" +
+                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success="
+                                    +
                                     result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
                         }
                     } catch (Exception e) {
@@ -984,8 +985,10 @@ public class MigrationStructurePanel extends JPanel {
                                         (window != null ? window.getClass().getName() : "null"));
                             }
                         } else {
-                            System.out.println("DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
-                                    result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
+                            System.out.println(
+                                    "DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
+                                            result.isSuccess() + ", counts size="
+                                            + result.getExportedClassCounts().size());
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
