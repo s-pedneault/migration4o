@@ -1,6 +1,8 @@
 
 package migration4o.models.schema;
 
+import migration4o.util.SchemaUtil;
+
 public class DOSchema {
     private final DOSchemaClass[] classes;
     private final DOSchemaModule[] modules;
@@ -26,5 +28,13 @@ public class DOSchema {
 
     public DOSchemaClass[] getFoundationClasses() {
         return foundationClasses;
+    }
+
+    public boolean isDescendant(DOSchemaClass schemaClass, String ancestorClassName) {
+        return SchemaUtil.isDescendantOf(schemaClass, ancestorClassName, this);
+    }
+
+    public DOSchemaClass findClassByName(String className) {
+        return SchemaUtil.findClassByName(className, this);
     }
 }

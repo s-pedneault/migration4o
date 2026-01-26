@@ -6,6 +6,8 @@ import java.util.List;
 
 import migration4o.models.DOReference;
 import migration4o.models.database.DODatabaseClass;
+import migration4o.util.ClassUtil;
+import migration4o.util.SchemaUtil;
 
 public class DOSchemaClass {
     public String source;
@@ -26,4 +28,25 @@ public class DOSchemaClass {
     public DOSchemaClass() {
         referenceList = new ArrayList<>();
     }
+
+    public String getSourcePackage() {
+        return ClassUtil.getPackageName(source);
+    }
+
+    public String getSourceName() {
+        return ClassUtil.getSimpleName(source);
+    }
+
+    public boolean isDescendantOf(String ancestorClassName, DOSchema schema) {
+        return SchemaUtil.isDescendantOf(this, ancestorClassName, schema);
+    }
+
+    public boolean isEntite(DOSchema schema) {
+        return isDescendantOf("gest.gen.EntiteContientID", schema);
+    }
+
+    public boolean isParam(DOSchema schema) {
+        return isDescendantOf("gest.gen.EntiteParam", schema);
+    }
+
 }
