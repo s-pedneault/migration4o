@@ -1,4 +1,4 @@
-package migration4o.ui.components;
+package migration4o.ui.common;
 
 import javax.swing.*;
 import java.awt.*;

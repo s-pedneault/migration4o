@@ -1,11 +1,15 @@
-package migration4o.ui.editors.schema;
+package migration4o.ui.panels.reference_schema_panels.reference_schema_panel;
+
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Font;
+
+import javax.swing.JTree;
+import javax.swing.UIManager;
+import javax.swing.tree.DefaultTreeCellRenderer;
 
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.ui.models.SchemaTreeNode;
-
-import javax.swing.*;
-import javax.swing.tree.DefaultTreeCellRenderer;
-import java.awt.*;
+import migration4o.models.ui.SchemaTreeNode;
 
 /**
  * Custom tree cell renderer for schema tree nodes.

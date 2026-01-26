@@ -1,13 +1,14 @@
 package migration4o.ui;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.schema.DODatabaseSchemaReader;
-import migration4o.ui.editors.schema.SchemaEditorPanel;
-import migration4o.ui.main.MainWindow;
-import migration4o.ui.schema.MigrationStructurePanel;
-import migration4o.ui.schema.SchemaStructurePanel;
+import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
 
-import javax.swing.*;
+import migration4o.models.schema.DOSchema;
+import migration4o.ui.main.MainWindow;
+import migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
+import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 
 /**
  * Main entry point for the Migration4o UI application.

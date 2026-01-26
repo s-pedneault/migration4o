@@ -1,11 +1,13 @@
-package migration4o.ui.editors.schema;
+package migration4o.ui.panels.reference_schema_panels.reference_schema_panel;
 
 import migration4o.models.schema.*;
+import migration4o.models.ui.SchemaTreeNode;
+import migration4o.models.ui.SchemaTreeNode.NodeType;
 import migration4o.schema.DODatabaseSchemaReader;
 import migration4o.schema.DODatabaseSchemaWriter;
-import migration4o.ui.components.PropertyPanel;
-import migration4o.ui.models.SchemaTreeNode;
-import migration4o.ui.models.SchemaTreeNode.NodeType;
+import migration4o.ui.common.PropertyPanel;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.util.TypeUtil;
 
 import javax.swing.*;
@@ -1838,7 +1840,7 @@ public class SchemaEditorPanel extends JPanel {
      * Check if a class has any unresolved type errors.
      * Made package-private so the renderer can access it.
      */
-    boolean hasErrors(DOSchemaClass schemaClass) {
+    public boolean hasErrors(DOSchemaClass schemaClass) {
         if (schemaClass.fields == null || schemaClass.fields.length == 0) {
             return false;
         }

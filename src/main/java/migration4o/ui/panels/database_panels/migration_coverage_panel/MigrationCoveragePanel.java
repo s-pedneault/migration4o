@@ -1,4 +1,4 @@
-package migration4o.ui.migration;
+package migration4o.ui.panels.database_panels.migration_coverage_panel;
 
 import migration4o.database.DODatabaseOpener;
 import migration4o.models.schema.DOSchema;

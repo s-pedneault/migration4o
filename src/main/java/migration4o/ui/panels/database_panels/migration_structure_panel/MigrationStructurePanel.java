@@ -1,29 +1,58 @@
 
-package migration4o.ui.schema;
+package migration4o.ui.panels.database_panels.migration_structure_panel;
 
-import migration4o.ui.schema.MigrationStructurePanelUtil;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+import java.awt.Point;
+import java.awt.Window;
+import java.awt.datatransfer.DataFlavor;
+import java.awt.datatransfer.Transferable;
+import java.awt.datatransfer.UnsupportedFlavorException;
+import java.awt.dnd.DnDConstants;
+import java.awt.dnd.DragGestureEvent;
+import java.awt.dnd.DragGestureListener;
+import java.awt.dnd.DragSource;
+import java.awt.dnd.DropTarget;
+import java.awt.dnd.DropTargetAdapter;
+import java.awt.dnd.DropTargetDragEvent;
+import java.awt.dnd.DropTargetDropEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.TransferHandler;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreePath;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.schema.MigrationFormatReader;
-import migration4o.schema.MigrationFormatWriter;
-
-import javax.swing.*;
-import javax.swing.tree.*;
-import java.awt.*;
-import java.awt.datatransfer.*;
-import java.awt.dnd.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Enumeration;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.TreeMap;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -387,79 +416,23 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Collect classes by category
-        java.util.List<DOSchemaClass> availableEntities = new ArrayList<>();
-        java.util.List<DOSchemaClass> availableParams = new ArrayList<>();
-        java.util.List<DOSchemaClass> availableOthers = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedEntities = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedParams = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedOthers = new ArrayList<>();
-
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (exportedClasses.contains(schemaClass.source)) {
-                // Add to Exported section
-                if (schemaClass.isEntite(schema)) {
-                    exportedEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
-                    exportedParams.add(schemaClass);
-                } else {
-                    exportedOthers.add(schemaClass);
-                }
-            } else {
-                // Add to Available section
-                if (schemaClass.isEntite(schema)) {
-                    availableEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
-                    availableParams.add(schemaClass);
-                } else {
-                    availableOthers.add(schemaClass);
-                }
-            }
-        }
+        // Categorize classes using util
+        MigrationStructurePanelUtil.CategorizedClasses categorized = MigrationStructurePanelUtil
+                .categorizeClasses(schema, exportedClasses);
 
         // Sort by package and add to tree
-        addSortedClasses(availableEntitiesNode, availableEntities);
-        addSortedClasses(availableParamsNode, availableParams);
-        addSortedClasses(availableOthersNode, availableOthers);
-        addSortedClasses(exportedEntitiesNode, exportedEntities);
-        addSortedClasses(exportedParamsNode, exportedParams);
-        addSortedClasses(exportedOthersNode, exportedOthers);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableEntitiesNode, categorized.availableEntities);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableParamsNode, categorized.availableParams);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableOthersNode, categorized.availableOthers);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedEntitiesNode, categorized.exportedEntities);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedParamsNode, categorized.exportedParams);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedOthersNode, categorized.exportedOthers);
 
         availableModel.reload();
 
         // Expand all categories
         for (int i = 0; i < 10; i++) {
             availableTree.expandRow(i);
-        }
-    }
-
-    private void addSortedClasses(DefaultMutableTreeNode parentNode, java.util.List<DOSchemaClass> classes) {
-        // Group classes by package
-        Map<String, java.util.List<DOSchemaClass>> packageMap = new TreeMap<>();
-
-        for (DOSchemaClass schemaClass : classes) {
-            String packageName = schemaClass.getSourcePackage();
-            packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
-        }
-
-        // Add package nodes and classes under them
-        for (Map.Entry<String, java.util.List<DOSchemaClass>> entry : packageMap.entrySet()) {
-            String packageName = entry.getKey();
-            java.util.List<DOSchemaClass> packageClasses = entry.getValue();
-
-            // Create package node
-            DefaultMutableTreeNode packageNode = new DefaultMutableTreeNode(packageName);
-            parentNode.add(packageNode);
-
-            // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> c.getSourceName()));
-
-            // Add classes to package node
-            for (DOSchemaClass schemaClass : packageClasses) {
-                ClassNode classNode = new ClassNode(schemaClass);
-                DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(classNode);
-                packageNode.add(treeNode);
-            }
         }
     }
 
@@ -472,46 +445,21 @@ public class MigrationStructurePanel extends JPanel {
         exportedParamsNode.removeAllChildren();
         exportedOthersNode.removeAllChildren();
 
-        // Collect classes by category
-        java.util.List<DOSchemaClass> availableEntities = new ArrayList<>();
-        java.util.List<DOSchemaClass> availableParams = new ArrayList<>();
-        java.util.List<DOSchemaClass> availableOthers = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedEntities = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedParams = new ArrayList<>();
-        java.util.List<DOSchemaClass> exportedOthers = new ArrayList<>();
-
         // Use databaseSchema if available (has object counts), otherwise use reference
         // schema
         DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
-        for (DOSchemaClass schemaClass : sourceSchema.getClasses()) {
-            if (exportedClasses.contains(schemaClass.source)) {
-                // Add to Exported section
-                if (schemaClass.isEntite(schema)) {
-                    exportedEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
-                    exportedParams.add(schemaClass);
-                } else {
-                    exportedOthers.add(schemaClass);
-                }
-            } else {
-                // Add to Available section
-                if (schemaClass.isEntite(schema)) {
-                    availableEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
-                    availableParams.add(schemaClass);
-                } else {
-                    availableOthers.add(schemaClass);
-                }
-            }
-        }
+
+        // Categorize classes using util
+        MigrationStructurePanelUtil.CategorizedClasses categorized = MigrationStructurePanelUtil
+                .categorizeClasses(sourceSchema, exportedClasses);
 
         // Sort by package and add to tree
-        addSortedClasses(availableEntitiesNode, availableEntities);
-        addSortedClasses(availableParamsNode, availableParams);
-        addSortedClasses(availableOthersNode, availableOthers);
-        addSortedClasses(exportedEntitiesNode, exportedEntities);
-        addSortedClasses(exportedParamsNode, exportedParams);
-        addSortedClasses(exportedOthersNode, exportedOthers);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableEntitiesNode, categorized.availableEntities);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableParamsNode, categorized.availableParams);
+        MigrationStructurePanelUtil.addSortedClassesToNode(availableOthersNode, categorized.availableOthers);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedEntitiesNode, categorized.exportedEntities);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedParamsNode, categorized.exportedParams);
+        MigrationStructurePanelUtil.addSortedClassesToNode(exportedOthersNode, categorized.exportedOthers);
 
         availableModel.reload();
 
@@ -611,14 +559,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void moveChildrenToAvailable(DefaultMutableTreeNode moduleNode) {
-        Enumeration<?> children = moduleNode.children();
-        while (children.hasMoreElements()) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            if (child.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) child.getUserObject();
-                exportedClasses.remove(classNode.getSchemaClass().source);
-            }
-        }
+        MigrationStructurePanelUtil.removeModuleClassesFromExported(moduleNode, exportedClasses);
         refreshAvailableTree();
     }
 
@@ -738,31 +679,12 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private boolean isClassNode(DefaultMutableTreeNode node) {
-        return node.getUserObject() instanceof ClassNode;
+        return MigrationStructurePanelUtil.isClassNode(node);
     }
 
     private DefaultMutableTreeNode findClassNodeInExportTree(String className) {
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
-        return findClassNodeInTree(root, className);
-    }
-
-    private DefaultMutableTreeNode findClassNodeInTree(DefaultMutableTreeNode node, String className) {
-        if (node.getUserObject() instanceof ClassNode) {
-            ClassNode classNode = (ClassNode) node.getUserObject();
-            if (classNode.getSchemaClass().source.equals(className)) {
-                return node;
-            }
-        }
-
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
-            DefaultMutableTreeNode result = findClassNodeInTree(child, className);
-            if (result != null) {
-                return result;
-            }
-        }
-
-        return null;
+        return MigrationStructurePanelUtil.findClassNodeInTree(root, className);
     }
 
     /**
@@ -859,7 +781,7 @@ public class MigrationStructurePanel extends JPanel {
                                     className, outputPath, null);
                         }
                         // Show detailed result dialog
-                        migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
+                        migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
                                 (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
@@ -959,7 +881,7 @@ public class MigrationStructurePanel extends JPanel {
                         migration4o.engine.export.ExportResult result = get();
                         System.out.println("DEBUG: Got export result, showing dialog...");
                         // Show detailed result dialog
-                        migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
+                        migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
                                 (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
@@ -1008,17 +930,7 @@ public class MigrationStructurePanel extends JPanel {
      * Recursively collects all class names from a module and its children
      */
     private void collectClassNamesFromModule(DefaultMutableTreeNode moduleNode, List<String> classNames) {
-        Enumeration<?> children = moduleNode.children();
-        while (children.hasMoreElements()) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            if (child.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) child.getUserObject();
-                classNames.add(classNode.getSchemaClass().source);
-            } else if (child.getUserObject() instanceof ModuleNode) {
-                // Recursively collect from child modules
-                collectClassNamesFromModule(child, classNames);
-            }
-        }
+        MigrationStructurePanelUtil.collectClassNamesFromModule(moduleNode, classNames);
     }
 
     private void loadMigrationStructure() {
@@ -1044,25 +956,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module) {
-        ModuleNode moduleNode = new ModuleNode(module.getName(), module.getId());
-        DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
-        parentNode.add(moduleTreeNode);
-
-        // Add classes to module
-        for (String className : module.getClassNames()) {
-            DOSchemaClass schemaClass = findClassByName(className);
-            if (schemaClass != null) {
-                ClassNode classNode = new ClassNode(schemaClass);
-                DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
-                moduleTreeNode.add(classTreeNode);
-                exportedClasses.add(className);
-            }
-        }
-
-        // Add child modules recursively
-        for (MigrationModule childModule : module.getChildModules()) {
-            addModuleToTree(moduleTreeNode, childModule);
-        }
+        MigrationStructurePanelUtil.addModuleToTree(parentNode, module, schema, databaseSchema, exportedClasses);
     }
 
     /**
@@ -1070,55 +964,21 @@ public class MigrationStructurePanel extends JPanel {
      */
     private void reloadExportTree() {
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
-        updateNodeCounts(root);
+        MigrationStructurePanelUtil.updateNodeCounts(root, schema, databaseSchema);
         exportModel.reload();
-    }
-
-    /**
-     * Recursively updates object counts in tree nodes
-     */
-    private void updateNodeCounts(DefaultMutableTreeNode node) {
-        Object userObject = node.getUserObject();
-        if (userObject instanceof ClassNode) {
-            ClassNode classNode = (ClassNode) userObject;
-            // Find the class with updated counts from databaseSchema
-            DOSchemaClass updatedClass = findClassByName(classNode.getSchemaClass().source);
-            if (updatedClass != null) {
-                // Create new ClassNode with updated class data
-                node.setUserObject(new ClassNode(updatedClass));
-            }
-        }
-
-        // Recursively update children
-        Enumeration<?> children = node.children();
-        while (children.hasMoreElements()) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            updateNodeCounts(child);
-        }
     }
 
     private void saveMigrationStructure() {
         try {
-            List<MigrationModule> modules = new ArrayList<>();
             DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
-
-            Enumeration<?> children = root.children();
-            while (children.hasMoreElements()) {
-                DefaultMutableTreeNode moduleNode = (DefaultMutableTreeNode) children.nextElement();
-                if (moduleNode.getUserObject() instanceof ModuleNode) {
-                    modules.add(extractModule(moduleNode));
-                }
-            }
-
-            MigrationFormatWriter writer = new MigrationFormatWriter();
-            writer.writeMigrationFormat(modules, MIGRATION_FORMAT_FILE);
+            MigrationStructurePanelUtil.saveMigrationStructure(root, MIGRATION_FORMAT_FILE);
 
             JOptionPane.showMessageDialog(this,
                     "Migration structure saved successfully!\nBackup created.",
                     "Save Successful",
                     JOptionPane.INFORMATION_MESSAGE);
 
-            System.out.println("Saved " + modules.size() + " modules to " + MIGRATION_FORMAT_FILE);
+            System.out.println("Saved migration structure to " + MIGRATION_FORMAT_FILE);
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this,
                     "Error saving migration structure: " + e.getMessage(),
@@ -1128,47 +988,8 @@ public class MigrationStructurePanel extends JPanel {
         }
     }
 
-    private MigrationModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
-        ModuleNode module = (ModuleNode) moduleTreeNode.getUserObject();
-        List<String> classNames = new ArrayList<>();
-        List<MigrationModule> childModules = new ArrayList<>();
-
-        Enumeration<?> children = moduleTreeNode.children();
-        while (children.hasMoreElements()) {
-            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) children.nextElement();
-            if (childNode.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) childNode.getUserObject();
-                classNames.add(classNode.getSchemaClass().source);
-            } else if (childNode.getUserObject() instanceof ModuleNode) {
-                childModules.add(extractModule(childNode));
-            }
-        }
-
-        return new MigrationModule(module.getName(), module.getId(), classNames, childModules);
-    }
-
     private DOSchemaClass findClassByName(String className) {
-        // Try databaseSchema first if available (has object counts)
-        if (databaseSchema != null && databaseSchema.getClasses() != null) {
-            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (schemaClass.source.equals(className)) {
-                    return schemaClass;
-                }
-            }
-        }
-
-        // Fall back to reference schema
-        if (schema == null || schema.getClasses() == null) {
-            return null;
-        }
-
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
-                return schemaClass;
-            }
-        }
-
-        return null;
+        return MigrationStructurePanelUtil.findClassByName(className, schema, databaseSchema);
     }
 
     /**
@@ -1499,7 +1320,7 @@ public class MigrationStructurePanel extends JPanel {
                     System.out.println("DEBUG: Got repeat export result, showing dialog...");
                     // Don't save to history again - we're repeating
                     // Show detailed result dialog
-                    migration4o.ui.dialogs.ExportResultDialog dialog = new migration4o.ui.dialogs.ExportResultDialog(
+                    migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
                             (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                             result);
                     dialog.setVisible(true);

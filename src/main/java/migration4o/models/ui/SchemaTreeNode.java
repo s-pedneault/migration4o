@@ -1,4 +1,4 @@
-package migration4o.ui.models;
+package migration4o.models.ui;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 

@@ -1,4 +1,4 @@
-package migration4o.ui.dialogs;
+package migration4o.ui.common.dialogs;
 
 import migration4o.engine.export.ExportResult;
 import migration4o.engine.export.ExportResult.ExportError;

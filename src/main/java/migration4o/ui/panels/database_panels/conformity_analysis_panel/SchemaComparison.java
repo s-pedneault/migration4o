@@ -1,8 +1,10 @@
-package migration4o.ui.comparison;
+package migration4o.ui.panels.database_panels.conformity_analysis_panel;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.ClassDifference;
+import migration4o.models.ui.FieldPropertyDifference;
 
 import java.util.*;
 
@@ -254,111 +256,5 @@ public class SchemaComparison {
         this.showAllClasses = showAllClasses;
         differences.clear();
         performComparison();
-    }
-
-    /**
-     * Represents differences for a single class.
-     */
-    public static class ClassDifference {
-        private final String className;
-        private final DOSchemaClass referenceClass;
-        private final DOSchemaClass comparedClass;
-        private final List<DOSchemaField> fieldsOnlyInReference = new ArrayList<>();
-        private final List<DOSchemaField> fieldsOnlyInCompared = new ArrayList<>();
-        private final Map<String, FieldPropertyDifference> fieldsWithDifferences = new HashMap<>();
-
-        public ClassDifference(String className, DOSchemaClass referenceClass, DOSchemaClass comparedClass) {
-            this.className = className;
-            this.referenceClass = referenceClass;
-            this.comparedClass = comparedClass;
-        }
-
-        public void addFieldOnlyInReference(DOSchemaField field) {
-            fieldsOnlyInReference.add(field);
-        }
-
-        public void addFieldOnlyInCompared(DOSchemaField field) {
-            fieldsOnlyInCompared.add(field);
-        }
-
-        public void addFieldWithDifferences(String fieldName, FieldPropertyDifference diff) {
-            fieldsWithDifferences.put(fieldName, diff);
-        }
-
-        public boolean hasDifferences() {
-            return referenceClass == null || comparedClass == null ||
-                    !fieldsOnlyInReference.isEmpty() ||
-                    !fieldsOnlyInCompared.isEmpty() ||
-                    !fieldsWithDifferences.isEmpty();
-        }
-
-        public boolean isOnlyInReference() {
-            return referenceClass != null && comparedClass == null;
-        }
-
-        public boolean isOnlyInCompared() {
-            return referenceClass == null && comparedClass != null;
-        }
-
-        public String getClassName() {
-            return className;
-        }
-
-        public DOSchemaClass getReferenceClass() {
-            return referenceClass;
-        }
-
-        public DOSchemaClass getComparedClass() {
-            return comparedClass;
-        }
-
-        public List<DOSchemaField> getFieldsOnlyInReference() {
-            return fieldsOnlyInReference;
-        }
-
-        public List<DOSchemaField> getFieldsOnlyInCompared() {
-            return fieldsOnlyInCompared;
-        }
-
-        public Map<String, FieldPropertyDifference> getFieldsWithDifferences() {
-            return fieldsWithDifferences;
-        }
-    }
-
-    /**
-     * Represents property differences for a single field.
-     */
-    public static class FieldPropertyDifference {
-        private final Map<String, PropertyDiff> differences = new HashMap<>();
-
-        public void addDifference(String property, Object referenceValue, Object comparedValue) {
-            differences.put(property, new PropertyDiff(referenceValue, comparedValue));
-        }
-
-        public boolean hasDifferences() {
-            return !differences.isEmpty();
-        }
-
-        public Map<String, PropertyDiff> getDifferences() {
-            return differences;
-        }
-
-        public static class PropertyDiff {
-            private final Object referenceValue;
-            private final Object comparedValue;
-
-            public PropertyDiff(Object referenceValue, Object comparedValue) {
-                this.referenceValue = referenceValue;
-                this.comparedValue = comparedValue;
-            }
-
-            public Object getReferenceValue() {
-                return referenceValue;
-            }
-
-            public Object getComparedValue() {
-                return comparedValue;
-            }
-        }
     }
 }

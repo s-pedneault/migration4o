@@ -1,26 +1,44 @@
 package migration4o.ui.main;
 
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.Font;
+import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JFrame;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.JScrollPane;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JToolBar;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.UIManager;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
 import migration4o.database.DODatabaseOpener;
 import migration4o.database.DODatabaseReader;
 import migration4o.models.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.ComparisonTabInfo;
+import migration4o.models.ui.SchemaTabInfo;
 import migration4o.schema.DODatabaseSchemaInferrer;
-import migration4o.schema.DODatabaseSchemaWriter;
-import migration4o.ui.comparison.SchemaComparison;
-import migration4o.ui.comparison.SchemaComparisonPanel;
-import migration4o.ui.editors.schema.SchemaEditorPanel;
-import migration4o.ui.migration.MigrationCoveragePanel;
-
-import javax.swing.*;
-import javax.swing.filechooser.FileNameExtensionFilter;
-import java.awt.*;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
+import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
+import migration4o.ui.panels.welcome_panel.WelcomePanel;
 
 /**
  * Main application window with tabbed interface for migration tools.
@@ -42,42 +60,8 @@ public class MainWindow extends JFrame {
     private DOSchema currentDatabaseSchema = null;
     private String currentDatabasePath = null;
 
-    private static class ComparisonTabInfo {
-        SchemaTabInfo referenceTab;
-        SchemaTabInfo comparedTab;
-        String title;
-        SchemaComparisonPanel panel;
-
-        ComparisonTabInfo(SchemaTabInfo referenceTab, SchemaTabInfo comparedTab, String title,
-                SchemaComparisonPanel panel) {
-            this.referenceTab = referenceTab;
-            this.comparedTab = comparedTab;
-            this.title = title;
-            this.panel = panel;
-        }
-    }
-
     public MainWindow() {
         initializeUI();
-    }
-
-    private static class SchemaTabInfo {
-        String label;
-        DOSchema schema;
-        SchemaEditorPanel editorPanel;
-        boolean isReference; // true if this is the XML reference schema
-
-        SchemaTabInfo(String label, DOSchema schema, SchemaEditorPanel editorPanel, boolean isReference) {
-            this.label = label;
-            this.schema = schema;
-            this.editorPanel = editorPanel;
-            this.isReference = isReference;
-        }
-
-        @Override
-        public String toString() {
-            return label + (isReference ? " (Reference)" : "");
-        }
     }
 
     private void initializeUI() {
@@ -402,8 +386,8 @@ public class MainWindow extends JFrame {
         // Iterate through all tabs and notify those that need to know
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             Component component = tabbedPane.getComponentAt(i);
-            if (component instanceof migration4o.ui.schema.MigrationStructurePanel) {
-                migration4o.ui.schema.MigrationStructurePanel migrationPanel = (migration4o.ui.schema.MigrationStructurePanel) component;
+            if (component instanceof migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel) {
+                migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel migrationPanel = (migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel) component;
                 migrationPanel.setDatabasePath(databasePath);
                 migrationPanel.setDatabaseSchema(inferredSchema);
             }
@@ -416,8 +400,8 @@ public class MainWindow extends JFrame {
      * @param exportedClasses Map of class name to number of exported objects
      */
     public void notifyExportCompleted(Map<String, Integer> exportedClasses) {
-        if (migrationCoverageTab instanceof migration4o.ui.migration.MigrationCoveragePanel) {
-            migration4o.ui.migration.MigrationCoveragePanel coveragePanel = (migration4o.ui.migration.MigrationCoveragePanel) migrationCoverageTab;
+        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
+            migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
             coveragePanel.updateExportedCounts(exportedClasses);
         }
     }

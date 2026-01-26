@@ -1,4 +1,4 @@
-package migration4o.ui.editors.schema;
+package migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;

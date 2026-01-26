@@ -1,13 +1,13 @@
 package migration4o.schema;
 
-import migration4o.ui.schema.MigrationStructurePanel.MigrationModule;
-
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+
+import migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel.MigrationModule;
 
 /**
  * Writes migration structure to migration-format.xml file.
@@ -60,7 +60,7 @@ public class MigrationFormatWriter {
 
     private void writeModule(FileWriter writer, MigrationModule module, int indentLevel) throws IOException {
         String indent = "    ".repeat(indentLevel);
-        
+
         writer.write(indent + "<module name=\"" + escapeXml(module.getName()) + "\"");
         if (module.getId() != null && !module.getId().isEmpty()) {
             writer.write(" id=\"" + escapeXml(module.getId()) + "\"");

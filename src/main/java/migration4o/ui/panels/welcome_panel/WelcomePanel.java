@@ -1,4 +1,4 @@
-package migration4o.ui.main;
+package migration4o.ui.panels.welcome_panel;
 
 import javax.swing.*;
 import java.awt.*;

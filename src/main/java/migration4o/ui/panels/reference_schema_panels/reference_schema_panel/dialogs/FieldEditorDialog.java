@@ -1,9 +1,9 @@
-package migration4o.ui.editors.schema;
+package migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.ui.components.PropertyPanel;
+import migration4o.ui.common.PropertyPanel;
 import migration4o.util.TypeUtil;
 
 import javax.swing.*;

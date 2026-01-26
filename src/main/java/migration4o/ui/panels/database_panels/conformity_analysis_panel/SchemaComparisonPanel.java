@@ -1,18 +1,12 @@
-package migration4o.ui.comparison;
+package migration4o.ui.panels.database_panels.conformity_analysis_panel;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
-import migration4o.ui.comparison.SchemaComparison.ClassDifference;
-import migration4o.ui.comparison.SchemaComparison.FieldPropertyDifference;
-import migration4o.ui.editors.schema.FieldEditorDialog;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.DefaultTreeModel;
-import javax.swing.tree.TreePath;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
@@ -21,6 +15,32 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextArea;
+import javax.swing.JTree;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
+import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
+
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.ClassDifference;
+import migration4o.models.ui.FieldPropertyDifference;
+import migration4o.models.ui.PropertyDiff;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 
 /**
  * Panel for displaying schema comparison results.
@@ -705,7 +725,7 @@ public class SchemaComparisonPanel extends JPanel {
      * childrenType.
      */
     private boolean isOnlyChildrenTypeDifference(FieldPropertyDifference propDiff) {
-        Map<String, FieldPropertyDifference.PropertyDiff> differences = propDiff.getDifferences();
+        Map<String, PropertyDiff> differences = propDiff.getDifferences();
 
         // If there's only one difference and it's childrenType, return true
         if (differences.size() == 1 && differences.containsKey("childrenType")) {
