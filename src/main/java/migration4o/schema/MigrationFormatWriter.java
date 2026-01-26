@@ -7,7 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
 
-import migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel.MigrationModule;
+import migration4o.models.ui.MigrationModule;
 
 /**
  * Writes migration structure to migration-format.xml file.

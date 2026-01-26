@@ -1,6 +1,7 @@
 package migration4o.ui.panels.reference_schema_panels.reference_schema_panel;
 
 import migration4o.models.schema.*;
+import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
 import migration4o.schema.DODatabaseSchemaReader;
@@ -45,18 +46,6 @@ public class SchemaEditorPanel extends JPanel {
     private Runnable onSchemaReloaded; // Callback for schema reload
 
     // Column definitions for the fields table
-    private static class ColumnDefinition {
-        final String name;
-        final int width;
-        final Class<?> columnClass;
-
-        ColumnDefinition(String name, int width, Class<?> columnClass) {
-            this.name = name;
-            this.width = width;
-            this.columnClass = columnClass;
-        }
-    }
-
     private ColumnDefinition[] fieldColumns;
 
     public SchemaEditorPanel(String schemaFilePath) {

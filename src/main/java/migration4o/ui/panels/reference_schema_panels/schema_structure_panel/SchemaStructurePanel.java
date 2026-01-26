@@ -3,6 +3,7 @@ package migration4o.ui.panels.reference_schema_panels.schema_structure_panel;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.FieldReference;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -443,16 +444,6 @@ public class SchemaStructurePanel extends JPanel {
     /**
      * Helper class to store field reference information.
      */
-    private static class FieldReference {
-        DOSchemaClass schemaClass;
-        DOSchemaField field;
-
-        FieldReference(DOSchemaClass schemaClass, DOSchemaField field) {
-            this.schemaClass = schemaClass;
-            this.field = field;
-        }
-    }
-
     /**
      * Extracts expected EntiteContientID type from field name.
      * Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"

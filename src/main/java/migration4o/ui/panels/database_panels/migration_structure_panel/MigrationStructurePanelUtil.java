@@ -2,6 +2,10 @@ package migration4o.ui.panels.database_panels.migration_structure_panel;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.CategorizedClasses;
+import migration4o.models.ui.ClassNode;
+import migration4o.models.ui.MigrationModule;
+import migration4o.models.ui.ModuleNode;
 import migration4o.schema.MigrationFormatWriter;
 import migration4o.util.SchemaUtil;
 
@@ -28,7 +32,7 @@ public class MigrationStructurePanelUtil {
      * @return true if the node's user object is a ClassNode
      */
     public static boolean isClassNode(DefaultMutableTreeNode node) {
-        return node.getUserObject() instanceof MigrationStructurePanel.ClassNode;
+        return node.getUserObject() instanceof ClassNode;
     }
 
     /**
@@ -39,8 +43,8 @@ public class MigrationStructurePanelUtil {
      * @return the tree node containing the class, or null if not found
      */
     public static DefaultMutableTreeNode findClassNodeInTree(DefaultMutableTreeNode root, String className) {
-        if (root.getUserObject() instanceof MigrationStructurePanel.ClassNode) {
-            MigrationStructurePanel.ClassNode classNode = (MigrationStructurePanel.ClassNode) root.getUserObject();
+        if (root.getUserObject() instanceof ClassNode) {
+            ClassNode classNode = (ClassNode) root.getUserObject();
             if (classNode.getSchemaClass().source.equals(className)) {
                 return root;
             }
@@ -67,10 +71,10 @@ public class MigrationStructurePanelUtil {
         Enumeration<?> children = moduleNode.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            if (child.getUserObject() instanceof MigrationStructurePanel.ClassNode) {
-                MigrationStructurePanel.ClassNode classNode = (MigrationStructurePanel.ClassNode) child.getUserObject();
+            if (child.getUserObject() instanceof ClassNode) {
+                ClassNode classNode = (ClassNode) child.getUserObject();
                 classNames.add(classNode.getSchemaClass().source);
-            } else if (child.getUserObject() instanceof MigrationStructurePanel.ModuleNode) {
+            } else if (child.getUserObject() instanceof ModuleNode) {
                 // Recursively collect from child modules
                 collectClassNamesFromModule(child, classNames);
             }
@@ -86,15 +90,15 @@ public class MigrationStructurePanelUtil {
      */
     public static void updateNodeCounts(DefaultMutableTreeNode node, DOSchema schema, DOSchema databaseSchema) {
         Object userObject = node.getUserObject();
-        if (userObject instanceof MigrationStructurePanel.ClassNode) {
-            MigrationStructurePanel.ClassNode classNode = (MigrationStructurePanel.ClassNode) userObject;
+        if (userObject instanceof ClassNode) {
+            ClassNode classNode = (ClassNode) userObject;
             // Find the class with updated counts from databaseSchema
             DOSchemaClass updatedClass = SchemaUtil.findClassByName(classNode.getSchemaClass().source,
                     new DOSchema[] { schema,
                             databaseSchema });
             if (updatedClass != null) {
                 // Create new ClassNode with updated class data
-                node.setUserObject(new MigrationStructurePanel.ClassNode(updatedClass));
+                node.setUserObject(new ClassNode(updatedClass));
             }
         }
 
@@ -147,24 +151,24 @@ public class MigrationStructurePanelUtil {
      * @param moduleTreeNode the tree node representing the module
      * @return a MigrationModule object with all nested data
      */
-    public static MigrationStructurePanel.MigrationModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
-        MigrationStructurePanel.ModuleNode module = (MigrationStructurePanel.ModuleNode) moduleTreeNode.getUserObject();
+    public static MigrationModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
+        ModuleNode module = (ModuleNode) moduleTreeNode.getUserObject();
         List<String> classNames = new ArrayList<>();
-        List<MigrationStructurePanel.MigrationModule> childModules = new ArrayList<>();
+        List<MigrationModule> childModules = new ArrayList<>();
 
         Enumeration<?> children = moduleTreeNode.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) children.nextElement();
-            if (childNode.getUserObject() instanceof MigrationStructurePanel.ClassNode) {
-                MigrationStructurePanel.ClassNode classNode = (MigrationStructurePanel.ClassNode) childNode
+            if (childNode.getUserObject() instanceof ClassNode) {
+                ClassNode classNode = (ClassNode) childNode
                         .getUserObject();
                 classNames.add(classNode.getSchemaClass().source);
-            } else if (childNode.getUserObject() instanceof MigrationStructurePanel.ModuleNode) {
+            } else if (childNode.getUserObject() instanceof ModuleNode) {
                 childModules.add(extractModule(childNode));
             }
         }
 
-        return new MigrationStructurePanel.MigrationModule(module.getName(), module.getId(), classNames, childModules);
+        return new MigrationModule(module.getName(), module.getId(), classNames, childModules);
     }
 
     /**
@@ -176,30 +180,18 @@ public class MigrationStructurePanelUtil {
      */
     public static void saveMigrationStructure(DefaultMutableTreeNode exportRoot, String formatFilePath)
             throws Exception {
-        List<MigrationStructurePanel.MigrationModule> modules = new ArrayList<>();
+        List<MigrationModule> modules = new ArrayList<>();
 
         Enumeration<?> children = exportRoot.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode moduleNode = (DefaultMutableTreeNode) children.nextElement();
-            if (moduleNode.getUserObject() instanceof MigrationStructurePanel.ModuleNode) {
+            if (moduleNode.getUserObject() instanceof ModuleNode) {
                 modules.add(extractModule(moduleNode));
             }
         }
 
         MigrationFormatWriter writer = new MigrationFormatWriter();
         writer.writeMigrationFormat(modules, formatFilePath);
-    }
-
-    /**
-     * Data class to hold categorized classes for tree population.
-     */
-    public static class CategorizedClasses {
-        public final List<DOSchemaClass> availableEntities = new ArrayList<>();
-        public final List<DOSchemaClass> availableParams = new ArrayList<>();
-        public final List<DOSchemaClass> availableOthers = new ArrayList<>();
-        public final List<DOSchemaClass> exportedEntities = new ArrayList<>();
-        public final List<DOSchemaClass> exportedParams = new ArrayList<>();
-        public final List<DOSchemaClass> exportedOthers = new ArrayList<>();
     }
 
     /**
@@ -272,7 +264,7 @@ public class MigrationStructurePanelUtil {
 
             // Add classes to package node
             for (DOSchemaClass schemaClass : packageClasses) {
-                MigrationStructurePanel.ClassNode classNode = new MigrationStructurePanel.ClassNode(schemaClass);
+                ClassNode classNode = new ClassNode(schemaClass);
                 DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(classNode);
                 packageNode.add(treeNode);
             }
@@ -291,9 +283,9 @@ public class MigrationStructurePanelUtil {
      * @param exportedClasses set to track exported class names (modified in place)
      */
     public static void addModuleToTree(DefaultMutableTreeNode parentNode,
-            MigrationStructurePanel.MigrationModule module,
+            MigrationModule module,
             DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
-        MigrationStructurePanel.ModuleNode moduleNode = new MigrationStructurePanel.ModuleNode(module.getName(),
+        ModuleNode moduleNode = new ModuleNode(module.getName(),
                 module.getId());
         DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
         parentNode.add(moduleTreeNode);
@@ -302,7 +294,7 @@ public class MigrationStructurePanelUtil {
         for (String className : module.getClassNames()) {
             DOSchemaClass schemaClass = findClassByName(className, schema, databaseSchema);
             if (schemaClass != null) {
-                MigrationStructurePanel.ClassNode classNode = new MigrationStructurePanel.ClassNode(schemaClass);
+                ClassNode classNode = new ClassNode(schemaClass);
                 DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
                 moduleTreeNode.add(classTreeNode);
                 exportedClasses.add(className);
@@ -310,7 +302,7 @@ public class MigrationStructurePanelUtil {
         }
 
         // Add child modules recursively
-        for (MigrationStructurePanel.MigrationModule childModule : module.getChildModules()) {
+        for (MigrationModule childModule : module.getChildModules()) {
             addModuleToTree(moduleTreeNode, childModule, schema, databaseSchema, exportedClasses);
         }
     }
@@ -326,8 +318,8 @@ public class MigrationStructurePanelUtil {
         Enumeration<?> children = moduleNode.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            if (child.getUserObject() instanceof MigrationStructurePanel.ClassNode) {
-                MigrationStructurePanel.ClassNode classNode = (MigrationStructurePanel.ClassNode) child
+            if (child.getUserObject() instanceof ClassNode) {
+                ClassNode classNode = (ClassNode) child
                         .getUserObject();
                 exportedClasses.remove(classNode.getSchemaClass().source);
             }

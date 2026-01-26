@@ -40,6 +40,7 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassDifference;
 import migration4o.models.ui.FieldPropertyDifference;
 import migration4o.models.ui.PropertyDiff;
+import migration4o.models.ui.SyncTreeNode;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 
 /**
@@ -265,16 +266,16 @@ public class SchemaComparisonPanel extends JPanel {
         detailPanel.removeAll();
 
         Object userObject = node.getUserObject();
-        if (userObject instanceof SynchronizedTreePanel.SyncTreeNode) {
-            SynchronizedTreePanel.SyncTreeNode syncNode = (SynchronizedTreePanel.SyncTreeNode) userObject;
+        if (userObject instanceof SyncTreeNode) {
+            SyncTreeNode syncNode = (SyncTreeNode) userObject;
             ClassDifference diff = syncNode.getDifference();
 
             // Handle field node - show parent class's fields table
             if (syncNode.isField()) {
                 // Get parent node which is the class
                 DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();
-                if (parentNode != null && parentNode.getUserObject() instanceof SynchronizedTreePanel.SyncTreeNode) {
-                    SynchronizedTreePanel.SyncTreeNode parentSyncNode = (SynchronizedTreePanel.SyncTreeNode) parentNode
+                if (parentNode != null && parentNode.getUserObject() instanceof SyncTreeNode) {
+                    SyncTreeNode parentSyncNode = (SyncTreeNode) parentNode
                             .getUserObject();
                     ClassDifference parentDiff = parentSyncNode.getDifference();
                     if (parentDiff != null) {
@@ -758,11 +759,11 @@ public class SchemaComparisonPanel extends JPanel {
      */
     private void handleDoubleClick(DefaultMutableTreeNode node) {
         Object userObject = node.getUserObject();
-        if (!(userObject instanceof SynchronizedTreePanel.SyncTreeNode)) {
+        if (!(userObject instanceof SyncTreeNode)) {
             return;
         }
 
-        SynchronizedTreePanel.SyncTreeNode syncNode = (SynchronizedTreePanel.SyncTreeNode) userObject;
+        SyncTreeNode syncNode = (SyncTreeNode) userObject;
 
         // Only handle field nodes from the reference schema
         if (!syncNode.isField()) {
@@ -776,11 +777,11 @@ public class SchemaComparisonPanel extends JPanel {
 
         // Get the parent class
         DefaultMutableTreeNode parentNode = (DefaultMutableTreeNode) node.getParent();
-        if (parentNode == null || !(parentNode.getUserObject() instanceof SynchronizedTreePanel.SyncTreeNode)) {
+        if (parentNode == null || !(parentNode.getUserObject() instanceof SyncTreeNode)) {
             return;
         }
 
-        SynchronizedTreePanel.SyncTreeNode parentSyncNode = (SynchronizedTreePanel.SyncTreeNode) parentNode
+        SyncTreeNode parentSyncNode = (SyncTreeNode) parentNode
                 .getUserObject();
         ClassDifference diff = parentSyncNode.getDifference();
         DOSchemaClass oldClass = diff != null ? diff.getReferenceClass() : null;
@@ -898,8 +899,8 @@ public class SchemaComparisonPanel extends JPanel {
     private String getNodeKeyFromPath(TreePath path) {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
         Object userObject = node.getUserObject();
-        if (userObject instanceof SynchronizedTreePanel.SyncTreeNode) {
-            return ((SynchronizedTreePanel.SyncTreeNode) userObject).getKey();
+        if (userObject instanceof SyncTreeNode) {
+            return ((SyncTreeNode) userObject).getKey();
         }
         return userObject != null ? userObject.toString() : "";
     }

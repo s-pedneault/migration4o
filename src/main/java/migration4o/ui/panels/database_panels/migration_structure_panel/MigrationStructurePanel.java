@@ -52,6 +52,10 @@ import javax.swing.tree.TreePath;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.CategorizedClasses;
+import migration4o.models.ui.ClassNode;
+import migration4o.models.ui.MigrationModule;
+import migration4o.models.ui.ModuleNode;
 import migration4o.schema.MigrationFormatReader;
 
 /**
@@ -417,7 +421,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Categorize classes using util
-        MigrationStructurePanelUtil.CategorizedClasses categorized = MigrationStructurePanelUtil
+        CategorizedClasses categorized = MigrationStructurePanelUtil
                 .categorizeClasses(schema, exportedClasses);
 
         // Sort by package and add to tree
@@ -450,7 +454,7 @@ public class MigrationStructurePanel extends JPanel {
         DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
 
         // Categorize classes using util
-        MigrationStructurePanelUtil.CategorizedClasses categorized = MigrationStructurePanelUtil
+        CategorizedClasses categorized = MigrationStructurePanelUtil
                 .categorizeClasses(sourceSchema, exportedClasses);
 
         // Sort by package and add to tree
@@ -993,43 +997,6 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Data class representing a migration module
-     */
-    public static class MigrationModule {
-        private final String name;
-        private final String id;
-        private final List<String> classNames;
-        private final List<MigrationModule> childModules;
-
-        public MigrationModule(String name, String id, List<String> classNames) {
-            this(name, id, classNames, new ArrayList<>());
-        }
-
-        public MigrationModule(String name, String id, List<String> classNames, List<MigrationModule> childModules) {
-            this.name = name;
-            this.id = id;
-            this.classNames = classNames;
-            this.childModules = childModules;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public List<String> getClassNames() {
-            return classNames;
-        }
-
-        public List<MigrationModule> getChildModules() {
-            return childModules;
-        }
-    }
-
-    /**
      * Dialog for creating or editing a module
      */
     private static class ModuleDialog extends JDialog {
@@ -1190,69 +1157,6 @@ public class MigrationStructurePanel extends JPanel {
                 throw new UnsupportedFlavorException(flavor);
             }
             return schemaClass;
-        }
-    }
-
-    /**
-     * Inner class to represent a class node with proper display
-     */
-    public static class ClassNode {
-        private DOSchemaClass schemaClass;
-
-        public ClassNode(DOSchemaClass schemaClass) {
-            this.schemaClass = schemaClass;
-        }
-
-        public DOSchemaClass getSchemaClass() {
-            return schemaClass;
-        }
-
-        @Override
-        public String toString() {
-            String simpleName = schemaClass.source;
-            if (simpleName.contains(".")) {
-                simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
-            }
-            int objectCount = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
-            if (objectCount > 0) {
-                return simpleName + " (" + objectCount + " objects)";
-            } else {
-                return simpleName;
-            }
-        }
-    }
-
-    /**
-     * Inner class to represent a module with name and ID
-     */
-    public static class ModuleNode {
-        private String name;
-        private String id;
-
-        public ModuleNode(String name, String id) {
-            this.name = name;
-            this.id = id;
-        }
-
-        public String getName() {
-            return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
-        }
-
-        public String getId() {
-            return id;
-        }
-
-        public void setId(String id) {
-            this.id = id;
-        }
-
-        @Override
-        public String toString() {
-            return name + " [" + id + "]";
         }
     }
 

@@ -2,7 +2,7 @@ package migration4o.schema;
 
 import org.w3c.dom.*;
 
-import migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel.MigrationModule;
+import migration4o.models.ui.MigrationModule;
 
 import javax.xml.parsers.*;
 import java.io.File;
