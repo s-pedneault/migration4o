@@ -386,8 +386,8 @@ public class MainWindow extends JFrame {
         // Iterate through all tabs and notify those that need to know
         for (int i = 0; i < tabbedPane.getTabCount(); i++) {
             Component component = tabbedPane.getComponentAt(i);
-            if (component instanceof migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel) {
-                migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel migrationPanel = (migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel) component;
+            if (component instanceof migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel) {
+                migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel migrationPanel = (migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel) component;
                 migrationPanel.setDatabasePath(databasePath);
                 migrationPanel.setDatabaseSchema(inferredSchema);
             }

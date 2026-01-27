@@ -1,4 +1,4 @@
-package migration4o.ui.panels.database_panels.migration_structure_panel;
+package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;

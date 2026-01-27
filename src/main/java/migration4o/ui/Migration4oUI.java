@@ -6,7 +6,7 @@ import javax.swing.UIManager;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.ui.main.MainWindow;
-import migration4o.ui.panels.database_panels.migration_structure_panel.MigrationStructurePanel;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
 import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 

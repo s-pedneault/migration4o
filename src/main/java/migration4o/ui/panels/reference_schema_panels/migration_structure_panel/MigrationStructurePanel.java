@@ -1,5 +1,5 @@
 
-package migration4o.ui.panels.database_panels.migration_structure_panel;
+package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
