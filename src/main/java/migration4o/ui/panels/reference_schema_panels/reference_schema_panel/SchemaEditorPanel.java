@@ -7,6 +7,7 @@ import migration4o.models.ui.SchemaTreeNode.NodeType;
 import migration4o.schema.DODatabaseSchemaReader;
 import migration4o.schema.DODatabaseSchemaWriter;
 import migration4o.ui.common.PropertyPanel;
+import migration4o.ui.common.renderers.SchemaTypeRenderer;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.util.TypeUtil;
@@ -453,9 +454,9 @@ public class SchemaEditorPanel extends JPanel {
 
             // Set custom renderers based on column name
             if (fieldColumns[i].name.equals("Type")) {
-                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new TypeRenderer());
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new SchemaTypeRenderer(schema));
             } else if (fieldColumns[i].name.equals("Children Type")) {
-                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new ChildrenTypeRenderer());
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new SchemaTypeRenderer(schema));
             } else if (fieldColumns[i].name.equals("Collection")) {
                 fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new CollectionRenderer());
             }
@@ -1186,102 +1187,6 @@ public class SchemaEditorPanel extends JPanel {
      * - Primitives: green
      * - Others: red (unresolved)
      */
-    private class TypeRenderer extends DefaultTableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus,
-                int row, int column) {
-            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-            if (value != null && !value.toString().isEmpty()) {
-                String typeName = value.toString();
-
-                // Check if it's a class in our schema
-                boolean isSchemaClass = false;
-                if (schema != null && schema.getClasses() != null) {
-                    for (DOSchemaClass cls : schema.getClasses()) {
-                        String shortName = cls.source.contains(".")
-                                ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                                : cls.source;
-                        if (cls.source.equals(typeName) || shortName.equals(typeName)) {
-                            isSchemaClass = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isSchemaClass) {
-                    // Class: blue and underlined
-                    setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
-                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                } else if (TypeUtil.isPrimitiveType(typeName)) {
-                    // Primitive: green
-                    setText("<html><font color='green'>" + typeName + "</font></html>");
-                    setCursor(Cursor.getDefaultCursor());
-                } else {
-                    // Other: red (unresolved)
-                    setText("<html><font color='red'>" + typeName + "</font></html>");
-                    setCursor(Cursor.getDefaultCursor());
-                }
-            } else {
-                setCursor(Cursor.getDefaultCursor());
-            }
-
-            return c;
-        }
-    }
-
-    /**
-     * Custom renderer for the Children Type column.
-     * - Classes: blue and underlined
-     * - Primitives: green
-     * - Others: red
-     */
-    private class ChildrenTypeRenderer extends DefaultTableCellRenderer {
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus,
-                int row, int column) {
-            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-
-            if (value != null && !value.toString().isEmpty()) {
-                String typeName = value.toString();
-
-                // Check if it's a class in our schema
-                boolean isSchemaClass = false;
-                if (schema != null && schema.getClasses() != null) {
-                    for (DOSchemaClass cls : schema.getClasses()) {
-                        String shortName = cls.source.contains(".")
-                                ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                                : cls.source;
-                        if (cls.source.equals(typeName) || shortName.equals(typeName)) {
-                            isSchemaClass = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (isSchemaClass) {
-                    // Class: blue and underlined
-                    setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
-                    setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                } else if (TypeUtil.isPrimitiveType(typeName)) {
-                    // Primitive: green
-                    setText("<html><font color='green'>" + typeName + "</font></html>");
-                    setCursor(Cursor.getDefaultCursor());
-                } else {
-                    // Other: red
-                    setText("<html><font color='red'>" + typeName + "</font></html>");
-                    setCursor(Cursor.getDefaultCursor());
-                }
-            } else {
-                setCursor(Cursor.getDefaultCursor());
-            }
-
-            return c;
-        }
-    }
-
     /**
      * Custom renderer for the Collection column.
      * Displays a checkbox and highlights the cell with red background if there's a

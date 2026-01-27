@@ -2,24 +2,19 @@ package migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dia
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.ui.common.dialogs.FilteredListDialog;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * Dialog for finding and selecting class names (primitives or schema classes).
+ * Extends FilteredListDialog to provide search and selection functionality.
  */
-public class ClassFinderDialog extends JDialog {
+public class ClassFinderDialog extends FilteredListDialog<String> {
 
     private final DOSchema schema;
-    private final JTextField searchField;
-    private final DefaultListModel<String> listModel;
-    private final JList<String> classList;
-    private String selectedValue = null;
 
     // Primitive types to include in the list
     private static final String[] PRIMITIVES = {
@@ -33,96 +28,31 @@ public class ClassFinderDialog extends JDialog {
     };
 
     public ClassFinderDialog(Frame owner, DOSchema schema, String initialValue) {
-        super(owner, "Class Finder", true);
+        super(owner, "Class Finder", initialValue, "Type to search classes...");
         this.schema = schema;
-
-        setLayout(new BorderLayout(10, 10));
-        setSize(500, 400);
-
-        // Search field at the top
-        JPanel searchPanel = new JPanel(new BorderLayout(5, 5));
-        searchPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 5, 10));
-        searchField = new JTextField(initialValue != null ? initialValue : "");
-        searchField.putClientProperty("JTextField.placeholderText", "Type to search classes...");
-        searchPanel.add(new JLabel("Search:"), BorderLayout.WEST);
-        searchPanel.add(searchField, BorderLayout.CENTER);
-        add(searchPanel, BorderLayout.NORTH);
-
-        // List of matching classes
-        listModel = new DefaultListModel<>();
-        classList = new JList<>(listModel);
-        classList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-
-        // Populate initial list
-        updateClassList(initialValue != null ? initialValue : "");
-
-        // Update list as user types
-        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
-            public void changedUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(searchField.getText());
-            }
-
-            public void removeUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(searchField.getText());
-            }
-
-            public void insertUpdate(javax.swing.event.DocumentEvent e) {
-                updateClassList(searchField.getText());
-            }
-        });
-
-        JScrollPane listScroll = new JScrollPane(classList);
-        listScroll.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
-        add(listScroll, BorderLayout.CENTER);
-
-        // Button panel
-        add(createButtonPanel(), BorderLayout.SOUTH);
-
-        // Double-click to select
-        classList.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    selectAndClose();
-                }
-            }
-        });
     }
 
-    private JPanel createButtonPanel() {
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        buttonPanel.setBorder(BorderFactory.createEmptyBorder(0, 10, 10, 10));
+    @Override
+    protected List<String> getAllItems() {
+        List<String> allItems = new ArrayList<>();
 
-        JButton okButton = new JButton("OK");
-        okButton.addActionListener(e -> selectAndClose());
-
-        JButton clearButton = new JButton("Clear");
-        clearButton.addActionListener(e -> {
-            selectedValue = "";
-            dispose();
-        });
-
-        JButton cancelButton = new JButton("Cancel");
-        cancelButton.addActionListener(e -> dispose());
-
-        buttonPanel.add(okButton);
-        buttonPanel.add(clearButton);
-        buttonPanel.add(cancelButton);
-
-        return buttonPanel;
-    }
-
-    private void selectAndClose() {
-        String selected = classList.getSelectedValue();
-        if (selected != null) {
-            selectedValue = selected;
-            dispose();
+        // Add all primitive types
+        for (String primitive : PRIMITIVES) {
+            allItems.add(primitive);
         }
+
+        // Add all schema classes
+        if (schema != null && schema.getClasses() != null) {
+            for (DOSchemaClass cls : schema.getClasses()) {
+                allItems.add(cls.source);
+            }
+        }
+
+        return allItems;
     }
 
-    private void updateClassList(String pattern) {
-        listModel.clear();
-
+    @Override
+    protected List<String> filterItems(String pattern) {
         String lowerPattern = pattern.toLowerCase();
         List<String> matches = new ArrayList<>();
 
@@ -146,10 +76,12 @@ public class ClassFinderDialog extends JDialog {
         // Sort matches
         matches.sort(String.CASE_INSENSITIVE_ORDER);
 
-        // Add to list
-        for (String match : matches) {
-            listModel.addElement(match);
-        }
+        return matches;
+    }
+
+    @Override
+    protected boolean supportsNullSelection() {
+        return true; // ClassFinder supports clearing the selection
     }
 
     /**
@@ -164,6 +96,11 @@ public class ClassFinderDialog extends JDialog {
         ClassFinderDialog dialog = new ClassFinderDialog(owner, schema, initialValue);
         dialog.setLocationRelativeTo(owner);
         dialog.setVisible(true);
-        return dialog.selectedValue;
+
+        // Return empty string if cleared, otherwise return selected value or null
+        if (dialog.wasCleared()) {
+            return "";
+        }
+        return dialog.getSelectedValue();
     }
 }

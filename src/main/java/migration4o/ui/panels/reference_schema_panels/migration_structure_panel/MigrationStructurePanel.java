@@ -999,99 +999,45 @@ public class MigrationStructurePanel extends JPanel {
     /**
      * Dialog for creating or editing a module
      */
-    private static class ModuleDialog extends JDialog {
+    private static class ModuleDialog extends migration4o.ui.common.dialogs.BaseFormDialog {
         private JTextField nameField;
         private JTextField idField;
-        private boolean confirmed = false;
 
         public ModuleDialog(Window owner, String title, String initialName, String initialId) {
-            super(owner, title, ModalityType.APPLICATION_MODAL);
+            super(owner, title);
 
-            setLayout(new BorderLayout(10, 10));
-
-            // Create form panel
-            JPanel formPanel = new JPanel(new GridBagLayout());
-            formPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.insets = new Insets(5, 5, 5, 5);
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-
-            // Module Name
-            gbc.gridx = 0;
-            gbc.gridy = 0;
-            gbc.weightx = 0;
-            formPanel.add(new JLabel("Module Name:"), gbc);
-
-            gbc.gridx = 1;
-            gbc.weightx = 1.0;
+            // Initialize fields with initial values
             nameField = new JTextField(initialName != null ? initialName : "", 20);
-            formPanel.add(nameField, gbc);
-
-            // Module ID
-            gbc.gridx = 0;
-            gbc.gridy = 1;
-            gbc.weightx = 0;
-            formPanel.add(new JLabel("Module ID:"), gbc);
-
-            gbc.gridx = 1;
-            gbc.weightx = 1.0;
             idField = new JTextField(initialId != null ? initialId : "", 20);
-            formPanel.add(idField, gbc);
-
-            add(formPanel, BorderLayout.CENTER);
-
-            // Create button panel
-            JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-            JButton okButton = new JButton("OK");
-            JButton cancelButton = new JButton("Cancel");
-
-            okButton.addActionListener(e -> {
-                if (validateInput()) {
-                    confirmed = true;
-                    dispose();
-                }
-            });
-
-            cancelButton.addActionListener(e -> {
-                confirmed = false;
-                dispose();
-            });
-
-            buttonPanel.add(okButton);
-            buttonPanel.add(cancelButton);
-            add(buttonPanel, BorderLayout.SOUTH);
-
-            pack();
-            setLocationRelativeTo(owner);
 
             // Set focus to name field
-            nameField.requestFocusInWindow();
+            SwingUtilities.invokeLater(() -> nameField.requestFocusInWindow());
         }
 
-        private boolean validateInput() {
+        @Override
+        protected JPanel buildFormPanel() {
+            JPanel panel = createGridBagFormPanel();
+            GridBagConstraints gbc = createFormConstraints();
+
+            addFormRow(panel, gbc, "Module Name:", nameField);
+            addFormRow(panel, gbc, "Module ID:", idField);
+
+            return panel;
+        }
+
+        @Override
+        protected boolean validateInput() {
             if (nameField.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Module name cannot be empty",
-                        "Validation Error",
-                        JOptionPane.ERROR_MESSAGE);
-                nameField.requestFocusInWindow();
+                showValidationError("Module name cannot be empty", nameField);
                 return false;
             }
 
             if (idField.getText().trim().isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Module ID cannot be empty",
-                        "Validation Error",
-                        JOptionPane.ERROR_MESSAGE);
-                idField.requestFocusInWindow();
+                showValidationError("Module ID cannot be empty", idField);
                 return false;
             }
 
             return true;
-        }
-
-        public boolean isConfirmed() {
-            return confirmed;
         }
 
         public String getModuleName() {
