@@ -37,13 +37,18 @@ import migration4o.schema.DODatabaseSchemaInferrer;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
+import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 import migration4o.ui.panels.welcome_panel.WelcomePanel;
 
 /**
  * Main application window with tabbed interface for migration tools.
+ * Responsible for initializing and coordinating all application tabs.
  */
 public class MainWindow extends JFrame {
+
+    private static final String DEFAULT_SCHEMA_PATH = "schema/database-schema.xml";
 
     private JTabbedPane tabbedPane;
     private WelcomePanel welcomePanel;
@@ -53,7 +58,12 @@ public class MainWindow extends JFrame {
     private Runnable repeatExportCallback;
     private boolean pendingRepeatExport = false;
 
-    // Track database-related tabs for closing
+    // Track static tabs (always present)
+    private SchemaEditorPanel referenceSchemaPanel = null;
+    private SchemaStructurePanel schemaStructurePanel = null;
+    private MigrationStructurePanel migrationStructurePanel = null;
+
+    // Track database-related tabs (dynamically created)
     private Component databaseSchemaTab = null;
     private Component conformityAnalysisTab = null;
     private Component migrationCoverageTab = null;
@@ -104,6 +114,58 @@ public class MainWindow extends JFrame {
         welcomePanel.setOnOpenDatabase(() -> openDatabaseFile());
         welcomePanel.setOnCloseDatabase(() -> closeDatabase());
         tabbedPane.addTab("Welcome", welcomePanel);
+    }
+
+    /**
+     * Initializes all static application tabs.
+     * This includes reference schema, schema structure, and migration structure.
+     * Called after MainWindow construction and before showing the window.
+     */
+    public void initialize() {
+        try {
+            // Load and add reference schema tab
+            referenceSchemaPanel = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
+            referenceSchemaPanel.setOnCompareRequested(() -> openDatabaseFile());
+            DOSchema schema = referenceSchemaPanel.getSchema();
+            addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);
+
+            // Add schema structure tab
+            schemaStructurePanel = new SchemaStructurePanel(schema);
+            addTab("Schema structure", schemaStructurePanel);
+
+            // Add migration structure tab
+            migrationStructurePanel = new MigrationStructurePanel(schema);
+            addTab("Migration structure", migrationStructurePanel);
+
+            // Set up repeat export callback
+            setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(this,
+                    "Error loading default schema: " + e.getMessage(),
+                    "Schema Load Error",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * Automatically opens a database file (used for command-line auto-open).
+     * Shows appropriate error messages if the file doesn't exist.
+     * 
+     * @param databasePath the absolute path to the database file
+     */
+    public void autoOpenDatabase(String databasePath) {
+        File dbFile = new File(databasePath);
+        if (dbFile.exists() && dbFile.isFile()) {
+            System.out.println("Auto-opening database: " + databasePath);
+            openDatabaseFile(databasePath);
+        } else {
+            JOptionPane.showMessageDialog(this,
+                    "Database file not found: " + databasePath,
+                    "Auto-open Failed",
+                    JOptionPane.WARNING_MESSAGE);
+        }
     }
 
     public void openDatabaseFile() {
@@ -380,17 +442,13 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Notifies all tabs that a database has been opened
+     * Notifies all tabs that a database has been opened.
+     * Updates migration structure panel with database path and schema.
      */
     private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
-        // Iterate through all tabs and notify those that need to know
-        for (int i = 0; i < tabbedPane.getTabCount(); i++) {
-            Component component = tabbedPane.getComponentAt(i);
-            if (component instanceof migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel) {
-                migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel migrationPanel = (migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel) component;
-                migrationPanel.setDatabasePath(databasePath);
-                migrationPanel.setDatabaseSchema(inferredSchema);
-            }
+        if (migrationStructurePanel != null) {
+            migrationStructurePanel.setDatabasePath(databasePath);
+            migrationStructurePanel.setDatabaseSchema(inferredSchema);
         }
     }
 

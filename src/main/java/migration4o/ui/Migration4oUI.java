@@ -1,21 +1,16 @@
 package migration4o.ui;
 
-import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
-import migration4o.models.schema.DOSchema;
 import migration4o.ui.main.MainWindow;
-import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
-import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
-import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 
 /**
  * Main entry point for the Migration4o UI application.
+ * Handles command-line arguments and application bootstrapping.
+ * All UI initialization is delegated to MainWindow.
  */
 public class Migration4oUI {
-
-    private static final String DEFAULT_SCHEMA_PATH = "schema/database-schema.xml";
 
     public static void main(String[] args) {
         // Parse command line arguments
@@ -26,7 +21,6 @@ public class Migration4oUI {
             if (arg.equals("--repeat-export")) {
                 repeatExport = true;
             } else if (!arg.startsWith("--")) {
-                // Assume it's a database path
                 databasePath = arg;
             }
         }
@@ -37,65 +31,22 @@ public class Migration4oUI {
         // Set look and feel before creating any UI components
         SwingUtilities.invokeLater(() -> {
             try {
-                // Use system look and feel for native appearance
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
-            // Create and show main window
+            // Create and initialize main window - it handles all tab setup
             MainWindow mainWindow = new MainWindow();
-
-            // Add schema editor tab
-            try {
-                SchemaEditorPanel schemaEditor = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
-                schemaEditor.setOnCompareRequested(() -> mainWindow.openDatabaseFile());
-
-                // Get the schema from the editor (already loaded by the constructor)
-                DOSchema schema = schemaEditor.getSchema();
-
-                mainWindow.addSchemaTab("Reference schema", schemaEditor, schema, true);
-
-                // Add schema structure tab right after reference schema
-                SchemaStructurePanel schemaStructurePanel = new SchemaStructurePanel(schema);
-                mainWindow.addTab("Schema structure", schemaStructurePanel);
-
-                // Add migration structure tab
-                MigrationStructurePanel migrationStructurePanel = new MigrationStructurePanel(schema);
-                mainWindow.addTab("Migration structure", migrationStructurePanel);
-
-                // Set up repeat export callback
-                mainWindow.setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
-            } catch (Exception e) {
-                e.printStackTrace();
-                JOptionPane.showMessageDialog(null,
-                        "Error loading default schema: " + e.getMessage(),
-                        "Schema Load Error",
-                        JOptionPane.ERROR_MESSAGE);
-            }
-
-            // Show window
+            mainWindow.initialize();
             mainWindow.setVisible(true);
 
-            // Auto-open database if path was provided
+            // Handle command-line database auto-open
             if (finalDatabasePath != null) {
-                java.io.File dbFile = new java.io.File(finalDatabasePath);
-                if (dbFile.exists() && dbFile.isFile()) {
-                    System.out.println("Auto-opening database: " + finalDatabasePath);
-
-                    // Set up repeat export before opening database
-                    if (finalRepeatExport) {
-                        mainWindow.triggerRepeatExport();
-                    }
-
-                    // Open database - repeat export will trigger automatically after load completes
-                    mainWindow.openDatabaseFile(finalDatabasePath);
-                } else {
-                    JOptionPane.showMessageDialog(mainWindow,
-                            "Database file not found: " + finalDatabasePath,
-                            "Auto-open Failed",
-                            JOptionPane.WARNING_MESSAGE);
+                if (finalRepeatExport) {
+                    mainWindow.triggerRepeatExport();
                 }
+                mainWindow.autoOpenDatabase(finalDatabasePath);
             }
         });
     }
