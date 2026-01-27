@@ -1,4 +1,4 @@
-package migration4o.models.ui;
+package migration4o.models.schema.comparison;
 
 /**
  * Represents a single property difference between two schema elements.

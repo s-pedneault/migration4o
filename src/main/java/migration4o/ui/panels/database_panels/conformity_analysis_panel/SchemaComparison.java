@@ -3,8 +3,8 @@ package migration4o.ui.panels.database_panels.conformity_analysis_panel;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.ui.ClassDifference;
-import migration4o.models.ui.FieldPropertyDifference;
+import migration4o.models.schema.comparison.ClassDifference;
+import migration4o.models.schema.comparison.FieldPropertyDifference;
 
 import java.util.*;
 

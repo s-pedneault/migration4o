@@ -1,4 +1,4 @@
-package migration4o.models.ui;
+package migration4o.models.schema.comparison;
 
 import java.util.HashMap;
 import java.util.Map;

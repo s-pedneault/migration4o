@@ -1,6 +1,7 @@
 package migration4o.models.ui;
 
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.comparison.ClassDifference;
 
 /**
  * Model class representing a node in the synchronized tree panel.

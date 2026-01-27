@@ -37,9 +37,9 @@ import javax.swing.tree.TreePath;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.ui.ClassDifference;
-import migration4o.models.ui.FieldPropertyDifference;
-import migration4o.models.ui.PropertyDiff;
+import migration4o.models.schema.comparison.ClassDifference;
+import migration4o.models.schema.comparison.FieldPropertyDifference;
+import migration4o.models.schema.comparison.PropertyDiff;
 import migration4o.models.ui.SyncTreeNode;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 

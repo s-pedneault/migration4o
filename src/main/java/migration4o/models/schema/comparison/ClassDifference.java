@@ -1,4 +1,4 @@
-package migration4o.models.ui;
+package migration4o.models.schema.comparison;
 
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;

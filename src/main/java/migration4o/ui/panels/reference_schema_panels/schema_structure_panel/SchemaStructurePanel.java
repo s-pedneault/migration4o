@@ -3,7 +3,7 @@ package migration4o.ui.panels.reference_schema_panels.schema_structure_panel;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.ui.FieldReference;
+import migration4o.models.schema.DOSchemaFieldReference;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -350,7 +350,7 @@ public class SchemaStructurePanel extends JPanel {
         String targetClassName = targetClass.source;
 
         // Find all classes and fields that reference this target class
-        List<FieldReference> references = new ArrayList<>();
+        List<DOSchemaFieldReference> references = new ArrayList<>();
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             DOSchemaField[] fields = schemaClass.fields;
@@ -419,13 +419,13 @@ public class SchemaStructurePanel extends JPanel {
                 }
 
                 if (isMatch) {
-                    references.add(new FieldReference(schemaClass, field));
+                    references.add(new DOSchemaFieldReference(schemaClass, field));
                 }
             }
         }
 
         // Add found references to the tree
-        for (FieldReference ref : references) {
+        for (DOSchemaFieldReference ref : references) {
             String refClassName = ref.schemaClass.source;
             String refSimpleName = getSimpleName(refClassName);
             String fieldLabel = "← " + refSimpleName + "." + ref.field.source;
