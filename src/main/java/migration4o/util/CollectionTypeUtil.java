@@ -1,6 +1,9 @@
 package migration4o.util;
 
 import migration4o.models.database.DODatabaseField;
+import java.util.Set;
+import java.util.HashSet;
+import java.util.Arrays;
 
 /**
  * Utility class for detecting and working with collection types.
@@ -8,6 +11,27 @@ import migration4o.models.database.DODatabaseField;
  * content types.
  */
 public class CollectionTypeUtil {
+
+    /**
+     * Set of type name substrings that indicate a collection type.
+     */
+    private static final Set<String> COLLECTION_TYPE_NAMES = new HashSet<>(Arrays.asList(
+            "Vector",
+            "ArrayList",
+            "LinkedList",
+            "HashSet",
+            "TreeSet",
+            "LinkedHashSet",
+            "HashMap",
+            "TreeMap",
+            "Stack",
+            "Queue",
+            "Collection",
+            "List",
+            "Set",
+            "Map",
+            "VectRechID" // Project-specific collection type
+    ));
 
     /**
      * Determines if a field represents a collection (array, list, set, map, etc.).
@@ -34,23 +58,19 @@ public class CollectionTypeUtil {
             return false;
         }
 
-        // Check for common collection types
-        return typeName.endsWith("[]") ||
-                typeName.contains("Vector") ||
-                typeName.contains("ArrayList") ||
-                typeName.contains("LinkedList") ||
-                typeName.contains("HashSet") ||
-                typeName.contains("TreeSet") ||
-                typeName.contains("LinkedHashSet") ||
-                typeName.contains("HashMap") ||
-                typeName.contains("TreeMap") ||
-                typeName.contains("Stack") ||
-                typeName.contains("Queue") ||
-                typeName.contains("Collection") ||
-                typeName.contains("List") ||
-                typeName.contains("Set") ||
-                typeName.contains("Map") ||
-                typeName.contains("VectRechID"); // Project-specific collection type
+        // Check for array notation
+        if (typeName.endsWith("[]")) {
+            return true;
+        }
+
+        // Check if the type name contains any of the collection type names
+        for (String collectionType : COLLECTION_TYPE_NAMES) {
+            if (typeName.contains(collectionType)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
