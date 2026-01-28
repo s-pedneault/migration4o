@@ -5,11 +5,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.db4o.ObjectSet;
 import com.db4o.ext.ExtObjectContainer;
-import com.db4o.query.Query;
 
-import migration4o.database.DODatabaseReader;
 import migration4o.models.database.DODatabase;
 import migration4o.models.database.DODatabaseClass;
 import migration4o.models.database.DODatabaseField;
@@ -31,10 +28,10 @@ import migration4o.util.CollectionTypeUtil;
  */
 public class DODatabaseSchemaInferrer {
 
-    private final DODatabaseReader databaseReader;
+    // private final DODatabaseReader databaseReader;
 
     public DODatabaseSchemaInferrer() {
-        this.databaseReader = new DODatabaseReader();
+        // this.databaseReader = new DODatabaseReader();
     }
 
     /**
