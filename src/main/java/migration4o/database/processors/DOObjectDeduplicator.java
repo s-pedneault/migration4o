@@ -36,6 +36,8 @@ public class DOObjectDeduplicator {
             return schema;
         }
 
+        System.out.println("Deduplicating object IDs across inheritance hierarchies...");
+
         // Create a map for quick class lookup
         Map<String, DOSchemaClass> classMap = new HashMap<>();
         for (DOSchemaClass cls : schema.getClasses()) {
@@ -45,7 +47,11 @@ public class DOObjectDeduplicator {
         // Find leaf classes (classes with no subclasses)
         List<DOSchemaClass> leafClasses = findLeafClasses(schema, classMap);
 
-        // For each leaf class, remove its object IDs from all ancestor classes
+        // Track which IDs should be removed from each class
+        Map<String, java.util.Set<Long>> idsToRemove = new HashMap<>();
+
+        // For each leaf class, mark its object IDs for removal from all ancestor
+        // classes
         for (DOSchemaClass leafClass : leafClasses) {
             if (leafClass.objectIds == null || leafClass.objectIds.length == 0) {
                 continue;
@@ -59,13 +65,42 @@ public class DOObjectDeduplicator {
                     break;
                 }
 
-                // Remove leaf's object IDs from parent
-                parentClass.objectIds = removeObjectIds(parentClass.objectIds, leafClass.objectIds);
+                // Mark leaf's object IDs for removal from this parent
+                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.source,
+                        k -> new java.util.HashSet<>());
+                for (long id : leafClass.objectIds) {
+                    toRemove.add(id);
+                }
 
                 // Move to next ancestor
                 parentClassName = parentClass.parentClassName;
             }
         }
+
+        // Now update uniqueObjectIds for all classes (keep objectIds unchanged)
+        int deduplicatedCount = 0;
+        for (DOSchemaClass cls : schema.getClasses()) {
+            java.util.Set<Long> toRemove = idsToRemove.get(cls.source);
+
+            if (toRemove != null && !toRemove.isEmpty() && cls.objectIds != null) {
+                // Filter out the IDs that belong to derived classes
+                long[] uniqueIds = removeObjectIds(cls.objectIds, toRemove);
+                cls.uniqueObjectIds = uniqueIds;
+
+                int removedCount = cls.objectIds.length - uniqueIds.length;
+                if (removedCount > 0) {
+                    deduplicatedCount++;
+                    System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.source +
+                            " (" + cls.objectIds.length + " -> " + uniqueIds.length + ")");
+                }
+            } else if (cls.objectIds != null) {
+                // No deduplication needed - copy objectIds to uniqueObjectIds
+                cls.uniqueObjectIds = cls.objectIds;
+            }
+        }
+
+        System.out.println("Object ID deduplication complete: " + leafClasses.size() + " leaf classes, " +
+                deduplicatedCount + " classes deduplicated");
 
         return schema;
     }
@@ -97,6 +132,39 @@ public class DOObjectDeduplicator {
         }
 
         return leafClasses;
+    }
+
+    /**
+     * Removes specified object IDs from an array.
+     * 
+     * @param sourceIds   The source array of object IDs
+     * @param idsToRemove The IDs to remove from the source array (as a Set)
+     * @return A new array with the specified IDs removed
+     */
+    public static long[] removeObjectIds(long[] sourceIds, java.util.Set<Long> idsToRemove) {
+        if (sourceIds == null || sourceIds.length == 0) {
+            return sourceIds;
+        }
+
+        if (idsToRemove == null || idsToRemove.isEmpty()) {
+            return sourceIds;
+        }
+
+        // Filter out IDs that are in the remove set
+        List<Long> result = new ArrayList<>();
+        for (long id : sourceIds) {
+            if (!idsToRemove.contains(id)) {
+                result.add(id);
+            }
+        }
+
+        // Convert back to array
+        long[] resultArray = new long[result.size()];
+        for (int i = 0; i < result.size(); i++) {
+            resultArray[i] = result.get(i);
+        }
+
+        return resultArray;
     }
 
     /**
