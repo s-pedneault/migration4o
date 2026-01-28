@@ -47,8 +47,16 @@ import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
+import migration4o.engine.export.ExportHistory;
+import migration4o.engine.export.ExportResult;
+import migration4o.migration.MigrationExportService;
 import migration4o.schema.MigrationFormatReader;
+import migration4o.ui.common.dialogs.ExportResultDialog;
+import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
+
+import java.awt.Frame;
+import java.io.File;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -721,42 +729,35 @@ public class MigrationStructurePanel extends JPanel {
      * Exports a single class to XML
      */
     private void exportClass(ClassNode classNode) {
-        if (databasePath == null || databasePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No database is currently open. Please open a database first.",
-                    "No Database",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        // Create export service and validate prerequisites
+        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
 
-        if (databaseSchema == null) {
+        if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
-                    "No database schema available. Please open a database first.",
-                    "No Database Schema",
+                    validation.getErrorMessage(),
+                    validation.getErrorTitle(),
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         DOSchemaClass schemaClass = classNode.getSchemaClass();
-        String className = schemaClass.source;
         String simpleName = schemaClass.getSourceName();
 
         // Ask user for output file
-        JFileChooser fileChooser = new JFileChooser("output/migration");
+        JFileChooser fileChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
         fileChooser.setDialogTitle("Export " + simpleName + " to XML");
-        fileChooser.setSelectedFile(new java.io.File(simpleName + "_export.xml"));
+        fileChooser.setSelectedFile(new File(exportService.suggestClassFilename(schemaClass)));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
 
             // Run export in background
-            SwingWorker<migration4o.engine.export.ExportResult, String> worker = new SwingWorker<>() {
+            SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
                 @Override
-                protected migration4o.engine.export.ExportResult doInBackground() throws Exception {
+                protected ExportResult doInBackground() throws Exception {
                     publish("Exporting " + simpleName + "...");
-                    migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
-                            schema, databaseSchema, databasePath);
-                    return exporter.exportClass(className, outputPath);
+                    return exportService.exportClass(schemaClass, outputPath);
                 }
 
                 @Override
@@ -769,27 +770,21 @@ public class MigrationStructurePanel extends JPanel {
                 @Override
                 protected void done() {
                     try {
-                        migration4o.engine.export.ExportResult result = get();
-                        // Save to history if successful
-                        if (result.isSuccess()) {
-                            migration4o.engine.export.ExportHistory.saveExport(
-                                    migration4o.engine.export.ExportHistory.ExportType.CLASS,
-                                    className, outputPath, null);
-                        }
+                        ExportResult result = get();
                         // Show detailed result dialog
-                        migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
-                                (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                        ExportResultDialog dialog = new ExportResultDialog(
+                                (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
 
                         // Update migration coverage with exported object counts
-                        if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                        if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
                             System.out.println("DEBUG MigrationStructurePanel (CLASS): Notifying MainWindow with " +
-                                    result.getExportedClassCounts().size() + " classes");
+                                    result.exportedClassCounts.size() + " classes");
                             java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                            if (window instanceof migration4o.ui.main.MainWindow) {
-                                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
-                                mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                            if (window instanceof MainWindow) {
+                                MainWindow mainWindow = (MainWindow) window;
+                                mainWindow.notifyExportCompleted(result.exportedClassCounts);
                             } else {
                                 System.out.println("DEBUG: Window is not MainWindow: " +
                                         (window != null ? window.getClass().getName() : "null"));
@@ -797,7 +792,7 @@ public class MigrationStructurePanel extends JPanel {
                         } else {
                             System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success="
                                     +
-                                    result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
+                                    result.errors.isEmpty() + ", counts size=" + result.exportedClassCounts.size());
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -817,18 +812,14 @@ public class MigrationStructurePanel extends JPanel {
      * Exports an entire module (with all its classes and nested modules) to XML
      */
     private void exportModule(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
-        if (databasePath == null || databasePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No database is currently open. Please open a database first.",
-                    "No Database",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
+        // Create export service and validate prerequisites
+        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
 
-        if (databaseSchema == null) {
+        if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
-                    "No database schema available. Please open a database first.",
-                    "No Database Schema",
+                    validation.getErrorMessage(),
+                    validation.getErrorTitle(),
                     JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -846,21 +837,20 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Ask user for output file
-        JFileChooser fileChooser = new JFileChooser("output/migration");
+        JFileChooser fileChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
         fileChooser.setDialogTitle("Export Module: " + moduleNode.getName());
-        fileChooser.setSelectedFile(new java.io.File(moduleNode.getId() + "_export.xml"));
+        fileChooser.setSelectedFile(
+                new File(exportService.suggestModuleFilename(moduleNode.getId(), moduleNode.getName())));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
 
             // Run export in background
-            SwingWorker<migration4o.engine.export.ExportResult, String> worker = new SwingWorker<>() {
+            SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
                 @Override
-                protected migration4o.engine.export.ExportResult doInBackground() throws Exception {
+                protected ExportResult doInBackground() throws Exception {
                     publish("Exporting module " + moduleNode.getName() + " (" + classNames.size() + " classes)...");
-                    migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
-                            schema, databaseSchema, databasePath);
-                    return exporter.exportModule(classNames, moduleNode.getName(), outputPath);
+                    return exportService.exportModule(classNames, moduleNode.getName(), outputPath);
                 }
 
                 @Override
@@ -874,30 +864,23 @@ public class MigrationStructurePanel extends JPanel {
                 protected void done() {
                     System.out.println("DEBUG: MODULE export done() called");
                     try {
-                        migration4o.engine.export.ExportResult result = get();
+                        ExportResult result = get();
                         System.out.println("DEBUG: Got export result, showing dialog...");
                         // Show detailed result dialog
-                        migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
-                                (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                        ExportResultDialog dialog = new ExportResultDialog(
+                                (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                                 result);
                         dialog.setVisible(true);
                         System.out.println("DEBUG: Dialog closed, continuing...");
 
-                        // Save to history if successful
-                        if (result.isSuccess()) {
-                            migration4o.engine.export.ExportHistory.saveExport(
-                                    migration4o.engine.export.ExportHistory.ExportType.MODULE,
-                                    moduleNode.getName(), outputPath, classNames);
-                        }
-
                         // Update migration coverage with exported object counts
-                        if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                        if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
                             System.out.println("DEBUG MigrationStructurePanel (MODULE): Notifying MainWindow with " +
-                                    result.getExportedClassCounts().size() + " classes");
+                                    result.exportedClassCounts.size() + " classes");
                             java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                            if (window instanceof migration4o.ui.main.MainWindow) {
-                                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
-                                mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                            if (window instanceof MainWindow) {
+                                MainWindow mainWindow = (MainWindow) window;
+                                mainWindow.notifyExportCompleted(result.exportedClassCounts);
                             } else {
                                 System.out.println("DEBUG: Window is not MainWindow: " +
                                         (window != null ? window.getClass().getName() : "null"));
@@ -905,8 +888,8 @@ public class MigrationStructurePanel extends JPanel {
                         } else {
                             System.out.println(
                                     "DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
-                                            result.isSuccess() + ", counts size="
-                                            + result.getExportedClassCounts().size());
+                                            result.errors.isEmpty() + ", counts size="
+                                            + result.exportedClassCounts.size());
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -992,8 +975,20 @@ public class MigrationStructurePanel extends JPanel {
      * Repeats the last export operation if history exists.
      */
     public void repeatLastExport() {
-        migration4o.engine.export.ExportHistory.ExportParams params = migration4o.engine.export.ExportHistory
-                .loadLastExport();
+        // Create export service and validate prerequisites
+        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
+
+        if (!validation.isValid()) {
+            JOptionPane.showMessageDialog(this,
+                    validation.getErrorMessage(),
+                    validation.getErrorTitle(),
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Check if history exists
+        ExportHistory.ExportParams params = ExportHistory.loadLastExport();
 
         if (params == null) {
             JOptionPane.showMessageDialog(this,
@@ -1003,38 +998,18 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        if (databasePath == null || databasePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No database is currently open. Please open a database first.",
-                    "No Database",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        if (databaseSchema == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No database schema available. Please open a database first.",
-                    "No Database Schema",
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
         // Execute the export (no confirmation needed - command-line flag is explicit
         // intent)
         System.out.println("Repeating export: " + params.getDescription());
-        SwingWorker<migration4o.engine.export.ExportResult, String> worker = new SwingWorker<>() {
+        SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
             @Override
-            protected migration4o.engine.export.ExportResult doInBackground() throws Exception {
-                migration4o.engine.export.XMLExportEngine exporter = new migration4o.engine.export.XMLExportEngine(
-                        schema, databaseSchema, databasePath);
-
-                if (params.type == migration4o.engine.export.ExportHistory.ExportType.CLASS) {
+            protected ExportResult doInBackground() throws Exception {
+                if (params.type == ExportHistory.ExportType.CLASS) {
                     publish("Repeating class export: " + params.targetName);
-                    return exporter.exportClass(params.targetName, params.outputPath);
                 } else {
                     publish("Repeating module export: " + params.targetName);
-                    return exporter.exportModule(params.classNames, params.targetName, params.outputPath);
                 }
+                return exportService.repeatLastExport();
             }
 
             @Override
@@ -1048,31 +1023,31 @@ public class MigrationStructurePanel extends JPanel {
             protected void done() {
                 System.out.println("DEBUG: REPEAT export done() called");
                 try {
-                    migration4o.engine.export.ExportResult result = get();
+                    ExportResult result = get();
                     System.out.println("DEBUG: Got repeat export result, showing dialog...");
                     // Don't save to history again - we're repeating
                     // Show detailed result dialog
-                    migration4o.ui.common.dialogs.ExportResultDialog dialog = new migration4o.ui.common.dialogs.ExportResultDialog(
-                            (java.awt.Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                    ExportResultDialog dialog = new ExportResultDialog(
+                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
                             result);
                     dialog.setVisible(true);
                     System.out.println("DEBUG: Dialog closed, continuing...");
 
                     // Update migration coverage with exported object counts
-                    if (result.isSuccess() && !result.getExportedClassCounts().isEmpty()) {
+                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
                         System.out.println("DEBUG MigrationStructurePanel (REPEAT): Notifying MainWindow with " +
-                                result.getExportedClassCounts().size() + " classes");
+                                result.exportedClassCounts.size() + " classes");
                         java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                        if (window instanceof migration4o.ui.main.MainWindow) {
-                            migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
-                            mainWindow.notifyExportCompleted(result.getExportedClassCounts());
+                        if (window instanceof MainWindow) {
+                            MainWindow mainWindow = (MainWindow) window;
+                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
                         } else {
                             System.out.println("DEBUG: Window is not MainWindow: " +
                                     (window != null ? window.getClass().getName() : "null"));
                         }
                     } else {
                         System.out.println("DEBUG MigrationStructurePanel (REPEAT): Not updating coverage - success=" +
-                                result.isSuccess() + ", counts size=" + result.getExportedClassCounts().size());
+                                result.errors.isEmpty() + ", counts size=" + result.exportedClassCounts.size());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();

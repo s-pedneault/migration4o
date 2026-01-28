@@ -1,7 +1,6 @@
 package migration4o.engine.export;
 
 import java.io.*;
-import java.nio.file.*;
 import java.util.*;
 
 /**
@@ -10,6 +9,13 @@ import java.util.*;
  */
 public class ExportHistory {
     private static final String HISTORY_FILE = "local/.export-history.properties";
+
+    // Property name constants
+    private static final String PROP_TYPE = "export.type";
+    private static final String PROP_TARGET = "export.target";
+    private static final String PROP_OUTPUT = "export.output";
+    private static final String PROP_TIMESTAMP = "export.timestamp";
+    private static final String PROP_CLASS_NAMES = "export.classNames";
 
     public enum ExportType {
         CLASS, MODULE
@@ -21,13 +27,13 @@ public class ExportHistory {
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames) {
         Properties props = new Properties();
-        props.setProperty("export.type", type.name());
-        props.setProperty("export.target", targetName);
-        props.setProperty("export.output", outputPath);
-        props.setProperty("export.timestamp", String.valueOf(System.currentTimeMillis()));
+        props.setProperty(PROP_TYPE, type.name());
+        props.setProperty(PROP_TARGET, targetName);
+        props.setProperty(PROP_OUTPUT, outputPath);
+        props.setProperty(PROP_TIMESTAMP, String.valueOf(System.currentTimeMillis()));
 
         if (type == ExportType.MODULE && classNames != null) {
-            props.setProperty("export.classNames", String.join(",", classNames));
+            props.setProperty(PROP_CLASS_NAMES, String.join(",", classNames));
         }
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
@@ -50,14 +56,14 @@ public class ExportHistory {
         try (FileReader reader = new FileReader(HISTORY_FILE)) {
             props.load(reader);
 
-            ExportType type = ExportType.valueOf(props.getProperty("export.type"));
-            String target = props.getProperty("export.target");
-            String output = props.getProperty("export.output");
-            String timestamp = props.getProperty("export.timestamp");
+            ExportType type = ExportType.valueOf(props.getProperty(PROP_TYPE));
+            String target = props.getProperty(PROP_TARGET);
+            String output = props.getProperty(PROP_OUTPUT);
+            String timestamp = props.getProperty(PROP_TIMESTAMP);
             List<String> classNames = null;
 
             if (type == ExportType.MODULE) {
-                String classNamesStr = props.getProperty("export.classNames");
+                String classNamesStr = props.getProperty(PROP_CLASS_NAMES);
                 if (classNamesStr != null && !classNamesStr.isEmpty()) {
                     classNames = Arrays.asList(classNamesStr.split(","));
                 }

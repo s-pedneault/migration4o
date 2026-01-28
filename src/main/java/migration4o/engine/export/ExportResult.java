@@ -10,12 +10,12 @@ import java.util.Map;
  * and UI.
  */
 public class ExportResult {
-    private final String exportName;
-    private final String outputPath;
-    private final int objectsAttempted;
-    private final int objectsSucceeded;
-    private final List<ExportError> errors;
-    private final Map<String, Integer> exportedClassCounts;
+    public String exportName;
+    public String outputPath;
+    public int objectsAttempted;
+    public int objectsSucceeded;
+    public List<ExportError> errors;
+    public Map<String, Integer> exportedClassCounts;
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, List<ExportError> errors) {
@@ -33,55 +33,14 @@ public class ExportResult {
                 : new java.util.HashMap<>();
     }
 
-    public String getExportName() {
-        return exportName;
-    }
-
-    public String getOutputPath() {
-        return outputPath;
-    }
-
-    public int getObjectsAttempted() {
-        return objectsAttempted;
-    }
-
-    public int getObjectsSucceeded() {
-        return objectsSucceeded;
-    }
-
-    public int getObjectsFailed() {
-        return errors.size();
-    }
-
-    public List<ExportError> getErrors() {
-        return new ArrayList<>(errors);
-    }
-
-    public boolean hasErrors() {
-        return !errors.isEmpty();
-    }
-
-    public boolean isSuccess() {
-        return errors.isEmpty();
-    }
-
-    /**
-     * Returns a map of class names to the number of objects exported for each
-     * class.
-     * Useful for updating migration coverage statistics.
-     */
-    public Map<String, Integer> getExportedClassCounts() {
-        return new java.util.HashMap<>(exportedClassCounts);
-    }
-
     /**
      * Represents an error that occurred during object export.
      */
     public static class ExportError {
-        private final long objectId;
-        private final String className;
-        private final String errorMessage;
-        private final Exception exception;
+        public long objectId;
+        public String className;
+        public String errorMessage;
+        public Exception exception;
 
         public ExportError(long objectId, String className, String errorMessage, Exception exception) {
             this.objectId = objectId;
@@ -90,20 +49,5 @@ public class ExportResult {
             this.exception = exception;
         }
 
-        public long getObjectId() {
-            return objectId;
-        }
-
-        public String getClassName() {
-            return className;
-        }
-
-        public String getErrorMessage() {
-            return errorMessage;
-        }
-
-        public Exception getException() {
-            return exception;
-        }
     }
 }

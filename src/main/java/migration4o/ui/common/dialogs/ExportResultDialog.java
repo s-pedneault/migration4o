@@ -31,7 +31,7 @@ public class ExportResultDialog extends JDialog {
         add(createHeaderPanel(), BorderLayout.NORTH);
 
         // Center panel - either success message or error table
-        if (result.hasErrors()) {
+        if (!result.errors.isEmpty()) {
             add(createErrorPanel(), BorderLayout.CENTER);
         } else {
             add(createSuccessPanel(), BorderLayout.CENTER);
@@ -50,7 +50,7 @@ public class ExportResultDialog extends JDialog {
         panel.setBorder(BorderFactory.createEmptyBorder(15, 15, 10, 15));
 
         // Export name
-        JLabel nameLabel = new JLabel(result.getExportName());
+        JLabel nameLabel = new JLabel(result.exportName);
         nameLabel.setFont(new Font("Arial", Font.BOLD, 18));
         nameLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(nameLabel);
@@ -58,7 +58,7 @@ public class ExportResultDialog extends JDialog {
         panel.add(Box.createVerticalStrut(5));
 
         // Output path
-        JLabel pathLabel = new JLabel("Output: " + result.getOutputPath());
+        JLabel pathLabel = new JLabel("Output: " + result.outputPath);
         pathLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         pathLabel.setForeground(Color.GRAY);
         pathLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -73,18 +73,18 @@ public class ExportResultDialog extends JDialog {
 
         // Attempted
         statsPanel.add(createStatBox("Objects Attempted",
-                String.valueOf(result.getObjectsAttempted()),
+                String.valueOf(result.objectsAttempted),
                 new Color(100, 100, 100)));
 
         // Succeeded
         statsPanel.add(createStatBox("Objects Succeeded",
-                String.valueOf(result.getObjectsSucceeded()),
+                String.valueOf(result.objectsSucceeded),
                 new Color(34, 197, 94))); // Green
 
         // Failed
-        Color failedColor = result.hasErrors() ? new Color(239, 68, 68) : new Color(100, 100, 100); // Red or gray
+        Color failedColor = !result.errors.isEmpty() ? new Color(239, 68, 68) : new Color(100, 100, 100); // Red or gray
         statsPanel.add(createStatBox("Objects Failed",
-                String.valueOf(result.getObjectsFailed()),
+                String.valueOf(result.errors.size()),
                 failedColor));
 
         panel.add(statsPanel);
@@ -96,7 +96,7 @@ public class ExportResultDialog extends JDialog {
 
         JLabel statusIcon;
         JLabel statusText;
-        if (result.isSuccess()) {
+        if (result.errors.isEmpty()) {
             statusIcon = new JLabel("✓");
             statusIcon.setFont(new Font("Arial", Font.BOLD, 24));
             statusIcon.setForeground(new Color(34, 197, 94));
@@ -162,8 +162,8 @@ public class ExportResultDialog extends JDialog {
 
         // Group errors by message
         Map<String, List<ExportError>> errorsByMessage = new LinkedHashMap<>();
-        for (ExportError error : result.getErrors()) {
-            errorsByMessage.computeIfAbsent(error.getErrorMessage(), k -> new ArrayList<>()).add(error);
+        for (ExportError error : result.errors) {
+            errorsByMessage.computeIfAbsent(error.errorMessage, k -> new ArrayList<>()).add(error);
         }
 
         // Create table model
@@ -186,7 +186,7 @@ public class ExportResultDialog extends JDialog {
             for (int i = 0; i < showCount; i++) {
                 if (i > 0)
                     sampleIds.append(", ");
-                sampleIds.append(errors.get(i).getObjectId());
+                sampleIds.append(errors.get(i).objectId);
             }
             if (errors.size() > showCount) {
                 sampleIds.append(" ... and ").append(errors.size() - showCount).append(" more");
@@ -195,9 +195,9 @@ public class ExportResultDialog extends JDialog {
             // Get unique class names
             Set<String> classNames = new TreeSet<>();
             for (ExportError error : errors) {
-                if (error.getClassName() != null && !error.getClassName().isEmpty()) {
+                if (error.className != null && !error.className.isEmpty()) {
                     // Get simple class name
-                    String className = error.getClassName();
+                    String className = error.className;
                     if (className.contains(".")) {
                         className = className.substring(className.lastIndexOf('.') + 1);
                     }
@@ -237,7 +237,7 @@ public class ExportResultDialog extends JDialog {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         panel.setBorder(BorderFactory.createEmptyBorder(5, 15, 15, 15));
 
-        if (result.hasErrors()) {
+        if (!result.errors.isEmpty()) {
             JButton copyButton = new JButton("Copy Error Details");
             copyButton.addActionListener(e -> copyErrorDetailsToClipboard());
             panel.add(copyButton);
@@ -254,16 +254,16 @@ public class ExportResultDialog extends JDialog {
         StringBuilder sb = new StringBuilder();
         sb.append("EXPORT ERROR DETAILS\n");
         sb.append("=".repeat(80)).append("\n");
-        sb.append("Export: ").append(result.getExportName()).append("\n");
-        sb.append("Output: ").append(result.getOutputPath()).append("\n");
-        sb.append("Objects Attempted: ").append(result.getObjectsAttempted()).append("\n");
-        sb.append("Objects Succeeded: ").append(result.getObjectsSucceeded()).append("\n");
-        sb.append("Objects Failed: ").append(result.getObjectsFailed()).append("\n\n");
+        sb.append("Export: ").append(result.exportName).append("\n");
+        sb.append("Output: ").append(result.outputPath).append("\n");
+        sb.append("Objects Attempted: ").append(result.objectsAttempted).append("\n");
+        sb.append("Objects Succeeded: ").append(result.objectsSucceeded).append("\n");
+        sb.append("Objects Failed: ").append(result.errors.size()).append("\n\n");
 
         // Group errors by message
         Map<String, List<ExportError>> errorsByMessage = new LinkedHashMap<>();
-        for (ExportError error : result.getErrors()) {
-            errorsByMessage.computeIfAbsent(error.getErrorMessage(), k -> new ArrayList<>()).add(error);
+        for (ExportError error : result.errors) {
+            errorsByMessage.computeIfAbsent(error.errorMessage, k -> new ArrayList<>()).add(error);
         }
 
         sb.append("ERROR BREAKDOWN:\n");
@@ -281,7 +281,7 @@ public class ExportResultDialog extends JDialog {
             for (int i = 0; i < showCount; i++) {
                 if (i > 0)
                     sb.append(", ");
-                sb.append(errors.get(i).getObjectId());
+                sb.append(errors.get(i).objectId);
             }
             if (errors.size() > showCount) {
                 sb.append(" ... and ").append(errors.size() - showCount).append(" more");
@@ -291,8 +291,8 @@ public class ExportResultDialog extends JDialog {
             // Classes
             Set<String> classNames = new TreeSet<>();
             for (ExportError error : errors) {
-                if (error.getClassName() != null) {
-                    classNames.add(error.getClassName());
+                if (error.className != null) {
+                    classNames.add(error.className);
                 }
             }
             if (!classNames.isEmpty()) {

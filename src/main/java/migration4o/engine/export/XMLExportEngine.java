@@ -1,22 +1,28 @@
 package migration4o.engine.export;
 
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
-import com.db4o.foundation.io.File4;
+import com.db4o.reflect.generic.GenericObject;
+
 import migration4o.database.DODatabaseOpener;
-import migration4o.util.ObjectResolverUtil;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import com.db4o.reflect.generic.GenericObject;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.*;
+import migration4o.util.ObjectResolverUtil;
 
 public class XMLExportEngine {
     private DOSchema schema; // Reference schema for class definitions
