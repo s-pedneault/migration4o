@@ -1,10 +1,12 @@
-package migration4o.engine.export;
+package migration4o.engine.export.monitoring;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import migration4o.models.schema.DOSchemaClass;
 
 /**
  * Tracks statistics and errors during export operations.
@@ -23,8 +25,11 @@ public class ExportStatistics {
         objectsSucceeded++;
     }
 
-    public void recordClassExport(String className) {
-        exportedClassCounts.put(className, exportedClassCounts.getOrDefault(className, 0) + 1);
+    public void recordClassExport(DOSchemaClass schemaClass) {
+        if (schemaClass != null) {
+            String className = schemaClass.destinationName;
+            exportedClassCounts.put(className, exportedClassCounts.getOrDefault(className, 0) + 1);
+        }
     }
 
     public void addError(long objectId, String className, String errorMessage, Exception exception) {

@@ -66,8 +66,10 @@ public class SchemaUtil {
 
     /**
      * Finds a class in the schema by its absolute name.
+     * If not found, falls back to searching by simple name (class name without
+     * package).
      * 
-     * @param className the absolute class name to find
+     * @param className the absolute class name to find (or simple name as fallback)
      * @param schema    the reference schema
      * @return the schema class, or null if not found
      */
@@ -76,11 +78,22 @@ public class SchemaUtil {
             return null;
         }
 
+        // First, try exact match by absolute name
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (schemaClass.source.equals(className)) {
                 return schemaClass;
             }
         }
+
+        // Fallback: try matching by simple name (class name without package)
+        String searchSimpleName = ClassUtil.getSimpleName(className);
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.source);
+            if (schemaSimpleName.equals(searchSimpleName)) {
+                return schemaClass;
+            }
+        }
+
         return null;
     }
 }

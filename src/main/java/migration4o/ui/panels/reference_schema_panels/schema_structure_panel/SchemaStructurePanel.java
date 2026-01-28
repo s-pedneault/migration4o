@@ -4,6 +4,8 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaFieldReference;
+import migration4o.util.ClassUtil;
+import migration4o.util.SchemaUtil;
 
 import javax.swing.*;
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -63,8 +65,8 @@ public class SchemaStructurePanel extends JPanel {
         }
 
         // Count classes in each category
-        int entitiesCount = countDescendants("gest.gen.EntiteContientID");
-        int paramsCount = countDescendants("gest.gen.EntiteParam");
+        int entitiesCount = countEntities();
+        int paramsCount = countParams();
 
         // Create three main branches with counts
         DefaultMutableTreeNode entitiesNode = new DefaultMutableTreeNode("Entities (" + entitiesCount + ")");
@@ -98,7 +100,7 @@ public class SchemaStructurePanel extends JPanel {
 
         // Find all classes that descend from EntiteContientID
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+            if (schemaClass.isEntite(schema)) {
                 entiteContientIDClasses.add(schemaClass);
             }
         }
@@ -106,7 +108,7 @@ public class SchemaStructurePanel extends JPanel {
         // Group by package
         Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteContientIDClasses) {
-            String packageName = getPackageName(schemaClass.source);
+            String packageName = ClassUtil.getPackageName(schemaClass.source);
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -120,11 +122,11 @@ public class SchemaStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> getSimpleName(c.source)));
+            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
 
             // Add each class to the package node
             for (DOSchemaClass schemaClass : packageClasses) {
-                String simpleName = getSimpleName(schemaClass.source);
+                String simpleName = ClassUtil.getSimpleName(schemaClass.source);
                 DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
                 packageNode.add(classNode);
 
@@ -150,7 +152,7 @@ public class SchemaStructurePanel extends JPanel {
 
         // Find all classes that descend from EntiteParam
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+            if (schemaClass.isParam(schema)) {
                 entiteParamClasses.add(schemaClass);
             }
         }
@@ -158,7 +160,7 @@ public class SchemaStructurePanel extends JPanel {
         // Group by package
         Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteParamClasses) {
-            String packageName = getPackageName(schemaClass.source);
+            String packageName = ClassUtil.getPackageName(schemaClass.source);
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -172,11 +174,11 @@ public class SchemaStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> getSimpleName(c.source)));
+            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
 
             // Add each class to the package node
             for (DOSchemaClass schemaClass : packageClasses) {
-                String simpleName = getSimpleName(schemaClass.source);
+                String simpleName = ClassUtil.getSimpleName(schemaClass.source);
                 DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
                 packageNode.add(classNode);
 
@@ -213,10 +215,10 @@ public class SchemaStructurePanel extends JPanel {
             if (field.isCollection) {
                 String childrenType = field.childrenType;
                 if (childrenType != null) {
-                    DOSchemaClass childClass = findClassInSchemaByName(childrenType);
+                    DOSchemaClass childClass = SchemaUtil.findClassByName(childrenType, schema);
                     if (childClass != null) {
                         // Check if children type is an IDEntite descendant
-                        if (isDescendantOf(childClass, "gest.gen.IDEntite")) {
+                        if (childClass.isIDEntite(schema)) {
                             // Special handling for IDEntite collections
                             handleIDEntiteField(classNode, field, childClass);
                         } else {
@@ -227,10 +229,10 @@ public class SchemaStructurePanel extends JPanel {
                 }
             } else {
                 // Non-collection field - check the field type itself
-                DOSchemaClass referencedClass = findClassInSchemaByName(fieldType);
+                DOSchemaClass referencedClass = SchemaUtil.findClassByName(fieldType, schema);
                 if (referencedClass != null) {
                     // Check if this is an IDEntite descendant
-                    if (isDescendantOf(referencedClass, "gest.gen.IDEntite")) {
+                    if (referencedClass.isIDEntite(schema)) {
                         // Special handling for IDEntite fields
                         handleIDEntiteField(classNode, field, referencedClass);
                     } else {
@@ -260,20 +262,18 @@ public class SchemaStructurePanel extends JPanel {
         }
 
         if (targetClassName != null) {
-            // Find the target class by absolute name first, then by simple name
-            DOSchemaClass targetClass = findClassInSchemaByName(targetClassName);
-            if (targetClass == null) {
-                targetClass = findClassBySimpleName(targetClassName);
-            }
+            // Find the target class by absolute name (with simple name fallback in
+            // SchemaUtil)
+            DOSchemaClass targetClass = SchemaUtil.findClassByName(targetClassName, schema);
 
             if (targetClass != null &&
-                    (isDescendantOf(targetClass, "gest.gen.EntiteContientID") ||
-                            isDescendantOf(targetClass, "gest.gen.EntiteParam"))) {
+                    (targetClass.isEntite(schema) ||
+                            targetClass.isParam(schema))) {
                 // Mark the target class as reached
                 unreachedClasses.remove(targetClass.source);
 
                 String fieldLabel = "Field: " + field.source + " → "
-                        + getSimpleName(targetClass.source);
+                        + ClassUtil.getSimpleName(targetClass.source);
                 DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
                 classNode.add(fieldNode);
 
@@ -294,7 +294,7 @@ public class SchemaStructurePanel extends JPanel {
         // Mark the referenced class as reached
         unreachedClasses.remove(referencedClass.source);
 
-        String referencedSimpleName = getSimpleName(referencedClass.source);
+        String referencedSimpleName = ClassUtil.getSimpleName(referencedClass.source);
         String fieldLabel = "Field: " + field.source + " → " + referencedSimpleName;
         DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
         classNode.add(fieldNode);
@@ -314,7 +314,7 @@ public class SchemaStructurePanel extends JPanel {
         // Convert unreached class names to DOSchemaClass objects and sort
         List<DOSchemaClass> unreachedClassList = new ArrayList<>();
         for (String className : unreachedClasses) {
-            DOSchemaClass schemaClass = findClassInSchemaByName(className);
+            DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
             if (schemaClass != null) {
                 unreachedClassList.add(schemaClass);
             }
@@ -324,11 +324,11 @@ public class SchemaStructurePanel extends JPanel {
         parentNode.setUserObject("Unreached (" + unreachedClassList.size() + ")");
 
         // Sort by simple name for easier navigation
-        unreachedClassList.sort(Comparator.comparing(c -> getSimpleName(c.source)));
+        unreachedClassList.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
 
         // Add each unreached class to the tree
         for (DOSchemaClass schemaClass : unreachedClassList) {
-            String simpleName = getSimpleName(schemaClass.source);
+            String simpleName = ClassUtil.getSimpleName(schemaClass.source);
             String fullName = schemaClass.source;
             DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName + " (" + fullName + ")");
             parentNode.add(classNode);
@@ -378,8 +378,8 @@ public class SchemaStructurePanel extends JPanel {
                     }
                     // Also check if children type is IDEntite pointing to our target
                     else if (childrenType != null) {
-                        DOSchemaClass childTypeClass = findClassInSchemaByName(childrenType);
-                        if (childTypeClass != null && isDescendantOf(childTypeClass, "gest.gen.IDEntite")) {
+                        DOSchemaClass childTypeClass = SchemaUtil.findClassByName(childrenType, schema);
+                        if (childTypeClass != null && childTypeClass.isIDEntite(schema)) {
                             // Use pointsTo if available, otherwise fall back to name extraction
                             String pointsTo = childTypeClass.pointsTo;
                             if (pointsTo != null && pointsTo.equals(targetClassName)) {
@@ -388,7 +388,7 @@ public class SchemaStructurePanel extends JPanel {
                                 // Fallback to name extraction
                                 String expectedType = extractExpectedTypeFromFieldName(field.source, childrenType);
                                 if (expectedType != null) {
-                                    String targetSimpleName = getSimpleName(targetClassName);
+                                    String targetSimpleName = ClassUtil.getSimpleName(targetClassName);
                                     if (targetSimpleName.equals(expectedType)) {
                                         isMatch = true;
                                     }
@@ -399,8 +399,8 @@ public class SchemaStructurePanel extends JPanel {
                 }
                 // Check if it's an IDEntite that might point to this class
                 else {
-                    DOSchemaClass fieldTypeClass = findClassInSchemaByName(fieldType);
-                    if (fieldTypeClass != null && isDescendantOf(fieldTypeClass, "gest.gen.IDEntite")) {
+                    DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(fieldType, schema);
+                    if (fieldTypeClass != null && fieldTypeClass.isIDEntite(schema)) {
                         // Use pointsTo if available, otherwise fall back to name extraction
                         String pointsTo = fieldTypeClass.pointsTo;
                         if (pointsTo != null && pointsTo.equals(targetClassName)) {
@@ -409,7 +409,7 @@ public class SchemaStructurePanel extends JPanel {
                             // Fallback to name extraction
                             String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
                             if (expectedType != null) {
-                                String targetSimpleName = getSimpleName(targetClassName);
+                                String targetSimpleName = ClassUtil.getSimpleName(targetClassName);
                                 if (targetSimpleName.equals(expectedType)) {
                                     isMatch = true;
                                 }
@@ -427,7 +427,7 @@ public class SchemaStructurePanel extends JPanel {
         // Add found references to the tree
         for (DOSchemaFieldReference ref : references) {
             String refClassName = ref.schemaClass.source;
-            String refSimpleName = getSimpleName(refClassName);
+            String refSimpleName = ClassUtil.getSimpleName(refClassName);
             String fieldLabel = "← " + refSimpleName + "." + ref.field.source;
             DefaultMutableTreeNode refNode = new DefaultMutableTreeNode(fieldLabel);
             classNode.add(refNode);
@@ -455,7 +455,7 @@ public class SchemaStructurePanel extends JPanel {
         }
         // Otherwise try to extract from the ID class name
         // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
-        String simpleClassName = getSimpleName(idClassName);
+        String simpleClassName = ClassUtil.getSimpleName(idClassName);
         if (simpleClassName.startsWith("ID")) {
             return simpleClassName.substring(2); // Remove "ID" prefix
         }
@@ -463,12 +463,12 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Counts how many classes in the schema descend from a given parent class.
+     * Counts how many classes are entities (descendants of EntiteContientID).
      */
-    private int countDescendants(String parentClassName) {
+    private int countEntities() {
         int count = 0;
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (isDescendantOf(schemaClass, parentClassName)) {
+            if (schemaClass.isEntite(schema)) {
                 count++;
             }
         }
@@ -476,85 +476,16 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Checks if a class is a descendant of a given parent class name.
+     * Counts how many classes are params (descendants of EntiteParam).
      */
-    private boolean isDescendantOf(DOSchemaClass schemaClass, String parentClassName) {
-        if (schemaClass == null) {
-            return false;
-        }
-
-        // Check if this is the parent class itself
-        if (schemaClass.source.equals(parentClassName)) {
-            return true;
-        }
-
-        // Check parent class recursively
-        String parentName = schemaClass.parentClassName;
-        if (parentName != null) {
-            DOSchemaClass parentClass = findClassInSchemaByName(parentName);
-            return isDescendantOf(parentClass, parentClassName);
-        }
-
-        return false;
-    }
-
-    /**
-     * Finds a class in the schema by its absolute name.
-     */
-    private DOSchemaClass findClassInSchemaByName(String className) {
-        if (className == null) {
-            return null;
-        }
+    private int countParams() {
+        int count = 0;
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
-                return schemaClass;
+            if (schemaClass.isParam(schema)) {
+                count++;
             }
         }
-        return null;
-    }
-
-    /**
-     * Finds a class in the schema by its simple name (without package).
-     */
-    private DOSchemaClass findClassBySimpleName(String simpleName) {
-        if (simpleName == null) {
-            return null;
-        }
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String schemaSimpleName = getSimpleName(schemaClass.source);
-            if (schemaSimpleName.equals(simpleName)) {
-                return schemaClass;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Gets the simple name from a fully qualified class name.
-     */
-    private String getSimpleName(String fullyQualifiedName) {
-        if (fullyQualifiedName == null) {
-            return "Unknown";
-        }
-        int lastDot = fullyQualifiedName.lastIndexOf('.');
-        if (lastDot >= 0 && lastDot < fullyQualifiedName.length() - 1) {
-            return fullyQualifiedName.substring(lastDot + 1);
-        }
-        return fullyQualifiedName;
-    }
-
-    /**
-     * Gets the package name from a fully qualified class name.
-     */
-    private String getPackageName(String fullyQualifiedName) {
-        if (fullyQualifiedName == null) {
-            return "(default package)";
-        }
-        int lastDot = fullyQualifiedName.lastIndexOf('.');
-        if (lastDot > 0) {
-            return fullyQualifiedName.substring(0, lastDot);
-        }
-        return "(default package)";
+        return count;
     }
 
     /**

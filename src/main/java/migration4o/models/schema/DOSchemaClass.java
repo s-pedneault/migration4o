@@ -41,6 +41,10 @@ public class DOSchemaClass {
         return SchemaUtil.isDescendantOf(this, ancestorClassName, schema);
     }
 
+    public boolean isIDEntite(DOSchema schema) {
+        return isDescendantOf("gest.gen.IDEntite", schema);
+    }
+
     public boolean isEntite(DOSchema schema) {
         return isDescendantOf("gest.gen.EntiteContientID", schema);
     }

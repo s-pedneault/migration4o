@@ -296,16 +296,16 @@ public class MigrationCoveragePanel extends JPanel {
                     progressColor = new Color(169, 169, 169); // Darker grey for progress
                 }
                 // Check if descendant of EntiteContientID
-                else if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                else if (schemaClass.isEntite(referenceSchema)) {
                     backgroundColor = new Color(59, 130, 246); // Blue
                     progressColor = new Color(59, 130, 246); // Blue (fully)
-                } // Check if descendant of EntiteContientID
-                else if (isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                } // Check if descendant of EntiteParam
+                else if (schemaClass.isParam(referenceSchema)) {
                     backgroundColor = new Color(99, 190, 246); // Blue
                     progressColor = new Color(99, 190, 246); // Blue (fully)
                 }
                 // Check if descendant of IDEntite
-                else if (isDescendantOf(schemaClass, "gest.gen.IDEntite")) {
+                else if (schemaClass.isIDEntite(referenceSchema)) {
                     backgroundColor = new Color(234, 179, 8); // Yellow
                     progressColor = new Color(234, 179, 8); // Yellow (fully)
                 }
@@ -457,8 +457,8 @@ public class MigrationCoveragePanel extends JPanel {
                     // Count classes to process
                     int classCount = 0;
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID") ||
-                                isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                        if (schemaClass.isEntite(referenceSchema) ||
+                                schemaClass.isParam(referenceSchema)) {
                             classCount++;
                         }
                     }
@@ -468,8 +468,8 @@ public class MigrationCoveragePanel extends JPanel {
                     // Process all root classes (descendants of EntiteContientID or EntiteParam)
                     int processedCount = 0;
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID") ||
-                                isDescendantOf(schemaClass, "gest.gen.EntiteParam")) {
+                        if (schemaClass.isEntite(referenceSchema) ||
+                                schemaClass.isParam(referenceSchema)) {
 
                             processedCount++;
                             String simpleName = schemaClass.source;
@@ -878,7 +878,7 @@ public class MigrationCoveragePanel extends JPanel {
 
         // Check if this is an IDEntite descendant
         DOSchemaClass itemClass = findClassInSchemaByName(databaseSchema, className);
-        if (itemClass != null && isDescendantOf(itemClass, "gest.gen.IDEntite")) {
+        if (itemClass != null && itemClass.isIDEntite(referenceSchema)) {
             // This is an IDEntite - get target type from pointsTo or extract from field
             // name
             String expectedType = itemClass.pointsTo;
@@ -942,7 +942,7 @@ public class MigrationCoveragePanel extends JPanel {
 
             // Find EntiteContientID objects with the same mID and matching type
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (isDescendantOf(schemaClass, "gest.gen.EntiteContientID")) {
+                if (schemaClass.isEntite(referenceSchema)) {
                     // Check if this class matches the expected type (if specified)
                     String simpleClassName = schemaClass.source;
                     if (simpleClassName.contains(".")) {
@@ -1238,8 +1238,8 @@ public class MigrationCoveragePanel extends JPanel {
 
         DOSchemaClass objClass = findClassInSchemaByName(databaseSchema, className);
         if (objClass != null) {
-            return isDescendantOf(objClass, "gest.gen.EntiteContientID") ||
-                    isDescendantOf(objClass, "gest.gen.IDEntite");
+            return objClass.isEntite(referenceSchema) ||
+                    objClass.isIDEntite(referenceSchema);
         }
 
         return false;
@@ -1261,8 +1261,8 @@ public class MigrationCoveragePanel extends JPanel {
         // Check if the type itself is important
         DOSchemaClass fieldClass = findClassInSchemaByName(databaseSchema, fieldTypeName);
         if (fieldClass != null) {
-            return isDescendantOf(fieldClass, "gest.gen.EntiteContientID") ||
-                    isDescendantOf(fieldClass, "gest.gen.IDEntite");
+            return fieldClass.isEntite(referenceSchema) ||
+                    fieldClass.isIDEntite(referenceSchema);
         }
 
         return false;
@@ -1756,7 +1756,8 @@ public class MigrationCoveragePanel extends JPanel {
 
                 while (storedClass != null) {
                     String className = storedClass.getName();
-                    if (className != null && className.equals("gest.gen.IDEntite")) {
+                    DOSchemaClass pkgClass = findClass(className);
+                    if (pkgClass != null && pkgClass.isIDEntite(schema)) {
                         return true;
                     }
                     storedClass = storedClass.getParentStoredClass();
@@ -1765,6 +1766,21 @@ public class MigrationCoveragePanel extends JPanel {
                 // Could not determine type
             }
             return false;
+        }
+
+        /**
+         * Find a class in the schema by name.
+         */
+        private DOSchemaClass findClass(String className) {
+            if (className == null || schema == null || schema.getClasses() == null) {
+                return null;
+            }
+            for (DOSchemaClass cls : schema.getClasses()) {
+                if (className.equals(cls.source)) {
+                    return cls;
+                }
+            }
+            return null;
         }
 
         /**

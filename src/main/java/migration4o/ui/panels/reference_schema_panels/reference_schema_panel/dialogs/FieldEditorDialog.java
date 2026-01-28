@@ -239,8 +239,8 @@ public class FieldEditorDialog extends JDialog {
             if (typeName != null && !typeName.isEmpty() && schema != null) {
                 DOSchemaClass typeClass = findClassByName(typeName);
                 if (typeClass != null) {
-                    shouldEnable = isDescendantOf(typeClass, "gest.gen.IDEntite") ||
-                            isDescendantOf(typeClass, "gest.gen.EntiteContientID");
+                    shouldEnable = typeClass.isIDEntite(schema) ||
+                            typeClass.isEntite(schema);
                 }
             }
         }

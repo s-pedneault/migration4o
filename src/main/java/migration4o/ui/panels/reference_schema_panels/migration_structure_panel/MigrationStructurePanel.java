@@ -48,7 +48,7 @@ import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
 import migration4o.engine.export.ExportHistory;
-import migration4o.engine.export.ExportResult;
+import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.migration.MigrationExportService;
 import migration4o.schema.MigrationFormatReader;
 import migration4o.ui.common.dialogs.ExportResultDialog;

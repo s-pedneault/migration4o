@@ -1,11 +1,12 @@
 package migration4o.ui.common.dialogs;
 
-import migration4o.engine.export.ExportResult;
-import migration4o.engine.export.ExportResult.ExportError;
-
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
+
+import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.engine.export.monitoring.ExportResult.ExportError;
+
 import java.awt.*;
 import java.util.*;
 import java.util.List;

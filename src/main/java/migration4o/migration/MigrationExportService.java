@@ -3,8 +3,8 @@ package migration4o.migration;
 import java.util.List;
 
 import migration4o.engine.export.ExportHistory;
-import migration4o.engine.export.ExportResult;
 import migration4o.engine.export.XMLExportEngine;
+import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 

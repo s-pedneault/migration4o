@@ -7,6 +7,8 @@ import java.util.List;
 import com.db4o.ext.ExtObjectContainer;
 
 import migration4o.database.DODatabaseOpener;
+import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.engine.export.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 

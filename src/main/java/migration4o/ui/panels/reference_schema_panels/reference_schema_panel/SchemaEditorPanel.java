@@ -811,7 +811,7 @@ public class SchemaEditorPanel extends JPanel {
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (typeName.equals(schemaClass.destinationName) || typeName.equals(schemaClass.source)) {
-                return isDescendantOf(schemaClass, "gest.gen.IDEntite");
+                return schemaClass.isIDEntite(schema);
             }
         }
         return false;

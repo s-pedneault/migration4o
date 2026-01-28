@@ -40,10 +40,10 @@ public class XSDBuilder {
         }
     }
 
-    public void addField(String parentClassName, DOSchemaField field) {
-        if (field == null)
+    public void addField(DOSchemaClass parentClass, DOSchemaField field) {
+        if (field == null || parentClass == null)
             return;
-        fieldsByClass.computeIfAbsent(parentClassName, k -> new LinkedHashMap<>())
+        fieldsByClass.computeIfAbsent(parentClass.source, k -> new LinkedHashMap<>())
                 .put(field.destinationName, field);
     }
 
