@@ -26,14 +26,12 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import migration4o.database.DODatabaseOpener;
-import migration4o.database.DODatabaseReader;
-import migration4o.models.database.DODatabase;
+import migration4o.database.DODatabaseReaderV2;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ComparisonTabInfo;
 import migration4o.models.ui.SchemaTabInfo;
-import migration4o.schema.DODatabaseSchemaInferrer;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
@@ -227,20 +225,14 @@ public class MainWindow extends JFrame {
                     DODatabaseOpener opener = new DODatabaseOpener();
                     var objectContainer = opener.openDatabase(selectedFile.getAbsolutePath());
 
-                    // Get encoding used to open database
-                    var encoding = opener.getSuccessfulEncoding();
-
-                    // Read database structure (pass null for schema since we're inferring it)
-                    DODatabaseReader reader = new DODatabaseReader();
-                    DODatabase database = reader.readDatabaseMeta(objectContainer, encoding,
-                            selectedFile.length() + " bytes", null);
+                    // Read database as schema using DODatabaseReaderV2
+                    DODatabaseReaderV2 reader = new DODatabaseReaderV2();
+                    DOSchema schema = reader.readDatabaseAsSchema(objectContainer);
 
                     // Close database
                     objectContainer.close();
 
-                    // Infer schema
-                    DODatabaseSchemaInferrer inferrer = new DODatabaseSchemaInferrer();
-                    return inferrer.inferSchemaFromDatabase(database);
+                    return schema;
 
                 } catch (Exception e) {
                     e.printStackTrace();

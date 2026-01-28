@@ -4,14 +4,8 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 import java.awt.Point;
-import java.awt.Window;
-import java.awt.datatransfer.DataFlavor;
 import java.awt.datatransfer.Transferable;
-import java.awt.datatransfer.UnsupportedFlavorException;
 import java.awt.dnd.DnDConstants;
 import java.awt.dnd.DragGestureEvent;
 import java.awt.dnd.DragGestureListener;
@@ -30,8 +24,6 @@ import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JComponent;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
@@ -40,12 +32,10 @@ import javax.swing.JPanel;
 import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
-import javax.swing.JTextField;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
-import javax.swing.TransferHandler;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -54,9 +44,11 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
 import migration4o.models.ui.ClassNode;
+import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
 import migration4o.schema.MigrationFormatReader;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -994,116 +986,6 @@ public class MigrationStructurePanel extends JPanel {
 
     private DOSchemaClass findClassByName(String className) {
         return MigrationStructurePanelUtil.findClassByName(className, schema, databaseSchema);
-    }
-
-    /**
-     * Dialog for creating or editing a module
-     */
-    private static class ModuleDialog extends migration4o.ui.common.dialogs.BaseFormDialog {
-        private JTextField nameField;
-        private JTextField idField;
-
-        public ModuleDialog(Window owner, String title, String initialName, String initialId) {
-            super(owner, title);
-
-            // Initialize fields with initial values
-            nameField = new JTextField(initialName != null ? initialName : "", 20);
-            idField = new JTextField(initialId != null ? initialId : "", 20);
-
-            // Set focus to name field
-            SwingUtilities.invokeLater(() -> nameField.requestFocusInWindow());
-        }
-
-        @Override
-        protected JPanel buildFormPanel() {
-            JPanel panel = createGridBagFormPanel();
-            GridBagConstraints gbc = createFormConstraints();
-
-            addFormRow(panel, gbc, "Module Name:", nameField);
-            addFormRow(panel, gbc, "Module ID:", idField);
-
-            return panel;
-        }
-
-        @Override
-        protected boolean validateInput() {
-            if (nameField.getText().trim().isEmpty()) {
-                showValidationError("Module name cannot be empty", nameField);
-                return false;
-            }
-
-            if (idField.getText().trim().isEmpty()) {
-                showValidationError("Module ID cannot be empty", idField);
-                return false;
-            }
-
-            return true;
-        }
-
-        public String getModuleName() {
-            return nameField.getText().trim();
-        }
-
-        public String getModuleId() {
-            return idField.getText().trim();
-        }
-    }
-
-    /**
-     * Custom TransferHandler for class nodes
-     */
-    private static class ClassTransferHandler extends TransferHandler {
-        @Override
-        protected Transferable createTransferable(JComponent c) {
-            if (c instanceof JTree) {
-                JTree tree = (JTree) c;
-                TreePath path = tree.getSelectionPath();
-                if (path != null) {
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                    if (node.getUserObject() instanceof ClassNode) {
-                        ClassNode classNode = (ClassNode) node.getUserObject();
-                        return new ClassTransferable(classNode.getSchemaClass());
-                    }
-                }
-            }
-            return null;
-        }
-
-        @Override
-        public int getSourceActions(JComponent c) {
-            return COPY;
-        }
-    }
-
-    /**
-     * Transferable wrapper for DOSchemaClass
-     */
-    private static class ClassTransferable implements Transferable {
-        public static final DataFlavor CLASS_FLAVOR = new DataFlavor(DOSchemaClass.class, "Schema Class");
-        private static final DataFlavor[] FLAVORS = { CLASS_FLAVOR };
-        private final DOSchemaClass schemaClass;
-
-        public ClassTransferable(DOSchemaClass schemaClass) {
-            this.schemaClass = schemaClass;
-        }
-
-        @Override
-        public DataFlavor[] getTransferDataFlavors() {
-            return FLAVORS;
-        }
-
-        @Override
-        public boolean isDataFlavorSupported(DataFlavor flavor) {
-            return CLASS_FLAVOR.equals(flavor);
-        }
-
-        @Override
-        public Object getTransferData(DataFlavor flavor) throws UnsupportedFlavorException {
-            if (!isDataFlavorSupported(flavor)) {
-                throw new UnsupportedFlavorException(flavor);
-            }
-            return schemaClass;
-        }
     }
 
     /**
