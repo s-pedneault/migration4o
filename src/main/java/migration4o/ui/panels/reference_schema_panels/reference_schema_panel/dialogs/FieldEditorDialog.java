@@ -172,6 +172,7 @@ public class FieldEditorDialog extends JDialog {
 
         // Add fields in order
         addFormRow(innerPanel, gbc, "Source:", sourceField);
+        addFormRow(innerPanel, gbc, "Destination:", destField);
         addFormRow(innerPanel, gbc, "Type:", typePanel);
         addFormRow(innerPanel, gbc, "Points To:", pointsToPanel);
         addFormRow(innerPanel, gbc, "Title:", titleField);

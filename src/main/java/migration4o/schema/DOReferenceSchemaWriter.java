@@ -78,9 +78,17 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "title", schemaClass.title);
         }
 
+        if (schemaClass.description != null && !schemaClass.description.isEmpty()) {
+            writeAttribute(writer, "description", schemaClass.description);
+        }
+
         if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty()
                 && !"Undetermined".equals(schemaClass.parentClassName)) {
             writeAttribute(writer, "parentClass", schemaClass.parentClassName);
+        }
+
+        if (schemaClass.pointsTo != null && !schemaClass.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", schemaClass.pointsTo);
         }
 
         // Check if we have fields, references or nested content
@@ -147,6 +155,10 @@ public class DOReferenceSchemaWriter {
 
         if (field.childrenType != null && !field.childrenType.isEmpty()) {
             writeAttribute(writer, "childrenType", field.childrenType);
+        }
+
+        if (field.pointsTo != null && !field.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", field.pointsTo);
         }
 
         if (field.title != null && !field.title.isEmpty()) {

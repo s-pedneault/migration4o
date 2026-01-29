@@ -150,6 +150,7 @@ public class DOReferenceSchemaReader {
         String childrenType = fieldElement.getAttribute("childrenType");
         String title = fieldElement.getAttribute("title");
         String description = fieldElement.getAttribute("description");
+        String pointsTo = fieldElement.getAttribute("pointsTo");
 
         // Parse boolean attributes
         boolean isExported = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
@@ -171,7 +172,7 @@ public class DOReferenceSchemaReader {
         field.childrenType = childrenClassName;
         field.title = title.isEmpty() ? null : title;
         field.description = description.isEmpty() ? null : description;
-        field.pointsTo = null;
+        field.pointsTo = pointsTo.isEmpty() ? null : pointsTo;
         field.databaseClass = null;
         field.childrenSchemaClass = null;
         return field;

@@ -42,13 +42,19 @@ public class SchemaTypeRenderer extends DefaultTableCellRenderer {
 
             // Check if it's a class in our schema
             boolean isSchemaClass = false;
+            String debugInfo = "";
             if (schema != null && schema.getClasses() != null) {
                 for (DOSchemaClass cls : schema.getClasses()) {
                     String shortName = cls.source.contains(".")
                             ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
                             : cls.source;
-                    if (cls.source.equals(typeName) || shortName.equals(typeName)) {
+
+                    // Check full name, short name, and destination name
+                    if (cls.source.equals(typeName) ||
+                            shortName.equals(typeName) ||
+                            (cls.destinationName != null && cls.destinationName.equals(typeName))) {
                         isSchemaClass = true;
+                        debugInfo = " (matched: " + cls.source + ")";
                         break;
                     }
                 }
@@ -57,17 +63,23 @@ public class SchemaTypeRenderer extends DefaultTableCellRenderer {
             if (isSchemaClass) {
                 // Class: blue and underlined
                 setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
+                setToolTipText("Schema class: " + typeName + debugInfo);
                 setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             } else if (TypeUtil.isPrimitiveType(typeName)) {
                 // Primitive: green
                 setText("<html><font color='green'>" + typeName + "</font></html>");
+                setToolTipText("Primitive type: " + typeName);
                 setCursor(Cursor.getDefaultCursor());
             } else {
                 // Other: red (unresolved)
                 setText("<html><font color='red'>" + typeName + "</font></html>");
+                setToolTipText("Unresolved type: '" + typeName + "' is not a schema class or primitive type. Searched "
+                        +
+                        (schema != null && schema.getClasses() != null ? schema.getClasses().length : 0) + " classes.");
                 setCursor(Cursor.getDefaultCursor());
             }
         } else {
+            setToolTipText(null);
             setCursor(Cursor.getDefaultCursor());
         }
 

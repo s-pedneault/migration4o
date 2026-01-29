@@ -562,6 +562,9 @@ public class SchemaEditorPanel extends JPanel {
             // Build tree
             buildTree();
 
+            // Update table renderers now that schema is loaded
+            updateTableRenderers();
+
             setStatus("Schema loaded successfully. " + getSchemaStats());
             modified = false;
 
@@ -572,6 +575,20 @@ public class SchemaEditorPanel extends JPanel {
                     "Load Error",
                     JOptionPane.ERROR_MESSAGE);
             setStatus("Error loading schema");
+        }
+    }
+
+    /**
+     * Updates the table cell renderers with the loaded schema.
+     * Must be called after schema is loaded to ensure renderers have access to schema classes.
+     */
+    private void updateTableRenderers() {
+        if (fieldsTable != null && schema != null) {
+            for (int i = 0; i < fieldColumns.length; i++) {
+                if (fieldColumns[i].name.equals("Type") || fieldColumns[i].name.equals("Children Type")) {
+                    fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new SchemaTypeRenderer(schema));
+                }
+            }
         }
     }
 
@@ -1244,6 +1261,7 @@ public class SchemaEditorPanel extends JPanel {
 
             // Check for collection/childrenType consistency error
             boolean hasError = false;
+            String errorMessage = null;
             if (row >= 0 && row < fieldsTableModel.getRowCount()) {
                 // Get collection value (current cell)
                 Boolean isCollection = (Boolean) value;
@@ -1257,27 +1275,31 @@ public class SchemaEditorPanel extends JPanel {
                     // Error: collection is true but childrenType is empty
                     if (isCollection && !hasChildrenType) {
                         hasError = true;
+                        errorMessage = "Collection is true but Children Type is empty";
                     }
                     // Error: collection is false but childrenType is not empty
                     if (!isCollection && hasChildrenType) {
                         hasError = true;
+                        errorMessage = "Collection is false but Children Type is set to: " + childrenType;
                     }
                 }
             }
 
-            // Set background color based on error state
+            // Set background color and tooltip based on error state
             if (hasError) {
                 if (!isSelected) {
                     setBackground(new Color(255, 200, 200)); // Light red background
                 } else {
                     setBackground(table.getSelectionBackground().darker());
                 }
+                setToolTipText(errorMessage);
             } else {
                 if (!isSelected) {
                     setBackground(table.getBackground());
                 } else {
                     setBackground(table.getSelectionBackground());
                 }
+                setToolTipText(null);
             }
 
             setForeground(isSelected ? table.getSelectionForeground() : table.getForeground());

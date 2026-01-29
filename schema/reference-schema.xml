@@ -328,8 +328,16 @@
         <field source="mIDDossPrev" destinationName="idDossPrev" isExported="true" skipIfEmpty="true" type="gest.dossPrev.IDDossPrev" embedContents="true" />
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipIfEmpty="true" type="gest.graph.IDGraph" embedContents="true" />
     </class>
-    <class source="gest.borne.IDNivPriorite" destinationName="IDNivPriorite" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.borne.BornePer" destinationName="gest.borne.BornePer" isExported="true" parentClass="gest.gen.Entite">
+        <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipIfEmpty="true" type="gest.gen.Periodicite" />
+        <field source="mNote" destinationName="note" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="mIDTypeMaintBorne" destinationName="idTypeMaintBorne" isExported="true" skipIfEmpty="true" type="gest.borne.IDTypeMaintBorne" />
+    </class>
+    <class source="gest.borne.IDNivPriorite" destinationName="idNivPriorite" isExported="true" parentClass="gest.gen.IDEntite">
         <reference class="gest.borne.AnomBorne" field="mIDNivPriorite" />
+        <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
+    </class>
+    <class source="gest.borne.IDTypeMaintBorne" destinationName="idMaintBorne" isExported="true" parentClass="gest.gen.IDEntite">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.borne.ModeleBorne" destinationName="ModeleBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -1547,6 +1555,10 @@
         <field source="mRefreshToken" destinationName="refreshToken" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mRefreshTokenExpiration" destinationName="refreshTokenExpiration" isExported="true" skipIfEmpty="true" type="date" />
     </class>
+    <class source="gest.gen.IntervalleDate" destinationName="gest.gen.IntervalleDate" isExported="true" parentClass="gest.gen.Entite">
+        <field source="mDateDe" destinationName="dateDe" isExported="true" skipIfEmpty="true" type="java.util.Date" />
+        <field source="mDateA" destinationName="dateA" isExported="true" skipIfEmpty="true" type="java.util.Date" />
+    </class>
     <class source="gest.gen.IntervalleHeure" destinationName="IntervalleHeure" isExported="true" parentClass="gest.gen.Entite">
         <field source="mHeureA" destinationName="heureA" isExported="true" skipIfEmpty="true" type="date" />
         <field source="mHeureDe" destinationName="heureDe" isExported="true" skipIfEmpty="true" type="date" />
@@ -2693,6 +2705,13 @@
     <class source="gest.planInterv.EtatSection" destinationName="EtatSection" isExported="true" parentClass="gest.gen.Entite">
         <field source="mEtatInitial" destinationName="etatInitial" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mSectionId" destinationName="sectionId" isExported="true" skipIfEmpty="true" type="int" />
+    </class>
+    <class source="gest.planInterv.InfoServPub" destinationName="gest.planInterv.InfoServPub" isExported="true" parentClass="gest.gen.Entite">
+        <field source="mIDRessource" destinationName="idRessource" isExported="true" skipIfEmpty="true" type="gest.ressource.IDRessource" />
+        <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="gest.gen.PhotoFich" />
+        <field source="mEmplFerm" destinationName="emplFerm" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="mImpactProcede" destinationName="impactProcede" isExported="true" skipIfEmpty="true" type="java.lang.String" />
+        <field source="mImpactOccupant" destinationName="impactOccupant" isExported="true" skipIfEmpty="true" type="java.lang.String" />
     </class>
     <class source="gest.planInterv.ParamPlanInterv" destinationName="ParamPlanInterv" isExported="true" title="Paramètres de plan d&apos;intervention" parentClass="gest.gen.EntiteParam">
         <field source="mAutoCompleteOnglets" destinationName="autoCompleteOnglets" isExported="true" skipIfEmpty="true" type="boolean" />
