@@ -1,35 +1,59 @@
 package migration4o.ui.panels.reference_schema_panels.reference_schema_panel;
 
-import migration4o.models.schema.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.FlowLayout;
+import java.awt.Frame;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSplitPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.JToolBar;
+import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.TreeNode;
+import javax.swing.tree.TreePath;
+
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
-import migration4o.schema.DODatabaseSchemaReader;
-import migration4o.schema.DODatabaseSchemaWriter;
+import migration4o.schema.DOReferenceSchemaReader;
+import migration4o.schema.DOReferenceSchemaWriter;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.util.TypeUtil;
 
-import javax.swing.*;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.tree.*;
-import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.ArrayList;
-import java.util.List;
-
 /**
- * Editor panel for database-schema.xml file.
+ * Editor panel for reference-schema.xml file.
  * Provides a tree view with property editing.
  */
 public class SchemaEditorPanel extends JPanel {
 
-    private final String schemaFilePath;
     private DOSchema schema;
     private boolean modified;
 
@@ -49,8 +73,7 @@ public class SchemaEditorPanel extends JPanel {
     // Column definitions for the fields table
     private ColumnDefinition[] fieldColumns;
 
-    public SchemaEditorPanel(String schemaFilePath) {
-        this.schemaFilePath = schemaFilePath;
+    public SchemaEditorPanel() {
         this.modified = false;
 
         initializeUI();
@@ -62,7 +85,6 @@ public class SchemaEditorPanel extends JPanel {
      * The schema cannot be saved in this mode.
      */
     public SchemaEditorPanel(DOSchema schema, String displayName) {
-        this.schemaFilePath = null; // No file backing
         this.schema = schema;
         this.modified = false;
 
@@ -295,7 +317,7 @@ public class SchemaEditorPanel extends JPanel {
         JButton reloadButton = new JButton("Reload");
         reloadButton.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
         reloadButton.addActionListener(e -> reloadSchema());
-        reloadButton.setEnabled(schemaFilePath != null);
+        reloadButton.setEnabled(true);
         toolbar.add(reloadButton);
 
         toolbar.addSeparator();
@@ -304,7 +326,7 @@ public class SchemaEditorPanel extends JPanel {
         JButton saveButton = new JButton("Save");
         saveButton.setIcon(UIManager.getIcon("FileView.floppyDriveIcon"));
         saveButton.addActionListener(e -> saveSchema());
-        saveButton.setEnabled(schemaFilePath != null);
+        saveButton.setEnabled(true);
         toolbar.add(saveButton);
 
         toolbar.addSeparator();
@@ -516,8 +538,8 @@ public class SchemaEditorPanel extends JPanel {
             setStatus("Loading schema...");
 
             // Load schema using DODatabaseSchemaReader
-            DODatabaseSchemaReader reader = new DODatabaseSchemaReader();
-            schema = reader.readSchema(schemaFilePath);
+            DOReferenceSchemaReader reader = new DOReferenceSchemaReader();
+            schema = reader.readSchema();
 
             // Debug: print loaded classes count and check for ParamConfig
             int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;
@@ -1654,8 +1676,8 @@ public class SchemaEditorPanel extends JPanel {
             setStatus("Saving schema...");
 
             // Use the writer to save the schema
-            DODatabaseSchemaWriter writer = new DODatabaseSchemaWriter();
-            writer.writeSchema(schema, schemaFilePath);
+            DOReferenceSchemaWriter writer = new DOReferenceSchemaWriter();
+            writer.writeSchema(schema);
 
             modified = false;
             setStatus("Schema saved successfully");

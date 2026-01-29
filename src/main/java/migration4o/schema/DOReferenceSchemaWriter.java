@@ -14,12 +14,16 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
 
 /**
- * Writes DOSchema back to XML format matching database-schema.xml structure.
+ * Writes DOSchema back to XML format matching reference-schema.xml structure.
  * Preserves element order and all attributes.
  */
-public class DODatabaseSchemaWriter {
+public class DOReferenceSchemaWriter {
 
-    public void writeSchema(DOSchema schema, String filePath) throws IOException {
+    public void writeSchema(DOSchema schema) throws IOException {
+        writeSchema(schema, DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
+    }
+
+    private void writeSchema(DOSchema schema, String filePath) throws IOException {
         // Create backup first
         createBackup(filePath);
 

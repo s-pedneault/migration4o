@@ -16,16 +16,21 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.schema.processors.DOReferenceDetector;
 
 /**
- * Reader for the new database-schema.xml format.
+ * Reader for the new reference-schema.xml format.
  * This format uses <classes> as root element with direct class children.
  * Attributes use 'source' and 'isExported' instead of 'sourceName' and
  * 'migrate'.
  */
-public class DODatabaseSchemaReader {
+public class DOReferenceSchemaReader {
 
-    public DOSchema readSchema(String filePath) {
+    public DOSchema readSchema() {
+        return readSchema(DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
+    }
+
+    private DOSchema readSchema(String filePath) {
         try {
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
@@ -51,7 +56,7 @@ public class DODatabaseSchemaReader {
             DOSchema schema = new DOSchema(allClasses, modules, foundationClasses);
 
             // Post-process: detect and add missing references (e.g., IDEntite collections)
-            ReferenceDetector.detectAndAddReferences(schema);
+            DOReferenceDetector.detectAndAddReferences(schema);
 
             return schema;
         } catch (Exception e) {

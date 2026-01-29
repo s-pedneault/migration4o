@@ -1,4 +1,4 @@
-package migration4o.schema;
+package migration4o.schema.modules;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -13,7 +13,7 @@ import migration4o.models.ui.MigrationModule;
  * Writes migration structure to migration-format.xml file.
  * Uses the same backup strategy as DODatabaseSchemaWriter.
  */
-public class MigrationFormatWriter {
+public class DOModuleStructureWriter {
 
     public void writeMigrationFormat(List<MigrationModule> modules, String filePath) throws IOException {
         // Create backup first

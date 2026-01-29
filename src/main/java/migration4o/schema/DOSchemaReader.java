@@ -17,6 +17,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 
+@Deprecated
 public class DOSchemaReader {
 
     public DOSchema readSchema(String filePath) {

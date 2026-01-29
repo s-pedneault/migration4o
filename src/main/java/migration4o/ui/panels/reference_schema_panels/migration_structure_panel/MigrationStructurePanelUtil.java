@@ -6,7 +6,7 @@ import migration4o.models.ui.CategorizedClasses;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
-import migration4o.schema.MigrationFormatWriter;
+import migration4o.schema.modules.DOModuleStructureWriter;
 import migration4o.util.SchemaUtil;
 
 import javax.swing.tree.DefaultMutableTreeNode;
@@ -190,7 +190,7 @@ public class MigrationStructurePanelUtil {
             }
         }
 
-        MigrationFormatWriter writer = new MigrationFormatWriter();
+        DOModuleStructureWriter writer = new DOModuleStructureWriter();
         writer.writeMigrationFormat(modules, formatFilePath);
     }
 

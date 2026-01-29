@@ -1,25 +1,54 @@
 package migration4o.ui.panels.database_panels.migration_coverage_panel;
 
-import migration4o.database.DODatabaseOpener;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
-import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
-import migration4o.util.ObjectResolverUtil;
-import com.db4o.ext.ExtObjectContainer;
-import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
-import com.db4o.reflect.generic.GenericObject;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Graphics;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.Stack;
+import java.util.TreeSet;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JDialog;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTree;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
-import java.awt.*;
-import java.util.*;
-import java.util.List;
+
+import com.db4o.ext.ExtObjectContainer;
+import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+import com.db4o.reflect.generic.GenericObject;
+
+import migration4o.database.DODatabaseOpener;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * Panel showing migration coverage analysis with combined class list.
@@ -311,31 +340,6 @@ public class MigrationCoveragePanel extends JPanel {
                     progressColor = new Color(234, 179, 8); // Yellow (fully)
                 }
             }
-        }
-
-        private boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName) {
-            String currentParent = schemaClass.parentClassName;
-
-            // Walk up the inheritance chain
-            while (currentParent != null && !currentParent.isEmpty()) {
-                if (currentParent.equals(ancestorClassName)) {
-                    return true;
-                }
-
-                // Find parent class and continue walking up
-                DOSchemaClass parentClass = findClassInSchema(referenceSchema, currentParent);
-                if (parentClass == null) {
-                    parentClass = findClassInSchema(databaseSchema, currentParent);
-                }
-
-                if (parentClass == null) {
-                    break;
-                }
-
-                currentParent = parentClass.parentClassName;
-            }
-
-            return false;
         }
 
         private DOSchemaClass findClassInSchema(DOSchema schema, String className) {
@@ -1021,115 +1025,6 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
-     * DEPRECATED: Old non-recursive method - replaced by exploreObjectRecursively
-     * Processes a single class: activates each object in uniqueObjectIds,
-     * examines fields for collections, extracts child IDs, and removes them
-     * from their respective class's uniqueObjectIds array.
-     */
-    private void processClass(ExtObjectContainer container, DOSchemaClass parentClass) {
-        long[] uniqueIds = parentClass.uniqueObjectIds;
-        if (uniqueIds == null || uniqueIds.length == 0) {
-            return;
-        }
-
-        // Track all child IDs found, organized by class name
-        Map<String, Set<Long>> childIdsByClass = new HashMap<>();
-
-        // Process each object
-        for (long objectId : uniqueIds) {
-            try {
-                // Get and activate the object
-                Object obj = container.ext().getByID(objectId);
-                if (obj != null) {
-                    ObjectResolverUtil.activateObject(container, obj, objectId);
-
-                    // If it's a GenericObject, we can inspect its fields
-                    if (obj instanceof GenericObject) {
-                        GenericObject genericObj = (GenericObject) obj;
-                        extractChildIds(container, genericObj, childIdsByClass);
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Error processing object " + objectId + " of class " +
-                        parentClass.source + ": " + e.getMessage());
-            }
-        }
-
-        // Now add child IDs to their respective classes' reachedObjectIds
-        for (Map.Entry<String, Set<Long>> entry : childIdsByClass.entrySet()) {
-            String childClassName = entry.getKey();
-            Set<Long> idsToAdd = entry.getValue();
-
-            DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
-            if (childClass != null) {
-                addIdsToReachedList(childClass, idsToAdd);
-            }
-        }
-    }
-
-    /**
-     * Extracts child object IDs from all collection fields of a GenericObject.
-     */
-    private void extractChildIds(ExtObjectContainer container, GenericObject obj,
-            Map<String, Set<Long>> childIdsByClass) {
-        try {
-            // Use db4o StoredClass API to access fields properly
-            StoredClass storedClass = container.ext().storedClass(obj);
-            if (storedClass == null) {
-                return;
-            }
-
-            // Get all stored fields
-            StoredField[] fields = storedClass.getStoredFields();
-            for (StoredField field : fields) {
-                try {
-                    Object fieldValue = field.get(obj);
-                    if (fieldValue != null) {
-                        // Check if it's a collection
-                        if (fieldValue instanceof Collection) {
-                            Collection<?> collection = (Collection<?>) fieldValue;
-                            for (Object item : collection) {
-                                if (item != null) {
-                                    long childId = container.ext().getID(item);
-                                    if (childId > 0) {
-                                        // Get the class name of the child object
-                                        String childClassName = getClassName(item);
-                                        if (childClassName != null) {
-                                            childIdsByClass.computeIfAbsent(childClassName, k -> new HashSet<>())
-                                                    .add(childId);
-                                        }
-                                    }
-                                }
-                            }
-                        } else if (fieldValue.getClass().isArray()) {
-                            // Handle arrays
-                            int length = java.lang.reflect.Array.getLength(fieldValue);
-                            for (int i = 0; i < length; i++) {
-                                Object item = java.lang.reflect.Array.get(fieldValue, i);
-                                if (item != null) {
-                                    long childId = container.ext().getID(item);
-                                    if (childId > 0) {
-                                        String childClassName = getClassName(item);
-                                        if (childClassName != null) {
-                                            childIdsByClass.computeIfAbsent(childClassName, k -> new HashSet<>())
-                                                    .add(childId);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } catch (Exception e) {
-                    System.err.println(
-                            "Error extracting child IDs from field " + field.getName() + ": " + e.getMessage());
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Error accessing stored class for object: " + e.getMessage());
-        }
-    }
-
-    /**
      * Gets the class name of an object (handles both GenericObject and regular
      * objects).
      */
@@ -1196,34 +1091,6 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
-     * Helper method to check if a class is a descendant of another class.
-     */
-    private boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName) {
-        String currentParent = schemaClass.parentClassName;
-
-        // Walk up the inheritance chain
-        while (currentParent != null && !currentParent.isEmpty()) {
-            if (currentParent.equals(ancestorClassName)) {
-                return true;
-            }
-
-            // Find parent class and continue walking up
-            DOSchemaClass parentClass = findClassInSchemaByName(referenceSchema, currentParent);
-            if (parentClass == null) {
-                parentClass = findClassInSchemaByName(databaseSchema, currentParent);
-            }
-
-            if (parentClass == null) {
-                break;
-            }
-
-            currentParent = parentClass.parentClassName;
-        }
-
-        return false;
-    }
-
-    /**
      * Checks if an object is important (descendant of EntiteContientID or
      * IDEntite).
      */
@@ -1241,29 +1108,6 @@ public class MigrationCoveragePanel extends JPanel {
         if (objClass != null) {
             return objClass.isEntite(referenceSchema) ||
                     objClass.isIDEntite(referenceSchema);
-        }
-
-        return false;
-    }
-
-    /**
-     * DEPRECATED: No longer used - we check objects directly instead of field
-     * types.
-     * Checks if a field type is important (descendant of EntiteContientID or
-     * IDEntite).
-     * Also returns true for collections/arrays that might contain important types.
-     */
-    private boolean isImportantFieldType(String fieldTypeName) {
-        // Always include collections and arrays - they might contain important objects
-        if (fieldTypeName.startsWith("java.util.") || fieldTypeName.startsWith("[")) {
-            return true;
-        }
-
-        // Check if the type itself is important
-        DOSchemaClass fieldClass = findClassInSchemaByName(databaseSchema, fieldTypeName);
-        if (fieldClass != null) {
-            return fieldClass.isEntite(referenceSchema) ||
-                    fieldClass.isIDEntite(referenceSchema);
         }
 
         return false;

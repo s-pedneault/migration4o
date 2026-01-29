@@ -4,6 +4,7 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 import java.awt.BorderLayout;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.Frame;
 import java.awt.Point;
 import java.awt.datatransfer.Transferable;
 import java.awt.dnd.DnDConstants;
@@ -16,6 +17,7 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -40,6 +42,9 @@ import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 
+import migration4o.engine.export.ExportHistory;
+import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.migration.MigrationExportService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
@@ -47,16 +52,10 @@ import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
-import migration4o.engine.export.ExportHistory;
-import migration4o.engine.export.monitoring.ExportResult;
-import migration4o.migration.MigrationExportService;
-import migration4o.schema.MigrationFormatReader;
+import migration4o.schema.modules.DOModuleStructureReader;
 import migration4o.ui.common.dialogs.ExportResultDialog;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
-
-import java.awt.Frame;
-import java.io.File;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -914,7 +913,7 @@ public class MigrationStructurePanel extends JPanel {
 
     private void loadMigrationStructure() {
         try {
-            MigrationFormatReader reader = new MigrationFormatReader();
+            DOModuleStructureReader reader = new DOModuleStructureReader();
             List<MigrationModule> modules = reader.readMigrationFormat(MIGRATION_FORMAT_FILE);
 
             DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
@@ -965,10 +964,6 @@ public class MigrationStructurePanel extends JPanel {
                     JOptionPane.ERROR_MESSAGE);
             e.printStackTrace();
         }
-    }
-
-    private DOSchemaClass findClassByName(String className) {
-        return MigrationStructurePanelUtil.findClassByName(className, schema, databaseSchema);
     }
 
     /**

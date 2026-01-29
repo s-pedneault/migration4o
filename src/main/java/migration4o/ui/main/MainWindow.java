@@ -46,8 +46,6 @@ import migration4o.ui.panels.welcome_panel.WelcomePanel;
  */
 public class MainWindow extends JFrame {
 
-    private static final String DEFAULT_SCHEMA_PATH = "schema/database-schema.xml";
-
     private JTabbedPane tabbedPane;
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
@@ -122,7 +120,7 @@ public class MainWindow extends JFrame {
     public void initialize() {
         try {
             // Load and add reference schema tab
-            referenceSchemaPanel = new SchemaEditorPanel(DEFAULT_SCHEMA_PATH);
+            referenceSchemaPanel = new SchemaEditorPanel();
             referenceSchemaPanel.setOnCompareRequested(() -> openDatabaseFile());
             DOSchema schema = referenceSchemaPanel.getSchema();
             addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);

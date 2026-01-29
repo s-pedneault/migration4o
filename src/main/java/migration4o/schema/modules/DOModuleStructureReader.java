@@ -1,4 +1,4 @@
-package migration4o.schema;
+package migration4o.schema.modules;
 
 import org.w3c.dom.*;
 
@@ -12,7 +12,7 @@ import java.util.List;
 /**
  * Reads migration structure from migration-format.xml file.
  */
-public class MigrationFormatReader {
+public class DOModuleStructureReader {
 
     public List<MigrationModule> readMigrationFormat(String filePath) throws Exception {
         List<MigrationModule> modules = new ArrayList<>();

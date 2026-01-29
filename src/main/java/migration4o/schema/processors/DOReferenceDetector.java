@@ -1,4 +1,4 @@
-package migration4o.schema;
+package migration4o.schema.processors;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -17,7 +17,7 @@ import java.util.Map;
  * For example, if a field has childrenType="IDProgramme" and IDProgramme has
  * pointsTo="Programme", this detector will add a reference to Programme.
  */
-public class ReferenceDetector {
+public class DOReferenceDetector {
 
     /**
      * Scans all classes in the schema and adds missing references.
