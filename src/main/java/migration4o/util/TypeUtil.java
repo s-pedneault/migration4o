@@ -1,8 +1,28 @@
 package migration4o.util;
 
 import migration4o.models.database.DODatabaseField;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 
 public class TypeUtil {
+
+    /**
+     * Checks if a field contains IDEntite values by examining its type against the
+     * schema.
+     * 
+     * @param field  The field to check
+     * @param schema The schema containing class definitions
+     * @return true if the field's type is an IDEntite class
+     */
+    public static boolean isIDEntiteField(DOSchemaField field, DOSchema schema) {
+        if (field.type == null || field.type.isEmpty()) {
+            return false;
+        }
+
+        DOSchemaClass fieldClass = SchemaUtil.findClassByName(field.type, schema);
+        return fieldClass != null && fieldClass.isIDEntite(schema);
+    }
 
     public static boolean isPrimitiveType(DODatabaseField field) {
         String typeName = field.getTypeName();

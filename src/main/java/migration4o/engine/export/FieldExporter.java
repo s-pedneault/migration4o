@@ -13,7 +13,9 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
 import migration4o.util.DatabaseUtil;
+import migration4o.util.ReferenceUtil;
 import migration4o.util.SchemaUtil;
+import migration4o.util.ValueUtil;
 
 /**
  * Handles field-level export operations.
@@ -63,6 +65,10 @@ public class FieldExporter {
                     }
 
                     if (fieldValue == null) {
+                        // Skip this field if skipIfEmpty is true
+                        if (schemaField != null && schemaField.skipIfEmpty) {
+                            continue;
+                        }
                         xmlWriter.writeIndent(indentLevel);
                         xmlWriter.write("<" + fieldName + "/>\n");
                         continue;
@@ -92,7 +98,11 @@ public class FieldExporter {
             DOSchemaField schemaField, DOSchemaClass parentClass, int indentLevel,
             ObjectExportDelegate objectExportDelegate) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
-        if (collection.isEmpty()) {
+        if (ValueUtil.isEmpty(collection, schemaField, schema)) {
+            // Skip this field if skipIfEmpty is true
+            if (schemaField != null && schemaField.skipIfEmpty) {
+                return;
+            }
             xmlWriter.writeIndent(indentLevel);
             xmlWriter.write("<" + fieldName + "/>\n");
         } else {
@@ -111,11 +121,15 @@ public class FieldExporter {
             DOSchemaClass parentClass, int indentLevel, ObjectExportDelegate objectExportDelegate)
             throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
-        int length = java.lang.reflect.Array.getLength(fieldValue);
-        if (length == 0) {
+        if (ValueUtil.isEmpty(fieldValue, schemaField, schema)) {
+            // Skip this field if skipIfEmpty is true
+            if (schemaField != null && schemaField.skipIfEmpty) {
+                return;
+            }
             xmlWriter.writeIndent(indentLevel);
             xmlWriter.write("<" + fieldName + "/>\n");
         } else {
+            int length = java.lang.reflect.Array.getLength(fieldValue);
             xmlWriter.writeStartElement(fieldName, indentLevel);
             for (int i = 0; i < length; i++) {
                 Object item = java.lang.reflect.Array.get(fieldValue, i);
@@ -135,13 +149,34 @@ public class FieldExporter {
         long refId = container.ext().getID(fieldValue);
         if (refId > 0) {
             // This is a persistent object reference
+
+            // Check if this is an IDEntite with mID == -1 (empty reference)
+            if (schemaField != null && schemaField.skipIfEmpty) {
+                String className = ClassUtil.getClassName(fieldValue);
+                DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
+                if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
+                    Long mID = ReferenceUtil.extractMIDField(container, fieldValue);
+                    if (mID != null && mID == -1) {
+                        // Skip this field - it's an empty IDEntite reference
+                        return;
+                    }
+                }
+            }
+
             xmlWriter.writeStartElement(fieldName, indentLevel);
             exportFieldValue(container, fieldValue, schemaField, parentClass, indentLevel + 1,
                     objectExportDelegate);
             xmlWriter.writeEndElement(fieldName, indentLevel);
         } else {
             // Primitive or non-persistent value - write inline
-            xmlWriter.writeElement(fieldName, fieldValue.toString(), indentLevel);
+            String stringValue = fieldValue.toString();
+
+            // Skip this field if skipIfEmpty is true and value is empty
+            if (schemaField != null && schemaField.skipIfEmpty && ValueUtil.isEmpty(fieldValue, schemaField, schema)) {
+                return;
+            }
+
+            xmlWriter.writeElement(fieldName, stringValue, indentLevel);
         }
     }
 

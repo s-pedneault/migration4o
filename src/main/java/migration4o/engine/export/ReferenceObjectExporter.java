@@ -32,6 +32,15 @@ public class ReferenceObjectExporter {
     public void resolveAndExport(ExtObjectContainer container, Object idEntiteObj, String idClassName,
             DOSchemaField schemaField, ObjectExportCallback objectExportCallback, int indentLevel) throws IOException {
 
+        // Check if we should skip empty IDEntite references (mID == -1)
+        if (schemaField != null && schemaField.skipIfEmpty) {
+            Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
+            if (mID != null && mID == -1) {
+                // Skip this field - it's an empty reference
+                return;
+            }
+        }
+
         // Use ReferenceUtil to determine which object ID to export
         long objectIdToExport = ReferenceUtil.resolveIDEntiteForExport(container, idEntiteObj, idClassName,
                 schemaField, databaseSchema);
