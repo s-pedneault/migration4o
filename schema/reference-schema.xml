@@ -73,7 +73,7 @@
         <reference class="gest.caserne.Caserne" field="mVectQteRequise" />
         <reference class="gest.intervention.Intervention" field="mVectTabsStates" />
     </class>
-    <class source="gest.DSI2003.IDDSI2003" destinationName="IDDSI2003" isExported="false" parentClass="gest.gen.IDEntite">
+    <class source="gest.DSI2003.IDDSI2003" destinationName="IDDSI2003" isExported="false" parentClass="gest.gen.IDEntite" pointsTo="gest.DSI2003.DSI2003">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" parentClass="gest.DSI2003.IDDSI2003">
@@ -169,7 +169,7 @@
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
         <reference class="gest.rci.RciLieu" field="mIDEnergie" />
     </class>
-    <class source="gest.actionCondition.IDGroupeActionCondition" destinationName="IDGroupeActionCondition" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.actionCondition.IDGroupeActionCondition" destinationName="IDGroupeActionCondition" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.actionCondition.GroupeActionCondition">
         <reference class="gest.activite.ActionCondition" field="mIDGroupeAction" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -216,18 +216,18 @@
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipIfEmpty="true" type="gest.activite.IDTypeActivite" embedContents="true" />
     </class>
-    <class source="gest.activite.IDActe" destinationName="IDActe" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.activite.IDActe" destinationName="IDActe" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.activite.Acte">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.activite.IDHistoActivite" destinationName="IDHistoActivite" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.activite.IDHistoActivite" destinationName="IDHistoActivite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.activite.HistoActivite">
         <reference class="gest.activite.InfoHistoEmploye" field="mIDHistoActivite" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.activite.IDInfoEmploye" destinationName="IDInfoEmploye" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.activite.IDInfoEmploye" destinationName="IDInfoEmploye" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.activite.InfoEmploye">
         <reference class="gest.feuilleTemps.TempsPaye" field="mIDInfoEmploye" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.activite.IDTypeActivite" destinationName="IDTypeActivite" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.activite.IDTypeActivite" destinationName="IDTypeActivite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.activite.TypeActivite">
         <reference class="gest.activite.InfoEmploye" field="mIDTypeActiviteRempl" />
         <reference class="gest.activite.ActionCondition" field="mIDTypeActiviteActTaux" />
         <reference class="gest.horaire.ModeleHorQuart" field="mIDTypeActivite" />
@@ -333,11 +333,11 @@
         <field source="mNote" destinationName="note" isExported="true" skipIfEmpty="true" type="java.lang.String" />
         <field source="mIDTypeMaintBorne" destinationName="idTypeMaintBorne" isExported="true" skipIfEmpty="true" type="gest.borne.IDTypeMaintBorne" />
     </class>
-    <class source="gest.borne.IDNivPriorite" destinationName="idNivPriorite" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.borne.IDNivPriorite" destinationName="idNivPriorite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.NivPriorite">
         <reference class="gest.borne.AnomBorne" field="mIDNivPriorite" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.borne.IDTypeMaintBorne" destinationName="idMaintBorne" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.borne.IDTypeMaintBorne" destinationName="idMaintBorne" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.TypeMaintBorne">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.borne.ModeleBorne" destinationName="ModeleBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -398,7 +398,7 @@
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.canutec.IDPageJaune" destinationName="IDPageJaune" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.canutec.IDPageJaune" destinationName="IDPageJaune" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.canutec.PageJaune">
         <reference class="gest.dossPrev.ProdDang" field="mIDPageJaune" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mContrainte" destinationName="contrainte" isExported="true" skipIfEmpty="true" type="int" />
@@ -432,7 +432,7 @@
         <field source="mVectQteRequise" destinationName="vectQteRequise" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.equipement.QteRequise" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.caserne.IDCaserne" destinationName="IDCaserne" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.caserne.IDCaserne" destinationName="IDCaserne" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.caserne.Caserne">
         <reference class="gest.vehicule.Vehicule" field="mIDCaserne" />
         <reference class="gest.employe.Employe" field="mIDCaserne" />
         <reference class="gest.quart.Quart" field="mIDCaserne" />
@@ -457,7 +457,7 @@
         <field source="mSens" destinationName="sens" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mVectNDernImport" destinationName="vectNDernImport" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.cauca.ParamCauca$NDernImport" />
     </class>
-    <class source="gest.centreDesRapports.IDRapportCentral" destinationName="IDRapportCentral" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.centreDesRapports.IDRapportCentral" destinationName="IDRapportCentral" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.centreDesRapports.RapportCentral">
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mIDRapportCentral" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -501,7 +501,7 @@
         <field source="iIDChoix" destinationName="idChoix" isExported="true" skipIfEmpty="true" type="int" />
         <field source="iVal" destinationName="valeur" isExported="true" skipIfEmpty="true" type="object" />
     </class>
-    <class source="gest.champPerso.IDTypeChampPerso" destinationName="IDTypeChampPerso" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.champPerso.IDTypeChampPerso" destinationName="IDTypeChampPerso" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.champPerso.TypeChampPerso">
         <reference class="gest.champPerso.ChampPerso" field="mIDTypeChampPerso" />
         <reference class="gest.formElec.ParamFigureSaisie" field="mIDTypeChampPerso" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -541,7 +541,7 @@
         <field source="mIDFormulaire" destinationName="idFormulaire" isExported="true" skipIfEmpty="true" type="gest.fichier.IDFichier" embedContents="true" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.classif.IDClassif" destinationName="IDClassif" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.classif.IDClassif" destinationName="IDClassif" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.classif.Classif">
         <reference class="gest.dossPrev.DossPrev" field="mIDClassif" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -556,7 +556,7 @@
         <field source="mVectSection" destinationName="vectSection" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.section.IDSection" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.codeAppel.IDCodeAppel" destinationName="IDCodeAppel" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.codeAppel.IDCodeAppel" destinationName="IDCodeAppel" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.codeAppel.CodeAppel">
         <reference class="gest.intervention.Intervention" field="mIDCodeAppel" />
         <reference class="gest.intervention.Intervention" field="mIDCodeAppelInitial" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -568,7 +568,7 @@
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.codeRef.IDCodeRef" destinationName="IDCodeRef" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.codeRef.IDCodeRef" destinationName="IDCodeRef" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.codeRef.CodeRef">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.config.ConfigCompressionImages" destinationName="ConfigCompressionImages" isExported="true" parentClass="gest.gen.Entite">
@@ -744,13 +744,13 @@
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.cours.IDCours" destinationName="IDCours" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.cours.IDCours" destinationName="IDCours" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.cours.Cours">
         <reference class="gest.formation.Formation" field="mIDCours" />
         <reference class="gest.formation.CoursAvantEmbauche" field="mIDCours" />
         <reference class="gest.horaire.ModeleHoraire" field="mIDCours" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.cours.IDProgramme" destinationName="IDProgramme" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.cours.IDProgramme" destinationName="IDProgramme" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.cours.Programme">
         <reference class="gest.formation.Formation" field="mIDProgramme" />
         <reference class="gest.formation.CoursAvantEmbauche" field="mIDProgramme" />
         <reference class="gest.horaire.ModeleHoraire" field="mIDProgramme" />
@@ -780,7 +780,7 @@
         <field source="mEtat" destinationName="etat" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mNote" destinationName="note" isExported="true" skipIfEmpty="true" type="string" />
     </class>
-    <class source="gest.docum.IDDossierDocum" destinationName="IDDossierDocum" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.docum.IDDossierDocum" destinationName="IDDossierDocum" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.docum.DossierDocum">
         <reference class="gest.docum.Docum" field="mIDDossierParent" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -921,7 +921,7 @@
         <field source="mNumTraites" destinationName="numTraites" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mResultat" destinationName="resultat" isExported="true" skipIfEmpty="true" type="string" />
     </class>
-    <class source="gest.dossPrev.IDDossPrev" destinationName="IDDossPrev" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.dossPrev.IDDossPrev" destinationName="IDDossPrev" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.dossPrev.DossPrev">
         <reference class="gest.planInterv.PlanAdresseContact" field="mIDDossPrev" />
         <reference class="gest.dossPrev.DossPrev" field="mIDDossPrevAssoc" />
         <reference class="gest.dossPrev.DossPrev" field="mIDDossPrevAttach" />
@@ -934,7 +934,7 @@
         <reference class="gest.intervention.Intervention" field="mIDDossPrev" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.IDPersonneRess" destinationName="IDPersonneRess" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.dossPrev.IDPersonneRess" destinationName="IDPersonneRess" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.dossPrev.PersonneRess">
         <reference class="gest.planInterv.PlanContact" field="mIDPersonneRess" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -1100,7 +1100,7 @@
         <field source="mTaux" destinationName="taux" isExported="true" skipIfEmpty="true" type="double" />
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipIfEmpty="true" type="gest.activite.IDTypeActivite" embedContents="true" />
     </class>
-    <class source="gest.employe.IDEmploye" destinationName="IDEmploye" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.employe.IDEmploye" destinationName="IDEmploye" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.employe.Employe">
         <reference class="gest.intervention.IntervEnquete" field="mIDRemisPar" />
         <reference class="gest.quart.Quart" field="mIDAuteur" />
         <reference class="gest.quart.Quart" field="mIDResponsable" />
@@ -1158,7 +1158,7 @@
         <field source="mVectIDEquipeOuIDEmpl" destinationName="vectIdEquipeOuIdEmpl" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.equipe.IDEquipeOuIDEmploye" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.equipe.IDEquipe" destinationName="IDEquipe" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.equipe.IDEquipe" destinationName="IDEquipe" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipe.Equipe">
         <reference class="gest.equipe.IDEquipeOuIDEmploye" field="mIDEquipe" />
         <reference class="gest.quart.Quart" field="mIDEquipe" />
         <reference class="gest.horaire.ModeleHorQuart" field="mIDEquipe" />
@@ -1196,12 +1196,12 @@
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipIfEmpty="true" type="gest.equipement.IDTypeEquipement" embedContents="true" />
     </class>
-    <class source="gest.equipement.IDEquipConsom" destinationName="IDEquipConsom" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.equipement.IDEquipConsom" destinationName="IDEquipConsom" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipConsom">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipConsom" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDEquipConsom" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.equipement.IDEquipExist" destinationName="IDEquipExist" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.equipement.IDEquipExist" destinationName="IDEquipExist" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipExist">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipExist" />
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipExistAssemble" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDEquipExistAssemble" />
@@ -1209,7 +1209,7 @@
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDEquipExistAssemble" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.equipement.IDTypeEquipement" destinationName="IDTypeEquipement" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.equipement.IDTypeEquipement" destinationName="IDTypeEquipement" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.TypeEquipement">
         <reference class="gest.intervention.IntervMateriel" field="mIDTypeEquipement" />
         <reference class="gest.equipement.QteRequise" field="mIDTypeEquipement" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDTypeEquipementMaint" />
@@ -1312,7 +1312,7 @@
         <field source="mRotation" destinationName="rotation" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.fichier.IDFichier" destinationName="IDFichier" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.fichier.IDFichier" destinationName="IDFichier" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.fichier.Fichier">
         <reference class="gest.rci.RciAnalyse" field="mIDFichCroquisLieu" />
         <reference class="gest.rci.RciAnalyse" field="mIDFichCroquisOrigine" />
         <reference class="gest.employe.Employe" field="mIDSignature" />
@@ -1423,7 +1423,7 @@
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" embedContents="true" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.formation.IDFormation" destinationName="IDFormation" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.formation.IDFormation" destinationName="IDFormation" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.formation.Formation">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.formation.InfoEtudiant" destinationName="InfoEtudiant" isExported="true" parentClass="gest.activite.InfoEmploye">
@@ -1456,7 +1456,7 @@
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.fournisseur.IDFournisseur" destinationName="IDFournisseur" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.fournisseur.IDFournisseur" destinationName="IDFournisseur" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.fournisseur.Fournisseur">
         <reference class="gest.borne.ModeleBorne" field="mIDFournisseur" />
         <reference class="gest.equipement.SituationEquipement" field="mIDCentreServ" />
         <reference class="gest.secCiv.RessSecCiv" field="mIDFournisseur" />
@@ -1544,7 +1544,7 @@
         <field source="mContrainte" destinationName="contrainte" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mIDDBConso" destinationName="idDBConso" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.gen.IDEntiteDefaut" destinationName="IDEntiteDefaut" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.gen.IDEntiteDefaut" destinationName="IDEntiteDefaut" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.gen.EntiteDefaut">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mClass" destinationName="class" isExported="true" skipIfEmpty="true" type="java.lang.Class" />
     </class>
@@ -1713,7 +1713,7 @@
         <field source="mVectQteRequise" destinationName="vectQteRequise" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.equipement.QteRequise" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.grade.IDGrade" destinationName="IDGrade" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.grade.IDGrade" destinationName="IDGrade" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.grade.Grade">
         <reference class="gest.activite.ActionCondition" field="mIDGrade" />
         <reference class="gest.employe.EmployeNomin" field="mIDGrade" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -1747,7 +1747,7 @@
         <field source="mIDFichierSVG" destinationName="idFichierSVG" isExported="true" skipIfEmpty="true" type="gest.fichier.IDFichier" embedContents="true" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.graph.IDGraph" destinationName="IDGraph" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.graph.IDGraph" destinationName="IDGraph" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.graph.Graph">
         <reference class="gest.rci.RciAnalyse" field="mIDGraphCroquisLieu" />
         <reference class="gest.rci.RciAnalyse" field="mIDGraphCroquisOrigine" />
         <reference class="gest.vehicule.Vehicule" field="mIDGraph" />
@@ -1761,10 +1761,10 @@
         <reference class="gest.intervention.RapportOfficier" field="mIDCroquis" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.graph.IDGraphLib" destinationName="IDGraphLib" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.graph.IDGraphLib" destinationName="IDGraphLib" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.graph.GraphLib">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.graph.IDTypeGraph" destinationName="IDTypeGraph" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.graph.IDTypeGraph" destinationName="IDTypeGraph" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.graph.TypeGraph">
         <reference class="gest.graph.Graph" field="mIDTypeGraph" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -1836,18 +1836,18 @@
         <field source="mVectPreHorQuart" destinationName="vectPreHorQuart" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.horaire.PreHorQuart" />
         <field source="mVectEmplReserv" destinationName="vectEmplReserv" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.horaire.EmplReserv" />
     </class>
-    <class source="gest.horaire.IDHorQuart" destinationName="IDHorQuart" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.horaire.IDHorQuart" destinationName="IDHorQuart" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.horaire.HorQuart">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.horaire.IDHoraire" destinationName="IDHoraire" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.horaire.IDHoraire" destinationName="IDHoraire" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.horaire.Horaire">
         <reference class="gest.horaire.HorQuart" field="mIDHoraire" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.horaire.IDModeleHorQuart" destinationName="IDModeleHorQuart" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.horaire.IDModeleHorQuart" destinationName="IDModeleHorQuart" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.horaire.ModeleHorQuart">
         <reference class="gest.horaire.HorQuart" field="mIDModeleHorQuart" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.horaire.IDModeleHoraire" destinationName="IDModeleHoraire" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.horaire.IDModeleHoraire" destinationName="IDModeleHoraire" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.horaire.ModeleHoraire">
         <reference class="gest.horaire.ModeleHorQuart" field="mIDModeleHoraireBasculePerpet" />
         <reference class="gest.horaire.HorQuart" field="mIDModeleHoraire" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -1966,11 +1966,11 @@
         <field source="mNumero" destinationName="numero" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.intervention.IDFournSAAQ" destinationName="IDFournSAAQ" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.intervention.IDFournSAAQ" destinationName="IDFournSAAQ" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.intervention.FournSAAQ">
         <reference class="gest.intervention.IntervVehAccident" field="mIDFournSAAQ" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.intervention.IDIntervention" destinationName="IDIntervention" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.intervention.IDIntervention" destinationName="IDIntervention" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.intervention.Intervention">
         <reference class="gest.intervention.MemoFacturation" field="mIDIntervention" />
         <reference class="gest.rci.Rci" field="mIDIntervention" />
         <reference class="gest.intervention.RapportOfficier" field="mIDIntervention" />
@@ -2428,7 +2428,7 @@
     </class>
     <class source="gest.intervention.TypeActivIntervention" destinationName="TypeActivIntervention" isExported="true" parentClass="gest.activite.TypeActivite">
     </class>
-    <class source="gest.langue.IDLangue" destinationName="IDLangue" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.langue.IDLangue" destinationName="IDLangue" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.langue.Langue">
         <reference class="gest.employe.Employe" field="mIDLangue" />
         <reference class="gest.utilGroupe.Utilisateur" field="mIDLangue" />
         <reference class="gest.dossPrev.PersonneRess" field="mIDLangue" />
@@ -2508,15 +2508,15 @@
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDTypeMaintSurNouvMaint" destinationName="idTypeMaintSurNouvMaint" isExported="true" skipIfEmpty="true" type="gest.maintenance.IDTypeMaint" embedContents="true" />
     </class>
-    <class source="gest.maintEquip.IDEtatEquipement" destinationName="IDEtatEquipement" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.maintEquip.IDEtatEquipement" destinationName="IDEtatEquipement" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintEquip.EtatEquipement">
         <reference class="gest.maintenance.TypeMaint" field="mNouvEtatParDefaut" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.maintEquip.IDMaintEquip" destinationName="IDMaintEquip" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.maintEquip.IDMaintEquip" destinationName="IDMaintEquip" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintEquip.MaintEquip">
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDMaintEquip" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.maintEquip.IDMaintEquipHisto" destinationName="IDMaintEquipHisto" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.maintEquip.IDMaintEquipHisto" destinationName="IDMaintEquipHisto" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintEquip.MaintEquipHisto">
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDMaintEquipHistoOriginal" />
         <reference class="gest.equipement.EquipExist" field="mIDHisto" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -2595,11 +2595,11 @@
     </class>
     <class source="gest.maintEquip.TypeActivMaintEquip" destinationName="TypeActivMaintEquip" isExported="true" parentClass="gest.activite.TypeActivite">
     </class>
-    <class source="gest.maintenance.IDMaintenance" destinationName="IDMaintenance" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.maintenance.IDMaintenance" destinationName="IDMaintenance" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintenance.Maintenance">
         <reference class="gest.maintEquip.MaintEquip" field="mIDMaintenance" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.maintenance.IDTypeMaint" destinationName="IDTypeMaint" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.maintenance.IDTypeMaint" destinationName="IDTypeMaint" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintenance.TypeMaint">
         <reference class="gest.maintEquip.EtatEquipement" field="mIDTypeMaintSurNouvMaint" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDTypeMaint" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -2643,7 +2643,7 @@
     </class>
     <class source="gest.mobile.Mobile" destinationName="Mobile" isExported="true" parentClass="gest.gen.EntiteContientID">
     </class>
-    <class source="gest.parement.IDParement" destinationName="IDParement" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.parement.IDParement" destinationName="IDParement" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.parement.Parement">
         <reference class="gest.dossPrev.DossPrev" field="mIDParementExt" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -2903,7 +2903,7 @@
         <field source="mRessSpec" destinationName="ressSpec" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mVectInfoServPub" destinationName="vectInfoServPub" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.planInterv.InfoServPub" />
     </class>
-    <class source="gest.plancher.IDPlancher" destinationName="IDPlancher" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.plancher.IDPlancher" destinationName="IDPlancher" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.plancher.Plancher">
         <reference class="gest.dossPrev.DossPrev" field="mIDPlancher" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -2915,12 +2915,12 @@
         <field source="mVectCodesSMICommercial" destinationName="vectCodesSMICommercial" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="int" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.preference.IDPreference" destinationName="IDPreference" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.preference.IDPreference" destinationName="IDPreference" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.preference.Preference">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.preference.Preference" destinationName="Preference" isExported="true" parentClass="gest.gen.EntiteContientID">
     </class>
-    <class source="gest.prevention.IDPrevention" destinationName="IDPrevention" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.prevention.IDPrevention" destinationName="IDPrevention" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.prevention.Prevention">
         <reference class="gest.prevention.Prevention" field="mIDPrevSrc" />
         <reference class="gest.prevention.Prevention" field="mIDPrevAvisAssoc" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -3038,7 +3038,7 @@
         <field source="mStatut" destinationName="statut" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mIDAssigneA" destinationName="idAssigneA" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" embedContents="true" />
     </class>
-    <class source="gest.quart.IDQuart" destinationName="IDQuart" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.quart.IDQuart" destinationName="IDQuart" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.quart.Quart">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.quart.ParamQuart" destinationName="ParamAutreTravail" isExported="true" title="Paramètres de travail" parentClass="gest.gen.EntiteParam">
@@ -3075,7 +3075,7 @@
         <field source="mIDRapport" destinationName="idRapport" isExported="true" skipIfEmpty="true" type="gest.rapport.IDRapport" embedContents="true" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.rapport.IDRapport" destinationName="IDRapport" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.rapport.IDRapport" destinationName="IDRapport" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.rapport.Rapport">
         <reference class="gest.prevention.PrevForm" field="mIDRappForm" />
         <reference class="gest.prevention.PrevForm" field="mIDRappFormDefaut" />
         <reference class="gest.maintenance.Maintenance" field="mIDRapportPerso" />
@@ -3176,7 +3176,7 @@
         <field source="mTitre" destinationName="titre" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
     </class>
-    <class source="gest.rci.IDRci" destinationName="IDRci" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.rci.IDRci" destinationName="IDRci" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.rci.Rci">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.rci.Observation" destinationName="Observation" isExported="true" parentClass="gest.gen.Entite">
@@ -3382,7 +3382,7 @@
     </class>
     <class source="gest.rci.TypeActivRci" destinationName="TypeActivRci" isExported="true" parentClass="gest.activite.TypeActivite">
     </class>
-    <class source="gest.ressource.IDRessource" destinationName="IDRessource" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.ressource.IDRessource" destinationName="IDRessource" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.ressource.Ressource">
         <reference class="gest.secCiv.RessSecCiv" field="mIDRessource" />
         <reference class="gest.intervention.IntervIntervRessource" field="mIDRessource" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -3424,20 +3424,20 @@
         <field source="mNbrRepetition" destinationName="nbrRepetition" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mTypeDeclench" destinationName="typeDeclench" isExported="true" skipIfEmpty="true" type="int" />
     </class>
-    <class source="gest.secCiv.IDMission" destinationName="IDMission" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.secCiv.IDMission" destinationName="IDMission" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.Mission">
         <reference class="gest.secCiv.LogSinistre" field="mIDMission" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.secCiv.IDNivAlerte" destinationName="IDNivAlerte" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.secCiv.IDNivAlerte" destinationName="IDNivAlerte" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.NivAlerte">
         <reference class="gest.secCiv.Sinistre" field="mIDNivAlerte" />
         <reference class="gest.secCiv.LogSinistre" field="mIDNivAlerte" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.secCiv.IDPPI" destinationName="IDPPI" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.secCiv.IDPPI" destinationName="IDPPI" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.PPI">
         <reference class="gest.secCiv.LogSinistre" field="mIDPPI" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.secCiv.IDRessSecCiv" destinationName="IDRessSecCiv" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.secCiv.IDRessSecCiv" destinationName="IDRessSecCiv" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.RessSecCiv">
         <reference class="gest.secCiv.ParamSecCiv" field="mIDRessSecCiv" />
         <reference class="gest.docum.Docum" field="mIDResponsable" />
         <reference class="gest.secCiv.Sinistre" field="mIDAuteur" />
@@ -3445,7 +3445,7 @@
         <reference class="gest.secCiv.LogSinistre" field="mIDRessSecCiv" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.secCiv.IDSinistre" destinationName="IDSinistre" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.secCiv.IDSinistre" destinationName="IDSinistre" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.Sinistre">
         <reference class="gest.secCiv.LogSinistre" field="mIDSinistre" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3536,13 +3536,13 @@
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipIfEmpty="true" type="gest.secCiv.IDRessSecCiv" embedContents="true" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.section.IDSection" destinationName="IDSection" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.section.IDSection" destinationName="IDSection" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.section.Section">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.specialite.IDSpecialite" destinationName="IDSpecialite" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.specialite.IDSpecialite" destinationName="IDSpecialite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.specialite.Specialite">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typeAnom.IDTypeAnom" destinationName="IDTypeAnom" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeAnom.IDTypeAnom" destinationName="IDTypeAnom" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeAnom.TypeAnom">
         <reference class="gest.prevention.PrevAnom" field="mIDTypeAnom" />
         <reference class="gest.formElec.ParamFigureSaisie" field="mIDTypeAnom" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -3563,7 +3563,7 @@
         <field source="mInformationsAdditionnelles" destinationName="informationsAdditionnelles" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDTypeAssistanceParticuliere" destinationName="idTypeAssistanceParticuliere" isExported="true" skipIfEmpty="true" type="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" embedContents="true" />
     </class>
-    <class source="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" destinationName="IDTypeAssistanceParticuliere" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" destinationName="IDTypeAssistanceParticuliere" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere">
         <reference class="gest.typeAssistanceParticuliere.AssistanceParticuliere" field="mIDTypeAssistanceParticuliere" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3576,7 +3576,7 @@
         <field source="mTitre" destinationName="titre" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typeBatiment.IDTypeBatiment" destinationName="IDTypeBatiment" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeBatiment.IDTypeBatiment" destinationName="IDTypeBatiment" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeBatiment.TypeBatiment">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeBatiment" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3585,7 +3585,7 @@
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typeChauffage.IDTypeChauffage" destinationName="IDTypeChauffage" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeChauffage.IDTypeChauffage" destinationName="IDTypeChauffage" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeChauffage.TypeChauffage">
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeChauffage" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3597,7 +3597,7 @@
         <field source="mVectCodesSMICommercial" destinationName="vectCodesSMICommercial" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="int" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typeCheminee.IDTypeCheminee" destinationName="IDTypeCheminee" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeCheminee.IDTypeCheminee" destinationName="IDTypeCheminee" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeCheminee.TypeCheminee">
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeCheminee" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3608,7 +3608,7 @@
         <field source="mVectCodesSMICommercial" destinationName="vectCodesSMICommercial" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="int" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typePrev.IDTypePrev" destinationName="IDTypePrev" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typePrev.IDTypePrev" destinationName="IDTypePrev" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typePrev.TypePrev">
         <reference class="gest.prevention.Prevention" field="mIDTypePrev" />
         <reference class="gest.dossPrev.PeriodiciteDossPrev" field="mIDTypePrevention" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -3646,7 +3646,7 @@
         <field source="mVectTypeChampPerso" destinationName="vectTypeChampPerso" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.champPerso.TypeChampPerso" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.typeToit.IDTypeToit" destinationName="IDTypeToit" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.typeToit.IDTypeToit" destinationName="IDTypeToit" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeToit.TypeToit">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeToit" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
@@ -3679,10 +3679,10 @@
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.utilGroupe.IDGroupe" destinationName="IDGroupe" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.utilGroupe.IDGroupe" destinationName="IDGroupe" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.utilGroupe.Groupe">
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.utilGroupe.IDUtilisateur" destinationName="IDUtilisateur" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.utilGroupe.IDUtilisateur" destinationName="IDUtilisateur" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.utilGroupe.Utilisateur">
         <reference class="gest.employe.Employe" field="mIDUtilisateur" />
         <reference class="gest.secCiv.RessSecCiv" field="mIDUtilisateur" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
@@ -3711,12 +3711,12 @@
         <field source="mIDParent" destinationName="idParent" isExported="true" skipIfEmpty="true" type="gest.gen.IDEntite" embedContents="true" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.vehicule.IDCompartiment" destinationName="IDCompartiment" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.vehicule.IDCompartiment" destinationName="IDCompartiment" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.vehicule.Compartiment">
         <reference class="gest.equipement.SituationEquipement" field="mIDCompartiment" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDCompartiment" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
-    <class source="gest.vehicule.IDVehicule" destinationName="IDVehicule" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.vehicule.IDVehicule" destinationName="IDVehicule" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.vehicule.Vehicule">
         <reference class="gest.equipement.SituationEquipement" field="mIDVehicule" />
         <reference class="gest.employe.Employe" field="mIDVehicule" />
         <reference class="gest.intervention.IntervIntervEquipe" field="mIDVehicule" />
