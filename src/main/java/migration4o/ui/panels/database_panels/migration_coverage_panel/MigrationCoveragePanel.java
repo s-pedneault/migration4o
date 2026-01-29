@@ -1457,13 +1457,19 @@ public class MigrationCoveragePanel extends JPanel {
 
     /**
      * Helper method to find a class in a schema.
+     * Searches by both source (fully qualified) and destinationName (simple name).
      */
     private DOSchemaClass findClassInSchema(DOSchema schema, String className) {
         if (schema == null || schema.getClasses() == null) {
             return null;
         }
         for (DOSchemaClass schemaClass : schema.getClasses()) {
+            // Try matching by source (fully qualified name)
             if (schemaClass.source.equals(className)) {
+                return schemaClass;
+            }
+            // Also try matching by destinationName (simple name)
+            if (schemaClass.destinationName != null && schemaClass.destinationName.equals(className)) {
                 return schemaClass;
             }
         }

@@ -54,6 +54,11 @@ public class XMLWriter {
         writer.write("<" + elementName + ">\n");
     }
 
+    public void writeStartElementWithSize(String elementName, int size, int indentLevel) throws IOException {
+        writeIndent(indentLevel);
+        writer.write("<" + elementName + " size=\"" + size + "\">\n");
+    }
+
     public void writeEndElement(String elementName, int indentLevel) throws IOException {
         writeIndent(indentLevel);
         writer.write("</" + elementName + ">\n");

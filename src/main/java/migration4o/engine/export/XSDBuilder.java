@@ -131,15 +131,23 @@ public class XSDBuilder {
             if (childrenType == null || childrenType.isEmpty()) {
                 childrenType = fieldType;
             }
+            // Collection fields have a complex type with size attribute and child elements
+            xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\">\n");
+            xsdWriter.write(indent + "  <xs:complexType>\n");
+            xsdWriter.write(indent + "    <xs:sequence>\n");
             if (isPrimitiveType(childrenType)) {
                 String xsdType = getXSDType(childrenType);
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + xsdType
                         + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             } else {
                 String refClassName = getSimpleClassName(childrenType) + "Type";
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + refClassName
                         + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             }
+            xsdWriter.write(indent + "    </xs:sequence>\n");
+            xsdWriter.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
+            xsdWriter.write(indent + "  </xs:complexType>\n");
+            xsdWriter.write(indent + "</xs:element>\n");
         } else if (isPrimitiveType(fieldType)) {
             String xsdType = getXSDType(fieldType);
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType

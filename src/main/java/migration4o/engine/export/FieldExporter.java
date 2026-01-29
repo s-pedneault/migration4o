@@ -13,6 +13,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
 import migration4o.util.DatabaseUtil;
+import migration4o.util.ObjectResolverUtil;
 import migration4o.util.ReferenceUtil;
 import migration4o.util.SchemaUtil;
 import migration4o.util.ValueUtil;
@@ -74,8 +75,12 @@ public class FieldExporter {
                         continue;
                     }
 
-                    // Handle collections
-                    if (fieldValue instanceof Collection) {
+                    // Check schema flag first - DB4O collections may not be Java Collection
+                    // instances
+                    if (schemaField != null && schemaField.isCollection) {
+                        exportSchemaCollectionField(container, fieldValue, schemaField, parentClass, indentLevel,
+                                objectExportDelegate);
+                    } else if (fieldValue instanceof Collection) {
                         exportCollectionField(container, (Collection<?>) fieldValue, schemaField, parentClass,
                                 indentLevel, objectExportDelegate);
                     } else if (fieldValue.getClass().isArray()) {
@@ -94,6 +99,138 @@ public class FieldExporter {
         }
     }
 
+    /**
+     * Exports a collection field that is marked as collection in the schema
+     * but may be stored as a DB4O persistent object (like VectRechID).
+     * This method extracts the collection items from the DB4O object structure.
+     */
+    private void exportSchemaCollectionField(ExtObjectContainer container, Object collectionObj,
+            DOSchemaField schemaField, DOSchemaClass parentClass, int indentLevel,
+            ObjectExportDelegate objectExportDelegate) throws IOException {
+        String fieldName = schemaField.destinationName;
+        String collectionType = schemaField.type != null ? schemaField.type : "unknown";
+
+        System.out.println("INFO: Exporting schema collection field '" + fieldName + "' of type " + collectionType);
+
+        // Activate the collection object to access its fields
+        long collectionId = container.ext().getID(collectionObj);
+        if (collectionId > 0) {
+            ObjectResolverUtil.activateObject(container, collectionObj, collectionId);
+        }
+
+        // Try to extract items from the collection object
+        // VectRechID extends HVector which extends Vector, so look for Vector's
+        // internal array
+        Collection<?> items = extractCollectionItems(container, collectionObj);
+
+        if (items == null) {
+            System.err.println("WARNING: Failed to extract items from collection field '" + fieldName + "' (type: "
+                    + collectionType + ")");
+        } else if (items.isEmpty()) {
+            System.out.println("INFO: Collection field '" + fieldName + "' is empty (0 items)");
+        } else {
+            System.out.println("INFO: Successfully extracted " + items.size() + " items from collection field '"
+                    + fieldName + "'");
+        }
+
+        if (items == null || items.isEmpty()) {
+            // Check skipIfEmpty
+            if (schemaField.skipIfEmpty) {
+                return;
+            }
+            xmlWriter.writeIndent(indentLevel);
+            xmlWriter.write("<" + fieldName + " size=\"0\"/>\n");
+        } else {
+            int size = items.size();
+            xmlWriter.writeStartElementWithSize(fieldName, size, indentLevel);
+            for (Object item : items) {
+                if (item != null) {
+                    exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
+                            objectExportDelegate);
+                }
+            }
+            xmlWriter.writeEndElement(fieldName, indentLevel);
+        }
+    }
+
+    /**
+     * Extracts collection items from a DB4O persistent collection object.
+     * Inspects the actual DB4O structure to understand how the data is stored.
+     */
+    private Collection<?> extractCollectionItems(ExtObjectContainer container, Object collectionObj) {
+        if (collectionObj == null) {
+            return null;
+        }
+
+        // If it's already a Java Collection, return it directly
+        if (collectionObj instanceof Collection) {
+            return (Collection<?>) collectionObj;
+        }
+
+        // For DB4O GenericObject, we need to inspect its structure
+        if (!(collectionObj instanceof GenericObject)) {
+            return null;
+        }
+
+        GenericObject genericObj = (GenericObject) collectionObj;
+        StoredClass storedClass = container.ext().storedClass(genericObj);
+        if (storedClass == null) {
+            System.err.println("ERROR: Cannot get StoredClass for collection object");
+            return null;
+        }
+
+        String className = storedClass.getName();
+
+        // Traverse the entire class hierarchy to find collection data
+        // DB4O stores Vector data in translator fields like
+        // "com.db4o.config.TCollection"
+        StoredClass currentClass = storedClass;
+        while (currentClass != null) {
+            StoredField[] fields = currentClass.getStoredFields();
+
+            for (StoredField field : fields) {
+                String fieldName = field.getName();
+
+                // DB4O translators start with "com.db4o.config.T"
+                // TCollection is used for Vector and other collections
+                if (fieldName.startsWith("com.db4o.config.T")) {
+                    try {
+                        Object value = field.get(genericObj);
+                        if (value != null && value.getClass().isArray()) {
+                            // This is the collection data array
+                            java.util.List<Object> list = new java.util.ArrayList<>();
+                            int length = java.lang.reflect.Array.getLength(value);
+                            int nullCount = 0;
+
+                            for (int i = 0; i < length; i++) {
+                                Object item = java.lang.reflect.Array.get(value, i);
+                                if (item != null) {
+                                    list.add(item);
+                                } else {
+                                    nullCount++;
+                                }
+                            }
+
+                            System.out.println("INFO: Extracted " + list.size() + " items from DB4O translator field '"
+                                    + fieldName + "' in " + className + " (array length: " + length + ", nulls: "
+                                    + nullCount + ")");
+                            return list;
+                        }
+                    } catch (Exception e) {
+                        System.err.println("ERROR: Failed to extract from DB4O translator field '" + fieldName
+                                + "': " + e.getMessage());
+                    }
+                }
+            }
+
+            currentClass = currentClass.getParentStoredClass();
+        }
+
+        System.err.println("ERROR: No DB4O translator field found in " + className
+                + ". Cannot extract collection items.");
+        return null;
+    }
+
     private void exportCollectionField(ExtObjectContainer container, Collection<?> collection,
             DOSchemaField schemaField, DOSchemaClass parentClass, int indentLevel,
             ObjectExportDelegate objectExportDelegate) throws IOException {
@@ -104,9 +241,10 @@ public class FieldExporter {
                 return;
             }
             xmlWriter.writeIndent(indentLevel);
-            xmlWriter.write("<" + fieldName + "/>\n");
+            xmlWriter.write("<" + fieldName + " size=\"0\"/>\n");
         } else {
-            xmlWriter.writeStartElement(fieldName, indentLevel);
+            int size = collection.size();
+            xmlWriter.writeStartElementWithSize(fieldName, size, indentLevel);
             for (Object item : collection) {
                 if (item != null) {
                     exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
@@ -127,10 +265,10 @@ public class FieldExporter {
                 return;
             }
             xmlWriter.writeIndent(indentLevel);
-            xmlWriter.write("<" + fieldName + "/>\n");
+            xmlWriter.write("<" + fieldName + " size=\"0\"/>\n");
         } else {
             int length = java.lang.reflect.Array.getLength(fieldValue);
-            xmlWriter.writeStartElement(fieldName, indentLevel);
+            xmlWriter.writeStartElementWithSize(fieldName, length, indentLevel);
             for (int i = 0; i < length; i++) {
                 Object item = java.lang.reflect.Array.get(fieldValue, i);
                 if (item != null) {
