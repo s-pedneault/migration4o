@@ -77,10 +77,14 @@ public class FieldExporter {
 
                     // Check schema flag first - DB4O collections may not be Java Collection
                     // instances
+                    // CRITICAL: Always use schema-driven extraction for DB4O objects, even if they
+                    // implement Collection interface, because calling .size() on GenericObject
+                    // proxies
+                    // may return incorrect values before proper activation and extraction
                     if (schemaField != null && schemaField.isCollection) {
                         exportSchemaCollectionField(container, fieldValue, schemaField, parentClass, indentLevel,
                                 objectExportDelegate);
-                    } else if (fieldValue instanceof Collection) {
+                    } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) {
                         exportCollectionField(container, (Collection<?>) fieldValue, schemaField, parentClass,
                                 indentLevel, objectExportDelegate);
                     } else if (fieldValue.getClass().isArray()) {
@@ -330,21 +334,26 @@ public class FieldExporter {
 
         String className = ClassUtil.getClassName(fieldValue);
 
+        // Check if this field is marked for embedding (applies to all object types)
+        boolean isEmbedded = schemaField != null && schemaField.embedContents;
+        String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+
         // Check if this is an IDEntite reference (reference object pattern)
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
         if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
+            // Pass through the embedded flag and field name for tracking
             idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField,
-                    (objectId, indent) -> objectExportDelegate.exportObject(objectId, indent), indentLevel);
+                    (objectId, indent) -> objectExportDelegate.exportObject(objectId, indent, isEmbedded, fieldName),
+                    indentLevel);
             return;
         }
 
-        // For regular objects, just export them recursively
+        // For regular objects, check if they should be embedded or referenced
         long objectId = container.ext().getID(fieldValue);
         if (objectId > 0) {
-            objectExportDelegate.exportObject(objectId, indentLevel);
+            objectExportDelegate.exportObject(objectId, indentLevel, isEmbedded, fieldName);
         } else {
             // Primitive value - write inline
-            String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
             xmlWriter.writeElement(fieldName, fieldValue.toString(), indentLevel);
         }
     }
@@ -353,6 +362,6 @@ public class FieldExporter {
      * Delegate interface for exporting objects.
      */
     public interface ObjectExportDelegate {
-        void exportObject(long objectId, int indentLevel) throws IOException;
+        void exportObject(long objectId, int indentLevel, boolean isEmbedded, String fieldName) throws IOException;
     }
 }

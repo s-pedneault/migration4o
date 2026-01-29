@@ -20,8 +20,13 @@ public class ExportResultDialog extends JDialog {
     private final ExportResult result;
 
     public ExportResultDialog(Frame parent, ExportResult result) {
-        super(parent, "Export Results", true);
+        super(parent, "Export Results", false);
         this.result = result;
+        System.err.println("DEBUG ExportResultDialog: errors=" + result.errors.size()
+                + ", warnings=" + result.schemaWarnings.size());
+        if (!result.schemaWarnings.isEmpty()) {
+            System.err.println("DEBUG ExportResultDialog: First warning: " + result.schemaWarnings.get(0).message);
+        }
         initializeUI();
     }
 
@@ -31,9 +36,9 @@ public class ExportResultDialog extends JDialog {
         // Header panel with summary
         add(createHeaderPanel(), BorderLayout.NORTH);
 
-        // Center panel - either success message or error table
-        if (!result.errors.isEmpty()) {
-            add(createErrorPanel(), BorderLayout.CENTER);
+        // Center panel - either success message or error/warning tabbed pane
+        if (!result.errors.isEmpty() || !result.schemaWarnings.isEmpty()) {
+            add(createIssuesPanel(), BorderLayout.CENTER);
         } else {
             add(createSuccessPanel(), BorderLayout.CENTER);
         }
@@ -68,9 +73,10 @@ public class ExportResultDialog extends JDialog {
         panel.add(Box.createVerticalStrut(15));
 
         // Statistics panel with color coding
-        JPanel statsPanel = new JPanel(new GridLayout(1, 3, 20, 0));
+        int statBoxCount = !result.schemaWarnings.isEmpty() ? 4 : 3;
+        JPanel statsPanel = new JPanel(new GridLayout(1, statBoxCount, 15, 0));
         statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        statsPanel.setMaximumSize(new Dimension(600, 80));
+        statsPanel.setMaximumSize(new Dimension(800, 80));
 
         // Attempted
         statsPanel.add(createStatBox("Objects Attempted",
@@ -83,10 +89,18 @@ public class ExportResultDialog extends JDialog {
                 new Color(34, 197, 94))); // Green
 
         // Failed
-        Color failedColor = !result.errors.isEmpty() ? new Color(239, 68, 68) : new Color(100, 100, 100); // Red or gray
+        Color failedColor = !result.errors.isEmpty() ? new Color(239, 68, 68) : new Color(100, 100, 100); // Red or
+                                                                                                          // gray
         statsPanel.add(createStatBox("Objects Failed",
                 String.valueOf(result.errors.size()),
                 failedColor));
+
+        // Warnings (only show if there are warnings)
+        if (!result.schemaWarnings.isEmpty()) {
+            statsPanel.add(createStatBox("Schema Warnings",
+                    String.valueOf(result.schemaWarnings.size()),
+                    new Color(234, 179, 8))); // Yellow/amber
+        }
 
         panel.add(statsPanel);
 
@@ -97,18 +111,25 @@ public class ExportResultDialog extends JDialog {
 
         JLabel statusIcon;
         JLabel statusText;
-        if (result.errors.isEmpty()) {
+        if (result.errors.isEmpty() && result.schemaWarnings.isEmpty()) {
             statusIcon = new JLabel("✓");
             statusIcon.setFont(new Font("Arial", Font.BOLD, 24));
             statusIcon.setForeground(new Color(34, 197, 94));
             statusText = new JLabel("Export completed successfully");
             statusText.setForeground(new Color(34, 197, 94));
-        } else {
+        } else if (!result.errors.isEmpty()) {
             statusIcon = new JLabel("⚠");
             statusIcon.setFont(new Font("Arial", Font.BOLD, 24));
             statusIcon.setForeground(new Color(234, 179, 8));
             statusText = new JLabel("Export completed with errors - Data may be incomplete!");
             statusText.setForeground(new Color(239, 68, 68));
+        } else {
+            // Only warnings, no errors
+            statusIcon = new JLabel("⚠");
+            statusIcon.setFont(new Font("Arial", Font.BOLD, 24));
+            statusIcon.setForeground(new Color(234, 179, 8));
+            statusText = new JLabel("Export completed with schema warnings - Review recommended");
+            statusText.setForeground(new Color(234, 179, 8));
         }
         statusText.setFont(new Font("Arial", Font.BOLD, 14));
         statusPanel.add(statusIcon);
@@ -157,7 +178,27 @@ public class ExportResultDialog extends JDialog {
         return panel;
     }
 
-    private JPanel createErrorPanel() {
+    private JPanel createIssuesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
+
+        // If we have both errors and warnings, use a tabbed pane
+        if (!result.errors.isEmpty() && !result.schemaWarnings.isEmpty()) {
+            JTabbedPane tabbedPane = new JTabbedPane();
+            tabbedPane.addTab("Errors (" + result.errors.size() + ")", createErrorTable());
+            tabbedPane.addTab("Schema Warnings (" + result.schemaWarnings.size() + ")",
+                    createSchemaWarningsPanel());
+            panel.add(tabbedPane, BorderLayout.CENTER);
+        } else if (!result.errors.isEmpty()) {
+            panel.add(createErrorTable(), BorderLayout.CENTER);
+        } else {
+            panel.add(createSchemaWarningsPanel(), BorderLayout.CENTER);
+        }
+
+        return panel;
+    }
+
+    private JPanel createErrorTable() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
@@ -230,6 +271,118 @@ public class ExportResultDialog extends JDialog {
         explanationLabel.setForeground(Color.GRAY);
         explanationLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
         panel.add(explanationLabel, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    private JPanel createSchemaWarningsPanel() {
+        JPanel panel = new JPanel(new BorderLayout(0, 10));
+
+        // Group warnings by type and message
+        Map<String, List<ExportResult.SchemaWarning>> warningsByMessage = new LinkedHashMap<>();
+        for (ExportResult.SchemaWarning warning : result.schemaWarnings) {
+            String key = warning.type + ": " + warning.className;
+            warningsByMessage.computeIfAbsent(key, k -> new ArrayList<>()).add(warning);
+        }
+
+        // Create table model
+        String[] columnNames = { "Warning Type", "Class", "Count", "Sample Object IDs", "Fields" };
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        // Populate table
+        for (Map.Entry<String, List<ExportResult.SchemaWarning>> entry : warningsByMessage.entrySet()) {
+            List<ExportResult.SchemaWarning> warnings = entry.getValue();
+            ExportResult.SchemaWarning first = warnings.get(0);
+
+            // Warning type description
+            String warningType = first.type == ExportResult.SchemaWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
+                    ? "Duplicate Embedded Reference"
+                    : first.type.toString();
+
+            // Get sample object IDs (first 3)
+            StringBuilder sampleIds = new StringBuilder();
+            int showCount = Math.min(3, warnings.size());
+            for (int i = 0; i < showCount; i++) {
+                if (i > 0)
+                    sampleIds.append(", ");
+                sampleIds.append(warnings.get(i).objectId);
+            }
+            if (warnings.size() > showCount) {
+                sampleIds.append(" ... +").append(warnings.size() - showCount);
+            }
+
+            // Get field names
+            Set<String> fieldNames = new TreeSet<>();
+            for (ExportResult.SchemaWarning warning : warnings) {
+                if (warning.fieldName != null) {
+                    fieldNames.add(warning.fieldName);
+                }
+            }
+            String fieldsStr = fieldNames.isEmpty() ? "N/A" : String.join(", ", fieldNames);
+
+            tableModel.addRow(new Object[] {
+                    warningType,
+                    first.className,
+                    warnings.size(),
+                    sampleIds.toString(),
+                    fieldsStr
+            });
+        }
+
+        // Create table
+        JTable table = new JTable(tableModel);
+        table.setRowHeight(50);
+        table.getColumnModel().getColumn(0).setPreferredWidth(180);
+        table.getColumnModel().getColumn(1).setPreferredWidth(150);
+        table.getColumnModel().getColumn(2).setPreferredWidth(60);
+        table.getColumnModel().getColumn(3).setPreferredWidth(150);
+        table.getColumnModel().getColumn(4).setPreferredWidth(200);
+
+        // Custom renderer for wrapped text
+        table.setDefaultRenderer(Object.class, new MultiLineTableCellRenderer());
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        panel.add(scrollPane, BorderLayout.CENTER);
+
+        // Add explanation panel
+        JPanel explanationPanel = new JPanel();
+        explanationPanel.setLayout(new BoxLayout(explanationPanel, BoxLayout.Y_AXIS));
+        explanationPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(234, 179, 8), 2),
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+        explanationPanel.setBackground(new Color(254, 252, 232));
+
+        JLabel titleLabel = new JLabel("⚠ Schema Configuration Issues Detected");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        titleLabel.setForeground(new Color(161, 98, 7));
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        explanationPanel.add(titleLabel);
+
+        explanationPanel.add(Box.createVerticalStrut(5));
+
+        JTextArea explanationText = new JTextArea(
+                "Duplicate Embedded Reference: Objects marked with embedContents=\"true\" in the schema are being " +
+                        "referenced from multiple fields. This causes incomplete XML output (first reference exports the full object, "
+                        +
+                        "subsequent references are skipped). To fix: Change embedContents=\"false\" for these fields and export "
+                        +
+                        "the objects as separate top-level elements instead.");
+        explanationText.setWrapStyleWord(true);
+        explanationText.setLineWrap(true);
+        explanationText.setOpaque(false);
+        explanationText.setEditable(false);
+        explanationText.setFocusable(false);
+        explanationText.setFont(new Font("Arial", Font.PLAIN, 11));
+        explanationText.setForeground(new Color(120, 53, 15));
+        explanationText.setAlignmentX(Component.LEFT_ALIGNMENT);
+        explanationPanel.add(explanationText);
+
+        panel.add(explanationPanel, BorderLayout.SOUTH);
 
         return panel;
     }

@@ -13,6 +13,7 @@ import migration4o.models.schema.DOSchemaClass;
  */
 public class ExportStatistics {
     private final List<ExportError> errors = new ArrayList<>();
+    private final List<SchemaWarning> schemaWarnings = new ArrayList<>();
     private int objectsAttempted = 0;
     private int objectsSucceeded = 0;
     private final Map<String, Integer> exportedClassCounts = new HashMap<>();
@@ -36,6 +37,11 @@ public class ExportStatistics {
         errors.add(new ExportError(objectId, className, errorMessage, exception));
     }
 
+    public void addSchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId,
+            String className, String fieldName, String message, int referenceCount) {
+        schemaWarnings.add(new SchemaWarning(type, objectId, className, fieldName, message, referenceCount));
+    }
+
     public int getObjectsAttempted() {
         return objectsAttempted;
     }
@@ -50,6 +56,10 @@ public class ExportStatistics {
 
     public List<ExportError> getErrors() {
         return new ArrayList<>(errors);
+    }
+
+    public List<SchemaWarning> getSchemaWarnings() {
+        return new ArrayList<>(schemaWarnings);
     }
 
     public Map<String, Integer> getExportedClassCounts() {
@@ -120,8 +130,20 @@ public class ExportStatistics {
                     internalError.exception));
         }
 
+        // Convert internal warnings to public ExportResult.SchemaWarning format
+        List<ExportResult.SchemaWarning> publicWarnings = new ArrayList<>();
+        for (SchemaWarning internalWarning : schemaWarnings) {
+            publicWarnings.add(new ExportResult.SchemaWarning(
+                    internalWarning.type,
+                    internalWarning.objectId,
+                    internalWarning.className,
+                    internalWarning.fieldName,
+                    internalWarning.message,
+                    internalWarning.referenceCount));
+        }
+
         return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded,
-                publicErrors, exportedClassCounts);
+                publicErrors, publicWarnings, exportedClassCounts);
     }
 
     /**
@@ -138,6 +160,28 @@ public class ExportStatistics {
             this.className = className;
             this.errorMessage = errorMessage;
             this.exception = exception;
+        }
+    }
+
+    /**
+     * Internal representation of a schema warning.
+     */
+    private static class SchemaWarning {
+        final ExportResult.SchemaWarning.WarningType type;
+        final long objectId;
+        final String className;
+        final String fieldName;
+        final String message;
+        final int referenceCount;
+
+        SchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId, String className,
+                String fieldName, String message, int referenceCount) {
+            this.type = type;
+            this.objectId = objectId;
+            this.className = className;
+            this.fieldName = fieldName;
+            this.message = message;
+            this.referenceCount = referenceCount;
         }
     }
 }
