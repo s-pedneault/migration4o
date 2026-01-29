@@ -755,6 +755,16 @@ public class SchemaEditorPanel extends JPanel {
                 if (childrenType != null) {
                     if (childrenType.equals(targetShortName) || childrenType.equals(targetAbsoluteName)) {
                         isReference = true;
+                    } else {
+                        // Check if childrenType is an IDEntite class that points to target
+                        DOSchemaClass childrenClass = findClassByName(childrenType);
+                        if (childrenClass != null && isIDEntiteType(childrenType)) {
+                            String pointsTo = childrenClass.pointsTo;
+                            if (pointsTo != null &&
+                                    (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
+                                isReference = true;
+                            }
+                        }
                     }
                 }
 

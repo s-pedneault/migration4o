@@ -48,7 +48,12 @@ public class DODatabaseSchemaReader {
             // No foundation classes in new format
             DOSchemaClass[] foundationClasses = new DOSchemaClass[0];
 
-            return new DOSchema(allClasses, modules, foundationClasses);
+            DOSchema schema = new DOSchema(allClasses, modules, foundationClasses);
+
+            // Post-process: detect and add missing references (e.g., IDEntite collections)
+            ReferenceDetector.detectAndAddReferences(schema);
+
+            return schema;
         } catch (Exception e) {
             throw new RuntimeException("Failed to read schema from " + filePath, e);
         }
