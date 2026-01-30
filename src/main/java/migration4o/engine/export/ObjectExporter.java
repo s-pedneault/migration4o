@@ -74,25 +74,45 @@ public class ObjectExporter {
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel)
             throws IOException {
-        exportObjectRecursively(container, objectId, indentLevel, false, null);
+        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null);
     }
 
     /**
      * Recursively exports an object and all its referenced objects.
      * 
-     * @param isEmbedded true if this object is embedded in a parent field (not a
-     *                   top-level export)
-     * @param fieldName  the name of the field this object is embedded in (for
-     *                   warning messages)
+     * @param isEmbedded                true if this object is embedded in a parent
+     *                                  field
+     *                                  (not a
+     *                                  top-level export)
+     * @param fieldName                 the name of the field this object is
+     *                                  embedded in
+     *                                  (for
+     *                                  warning messages)
+     * @param containingClassName       the name of the class that contains the
+     *                                  field (for
+     *                                  warning messages)
+     * @param sourceFieldName           the source field name from schema (e.g.,
+     *                                  mVectCompartiment)
+     * @param sourceContainingClassName the source class name from schema (e.g.,
+     *                                  gest.vehicule.Vehicule)
      */
     private void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel,
-            boolean isEmbedded, String fieldName) throws IOException {
+            boolean isEmbedded, String fieldName, String containingClassName,
+            String sourceFieldName, String sourceContainingClassName) throws IOException {
         // Check if object was already exported
         if (!exportedObjectIds.add(objectId)) {
-            // Object already exported - this causes empty collection elements
+            // Object already exported
             System.err.println("DEBUG: Object " + objectId + " already exported. isEmbedded=" + isEmbedded
                     + ", fieldName=" + fieldName + ", inMap=" + embeddedObjectRefs.containsKey(objectId));
 
+            // If embedContents=false, this is expected - export as reference without warning
+            if (!isEmbedded) {
+                xmlWriter.writeIndent(indentLevel);
+                xmlWriter.write("<ref id=\"" + objectId + "\"/>\n");
+                return;
+            }
+
+            // If embedContents=true (embedded), this is a duplicate - warn user
             // Get object info for warning message
             String className = "Unknown";
             String firstFieldName = "unknown";
@@ -118,7 +138,7 @@ public class ObjectExporter {
                 firstFieldName = "first export location";
             }
 
-            // Always report duplicate reference warning
+            // Report duplicate reference warning for embedded objects only
             String message = String.format(
                     "Object (ID %d, class %s) already exported, reference from field '%s' will create empty element. " +
                             "First reference: '%s'. Reference count: %d. " +
@@ -129,6 +149,9 @@ public class ObjectExporter {
                     objectId,
                     className,
                     fieldName,
+                    containingClassName,
+                    sourceContainingClassName,
+                    sourceFieldName,
                     message,
                     referenceCount);
             System.err.println("WARNING: " + message);
@@ -179,9 +202,12 @@ public class ObjectExporter {
                 GenericObject genericObj = (GenericObject) obj;
                 StoredClass storedClass = container.ext().storedClass(genericObj);
                 if (storedClass != null) {
+                    final String currentClassName = schemaClass.destinationName;
+                    final String currentSourceClassName = schemaClass.source; // Full source class name
                     fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
-                            (objId, indent, embedded, fldName) -> exportObjectRecursively(container, objId, indent,
-                                    embedded, fldName));
+                            (objId, indent, embedded, fldName, sourceFldName) -> exportObjectRecursively(container,
+                                    objId, indent, embedded, fldName, currentClassName,
+                                    sourceFldName, currentSourceClassName));
                 }
             }
 

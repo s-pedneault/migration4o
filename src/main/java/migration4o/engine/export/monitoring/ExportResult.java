@@ -67,15 +67,22 @@ public class ExportResult {
         public long objectId;
         public String className;
         public String fieldName;
+        public String containingClass; // Class that contains the field
+        public String sourceContainingClass; // Full source class name from schema (e.g., gest.vehicule.Vehicule)
+        public String sourceFieldName; // Source field name from schema (e.g., mVectCompartiment)
         public String message;
         public int referenceCount;
 
         public SchemaWarning(WarningType type, long objectId, String className, String fieldName,
+                String containingClass, String sourceContainingClass, String sourceFieldName,
                 String message, int referenceCount) {
             this.type = type;
             this.objectId = objectId;
             this.className = className;
             this.fieldName = fieldName;
+            this.containingClass = containingClass;
+            this.sourceContainingClass = sourceContainingClass;
+            this.sourceFieldName = sourceFieldName;
             this.message = message;
             this.referenceCount = referenceCount;
         }

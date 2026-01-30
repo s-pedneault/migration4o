@@ -38,8 +38,11 @@ public class ExportStatistics {
     }
 
     public void addSchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId,
-            String className, String fieldName, String message, int referenceCount) {
-        schemaWarnings.add(new SchemaWarning(type, objectId, className, fieldName, message, referenceCount));
+            String className, String fieldName, String containingClass,
+            String sourceContainingClass, String sourceFieldName,
+            String message, int referenceCount) {
+        schemaWarnings.add(new SchemaWarning(type, objectId, className, fieldName, containingClass,
+                sourceContainingClass, sourceFieldName, message, referenceCount));
     }
 
     public int getObjectsAttempted() {
@@ -138,6 +141,9 @@ public class ExportStatistics {
                     internalWarning.objectId,
                     internalWarning.className,
                     internalWarning.fieldName,
+                    internalWarning.containingClass,
+                    internalWarning.sourceContainingClass,
+                    internalWarning.sourceFieldName,
                     internalWarning.message,
                     internalWarning.referenceCount));
         }
@@ -171,15 +177,22 @@ public class ExportStatistics {
         final long objectId;
         final String className;
         final String fieldName;
+        final String containingClass;
+        final String sourceContainingClass;
+        final String sourceFieldName;
         final String message;
         final int referenceCount;
 
         SchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId, String className,
-                String fieldName, String message, int referenceCount) {
+                String fieldName, String containingClass, String sourceContainingClass,
+                String sourceFieldName, String message, int referenceCount) {
             this.type = type;
             this.objectId = objectId;
             this.className = className;
             this.fieldName = fieldName;
+            this.containingClass = containingClass;
+            this.sourceContainingClass = sourceContainingClass;
+            this.sourceFieldName = sourceFieldName;
             this.message = message;
             this.referenceCount = referenceCount;
         }

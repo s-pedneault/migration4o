@@ -75,8 +75,9 @@ public class DOReferenceSchemaReader {
 
             // Post-process: determine optimal embedding strategy based on reference
             // patterns
-            DOEmbeddingCoordinator coordinator = new DOEmbeddingCoordinator(schema);
-            coordinator.coordinateEmbedding();
+            // DISABLED: Using embedContents values from XML file instead
+            // DOEmbeddingCoordinator coordinator = new DOEmbeddingCoordinator(schema);
+            // coordinator.coordinateEmbedding();
 
             return schema;
         } catch (Exception e) {

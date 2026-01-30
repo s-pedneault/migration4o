@@ -286,7 +286,8 @@ public class ExportResultDialog extends JDialog {
         }
 
         // Create table model
-        String[] columnNames = { "Warning Type", "Class", "Count", "Sample Object IDs", "Fields" };
+        String[] columnNames = { "Warning Type", "Embedded Class", "Count", "Sample Object IDs",
+                "Source Class (from schema)", "Source Field (from schema)" };
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -316,32 +317,45 @@ public class ExportResultDialog extends JDialog {
                 sampleIds.append(" ... +").append(warnings.size() - showCount);
             }
 
-            // Get field names
-            Set<String> fieldNames = new TreeSet<>();
+            // Get source containing class names (full package names from schema)
+            Set<String> sourceContainingClasses = new TreeSet<>();
             for (ExportResult.SchemaWarning warning : warnings) {
-                if (warning.fieldName != null) {
-                    fieldNames.add(warning.fieldName);
+                if (warning.sourceContainingClass != null && !warning.sourceContainingClass.isEmpty()) {
+                    sourceContainingClasses.add(warning.sourceContainingClass);
                 }
             }
-            String fieldsStr = fieldNames.isEmpty() ? "N/A" : String.join(", ", fieldNames);
+            String sourceContainingClassStr = sourceContainingClasses.isEmpty() ? "N/A"
+                    : String.join(", ", sourceContainingClasses);
+
+            // Get source field names (original field names from schema like
+            // mVectCompartiment)
+            Set<String> sourceFieldNames = new TreeSet<>();
+            for (ExportResult.SchemaWarning warning : warnings) {
+                if (warning.sourceFieldName != null) {
+                    sourceFieldNames.add(warning.sourceFieldName);
+                }
+            }
+            String sourceFieldsStr = sourceFieldNames.isEmpty() ? "N/A" : String.join(", ", sourceFieldNames);
 
             tableModel.addRow(new Object[] {
                     warningType,
                     first.className,
                     warnings.size(),
                     sampleIds.toString(),
-                    fieldsStr
+                    sourceContainingClassStr,
+                    sourceFieldsStr
             });
         }
 
         // Create table
         JTable table = new JTable(tableModel);
         table.setRowHeight(50);
-        table.getColumnModel().getColumn(0).setPreferredWidth(180);
-        table.getColumnModel().getColumn(1).setPreferredWidth(150);
-        table.getColumnModel().getColumn(2).setPreferredWidth(60);
-        table.getColumnModel().getColumn(3).setPreferredWidth(150);
-        table.getColumnModel().getColumn(4).setPreferredWidth(200);
+        table.getColumnModel().getColumn(0).setPreferredWidth(180); // Warning Type
+        table.getColumnModel().getColumn(1).setPreferredWidth(150); // Embedded Class
+        table.getColumnModel().getColumn(2).setPreferredWidth(60); // Count
+        table.getColumnModel().getColumn(3).setPreferredWidth(150); // Sample Object IDs
+        table.getColumnModel().getColumn(4).setPreferredWidth(180); // Containing Classes
+        table.getColumnModel().getColumn(5).setPreferredWidth(150); // Fields
 
         // Custom renderer for wrapped text
         table.setDefaultRenderer(Object.class, new MultiLineTableCellRenderer());
@@ -366,12 +380,19 @@ public class ExportResultDialog extends JDialog {
         explanationPanel.add(Box.createVerticalStrut(5));
 
         JTextArea explanationText = new JTextArea(
-                "Duplicate Embedded Reference: Objects marked with embedContents=\"true\" in the schema are being " +
-                        "referenced from multiple fields. This causes incomplete XML output (first reference exports the full object, "
+                "Duplicate Embedded Reference: Objects are being exported multiple times (embedded in one field, then referenced "
                         +
-                        "subsequent references are skipped). To fix: Change embedContents=\"false\" for these fields and export "
+                        "from another). The first reference exports the full object, subsequent references create empty elements.\n\n"
                         +
-                        "the objects as separate top-level elements instead.");
+                        "TO FIX: In reference-schema.xml, use the exact values from the warning table:\n" +
+                        "  1. Search for: <class source=\"[value from 'Source Class' column]\"\n" +
+                        "  2. Find: <field source=\"[value from 'Source Field' column]\">\n" +
+                        "  3. Add or change: embedContents=\"false\"\n\n" +
+                        "EXAMPLE: For class 'gest.vehicule.Vehicule' and field 'mVectCompartiment', search for:\n" +
+                        "  <class source=\"gest.vehicule.Vehicule\" ...\n" +
+                        "Then find: <field source=\"mVectCompartiment\" ...\n" +
+                        "And add: embedContents=\"false\"\n\n" +
+                        "NOTE: Collection fields default to embedContents=\"true\" if not specified.");
         explanationText.setWrapStyleWord(true);
         explanationText.setLineWrap(true);
         explanationText.setOpaque(false);

@@ -3887,7 +3887,7 @@
         <field source="mMotPasseDSI2003" destinationName="motPasseDSI2003" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mTypeLicence" destinationName="typeLicence" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mUtilCarto" destinationName="utilCarto" isExported="true" skipIfEmpty="true" type="gest.cartographie.ParamUtilisateurCartographie" embedContents="true" />
-        <field source="mVectIDGroupeParents" destinationName="vectIdGroupeParents" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.utilGroupe.IDGroupe" />
+        <field source="mVectIDGroupeParents" destinationName="vectIdGroupeParents" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="false" childrenType="gest.utilGroupe.IDGroupe" />
         <field source="mVectIDSSSI" destinationName="vectIdsSSI" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="int" />
         <field source="mVectLicConcur" destinationName="vectLicConcur" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="int" />
         <field source="mIDLangue" destinationName="idLangue" isExported="true" skipIfEmpty="true" type="gest.langue.IDLangue" />
@@ -3899,7 +3899,7 @@
         <field source="mIdentification" destinationName="identification" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mReserve" destinationName="reserve" isExported="true" skipIfEmpty="true" type="boolean" />
-        <field source="mIDParent" destinationName="idParent" isExported="true" skipIfEmpty="true" type="gest.gen.IDEntite" embedContents="true" />
+        <field source="mIDParent" destinationName="idParent" isExported="true" skipIfEmpty="true" type="gest.gen.IDEntite" embedContents="false" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.vehicule.IDCompartiment" destinationName="IDCompartiment" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.vehicule.Compartiment">

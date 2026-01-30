@@ -337,13 +337,15 @@ public class FieldExporter {
         // Check if this field is marked for embedding (applies to all object types)
         boolean isEmbedded = schemaField != null && schemaField.embedContents;
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+        String sourceFieldName = schemaField != null ? schemaField.source : null;
 
         // Check if this is an IDEntite reference (reference object pattern)
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
         if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
             // Pass through the embedded flag and field name for tracking
             idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField,
-                    (objectId, indent) -> objectExportDelegate.exportObject(objectId, indent, isEmbedded, fieldName),
+                    (objectId, indent) -> objectExportDelegate.exportObject(objectId, indent, isEmbedded, fieldName,
+                            sourceFieldName),
                     indentLevel);
             return;
         }
@@ -351,7 +353,7 @@ public class FieldExporter {
         // For regular objects, check if they should be embedded or referenced
         long objectId = container.ext().getID(fieldValue);
         if (objectId > 0) {
-            objectExportDelegate.exportObject(objectId, indentLevel, isEmbedded, fieldName);
+            objectExportDelegate.exportObject(objectId, indentLevel, isEmbedded, fieldName, sourceFieldName);
         } else {
             // Primitive value - write inline
             xmlWriter.writeElement(fieldName, fieldValue.toString(), indentLevel);
@@ -362,6 +364,7 @@ public class FieldExporter {
      * Delegate interface for exporting objects.
      */
     public interface ObjectExportDelegate {
-        void exportObject(long objectId, int indentLevel, boolean isEmbedded, String fieldName) throws IOException;
+        void exportObject(long objectId, int indentLevel, boolean isEmbedded, String fieldName,
+                String sourceFieldName) throws IOException;
     }
 }
