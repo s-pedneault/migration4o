@@ -105,11 +105,11 @@ public class ObjectExporter {
             System.err.println("DEBUG: Object " + objectId + " already exported. isEmbedded=" + isEmbedded
                     + ", fieldName=" + fieldName + ", inMap=" + embeddedObjectRefs.containsKey(objectId));
 
-            // If embedContents=false, this is expected - export as reference without
-            // warning
+            // If embedContents=false, this should have been handled by ID reference logic
+            // in FieldExporter
+            // If we reach here with isEmbedded=false, just skip - the object is already
+            // exported
             if (!isEmbedded) {
-                xmlWriter.writeIndent(indentLevel);
-                xmlWriter.write("<ref id=\"" + objectId + "\"/>\n");
                 return;
             }
 

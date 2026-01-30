@@ -21,6 +21,7 @@
         <main.class>migration4o.ui.main.MainWindow</main.class>
     </properties>
     
+    
     <dependencies>
         <!-- DB4O Dependencies (local JARs) -->
         <dependency>
@@ -133,7 +134,9 @@
     </dependencies>
     
     <build>
-        <!-- Output compiled classes to classes/ directory (like build.sh) -->
+        <!-- Default goal ensures clean compile instead of just compile -->
+        <defaultGoal>clean compile</defaultGoal>
+                <!-- Output compiled classes to classes/ directory (like build.sh) -->
         <outputDirectory>${project.basedir}/classes</outputDirectory>
         
         <plugins>
@@ -147,6 +150,7 @@
                     <target>25</target>
                     <release>25</release>
                     <encoding>UTF-8</encoding>
+                    <outputDirectory>${project.basedir}/classes</outputDirectory>
                     <compilerArgs>
                         <arg>-Xlint:unchecked</arg>
                     </compilerArgs>

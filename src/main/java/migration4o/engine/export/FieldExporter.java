@@ -147,10 +147,39 @@ public class FieldExporter {
         } else {
             int size = items.size();
             xmlWriter.writeStartElementWithSize(fieldName, size, indentLevel);
+
+            // Check if we should export ID references instead of entities
+            boolean shouldExportAsIDReferences = false;
+            DOSchemaClass idClass = null;
+
+            if (schemaField != null && !schemaField.embedContents && schemaField.childrenType != null) {
+                // Find the corresponding ID class for this entity type
+                idClass = findIDClassForEntity(schemaField.childrenType);
+                shouldExportAsIDReferences = (idClass != null);
+
+                if (shouldExportAsIDReferences) {
+                    System.out.println("DEBUG: Will export " + fieldName + " as ID references using " + idClass.source);
+                } else {
+                    System.out.println(
+                            "DEBUG: No ID class found for " + schemaField.childrenType + ", exporting normally");
+                }
+            } else {
+                System.out.println("DEBUG: " + fieldName + " - schemaField=" + (schemaField != null) +
+                        ", embedContents=" + (schemaField != null ? schemaField.embedContents : "N/A") +
+                        ", childrenType=" + (schemaField != null ? schemaField.childrenType : "N/A"));
+            }
+
             for (Object item : items) {
                 if (item != null) {
-                    exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
-                            objectExportDelegate);
+                    if (shouldExportAsIDReferences) {
+                        // Export as ID reference
+                        System.out.println("DEBUG: Exporting ID reference for object: " + item.getClass().getName());
+                        exportAsIDReference(container, item, idClass, indentLevel + 1, objectExportDelegate);
+                    } else {
+                        // Export normally
+                        exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
+                                objectExportDelegate);
+                    }
                 }
             }
             xmlWriter.writeEndElement(fieldName, indentLevel);
@@ -249,10 +278,39 @@ public class FieldExporter {
         } else {
             int size = collection.size();
             xmlWriter.writeStartElementWithSize(fieldName, size, indentLevel);
+
+            // Check if we should export ID references instead of entities
+            boolean shouldExportAsIDReferences = false;
+            DOSchemaClass idClass = null;
+
+            if (schemaField != null && !schemaField.embedContents && schemaField.childrenType != null) {
+                // Find the corresponding ID class for this entity type
+                idClass = findIDClassForEntity(schemaField.childrenType);
+                shouldExportAsIDReferences = (idClass != null);
+
+                if (shouldExportAsIDReferences) {
+                    System.out.println("DEBUG: Will export " + fieldName + " as ID references using " + idClass.source);
+                } else {
+                    System.out.println(
+                            "DEBUG: No ID class found for " + schemaField.childrenType + ", exporting normally");
+                }
+            } else {
+                System.out.println("DEBUG: " + fieldName + " - schemaField=" + (schemaField != null) +
+                        ", embedContents=" + (schemaField != null ? schemaField.embedContents : "N/A") +
+                        ", childrenType=" + (schemaField != null ? schemaField.childrenType : "N/A"));
+            }
+
             for (Object item : collection) {
                 if (item != null) {
-                    exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
-                            objectExportDelegate);
+                    if (shouldExportAsIDReferences) {
+                        // Export as ID reference
+                        System.out.println("DEBUG: Exporting ID reference for object: " + item.getClass().getName());
+                        exportAsIDReference(container, item, idClass, indentLevel + 1, objectExportDelegate);
+                    } else {
+                        // Export normally
+                        exportFieldValue(container, item, schemaField, parentClass, indentLevel + 1,
+                                objectExportDelegate);
+                    }
                 }
             }
             xmlWriter.writeEndElement(fieldName, indentLevel);
@@ -366,5 +424,69 @@ public class FieldExporter {
     public interface ObjectExportDelegate {
         void exportObject(long objectId, int indentLevel, boolean isEmbedded, String fieldName,
                 String sourceFieldName) throws IOException;
+    }
+
+    /**
+     * Finds the ID class (e.g., IDCompartiment) for a given entity class (e.g.,
+     * Compartiment).
+     * Searches schema for classes where pointsTo equals the given entity class
+     * name.
+     */
+    private DOSchemaClass findIDClassForEntity(String entityClassName) {
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (schemaClass.pointsTo != null && schemaClass.pointsTo.equals(entityClassName)) {
+                return schemaClass;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Exports an entity object as an ID reference.
+     * Creates a synthetic ID object (e.g., IDCompartiment) with the mID field set
+     * to the entity's DB ID.
+     * Also ensures the actual entity object is exported separately at the top
+     * level.
+     */
+    private void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass,
+            int indentLevel, ObjectExportDelegate objectExportDelegate) throws IOException {
+        // Get the DB object ID of the entity
+        long entityObjectId = container.ext().getID(entity);
+        System.out.println(
+                "DEBUG: exportAsIDReference - entity=" + entity.getClass().getName() + ", objectId=" + entityObjectId);
+
+        if (entityObjectId <= 0) {
+            System.err.println("WARNING: Cannot get object ID for entity, skipping ID reference export");
+            return;
+        }
+
+        // Export the ID object wrapper
+        String idClassName = idClass.source; // e.g., "IDCompartiment"
+        String simpleClassName = idClassName.substring(idClassName.lastIndexOf('.') + 1);
+
+        System.out.println("DEBUG: Writing ID class: " + simpleClassName + " with id=" + entityObjectId);
+        xmlWriter.writeStartElement(simpleClassName, indentLevel);
+
+        // Find the mID field in the ID class schema
+        DOSchemaField idField = null;
+        for (DOSchemaField field : idClass.fields) {
+            if ("mID".equals(field.source)) {
+                idField = field;
+                break;
+            }
+        }
+
+        if (idField != null) {
+            // Export the ID value
+            xmlWriter.writeElement(idField.destinationName, String.valueOf(entityObjectId), indentLevel + 1);
+        } else {
+            System.err.println("WARNING: No mID field found in ID class " + idClassName);
+        }
+
+        xmlWriter.writeEndElement(simpleClassName, indentLevel);
+
+        // Ensure the actual entity object gets exported separately (not embedded)
+        // Delegate to export the entity at top level
+        objectExportDelegate.exportObject(entityObjectId, indentLevel, false, null, null);
     }
 }
