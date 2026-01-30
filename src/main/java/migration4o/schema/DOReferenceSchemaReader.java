@@ -16,7 +16,10 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.ui.MigrationModule;
+import migration4o.schema.modules.DOModuleStructureReader;
 import migration4o.schema.processors.DOReferenceDetector;
+import migration4o.schema.processors.DOEmbeddingCoordinator;
 
 /**
  * Reader for the new reference-schema.xml format.
@@ -55,8 +58,25 @@ public class DOReferenceSchemaReader {
 
             DOSchema schema = new DOSchema(allClasses, modules, foundationClasses);
 
+            // Load migration modules from migration-format.xml
+            try {
+                DOModuleStructureReader moduleReader = new DOModuleStructureReader();
+                List<MigrationModule> migrationModules = moduleReader
+                        .readMigrationFormat("schema/migration-format.xml");
+                schema.setMigrationModules(migrationModules);
+                System.out.println("Loaded " + migrationModules.size() + " modules from schema/migration-format.xml");
+            } catch (Exception e) {
+                System.err.println("Warning: Could not load migration modules: " + e.getMessage());
+                schema.setMigrationModules(new ArrayList<>());
+            }
+
             // Post-process: detect and add missing references (e.g., IDEntite collections)
             DOReferenceDetector.detectAndAddReferences(schema);
+
+            // Post-process: determine optimal embedding strategy based on reference
+            // patterns
+            DOEmbeddingCoordinator coordinator = new DOEmbeddingCoordinator(schema);
+            coordinator.coordinateEmbedding();
 
             return schema;
         } catch (Exception e) {

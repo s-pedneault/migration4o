@@ -48,21 +48,35 @@ public class DOReferenceDetector {
             }
 
             for (DOSchemaField field : schemaClass.fields) {
-                // Check collection children type for IDEntite references
+                // 1. Check direct field type references (non-primitive, non-collection)
+                if (field.type != null && !field.isCollection) {
+                    DOSchemaClass typeClass = findClass(classMap, field.type);
+                    if (typeClass != null && isEntityType(field.type)) {
+                        // Direct reference to an entity class
+                        addReference(referencesMap, typeClass.source,
+                                schemaClass.source, field.source);
+                    }
+                }
+
+                // 2. Check collection children type references
                 if (field.childrenType != null) {
                     DOSchemaClass childrenClass = findClass(classMap, field.childrenType);
 
-                    if (childrenClass != null && childrenClass.isIDEntite(schema)) {
-                        // This is a collection of IDEntite objects
-                        String pointsTo = childrenClass.pointsTo;
-                        if (pointsTo != null && !pointsTo.isEmpty()) {
-                            // Find the target class
-                            DOSchemaClass targetClass = findClass(classMap, pointsTo);
-                            if (targetClass != null) {
-                                // Add this as a reference to the target class
-                                addReference(referencesMap, targetClass.source,
-                                        schemaClass.source, field.source);
+                    if (childrenClass != null) {
+                        if (childrenClass.isIDEntite(schema)) {
+                            // Indirect reference through IDEntite with pointsTo
+                            String pointsTo = childrenClass.pointsTo;
+                            if (pointsTo != null && !pointsTo.isEmpty()) {
+                                DOSchemaClass targetClass = findClass(classMap, pointsTo);
+                                if (targetClass != null) {
+                                    addReference(referencesMap, targetClass.source,
+                                            schemaClass.source, field.source);
+                                }
                             }
+                        } else if (isEntityType(field.childrenType)) {
+                            // Direct reference to entity class in collection
+                            addReference(referencesMap, childrenClass.source,
+                                    schemaClass.source, field.source);
                         }
                     }
                 }
@@ -94,6 +108,45 @@ public class DOReferenceDetector {
                 schemaClass.schemaReferences = allRefs.toArray(new DOSchemaReference[0]);
             }
         }
+    }
+
+    /**
+     * Check if a type represents an entity class (not a primitive or built-in
+     * type).
+     */
+    private static boolean isEntityType(String typeName) {
+        if (typeName == null || typeName.isEmpty()) {
+            return false;
+        }
+
+        String lower = typeName.toLowerCase();
+
+        // Filter out primitive types
+        if (lower.equals("string") || lower.equals("int") || lower.equals("integer") ||
+                lower.equals("long") || lower.equals("double") || lower.equals("float") ||
+                lower.equals("boolean") || lower.equals("bool") || lower.equals("date") ||
+                lower.equals("datetime") || lower.equals("byte") || lower.equals("short") ||
+                lower.equals("char") || lower.equals("character")) {
+            return false;
+        }
+
+        // Filter out common Java built-in types
+        if (typeName.startsWith("java.lang.") && !typeName.equals("java.lang.Class")) {
+            return false;
+        }
+
+        // Filter out collection types (these are containers, not entities)
+        if (typeName.startsWith("java.util.") || typeName.startsWith("gen.util.")) {
+            return false;
+        }
+
+        // Filter out java.awt types except Color which is referenced as entity
+        if (typeName.startsWith("java.awt.")) {
+            return typeName.equals("java.awt.Color");
+        }
+
+        // Anything else is considered an entity type
+        return true;
     }
 
     /**
