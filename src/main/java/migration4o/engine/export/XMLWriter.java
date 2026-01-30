@@ -99,14 +99,4 @@ public class XMLWriter {
                 .replace("'", "&apos;");
     }
 
-    /**
-     * Gets the simple class name from a fully qualified class name.
-     */
-    public static String getSimpleClassName(String fullClassName) {
-        if (fullClassName == null) {
-            return "Unknown";
-        }
-        int lastDot = fullClassName.lastIndexOf('.');
-        return lastDot >= 0 ? fullClassName.substring(lastDot + 1) : fullClassName;
-    }
 }

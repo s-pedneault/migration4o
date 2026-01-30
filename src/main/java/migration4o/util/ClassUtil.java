@@ -26,7 +26,7 @@ public class ClassUtil {
      */
     public static String getSimpleName(String absoluteName) {
         if (absoluteName == null) {
-            return "Unknown";
+            return "?";
         }
         if (absoluteName.contains(".")) {
             return absoluteName.substring(absoluteName.lastIndexOf('.') + 1);

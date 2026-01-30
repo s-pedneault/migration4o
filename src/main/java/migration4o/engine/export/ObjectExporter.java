@@ -14,7 +14,6 @@ import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
 import migration4o.util.ObjectResolverUtil;
 import migration4o.util.SchemaUtil;
@@ -190,7 +189,7 @@ public class ObjectExporter {
             // Write object opening tag using destination class name as element name
             DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
             String elementName = schemaClass != null ? schemaClass.destinationName
-                    : XMLWriter.getSimpleClassName(className);
+                    : ClassUtil.getSimpleName(className);
             xmlWriter.writeStartElement(elementName, indentLevel);
 
             // XSD: record this class structure

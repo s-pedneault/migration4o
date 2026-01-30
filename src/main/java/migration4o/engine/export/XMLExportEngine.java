@@ -35,7 +35,7 @@ public class XMLExportEngine {
      * Exports objects of a specific class to XML file.
      */
     public ExportResult exportClass(String className, String outputPath) throws Exception {
-        DOSchemaClass schemaClass = findClassByName(className);
+        DOSchemaClass schemaClass = schema.findClassByName(className);
         if (schemaClass == null) {
             throw new IllegalArgumentException("Class not found: " + className);
         }
@@ -67,7 +67,7 @@ public class XMLExportEngine {
             xmlWriter.writeExportHeader(className);
 
             // Export all objects of this class
-            DOSchemaClass dbSchemaClass = findClassByName(databaseSchema, className);
+            DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
             if (dbSchemaClass != null) {
                 xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
                 long[] objectIds = dbSchemaClass.objectIds;
@@ -150,7 +150,7 @@ public class XMLExportEngine {
 
             // Export all classes in the module
             for (String className : classNames) {
-                DOSchemaClass dbSchemaClass = findClassByName(databaseSchema, className);
+                DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
                 if (dbSchemaClass != null) {
                     xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
                     long[] objectIds = dbSchemaClass.objectIds;
@@ -194,19 +194,4 @@ public class XMLExportEngine {
         }
     }
 
-    private DOSchemaClass findClassByName(String className) {
-        return findClassByName(schema, className);
-    }
-
-    private DOSchemaClass findClassByName(DOSchema targetSchema, String className) {
-        if (targetSchema == null || targetSchema.getClasses() == null) {
-            return null;
-        }
-        for (DOSchemaClass schemaClass : targetSchema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
-                return schemaClass;
-            }
-        }
-        return null;
-    }
 }

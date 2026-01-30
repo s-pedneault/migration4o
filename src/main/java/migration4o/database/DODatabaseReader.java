@@ -25,7 +25,7 @@ import migration4o.util.DatabaseUtil;
  * This is more efficient for the UI which works exclusively with DOSchema*
  * classes.
  */
-public class DODatabaseReaderV2 {
+public class DODatabaseReader {
 
     /**
      * Reads a database and directly creates a DOSchema representation.

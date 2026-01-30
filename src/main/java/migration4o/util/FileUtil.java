@@ -24,8 +24,14 @@ public class FileUtil {
         }
     }
 
-    // Private constructor to prevent instantiation of utility class
-    private FileUtil() {
-        throw new UnsupportedOperationException("Utility class cannot be instantiated");
+    /**
+     * Sanitize a name for use in XML (remove invalid characters).
+     */
+    public static String sanitizeName(String name) {
+        if (name == null) {
+            return "unnamed";
+        }
+        return name.replaceAll("[^a-zA-Z0-9_.-]", "_");
     }
+
 }

@@ -26,7 +26,7 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import migration4o.database.DODatabaseOpener;
-import migration4o.database.DODatabaseReaderV2;
+import migration4o.database.DODatabaseReader;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -224,7 +224,7 @@ public class MainWindow extends JFrame {
                     var objectContainer = opener.openDatabase(selectedFile.getAbsolutePath());
 
                     // Read database as schema using DODatabaseReaderV2
-                    DODatabaseReaderV2 reader = new DODatabaseReaderV2();
+                    DODatabaseReader reader = new DODatabaseReader();
                     DOSchema schema = reader.readDatabaseAsSchema(objectContainer);
 
                     // Close database

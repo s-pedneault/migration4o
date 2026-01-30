@@ -1,9 +1,7 @@
 package migration4o.util;
 
 import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
 
-import migration4o.database.DODatabaseEncoding;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
