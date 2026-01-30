@@ -464,6 +464,12 @@ public class FieldExporter {
         String idClassName = idClass.source; // e.g., "IDCompartiment"
         String simpleClassName = idClassName.substring(idClassName.lastIndexOf('.') + 1);
 
+        // XSD: Register the ID class and its fields
+        xsdBuilder.addClass(idClass);
+        for (DOSchemaField field : idClass.fields) {
+            xsdBuilder.addField(idClass, field);
+        }
+
         System.out.println("DEBUG: Writing ID class: " + simpleClassName + " with id=" + entityObjectId);
         xmlWriter.writeStartElement(simpleClassName, indentLevel);
 
