@@ -4,10 +4,6 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 
 import migration4o.database.DODatabaseEncoding;
-import migration4o.models.database.DODatabaseField;
-import migration4o.models.database.DODatabase;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.database.DODatabaseObject;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -74,155 +70,169 @@ public class DatabaseUtil {
         return null;
     }
 
-    /**
-     * Converts a StoredField to a DODatabaseField with schema enhancement.
-     */
-    public static DODatabaseField convertStoredFieldToDOField(StoredField storedField, DOSchemaField schemaField) {
-        String fieldName = storedField.getName();
-        String typeName = storedField.getStoredType().getName();
-        String description = "";
-        boolean isPrimitive = TypeUtil.isPrimitiveType(typeName);
-        boolean isArray = storedField.isArray();
-        boolean isCollection = isArray || CollectionTypeUtil.isCollectionType(typeName);
+    // /**
+    // * Converts a StoredField to a DODatabaseField with schema enhancement.
+    // */
+    // public static DODatabaseField convertStoredFieldToDOField(StoredField
+    // storedField, DOSchemaField schemaField) {
+    // String fieldName = storedField.getName();
+    // String typeName = storedField.getStoredType().getName();
+    // String description = "";
+    // boolean isPrimitive = TypeUtil.isPrimitiveType(typeName);
+    // boolean isArray = storedField.isArray();
+    // boolean isCollection = isArray ||
+    // CollectionTypeUtil.isCollectionType(typeName);
 
-        String contentTypeName = null;
-        if (isCollection) {
-            if (schemaField != null && schemaField.childrenType != null) {
-                contentTypeName = schemaField.childrenType;
-                System.out.println("Enhanced field " + fieldName + " with schema content type: " + contentTypeName);
-            } else {
-                contentTypeName = CollectionTypeUtil.extractContentTypeFromTypeName(typeName, isArray);
-            }
-        }
+    // String contentTypeName = null;
+    // if (isCollection) {
+    // if (schemaField != null && schemaField.childrenType != null) {
+    // contentTypeName = schemaField.childrenType;
+    // System.out.println("Enhanced field " + fieldName + " with schema content
+    // type: " + contentTypeName);
+    // } else {
+    // contentTypeName = CollectionTypeUtil.extractContentTypeFromTypeName(typeName,
+    // isArray);
+    // }
+    // }
 
-        return new DODatabaseField(fieldName, description, typeName, null, isPrimitive, isCollection, contentTypeName,
-                null);
-    }
+    // return new DODatabaseField(fieldName, description, typeName, null,
+    // isPrimitive, isCollection, contentTypeName,
+    // null);
+    // }
 
-    /**
-     * Extracts class name from a resolved object.
-     */
-    public static String getClassNameFromObject(DODatabaseObject obj) {
-        if (obj.getMostSpecificClass() != null) {
-            return obj.getMostSpecificClass().getAbsoluteName();
-        }
+    // /**
+    // * Extracts class name from a resolved object.
+    // */
+    // public static String getClassNameFromObject(DODatabaseObject obj) {
+    // if (obj.getMostSpecificClass() != null) {
+    // return obj.getMostSpecificClass().getAbsoluteName();
+    // }
 
-        DODatabaseClass[] allClasses = obj.getAllClasses();
-        if (allClasses != null && allClasses.length > 0) {
-            return allClasses[0].getAbsoluteName();
-        }
+    // DODatabaseClass[] allClasses = obj.getAllClasses();
+    // if (allClasses != null && allClasses.length > 0) {
+    // return allClasses[0].getAbsoluteName();
+    // }
 
-        return null;
-    }
+    // return null;
+    // }
 
-    /**
-     * Finds resolved objects for a database class using multiple name lookup
-     * strategies.
-     */
-    public static java.util.List<DODatabaseObject> findResolvedObjectsForClass(
-            DODatabaseClass databaseClass,
-            java.util.Map<String, java.util.List<DODatabaseObject>> classToObjectsMap) {
+    // /**
+    // * Finds resolved objects for a database class using multiple name lookup
+    // * strategies.
+    // */
+    // public static java.util.List<DODatabaseObject> findResolvedObjectsForClass(
+    // DODatabaseClass databaseClass,
+    // java.util.Map<String, java.util.List<DODatabaseObject>> classToObjectsMap) {
 
-        // Try absolute name first
-        java.util.List<DODatabaseObject> objects = classToObjectsMap.get(databaseClass.getAbsoluteName());
-        if (objects != null) {
-            return objects;
-        }
+    // // Try absolute name first
+    // java.util.List<DODatabaseObject> objects =
+    // classToObjectsMap.get(databaseClass.getAbsoluteName());
+    // if (objects != null) {
+    // return objects;
+    // }
 
-        // Try short name
-        objects = classToObjectsMap.get(databaseClass.getShortName());
-        if (objects != null) {
-            return objects;
-        }
+    // // Try short name
+    // objects = classToObjectsMap.get(databaseClass.getShortName());
+    // if (objects != null) {
+    // return objects;
+    // }
 
-        // Try simple class name as fallback
-        objects = classToObjectsMap.get(getSimpleClassName(databaseClass.getAbsoluteName()));
-        if (objects != null) {
-            return objects;
-        }
+    // // Try simple class name as fallback
+    // objects =
+    // classToObjectsMap.get(getSimpleClassName(databaseClass.getAbsoluteName()));
+    // if (objects != null) {
+    // return objects;
+    // }
 
-        return new java.util.ArrayList<>();
-    }
+    // return new java.util.ArrayList<>();
+    // }
 
-    /**
-     * Creates a single database class from a stored class and schema information.
-     */
-    public static DODatabaseClass createDatabaseClass(StoredClass storedClass, DOSchema schema) {
-        String className = storedClass.getName();
-        int objectCount = storedClass.instanceCount();
+    // /**
+    // * Creates a single database class from a stored class and schema information.
+    // */
+    // public static DODatabaseClass createDatabaseClass(StoredClass storedClass,
+    // DOSchema schema) {
+    // String className = storedClass.getName();
+    // int objectCount = storedClass.instanceCount();
 
-        String superClassName = null;
-        StoredClass parentStoredClass = storedClass.getParentStoredClass();
-        if (parentStoredClass != null) {
-            superClassName = parentStoredClass.getName();
-        }
+    // String superClassName = null;
+    // StoredClass parentStoredClass = storedClass.getParentStoredClass();
+    // if (parentStoredClass != null) {
+    // superClassName = parentStoredClass.getName();
+    // }
 
-        DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
-        DODatabaseField[] fields = extractFieldsFromStoredClass(storedClass, matchingSchemaClass);
+    // DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
+    // DODatabaseField[] fields = extractFieldsFromStoredClass(storedClass,
+    // matchingSchemaClass);
 
-        // Get object IDs while database is still open
-        long[] objectIds = storedClass.getIDs();
-        if (objectIds == null) {
-            objectIds = new long[0];
-        }
+    // // Get object IDs while database is still open
+    // long[] objectIds = storedClass.getIDs();
+    // if (objectIds == null) {
+    // objectIds = new long[0];
+    // }
 
-        return new DODatabaseClass(
-                className,
-                getSimpleClassName(className),
-                "Class from database",
-                getSimpleClassName(className),
-                superClassName,
-                fields,
-                objectCount,
-                0,
-                objectIds);
-    }
+    // return new DODatabaseClass(
+    // className,
+    // getSimpleClassName(className),
+    // "Class from database",
+    // getSimpleClassName(className),
+    // superClassName,
+    // fields,
+    // objectCount,
+    // 0,
+    // objectIds);
+    // }
 
-    /**
-     * Extracts fields from a stored class with schema enhancement.
-     * Deduplicates fields with the same name (keeps array version if both exist).
-     */
-    public static DODatabaseField[] extractFieldsFromStoredClass(StoredClass storedClass, DOSchemaClass schemaClass) {
-        try {
-            StoredField[] storedFields = storedClass.getStoredFields();
+    // /**
+    // * Extracts fields from a stored class with schema enhancement.
+    // * Deduplicates fields with the same name (keeps array version if both exist).
+    // */
+    // public static DODatabaseField[] extractFieldsFromStoredClass(StoredClass
+    // storedClass, DOSchemaClass schemaClass) {
+    // try {
+    // StoredField[] storedFields = storedClass.getStoredFields();
 
-            // Use a map to deduplicate fields by name
-            // Key: field name, Value: StoredField
-            java.util.Map<String, StoredField> fieldMap = new java.util.LinkedHashMap<>();
+    // // Use a map to deduplicate fields by name
+    // // Key: field name, Value: StoredField
+    // java.util.Map<String, StoredField> fieldMap = new
+    // java.util.LinkedHashMap<>();
 
-            for (StoredField sf : storedFields) {
-                String fieldName = sf.getName();
-                StoredField existing = fieldMap.get(fieldName);
+    // for (StoredField sf : storedFields) {
+    // String fieldName = sf.getName();
+    // StoredField existing = fieldMap.get(fieldName);
 
-                if (existing == null) {
-                    // First occurrence of this field name
-                    fieldMap.put(fieldName, sf);
-                } else {
-                    // Duplicate field name - prefer array version
-                    if (sf.isArray() && !existing.isArray()) {
-                        // New field is array, existing is not - replace with array version
-                        fieldMap.put(fieldName, sf);
-                    }
-                    // else keep existing (either both are arrays, both are non-arrays, or existing
-                    // is already array)
-                }
-            }
+    // if (existing == null) {
+    // // First occurrence of this field name
+    // fieldMap.put(fieldName, sf);
+    // } else {
+    // // Duplicate field name - prefer array version
+    // if (sf.isArray() && !existing.isArray()) {
+    // // New field is array, existing is not - replace with array version
+    // fieldMap.put(fieldName, sf);
+    // }
+    // // else keep existing (either both are arrays, both are non-arrays, or
+    // existing
+    // // is already array)
+    // }
+    // }
 
-            // Convert deduplicated fields to DODatabaseField array
-            DODatabaseField[] fields = new DODatabaseField[fieldMap.size()];
-            int index = 0;
-            for (StoredField sf : fieldMap.values()) {
-                DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass, sf.getName());
-                fields[index++] = convertStoredFieldToDOField(sf, matchingSchemaField);
-            }
+    // // Convert deduplicated fields to DODatabaseField array
+    // DODatabaseField[] fields = new DODatabaseField[fieldMap.size()];
+    // int index = 0;
+    // for (StoredField sf : fieldMap.values()) {
+    // DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass,
+    // sf.getName());
+    // fields[index++] = convertStoredFieldToDOField(sf, matchingSchemaField);
+    // }
 
-            return fields;
-        } catch (Exception e) {
-            System.out.println(
-                    "Warning: Could not extract fields for class " + storedClass.getName() + ": " + e.getMessage());
-            return new DODatabaseField[0];
-        }
-    }
+    // return fields;
+    // } catch (Exception e) {
+    // System.out.println(
+    // "Warning: Could not extract fields for class " + storedClass.getName() + ": "
+    // + e.getMessage());
+    // return new DODatabaseField[0];
+    // }
+    // }
 
     /**
      * Checks if a stored class should be included in database analysis.
@@ -246,13 +256,14 @@ public class DatabaseUtil {
         }
     }
 
-    /**
-     * Creates a fallback empty database when there are errors.
-     */
-    public static DODatabase createEmptyDatabase(com.db4o.ext.ExtObjectContainer container,
-            DODatabaseEncoding encoding,
-            String databaseSize) {
-        return new DODatabase(container, encoding, 0, 0, databaseSize,
-                new DODatabaseClass[0]);
-    }
+    // /**
+    // * Creates a fallback empty database when there are errors.
+    // */
+    // public static DODatabase createEmptyDatabase(com.db4o.ext.ExtObjectContainer
+    // container,
+    // DODatabaseEncoding encoding,
+    // String databaseSize) {
+    // return new DODatabase(container, encoding, 0, 0, databaseSize,
+    // new DODatabaseClass[0]);
+    // }
 }

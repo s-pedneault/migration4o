@@ -11,15 +11,14 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 
-import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
 import migration4o.models.ui.MigrationModule;
 import migration4o.schema.modules.DOModuleStructureReader;
 import migration4o.schema.processors.DOReferenceDetector;
-import migration4o.schema.processors.DOEmbeddingCoordinator;
 
 /**
  * Reader for the new reference-schema.xml format.
@@ -194,7 +193,6 @@ public class DOReferenceSchemaReader {
         field.title = title.isEmpty() ? null : title;
         field.description = description.isEmpty() ? null : description;
         field.pointsTo = pointsTo.isEmpty() ? null : pointsTo;
-        field.databaseClass = null;
         field.childrenSchemaClass = null;
         return field;
     }

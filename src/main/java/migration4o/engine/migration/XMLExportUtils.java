@@ -1,10 +1,6 @@
 package migration4o.engine.migration;
 
 import java.text.SimpleDateFormat;
-import java.util.Calendar;
-import java.util.Date;
-
-import migration4o.models.database.DODatabaseField;
 
 /**
  * Utility methods for XML export operations.
@@ -61,44 +57,44 @@ public class XMLExportUtils {
         return cleaned;
     }
 
-    /**
-     * Get the XML type for a field.
-     */
-    public static String getFieldType(DODatabaseField field) {
-        if (field.isPrimitive()) {
-            String typeName = field.getTypeName();
-            if (typeName == null)
-                return "string";
+    // /**
+    // * Get the XML type for a field.
+    // */
+    // public static String getFieldType(DODatabaseField field) {
+    // if (field.isPrimitive()) {
+    // String typeName = field.getTypeName();
+    // if (typeName == null)
+    // return "string";
 
-            if (typeName.equals("int") || typeName.equals("java.lang.Integer"))
-                return "int";
-            if (typeName.equals("long") || typeName.equals("java.lang.Long"))
-                return "long";
-            if (typeName.equals("double") || typeName.equals("java.lang.Double"))
-                return "double";
-            if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean"))
-                return "boolean";
-            if (typeName.equals("java.util.Date"))
-                return "date";
+    // if (typeName.equals("int") || typeName.equals("java.lang.Integer"))
+    // return "int";
+    // if (typeName.equals("long") || typeName.equals("java.lang.Long"))
+    // return "long";
+    // if (typeName.equals("double") || typeName.equals("java.lang.Double"))
+    // return "double";
+    // if (typeName.equals("boolean") || typeName.equals("java.lang.Boolean"))
+    // return "boolean";
+    // if (typeName.equals("java.util.Date"))
+    // return "date";
 
-            return "string";
-        }
-        return "reference";
-    }
+    // return "string";
+    // }
+    // return "reference";
+    // }
 
-    /**
-     * Format field value for XML output.
-     */
-    public static String formatFieldValue(Object value, DODatabaseField field) {
-        if (value == null)
-            return "";
+    // /**
+    // * Format field value for XML output.
+    // */
+    // public static String formatFieldValue(Object value, DODatabaseField field) {
+    // if (value == null)
+    // return "";
 
-        if (value instanceof Date && getFieldType(field).equals("date")) {
-            return DATE_FORMAT.format((Date) value);
-        }
+    // if (value instanceof Date && getFieldType(field).equals("date")) {
+    // return DATE_FORMAT.format((Date) value);
+    // }
 
-        return String.valueOf(value);
-    }
+    // return String.valueOf(value);
+    // }
 
     /**
      * Get simple type name from full class name.
@@ -111,76 +107,78 @@ public class XMLExportUtils {
         return lastDot >= 0 ? className.substring(lastDot + 1) : className;
     }
 
-    /**
-     * Check if a value is empty or meaningless for export.
-     */
-    public static boolean isEmptyValue(Object value, DODatabaseField field) {
-        if (value == null) {
-            return true;
-        }
+    // /**
+    // * Check if a value is empty or meaningless for export.
+    // */
+    // public static boolean isEmptyValue(Object value, DODatabaseField field) {
+    // if (value == null) {
+    // return true;
+    // }
 
-        if (value instanceof String) {
-            String strValue = ((String) value).trim();
-            return strValue.isEmpty();
-        }
+    // if (value instanceof String) {
+    // String strValue = ((String) value).trim();
+    // return strValue.isEmpty();
+    // }
 
-        if (value instanceof Number) {
-            Number numValue = (Number) value;
-            double doubleValue = numValue.doubleValue();
+    // if (value instanceof Number) {
+    // Number numValue = (Number) value;
+    // double doubleValue = numValue.doubleValue();
 
-            // Skip -1 values for ID fields (indicates no reference)
-            if (isIDTypeField(field) && numValue.intValue() == -1) {
-                return true;
-            }
+    // // Skip -1 values for ID fields (indicates no reference)
+    // if (isIDTypeField(field) && numValue.intValue() == -1) {
+    // return true;
+    // }
 
-            // Skip 0 values for specific field types that are likely meaningless when zero
-            if (isZeroMeaninglessField(field) && doubleValue == 0.0) {
-                return true;
-            }
+    // // Skip 0 values for specific field types that are likely meaningless when
+    // zero
+    // if (isZeroMeaninglessField(field) && doubleValue == 0.0) {
+    // return true;
+    // }
 
-            // Skip SSI fields with -1 (they indicate no reference)
-            String fieldName = field.getName().toLowerCase();
-            if (fieldName.contains("ssi") && numValue.intValue() == -1) {
-                return true;
-            }
-        }
+    // // Skip SSI fields with -1 (they indicate no reference)
+    // String fieldName = field.getName().toLowerCase();
+    // if (fieldName.contains("ssi") && numValue.intValue() == -1) {
+    // return true;
+    // }
+    // }
 
-        if (value instanceof Date) {
-            Date dateValue = (Date) value;
-            // Skip default dates like 1900-01-01 which are often placeholders
-            Calendar cal = Calendar.getInstance();
-            cal.setTime(dateValue);
-            if (cal.get(Calendar.YEAR) <= 1900) {
-                return true;
-            }
-        }
+    // if (value instanceof Date) {
+    // Date dateValue = (Date) value;
+    // // Skip default dates like 1900-01-01 which are often placeholders
+    // Calendar cal = Calendar.getInstance();
+    // cal.setTime(dateValue);
+    // if (cal.get(Calendar.YEAR) <= 1900) {
+    // return true;
+    // }
+    // }
 
-        if (value instanceof Boolean) {
-            // Keep all boolean values as they are meaningful
-            return false;
-        }
+    // if (value instanceof Boolean) {
+    // // Keep all boolean values as they are meaningful
+    // return false;
+    // }
 
-        return false;
-    }
+    // return false;
+    // }
 
-    /**
-     * Check if this is an ID-type field.
-     */
-    public static boolean isIDTypeField(DODatabaseField field) {
-        String typeName = field.getTypeName();
-        return typeName != null && (typeName.startsWith("gen.util.ID") || typeName.contains(".ID"));
-    }
+    // /**
+    // * Check if this is an ID-type field.
+    // */
+    // public static boolean isIDTypeField(DODatabaseField field) {
+    // String typeName = field.getTypeName();
+    // return typeName != null && (typeName.startsWith("gen.util.ID") ||
+    // typeName.contains(".ID"));
+    // }
 
-    /**
-     * Determine if zero values for this field are likely meaningless.
-     */
-    public static boolean isZeroMeaninglessField(DODatabaseField field) {
-        String fieldName = field.getName().toLowerCase();
-        return fieldName.contains("annee") || // Year fields
-                fieldName.contains("year") ||
-                fieldName.contains("nbr") || // Count fields
-                fieldName.contains("count") ||
-                fieldName.contains("numero") || // Number fields
-                fieldName.contains("number");
-    }
+    // /**
+    // * Determine if zero values for this field are likely meaningless.
+    // */
+    // public static boolean isZeroMeaninglessField(DODatabaseField field) {
+    // String fieldName = field.getName().toLowerCase();
+    // return fieldName.contains("annee") || // Year fields
+    // fieldName.contains("year") ||
+    // fieldName.contains("nbr") || // Count fields
+    // fieldName.contains("count") ||
+    // fieldName.contains("numero") || // Number fields
+    // fieldName.contains("number");
+    // }
 }

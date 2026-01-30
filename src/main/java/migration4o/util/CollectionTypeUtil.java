@@ -1,9 +1,8 @@
 package migration4o.util;
 
-import migration4o.models.database.DODatabaseField;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Utility class for detecting and working with collection types.
@@ -33,19 +32,20 @@ public class CollectionTypeUtil {
             "VectRechID" // Project-specific collection type
     ));
 
-    /**
-     * Determines if a field represents a collection (array, list, set, map, etc.).
-     * 
-     * @param field The field to check
-     * @return true if the field is a collection type
-     */
-    public static boolean isCollection(DODatabaseField field) {
-        if (field == null) {
-            return false;
-        }
+    // /**
+    // * Determines if a field represents a collection (array, list, set, map,
+    // etc.).
+    // *
+    // * @param field The field to check
+    // * @return true if the field is a collection type
+    // */
+    // public static boolean isCollection(DOSDatabaseField field) {
+    // if (field == null) {
+    // return false;
+    // }
 
-        return field.isArray() || isCollectionType(field.getTypeName());
-    }
+    // return field.isArray() || isCollectionType(field.getTypeName());
+    // }
 
     /**
      * Determines if a type name represents a collection type.
@@ -73,44 +73,46 @@ public class CollectionTypeUtil {
         return false;
     }
 
-    /**
-     * Gets the content type of a collection field.
-     * For arrays, returns the component type.
-     * For generic collections, extracts the type parameter.
-     * 
-     * @param field The collection field
-     * @return The content type name, or null if it cannot be determined
-     */
-    public static String getCollectionContentType(DODatabaseField field) {
-        if (field == null || !isCollection(field)) {
-            return null;
-        }
+    // /**
+    // * Gets the content type of a collection field.
+    // * For arrays, returns the component type.
+    // * For generic collections, extracts the type parameter.
+    // *
+    // * @param field The collection field
+    // * @return The content type name, or null if it cannot be determined
+    // */
+    // public static String getCollectionContentType(DODatabaseField field) {
+    // if (field == null || !isCollection(field)) {
+    // return null;
+    // }
 
-        System.out.println("DEBUG getCollectionContentType for field: " + field.getName()
-                + ", typeName=" + field.getTypeName()
-                + ", isArray=" + field.isArray()
-                + ", contentTypeClass=" + field.getContentTypeClass()
-                + ", contentTypeName=" + field.getContentTypeName());
+    // System.out.println("DEBUG getCollectionContentType for field: " +
+    // field.getName()
+    // + ", typeName=" + field.getTypeName()
+    // + ", isArray=" + field.isArray()
+    // + ", contentTypeClass=" + field.getContentTypeClass()
+    // + ", contentTypeName=" + field.getContentTypeName());
 
-        // First, check if there's a content type class (most reliable)
-        if (field.getContentTypeClass() != null) {
-            String result = field.getContentTypeClass().getAbsoluteName();
-            System.out.println("  -> Using contentTypeClass: " + result);
-            return result;
-        }
+    // // First, check if there's a content type class (most reliable)
+    // if (field.getContentTypeClass() != null) {
+    // String result = field.getContentTypeClass().getAbsoluteName();
+    // System.out.println(" -> Using contentTypeClass: " + result);
+    // return result;
+    // }
 
-        // If the field already has a content type name, use it
-        String contentTypeName = field.getContentTypeName();
-        if (contentTypeName != null && !contentTypeName.isEmpty()) {
-            System.out.println("  -> Using contentTypeName: " + contentTypeName);
-            return contentTypeName;
-        }
+    // // If the field already has a content type name, use it
+    // String contentTypeName = field.getContentTypeName();
+    // if (contentTypeName != null && !contentTypeName.isEmpty()) {
+    // System.out.println(" -> Using contentTypeName: " + contentTypeName);
+    // return contentTypeName;
+    // }
 
-        // Try to determine from the type name
-        String result = extractContentTypeFromTypeName(field.getTypeName(), field.isArray());
-        System.out.println("  -> Extracted from type name: " + result);
-        return result;
-    }
+    // // Try to determine from the type name
+    // String result = extractContentTypeFromTypeName(field.getTypeName(),
+    // field.isArray());
+    // System.out.println(" -> Extracted from type name: " + result);
+    // return result;
+    // }
 
     /**
      * Extracts the content type from a type name.

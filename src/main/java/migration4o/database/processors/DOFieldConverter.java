@@ -72,7 +72,6 @@ public class DOFieldConverter {
         field.title = null;
         field.description = null;
         field.pointsTo = null;
-        field.databaseClass = null; // Will be linked later if needed
         field.childrenSchemaClass = null; // Will be linked later if needed
 
         return field;

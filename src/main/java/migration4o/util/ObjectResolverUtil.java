@@ -1,17 +1,16 @@
 package migration4o.util;
 
-import migration4o.models.database.DODatabaseField;
-import migration4o.models.database.DODatabase;
-import migration4o.models.database.DODatabaseClass;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
-
-import java.util.*;
-import java.util.Arrays;
 
 /**
  * Utility class for object resolution operations.
@@ -28,20 +27,6 @@ public class ObjectResolverUtil {
                 className.equals("java.util.ArrayList") ||
                 className.equals("java.util.LinkedList") ||
                 className.contains("VectRechID"); // Project-specific
-    }
-
-    /**
-     * Check if an object is any type of collection
-     */
-    /**
-     * Create a HashMap for quick class lookups by name
-     */
-    public static Map<String, DODatabaseClass> createDatabaseClassMap(DODatabase database) {
-        Map<String, DODatabaseClass> classMap = new HashMap<>();
-        for (DODatabaseClass dbClass : database.getClasses()) {
-            classMap.put(dbClass.getAbsoluteName(), dbClass);
-        }
-        return classMap;
     }
 
     /**
@@ -64,49 +49,6 @@ public class ObjectResolverUtil {
         }
 
         return allClassObjectIds;
-    }
-
-    /**
-     * Sort classes by inheritance specificity (most specific first)
-     * This ensures we process subclasses before their superclasses
-     */
-    public static List<String> sortClassesBySpecificity(Set<String> classNames,
-            Map<String, DODatabaseClass> classMap) {
-        List<String> sortedClasses = new ArrayList<>(classNames);
-
-        // Sort by inheritance depth (descending - most specific first)
-        sortedClasses.sort((a, b) -> {
-            int depthA = classMap.get(a) != null ? classMap.get(a).getInheritanceDepth() : 0;
-            int depthB = classMap.get(b) != null ? classMap.get(b).getInheritanceDepth() : 0;
-            return Integer.compare(depthB, depthA); // Descending order
-        });
-
-        return sortedClasses;
-    }
-
-    /**
-     * Find class definition by name in schema or database
-     */
-    public static DODatabaseClass findClassDefinition(String className, DOSchema schema, DODatabase database) {
-        // Try schema first
-        if (schema != null) {
-            for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (className.equals(schemaClass.source)) {
-                    return schemaClass.databaseClass;
-                }
-            }
-        }
-
-        // Try database
-        if (database != null) {
-            for (DODatabaseClass databaseClass : database.getClasses()) {
-                if (className.equals(databaseClass.getAbsoluteName())) {
-                    return databaseClass;
-                }
-            }
-        }
-
-        return null;
     }
 
     /**
@@ -163,73 +105,6 @@ public class ObjectResolverUtil {
     }
 
     /**
-     * Build complete inheritance chain for an object
-     */
-    public static DODatabaseClass[] buildInheritanceChain(DODatabaseClass mostSpecificClass,
-            DODatabaseClass databaseClass,
-            DOSchema schema, DODatabase database) {
-        List<DODatabaseClass> inheritanceChain = new ArrayList<>();
-
-        // Always include the most specific class first
-        inheritanceChain.add(mostSpecificClass);
-
-        if (databaseClass != null && !databaseClass.getInheritanceChain().isEmpty()) {
-            // Add parent classes from inheritance chain
-            for (DODatabaseClass parentDatabaseClass : databaseClass.getInheritanceChain()) {
-                DODatabaseClass parentClass = findClassDefinition(parentDatabaseClass.getAbsoluteName(), schema,
-                        database);
-                if (parentClass != null) {
-                    inheritanceChain.add(parentClass);
-                }
-            }
-        }
-
-        return inheritanceChain.toArray(new DODatabaseClass[0]);
-    }
-
-    /**
-     * Exclude an object from all its superclasses to avoid duplicate processing
-     */
-    public static void excludeObjectFromSuperclasses(Long objectId, DODatabaseClass databaseClass,
-            Set<String> excludedClassObjectPairs) {
-        if (databaseClass == null || databaseClass.getInheritanceChain().isEmpty()) {
-            return;
-        }
-
-        // Exclude this object from all superclasses in the inheritance chain
-        for (DODatabaseClass superClass : databaseClass.getInheritanceChain()) {
-            String excludeKey = superClass.getAbsoluteName() + ":" + objectId;
-            excludedClassObjectPairs.add(excludeKey);
-        }
-    }
-
-    /**
-     * Find the most specific class among multiple class names using inheritance
-     * depth
-     */
-    public static String findMostSpecificClass(DODatabase database, DOSchema schema, String[] classNames) {
-        if (classNames.length == 0)
-            return null;
-        if (classNames.length == 1)
-            return classNames[0];
-
-        Map<String, DODatabaseClass> classMap = createDatabaseClassMap(database);
-        String mostSpecific = classNames[0];
-        int maxDepth = -1;
-
-        for (String className : classNames) {
-            DODatabaseClass dbClass = classMap.get(className);
-            int depth = dbClass != null ? dbClass.getInheritanceDepth() : 0;
-            if (depth > maxDepth) {
-                maxDepth = depth;
-                mostSpecific = className;
-            }
-        }
-
-        return mostSpecific;
-    }
-
-    /**
      * Load objects in batch to minimize disk seeks
      */
     public static Map<Long, Object> loadObjectsBatch(ExtObjectContainer container, List<Long> objectIds) {
@@ -262,113 +137,6 @@ public class ObjectResolverUtil {
     }
 
     /**
-     * Get field value using db4o APIs
-     */
-    public static Object getFieldValue(ExtObjectContainer container, Object obj, DODatabaseField field) {
-        try {
-            String className = getObjectClassName(container, obj);
-            StoredClass storedClass = container.ext().storedClass(className);
-            if (storedClass != null) {
-                StoredField storedField = storedClass.storedField(field.getName(), null);
-                if (storedField != null) {
-                    return storedField.get(obj);
-                }
-            }
-        } catch (Exception e) {
-            // Field not accessible
-        }
-        return null;
-    }
-
-    /**
-     * Universal collection content extraction that works for all collection types
-     * (Vector, ArrayList, Arrays, etc.)
-     */
-    public static CollectionExtractionResult extractUniversalCollectionContents(
-            ExtObjectContainer container, Object collectionObj, Long objectId, DODatabaseField field) {
-        try {
-            List<Long> containedIds = new ArrayList<>();
-            String contentType = determineContentType(field, collectionObj);
-            int totalSize = 0;
-
-            // Handle different collection types uniformly
-            Iterable<?> iterable = convertToIterable(collectionObj);
-            if (iterable == null) {
-                return null;
-            }
-
-            // Count size
-            if (collectionObj instanceof Collection) {
-                totalSize = ((Collection<?>) collectionObj).size();
-            } else if (collectionObj instanceof Object[]) {
-                totalSize = ((Object[]) collectionObj).length;
-            } else {
-                // For other iterables, count manually
-                for (@SuppressWarnings("unused")
-                Object item : iterable) {
-                    totalSize++;
-                }
-            }
-
-            if (totalSize == 0) {
-                return null; // Skip empty collections
-            }
-
-            // Extract object IDs and determine content type
-            for (Object item : iterable) {
-                if (item != null) {
-                    Long itemId = getObjectId(container, item);
-                    if (itemId != null) {
-                        containedIds.add(itemId);
-                    }
-
-                    // Determine content type from first element if not already known
-                    if (contentType.equals("java.lang.Object")) {
-                        contentType = getObjectClassName(container, item);
-                    }
-                }
-            }
-
-            if (!containedIds.isEmpty()) {
-                return new CollectionExtractionResult(
-                        containedIds.toArray(new Long[0]),
-                        contentType,
-                        totalSize);
-            }
-
-        } catch (Exception e) {
-            // Return null for problematic collections
-        }
-
-        return null;
-    }
-
-    /**
-     * Convert any collection-like object to an Iterable for uniform processing
-     */
-    private static Iterable<?> convertToIterable(Object obj) {
-        if (obj instanceof Iterable) {
-            return (Iterable<?>) obj;
-        } else if (obj instanceof Object[]) {
-            return Arrays.asList((Object[]) obj);
-        }
-        return null;
-    }
-
-    /**
-     * Determine the content type of a collection
-     */
-    private static String determineContentType(DODatabaseField field, Object collectionObj) {
-        // First try to get from field definition
-        if (field != null && field.getContentTypeName() != null) {
-            return field.getContentTypeName();
-        }
-
-        // For standalone collections (like Vector objects), default to Object
-        return "java.lang.Object";
-    }
-
-    /**
      * Result of collection content extraction
      */
     public static class CollectionExtractionResult {
@@ -392,68 +160,4 @@ public class ObjectResolverUtil {
                 obj instanceof Map;
     }
 
-    /**
-     * Result of primitive field extraction
-     */
-    public static class PrimitiveFieldValue {
-        public final DODatabaseField field;
-        public final Object value;
-
-        public PrimitiveFieldValue(DODatabaseField field, Object value) {
-            this.field = field;
-            this.value = value;
-        }
-    }
-
-    /**
-     * Extract all primitive field values for an object on-demand.
-     * This method accesses the database to retrieve current field values.
-     * 
-     * @param container  The database container
-     * @param objectId   The ID of the object to extract fields from
-     * @param allClasses The complete inheritance chain for the object
-     * @return Map of field name to PrimitiveFieldValue, or empty map if extraction
-     *         fails
-     */
-    public static Map<String, PrimitiveFieldValue> extractPrimitiveFieldValues(
-            ExtObjectContainer container,
-            Long objectId,
-            DODatabaseClass[] allClasses) {
-        Map<String, PrimitiveFieldValue> fieldValues = new LinkedHashMap<>();
-
-        try {
-            // Get the actual object from the database
-            Object actualObj = container.getByID(objectId);
-            if (actualObj == null) {
-                return fieldValues;
-            }
-
-            // Activate the object
-            activateObject(container, actualObj, objectId);
-
-            // Collect primitive fields from the entire class hierarchy
-            if (allClasses != null) {
-                for (DODatabaseClass dbClass : allClasses) {
-                    DODatabaseField[] fields = dbClass.getFields();
-                    if (fields != null) {
-                        for (DODatabaseField field : fields) {
-                            // Only include primitive types
-                            if (TypeUtil.isPrimitiveType(field)) {
-                                try {
-                                    Object value = getFieldValue(container, actualObj, field);
-                                    fieldValues.put(field.getName(), new PrimitiveFieldValue(field, value));
-                                } catch (Exception e) {
-                                    // Skip fields that can't be read
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            // Return empty map on failure
-        }
-
-        return fieldValues;
-    }
 }

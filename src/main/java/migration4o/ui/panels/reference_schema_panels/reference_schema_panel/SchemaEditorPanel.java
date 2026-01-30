@@ -580,7 +580,8 @@ public class SchemaEditorPanel extends JPanel {
 
     /**
      * Updates the table cell renderers with the loaded schema.
-     * Must be called after schema is loaded to ensure renderers have access to schema classes.
+     * Must be called after schema is loaded to ensure renderers have access to
+     * schema classes.
      */
     private void updateTableRenderers() {
         if (fieldsTable != null && schema != null) {
@@ -1394,7 +1395,6 @@ public class SchemaEditorPanel extends JPanel {
         newField.isCollection = false;
         newField.embedContents = false;
         newField.childrenType = "";
-        newField.databaseClass = null;
         newField.childrenSchemaClass = null;
 
         // Show field editor dialog
@@ -1425,7 +1425,6 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.title = dialog.getFieldTitle();
             newFieldWithData.description = dialog.getFieldDescription();
             newFieldWithData.pointsTo = dialog.getFieldPointsTo();
-            newFieldWithData.databaseClass = null;
             newFieldWithData.childrenSchemaClass = null;
 
             // Add the new field to the table
@@ -1611,7 +1610,6 @@ public class SchemaEditorPanel extends JPanel {
             field.title = title;
             field.description = description;
             field.pointsTo = pointsTo;
-            field.databaseClass = null;
             field.childrenSchemaClass = null;
             newFields[i] = field;
         }

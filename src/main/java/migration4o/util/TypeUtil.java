@@ -1,6 +1,5 @@
 package migration4o.util;
 
-import migration4o.models.database.DODatabaseField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -22,11 +21,6 @@ public class TypeUtil {
 
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(field.type, schema);
         return fieldClass != null && fieldClass.isIDEntite(schema);
-    }
-
-    public static boolean isPrimitiveType(DODatabaseField field) {
-        String typeName = field.getTypeName();
-        return isPrimitiveType(typeName);
     }
 
     public static boolean isPrimitiveType(String typeName) {

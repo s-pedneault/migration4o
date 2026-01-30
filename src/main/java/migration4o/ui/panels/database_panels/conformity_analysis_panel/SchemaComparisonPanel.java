@@ -518,7 +518,7 @@ public class SchemaComparisonPanel extends JPanel {
         DOSchemaClass classToShow = isLeftTree ? diff.getReferenceClass() : diff.getComparedClass();
         if (classToShow != null) {
             info.append("Fields: ").append(classToShow.fields != null ? classToShow.fields.length : 0);
-            int objectCount = classToShow.databaseClass != null ? classToShow.databaseClass.getTotalObjectCount() : 0;
+            int objectCount = classToShow.objectIds != null ? classToShow.objectIds.length : 0;
             int uniqueObjectCount = classToShow.uniqueObjectIds != null ? classToShow.uniqueObjectIds.length : 0;
             if (objectCount > 0) {
                 info.append("  |  Objects: ").append(objectCount);
@@ -808,7 +808,6 @@ public class SchemaComparisonPanel extends JPanel {
             newField.childrenType = dialog.getFieldChildrenType();
             newField.title = dialog.getFieldTitle();
             newField.description = dialog.getFieldDescription();
-            newField.databaseClass = oldField.databaseClass;
             newField.childrenSchemaClass = oldField.childrenSchemaClass;
 
             // Replace the field in the class's field array
