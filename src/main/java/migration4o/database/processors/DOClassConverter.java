@@ -6,6 +6,7 @@ import java.util.Map;
 import com.db4o.ext.StoredClass;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.database.DODatabaseMonitor;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.DatabaseUtil;
@@ -27,6 +28,22 @@ public class DOClassConverter {
     public static DOSchemaClass convertStoredClassToSchemaClass(
             StoredClass storedClass,
             DODatabaseContext context) {
+        return convertStoredClassToSchemaClass(storedClass, context, null);
+    }
+
+    /**
+     * Converts a StoredClass directly to a DOSchemaClass.
+     * 
+     * @param storedClass The DB4O stored class to convert
+     * @param context     The database context containing container and stored class
+     *                    map
+     * @param monitor     Optional monitor for progress feedback
+     * @return A DOSchemaClass representing the stored class
+     */
+    public static DOSchemaClass convertStoredClassToSchemaClass(
+            StoredClass storedClass,
+            DODatabaseContext context,
+            DODatabaseMonitor monitor) {
 
         String absoluteName = storedClass.getName();
         String simpleName = DatabaseUtil.getSimpleClassName(absoluteName);
@@ -46,10 +63,18 @@ public class DOClassConverter {
                 storedClass,
                 context);
 
-        // Get object IDs
+        // Get object IDs - this can be very expensive for classes with many objects
+        if (monitor != null) {
+            monitor.onRetrievingObjectIds(absoluteName, objectCount);
+        }
+
         long[] objectIds = storedClass.getIDs();
         if (objectIds == null) {
             objectIds = new long[0];
+        }
+
+        if (monitor != null) {
+            monitor.onObjectIdsRetrieved(absoluteName, objectIds.length);
         }
 
         // Create schema class - all database classes are marked as migrate=true

@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import migration4o.database.DODatabaseMonitor;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 
@@ -32,11 +33,25 @@ public class DOObjectDeduplicator {
      * @return A new schema with deduplicated object IDs
      */
     public static DOSchema deduplicateObjectIdsInInheritanceHierarchies(DOSchema schema) {
+        return deduplicateObjectIdsInInheritanceHierarchies(schema, null);
+    }
+
+    /**
+     * Deduplicates object IDs across inheritance hierarchies.
+     * 
+     * Algorithm:
+     * 1. Find all leaf classes (classes with no subclasses)
+     * 2. For each leaf class, get its object IDs
+     * 3. For each object ID, walk up the parent chain and remove it from ancestors
+     * 
+     * @param schema  The schema with potentially duplicate object IDs
+     * @param monitor Optional monitor for progress feedback
+     * @return A new schema with deduplicated object IDs
+     */
+    public static DOSchema deduplicateObjectIdsInInheritanceHierarchies(DOSchema schema, DODatabaseMonitor monitor) {
         if (schema == null || schema.getClasses() == null || schema.getClasses().length == 0) {
             return schema;
         }
-
-        System.out.println("Deduplicating object IDs across inheritance hierarchies...");
 
         // Create a map for quick class lookup
         Map<String, DOSchemaClass> classMap = new HashMap<>();
@@ -47,12 +62,25 @@ public class DOObjectDeduplicator {
         // Find leaf classes (classes with no subclasses)
         List<DOSchemaClass> leafClasses = findLeafClasses(schema, classMap);
 
+        if (monitor != null) {
+            monitor.onStartingDeduplication(leafClasses.size());
+        } else {
+            System.out.println("Deduplicating object IDs across inheritance hierarchies...");
+        }
+
         // Track which IDs should be removed from each class
         Map<String, java.util.Set<Long>> idsToRemove = new HashMap<>();
 
         // For each leaf class, mark its object IDs for removal from all ancestor
         // classes
+        int leafIndex = 0;
         for (DOSchemaClass leafClass : leafClasses) {
+            leafIndex++;
+
+            if (monitor != null) {
+                monitor.onProcessingLeafClass(leafClass.source, leafIndex, leafClasses.size());
+            }
+
             if (leafClass.objectIds == null || leafClass.objectIds.length == 0) {
                 continue;
             }
@@ -79,6 +107,7 @@ public class DOObjectDeduplicator {
 
         // Now update uniqueObjectIds for all classes (keep objectIds unchanged)
         int deduplicatedCount = 0;
+        int totalRemoved = 0;
         for (DOSchemaClass cls : schema.getClasses()) {
             java.util.Set<Long> toRemove = idsToRemove.get(cls.source);
 
@@ -90,8 +119,13 @@ public class DOObjectDeduplicator {
                 int removedCount = cls.objectIds.length - uniqueIds.length;
                 if (removedCount > 0) {
                     deduplicatedCount++;
-                    System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.source +
-                            " (" + cls.objectIds.length + " -> " + uniqueIds.length + ")");
+                    totalRemoved += removedCount;
+                    if (monitor != null) {
+                        monitor.onClassDeduplicated(cls.source, removedCount, uniqueIds.length);
+                    } else {
+                        System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.source +
+                                " (" + cls.objectIds.length + " -> " + uniqueIds.length + ")");
+                    }
                 }
             } else if (cls.objectIds != null) {
                 // No deduplication needed - copy objectIds to uniqueObjectIds
@@ -99,8 +133,12 @@ public class DOObjectDeduplicator {
             }
         }
 
-        System.out.println("Object ID deduplication complete: " + leafClasses.size() + " leaf classes, " +
-                deduplicatedCount + " classes deduplicated");
+        if (monitor != null) {
+            monitor.onDeduplicationComplete(leafClasses.size(), totalRemoved);
+        } else {
+            System.out.println("Object ID deduplication complete: " + leafClasses.size() + " leaf classes, " +
+                    deduplicatedCount + " classes deduplicated");
+        }
 
         return schema;
     }

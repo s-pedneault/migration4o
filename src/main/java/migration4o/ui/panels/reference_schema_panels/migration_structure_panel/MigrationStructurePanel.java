@@ -753,8 +753,8 @@ public class MigrationStructurePanel extends JPanel {
      * Exports a single class to XML
      */
     private void exportClass(ClassNode classNode) {
-        // Create export service and validate prerequisites
-        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        // Create export service (uses singletons for database and schema)
+        MigrationExportService exportService = new MigrationExportService();
         MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
 
         if (!validation.isValid()) {
@@ -831,8 +831,8 @@ public class MigrationStructurePanel extends JPanel {
      * Exports an entire module (with all its classes and nested modules) to XML
      */
     private void exportModule(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
-        // Create export service and validate prerequisites
-        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        // Create export service (uses singletons for database and schema)
+        MigrationExportService exportService = new MigrationExportService();
         MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
 
         if (!validation.isValid()) {
@@ -1010,8 +1010,8 @@ public class MigrationStructurePanel extends JPanel {
      * Repeats the last export operation if history exists.
      */
     public void repeatLastExport() {
-        // Create export service and validate prerequisites
-        MigrationExportService exportService = new MigrationExportService(schema, databaseSchema, databasePath);
+        // Create export service (uses singletons for database and schema)
+        MigrationExportService exportService = new MigrationExportService();
         MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
 
         if (!validation.isValid()) {

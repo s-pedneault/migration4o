@@ -9,6 +9,7 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.database.DODatabaseMonitor;
 import migration4o.models.schema.DOSchemaField;
 
 /**
@@ -36,9 +37,30 @@ public class DOFieldsConverter {
     public static DOSchemaField[] convertStoredFieldsToSchemaFields(
             StoredClass storedClass,
             DODatabaseContext context) {
+        return convertStoredFieldsToSchemaFields(storedClass, context, null);
+    }
+
+    /**
+     * Converts stored fields to schema fields.
+     * Deduplicates fields with the same name (keeps array version if both exist).
+     * 
+     * @param storedClass The stored class containing the fields
+     * @param context     The database context containing container and stored class
+     *                    map
+     * @param monitor     Optional monitor for progress feedback
+     * @return Array of converted schema fields
+     */
+    public static DOSchemaField[] convertStoredFieldsToSchemaFields(
+            StoredClass storedClass,
+            DODatabaseContext context,
+            DODatabaseMonitor monitor) {
 
         try {
             StoredField[] storedFields = storedClass.getStoredFields();
+
+            if (monitor != null) {
+                monitor.onConvertingFields(storedClass.getName(), storedFields.length);
+            }
 
             // Use a map to deduplicate fields by name
             Map<String, StoredField> fieldMap = new LinkedHashMap<>();
@@ -66,15 +88,24 @@ public class DOFieldsConverter {
                     DOSchemaField schemaField = DOFieldConverter.convertStoredFieldToSchemaField(sf, context);
                     schemaFields.add(schemaField);
                 } catch (Exception e) {
-                    System.out.println("Warning: Could not convert field '" +
-                            sf.getName() + "': " + e.getMessage());
+                    String errorMsg = "Could not convert field '" + sf.getName() + "': " + e.getMessage();
+                    if (monitor != null) {
+                        monitor.onFieldConversionWarning(storedClass.getName(), sf.getName(), e.getMessage());
+                    } else {
+                        System.out.println("Warning: " + errorMsg);
+                    }
                 }
             }
 
             return schemaFields.toArray(new DOSchemaField[0]);
 
         } catch (Exception e) {
-            System.out.println("Error converting fields for class " + storedClass.getName() + ": " + e.getMessage());
+            String errorMsg = "Error converting fields for class " + storedClass.getName() + ": " + e.getMessage();
+            if (monitor != null) {
+                monitor.onFieldConversionError(storedClass.getName(), e.getMessage());
+            } else {
+                System.out.println(errorMsg);
+            }
             return new DOSchemaField[0];
         }
     }

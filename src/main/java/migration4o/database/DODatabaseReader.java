@@ -27,6 +27,22 @@ import migration4o.util.DatabaseUtil;
  */
 public class DODatabaseReader {
 
+    private DODatabaseMonitor monitor;
+
+    /**
+     * Creates a new database reader without a monitor
+     */
+    public DODatabaseReader() {
+        this(null);
+    }
+
+    /**
+     * Creates a new database reader with an optional monitor
+     */
+    public DODatabaseReader(DODatabaseMonitor monitor) {
+        this.monitor = monitor;
+    }
+
     /**
      * Reads a database and directly creates a DOSchema representation.
      * 
@@ -40,24 +56,47 @@ public class DODatabaseReader {
 
         try {
             StoredClass[] storedClasses = DatabaseUtil.getStoredClassesSafely(container);
-            System.out.println("DODatabaseReaderV2: Reading " + storedClasses.length + " classes directly as schema");
+
+            if (monitor != null) {
+                monitor.onStartingSchemaRead(storedClasses.length);
+            } else {
+                System.out
+                        .println("DODatabaseReaderV2: Reading " + storedClasses.length + " classes directly as schema");
+            }
 
             // Create database context
+            if (monitor != null) {
+                monitor.onCreatingDatabaseContext();
+            }
+
             DODatabaseContext context = new DODatabaseContext(
                     container,
                     DOClassConverter.createStoredClassMap(storedClasses));
 
             // Convert stored classes to schema classes
+            if (monitor != null) {
+                monitor.onConvertingClasses(storedClasses.length);
+            }
+
             DOSchemaClass[] schemaClasses = DOClassesConverter.convertStoredClassesToSchemaClasses(
                     storedClasses,
-                    context);
+                    context,
+                    monitor);
 
             // Create modules - single module containing all classes
+            if (monitor != null) {
+                monitor.onCreatingModules(1);
+            }
+
             DOSchemaModule[] modules = new DOSchemaModule[] {
                     new DOSchemaModule("Database Classes", schemaClasses)
             };
 
             // Create schema
+            if (monitor != null) {
+                monitor.onCreatingSchema(schemaClasses.length);
+            }
+
             DOSchema schema = new DOSchema(
                     schemaClasses,
                     modules,
@@ -65,13 +104,21 @@ public class DODatabaseReader {
             );
 
             // Deduplicate object IDs across inheritance hierarchies
-            schema = DOObjectDeduplicator.deduplicateObjectIdsInInheritanceHierarchies(schema);
+            schema = DOObjectDeduplicator.deduplicateObjectIdsInInheritanceHierarchies(schema, monitor);
 
-            System.out.println("Successfully created schema with " + schemaClasses.length + " classes");
+            if (monitor != null) {
+                monitor.onSchemaReadComplete(schemaClasses.length);
+            } else {
+                System.out.println("Successfully created schema with " + schemaClasses.length + " classes");
+            }
             return schema;
 
         } catch (Exception e) {
-            System.out.println("Error reading database as schema: " + e.getMessage());
+            if (monitor != null) {
+                monitor.onSchemaReadError(e.getMessage());
+            } else {
+                System.out.println("Error reading database as schema: " + e.getMessage());
+            }
             e.printStackTrace();
             return createEmptySchema();
         }

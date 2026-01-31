@@ -23,7 +23,7 @@ import javax.swing.table.DefaultTableModel;
 
 import com.db4o.ext.ExtObjectContainer;
 
-import migration4o.database.DODatabaseOpener;
+import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -164,9 +164,12 @@ public class ClassObjectsDialog extends JDialog {
     private void loadObjectsFromDatabase(int startIdx, int endIdx) {
         ExtObjectContainer container = null;
         try {
-            // Open database
-            DODatabaseOpener opener = new DODatabaseOpener();
-            container = opener.openDatabase(databasePath);
+            // Get the shared in-memory database container
+            container = DODatabaseService.getInstance().getContainer();
+
+            if (container == null) {
+                throw new IllegalStateException("No database is currently open.");
+            }
 
             // Get all fields including inherited ones
             List<FieldInfo> fields = collectAllFields(schemaClass, schema);

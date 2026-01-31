@@ -44,7 +44,7 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
-import migration4o.database.DODatabaseOpener;
+import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
@@ -435,15 +435,18 @@ public class MigrationCoveragePanel extends JPanel {
         SwingWorker<Void, TreeUpdate> worker = new SwingWorker<>() {
             @Override
             protected Void doInBackground() throws Exception {
-                publish(new TreeUpdate(TreeUpdateType.STATUS, "Opening database..."));
+                publish(new TreeUpdate(TreeUpdateType.STATUS, "Getting database connection..."));
 
                 ExtObjectContainer container = null;
                 try {
-                    // Open database
-                    DODatabaseOpener opener = new DODatabaseOpener();
-                    container = opener.openDatabase(databasePath);
+                    // Get the shared in-memory database container
+                    container = DODatabaseService.getInstance().getContainer();
 
-                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Database opened successfully"));
+                    if (container == null) {
+                        throw new IllegalStateException("No database is currently open.");
+                    }
+
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Using shared database connection"));
 
                     // Track all reached objects globally to avoid infinite loops and duplicates
                     Set<Long> reachedObjectIds = new HashSet<>();

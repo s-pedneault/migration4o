@@ -9,7 +9,7 @@ import java.util.List;
 
 import com.db4o.ext.ExtObjectContainer;
 
-import migration4o.database.DODatabaseOpener;
+import migration4o.database.DODatabaseService;
 import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
@@ -28,11 +28,28 @@ public class XMLExportEngine {
     private final DOSchema schema;
     private final DOSchema databaseSchema;
     private final String databasePath;
+    private final ExtObjectContainer container;
 
+    /**
+     * Creates export engine using the shared in-memory database from
+     * DODatabaseService.
+     * 
+     * @param schema         The reference schema
+     * @param databaseSchema The database schema
+     * @param databasePath   The database file path (for naming output folders)
+     */
     public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
         this.schema = schema;
         this.databaseSchema = databaseSchema;
         this.databasePath = databasePath;
+
+        // Get the shared in-memory container from the service
+        this.container = DODatabaseService.getInstance().getContainer();
+
+        if (container == null) {
+            throw new IllegalStateException(
+                    "No database is open. Please open a database first using DODatabaseService.");
+        }
     }
 
     /**
@@ -85,13 +102,11 @@ public class XMLExportEngine {
         XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
-        ExtObjectContainer container = null;
         FileWriter fileWriter = null;
 
         try {
-            // Open database
-            DODatabaseOpener opener = new DODatabaseOpener();
-            container = opener.openDatabase(databasePath);
+            // Use the shared in-memory container (already opened by DODatabaseService)
+            // No need to open database here - saves time and memory
 
             // Create database-specific output paths
             Path dbBasePath = getBaseOutputPath(baseOutputDir);
@@ -187,12 +202,8 @@ public class XMLExportEngine {
         // Initialize components
         ExportStatistics statistics = new ExportStatistics();
 
-        ExtObjectContainer container = null;
-
         try {
-            // Open database
-            DODatabaseOpener opener = new DODatabaseOpener();
-            container = opener.openDatabase(databasePath);
+            // Use the in-memory container (already open)
 
             // Create database-specific output directory: output/<db-folder>/
             Path dbBasePath = getBaseOutputPath(baseOutputPath);
@@ -211,9 +222,7 @@ public class XMLExportEngine {
             return statistics.createResult(module.getName(), fullOutputPath);
 
         } finally {
-            if (container != null) {
-                container.close();
-            }
+            // Don't close container - it's shared and managed by MainWindow
         }
     }
 
@@ -337,13 +346,11 @@ public class XMLExportEngine {
         XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
-        ExtObjectContainer container = null;
         FileWriter fileWriter = null;
 
         try {
-            // Open database
-            DODatabaseOpener opener = new DODatabaseOpener();
-            container = opener.openDatabase(databasePath);
+            // Use the shared in-memory container (already opened by DODatabaseService)
+            // No need to open database here - saves time and memory
 
             // Create XML writer
             fileWriter = new FileWriter(outputPath);

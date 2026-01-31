@@ -3,6 +3,8 @@ package migration4o.migration;
 import java.io.File;
 import java.util.List;
 
+import migration4o.database.DODatabaseService;
+import migration4o.schema.DOSchemaService;
 import migration4o.engine.export.ExportHistory;
 import migration4o.engine.export.XMLExportEngine;
 import migration4o.engine.export.monitoring.ExportResult;
@@ -18,24 +20,20 @@ import migration4o.schema.modules.DOModuleStructureReader;
  * XML,
  * separate from the UI concerns. It coordinates validation, export execution,
  * and history tracking.
+ * 
+ * Uses DODatabaseService and DOSchemaService singletons for data access.
  */
 public class MigrationExportService {
 
-    private final DOSchema referenceSchema;
-    private final DOSchema databaseSchema;
-    private final String databasePath;
+    private final DODatabaseService databaseService = DODatabaseService.getInstance();
+    private final DOSchemaService schemaService = DOSchemaService.getInstance();
 
     /**
      * Creates a new migration export service.
-     * 
-     * @param referenceSchema The reference schema with class definitions
-     * @param databaseSchema  The database schema with actual object IDs
-     * @param databasePath    Path to the currently opened database
+     * Uses the singleton services for database and schema access.
      */
-    public MigrationExportService(DOSchema referenceSchema, DOSchema databaseSchema, String databasePath) {
-        this.referenceSchema = referenceSchema;
-        this.databaseSchema = databaseSchema;
-        this.databasePath = databasePath;
+    public MigrationExportService() {
+        // Services are accessed via singletons
     }
 
     /**
@@ -45,14 +43,14 @@ public class MigrationExportService {
      *         error
      */
     public ValidationResult validateExportPrerequisites() {
-        if (databasePath == null || databasePath.trim().isEmpty()) {
+        if (!databaseService.isDatabaseOpen()) {
             return ValidationResult.error("No database is currently open. Please open a database first.",
                     "No Database");
         }
 
-        if (databaseSchema == null) {
-            return ValidationResult.error("No database schema available. Please open a database first.",
-                    "No Database Schema");
+        if (!schemaService.isSchemaLoaded()) {
+            return ValidationResult.error("No reference schema loaded. Please load the schema first.",
+                    "No Schema");
         }
 
         return ValidationResult.success();
@@ -68,6 +66,10 @@ public class MigrationExportService {
      */
     public ExportResult exportClass(DOSchemaClass schemaClass, String outputPath) throws Exception {
         String className = schemaClass.source;
+
+        DOSchema referenceSchema = schemaService.getReferenceSchema();
+        DOSchema databaseSchema = databaseService.getDatabaseSchema();
+        String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         ExportResult result = exporter.exportClass(className, outputPath);
@@ -99,6 +101,10 @@ public class MigrationExportService {
     @Deprecated
     public ExportResult exportModule(List<String> classNames, String moduleName, String outputPath) throws Exception {
         // Empty module validation is handled by UI
+        DOSchema referenceSchema = schemaService.getReferenceSchema();
+        DOSchema databaseSchema = databaseService.getDatabaseSchema();
+        String databasePath = databaseService.getCurrentDatabasePath();
+
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         ExportResult result = exporter.exportModule(classNames, moduleName, outputPath);
 
@@ -124,6 +130,10 @@ public class MigrationExportService {
      * @throws Exception if export fails
      */
     public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath) throws Exception {
+        DOSchema referenceSchema = schemaService.getReferenceSchema();
+        DOSchema databaseSchema = databaseService.getDatabaseSchema();
+        String databasePath = databaseService.getCurrentDatabasePath();
+
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         ExportResult result = exporter.exportModuleStructured(module, baseOutputPath);
 
@@ -154,6 +164,10 @@ public class MigrationExportService {
         if (params == null) {
             return null; // No history available
         }
+
+        DOSchema referenceSchema = schemaService.getReferenceSchema();
+        DOSchema databaseSchema = databaseService.getDatabaseSchema();
+        String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
 

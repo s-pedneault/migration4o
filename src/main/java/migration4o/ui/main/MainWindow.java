@@ -27,11 +27,14 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import migration4o.database.DODatabaseOpener;
 import migration4o.database.DODatabaseReader;
+import migration4o.database.DODatabaseService;
+import migration4o.schema.DOSchemaService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ComparisonTabInfo;
 import migration4o.models.ui.SchemaTabInfo;
+import migration4o.ui.common.DatabaseProgressMonitor;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
@@ -64,7 +67,10 @@ public class MainWindow extends JFrame {
     private Component conformityAnalysisTab = null;
     private Component migrationCoverageTab = null;
     private DOSchema currentDatabaseSchema = null;
-    private String currentDatabasePath = null;
+
+    // Services manage the actual database and schema
+    private final DODatabaseService databaseService = DODatabaseService.getInstance();
+    private final DOSchemaService schemaService = DOSchemaService.getInstance();
 
     public MainWindow() {
         initializeUI();
@@ -123,6 +129,7 @@ public class MainWindow extends JFrame {
             referenceSchemaPanel = new SchemaEditorPanel();
             referenceSchemaPanel.setOnCompareRequested(() -> openDatabaseFile());
             DOSchema schema = referenceSchemaPanel.getSchema();
+
             addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);
 
             // Add schema structure tab
@@ -207,10 +214,11 @@ public class MainWindow extends JFrame {
             return;
         }
 
-        currentDatabasePath = selectedFile.getAbsolutePath();
-
         // Show loading state on welcome panel
         welcomePanel.showLoading(selectedFile.getAbsolutePath());
+
+        // Create progress monitor for UI feedback
+        DatabaseProgressMonitor monitor = new DatabaseProgressMonitor(this, "Opening Database");
 
         // Process in background thread
         SwingWorker<DOSchema, Void> worker = new SwingWorker<>() {
@@ -219,16 +227,19 @@ public class MainWindow extends JFrame {
             @Override
             protected DOSchema doInBackground() {
                 try {
-                    // Open database
-                    DODatabaseOpener opener = new DODatabaseOpener();
-                    var objectContainer = opener.openDatabase(selectedFile.getAbsolutePath());
+                    // Show the progress dialog
+                    monitor.show();
 
-                    // Read database as schema using DODatabaseReaderV2
-                    DODatabaseReader reader = new DODatabaseReader();
+                    // Open database using the service (loads into memory, reused everywhere)
+                    DODatabaseOpener opener = new DODatabaseOpener(monitor);
+                    var objectContainer = opener.openDatabase(selectedFile.getAbsolutePath(), true);
+
+                    // Register with service
+                    databaseService.openDatabase(selectedFile.getAbsolutePath());
+
+                    // Read database as schema using DODatabaseReader with monitor
+                    DODatabaseReader reader = new DODatabaseReader(monitor);
                     DOSchema schema = reader.readDatabaseAsSchema(objectContainer);
-
-                    // Close database
-                    objectContainer.close();
 
                     return schema;
 
@@ -236,6 +247,9 @@ public class MainWindow extends JFrame {
                     e.printStackTrace();
                     errorMessage = e.getMessage();
                     return null;
+                } finally {
+                    // Hide the progress dialog
+                    monitor.hide();
                 }
             }
 
@@ -300,7 +314,7 @@ public class MainWindow extends JFrame {
                     createMigrationCoverageTab(inferredSchema);
 
                     // Notify all tabs that a database has been opened
-                    notifyTabsDatabaseOpened(currentDatabasePath, inferredSchema);
+                    notifyTabsDatabaseOpened(databaseService.getCurrentDatabasePath(), inferredSchema);
 
                     // Update welcome panel state
                     welcomePanel.setDatabaseOpen(true);
@@ -392,7 +406,7 @@ public class MainWindow extends JFrame {
         MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(
                 referenceTab.editorPanel.getSchema(),
                 databaseSchema,
-                currentDatabasePath);
+                databaseService.getCurrentDatabasePath());
 
         // Store and add migration coverage tab
         migrationCoverageTab = coveragePanel;
@@ -403,6 +417,9 @@ public class MainWindow extends JFrame {
      * Closes the database and removes all database-related tabs.
      */
     private void closeDatabase() {
+        // Close the database using the service
+        databaseService.closeDatabase();
+
         // Remove database-related tabs
         if (databaseSchemaTab != null) {
             tabbedPane.remove(databaseSchemaTab);
@@ -422,13 +439,22 @@ public class MainWindow extends JFrame {
         }
 
         currentDatabaseSchema = null;
-        currentDatabasePath = null;
 
         // Update welcome panel state
         welcomePanel.setDatabaseOpen(false);
 
         // Switch to welcome tab
         tabbedPane.setSelectedIndex(0);
+    }
+
+    /**
+     * Gets the current in-memory database container from the service.
+     * This allows reusing the same in-memory instance across all operations.
+     * 
+     * @return The database container, or null if no database is open
+     */
+    public com.db4o.ext.ExtObjectContainer getDatabaseContainer() {
+        return databaseService.getContainer();
     }
 
     /**
