@@ -836,7 +836,7 @@
     <class source="gest.dossPrev.DossPrev" destinationName="DossierAdresse" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.gen.VoieCircul" field="mVectTempIDDossPrevAssoc" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
-        <field source="INDEX_toString" destinationName="index_toString" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="INDEX_toString" destinationName="index_toString" isExported="false" skipIfEmpty="true" type="string" />
         <field source="NbrEtage" destinationName="nbrEtage" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipIfEmpty="true" type="gest.gen.Adresse" />
         <field source="mAireAuSol" destinationName="aireAuSol" isExported="true" skipIfEmpty="true" type="int" />
@@ -1076,13 +1076,13 @@
         <reference class="gest.utilGroupe.DroitPourUtilisateurs" field="mVectIDEmploye" />
         <field source="mID" destinationName="id" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipIfEmpty="true" type="gest.gen.Adresse" />
-        <field source="mCell" destinationName="cell" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="mCell" destinationName="cellulaire" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mCodePermanent" destinationName="codePermanent" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mCouriel" destinationName="couriel" isExported="true" skipIfEmpty="true" type="string" />
-        <field source="mCourielPaget" destinationName="courielPaget" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="mCourielPaget" destinationName="courielTeleavertisseur" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mDateEmbauche" destinationName="dateEmbauche" isExported="true" skipIfEmpty="true" type="date" />
         <field source="mDateFin" destinationName="dateFin" isExported="true" skipIfEmpty="true" type="date" />
-        <field source="mDateNais" destinationName="dateNais" isExported="true" skipIfEmpty="true" type="date" />
+        <field source="mDateNais" destinationName="dateNaissance" isExported="true" skipIfEmpty="true" type="date" />
         <field source="mInactif" destinationName="inactif" isExported="true" skipIfEmpty="true" type="boolean" />
         <field source="mMatricule" destinationName="matricule" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNAS" destinationName="nas" isExported="true" skipIfEmpty="true" type="string" />
@@ -1091,8 +1091,8 @@
         <field source="mNumAssMaladie" destinationName="numAssMaladie" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNumEmploye" destinationName="numEmploye" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNumSeqTache" destinationName="numSeqTache" isExported="true" skipIfEmpty="true" type="string" />
-        <field source="mPaget" destinationName="paget" isExported="true" skipIfEmpty="true" type="string" />
-        <field source="mPagetCode" destinationName="pagetCode" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="mPaget" destinationName="teleavertisseur" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="mPagetCode" destinationName="teleavertisseurCode" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mPermisClasse" destinationName="permisClasse" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mPermisConduire" destinationName="permisConduire" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mPermisExpiration" destinationName="permisExpiration" isExported="true" skipIfEmpty="true" type="date" />
@@ -1100,24 +1100,24 @@
         <field source="mTelBureau" destinationName="telBureau" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mTelTravailExt" destinationName="telTravailExt" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mTypeEmploye" destinationName="typeEmploye" isExported="true" skipIfEmpty="true" type="int" />
-        <field source="mUtilisateur" destinationName="utilisateur" isExported="true" skipIfEmpty="true" type="boolean" />
+        <field source="mUtilisateur" destinationName="aCompteUtilisateur" isExported="true" skipIfEmpty="true" type="boolean" />
         <field source="mUtiliseTauxGrade" destinationName="utiliseTauxGrade" isExported="true" skipIfEmpty="true" type="boolean" />
-        <field source="mVectContactUrgence" destinationName="vectContactUrgence" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.ContactUrgence" />
-        <field source="mVectCoursAvantEmbauche" destinationName="vectCoursAvantEmbauche" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.formation.CoursAvantEmbauche" />
-        <field source="mVectEmployeDateTaux" destinationName="vectEmployeDateTaux" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.employe.EmployeDateTaux" />
-        <field source="mVectEmployeTaux" destinationName="vectEmployeTaux" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.EmployeTaux" />
-        <field source="mVectEmployeNomin" destinationName="vectEmployeNomin" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.EmployeNomin" />
-        <field source="mVectNonDispo" destinationName="vectNonDispo" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.Employe$NNonDispo" />
-        <field source="mVectPer" destinationName="vectPer" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.maintenance.PeriodiciteEquip" />
-        <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.gen.PhotoFich" />
-        <field source="mVectQteRequise" destinationName="vectQteRequise" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" childrenType="gest.equipement.QteRequise" />
+        <field source="mVectContactUrgence" destinationName="listeContactUrgence" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.ContactUrgence" />
+        <field source="mVectCoursAvantEmbauche" destinationName="listeCoursAvantEmbauche" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.formation.CoursAvantEmbauche" />
+        <field source="mVectEmployeDateTaux" destinationName="listeDateTaux" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.employe.EmployeDateTaux" />
+        <field source="mVectEmployeTaux" destinationName="listeTaux" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.EmployeTaux" />
+        <field source="mVectEmployeNomin" destinationName="listeNominations" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.EmployeNomin" />
+        <field source="mVectNonDispo" destinationName="listeNonDisponibilites" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.employe.Employe$NNonDispo" />
+        <field source="mVectPer" destinationName="listePeriodiciteEntretienEquipement" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.maintenance.PeriodiciteEquip" />
+        <field source="mVectPhotoFich" destinationName="listePhotoFich" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.gen.PhotoFich" />
+        <field source="mVectQteRequise" destinationName="listeQteRequiseEquipement" isExported="true" skipIfEmpty="true" type="gen.util.VectRechID" collection="true" childrenType="gest.equipement.QteRequise" />
         <field source="mWebCodeUtil" destinationName="webCodeUtil" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mWebMemeCodeAccesQueUtil" destinationName="webMemeCodeAccesQueUtil" isExported="true" skipIfEmpty="true" type="boolean" />
         <field source="mWebMotPasse" destinationName="webMotPasse" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mWebUtil" destinationName="webUtil" isExported="true" skipIfEmpty="true" type="boolean" />
         <field source="mIDCaserne" destinationName="idCaserne" isExported="true" skipIfEmpty="true" type="gest.caserne.IDCaserne" />
         <field source="mIDLangue" destinationName="idLangue" isExported="true" skipIfEmpty="true" type="gest.langue.IDLangue" />
-        <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
+        <field source="mIDSSI" destinationName="idSSI" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mIDSignature" destinationName="idSignature" isExported="true" skipIfEmpty="true" type="gest.fichier.IDFichier" />
         <field source="mIDUtilisateur" destinationName="idUtilisateur" isExported="true" skipIfEmpty="true" type="gest.utilGroupe.IDUtilisateur" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipIfEmpty="true" type="gest.vehicule.IDVehicule" />
@@ -1550,7 +1550,7 @@
         <reference class="gest.planInterv.PlanContact" field="mAdresse" />
         <reference class="gest.caserne.Caserne" field="mAdresse" />
         <reference class="gest.dossPrev.DossPrev" field="mVectAliasAdresse" />
-        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="true" skipIfEmpty="true" type="string" />
+        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="false" skipIfEmpty="true" type="string" />
         <field source="mAfficherSuite" destinationName="afficherSuite" isExported="true" skipIfEmpty="true" type="boolean" />
         <field source="mAppart" destinationName="appart" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mArrondissement" destinationName="arrondissement" isExported="true" skipIfEmpty="true" type="string" />
@@ -3887,7 +3887,7 @@
         <field source="mMotPasseDSI2003" destinationName="motPasseDSI2003" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mTypeLicence" destinationName="typeLicence" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mUtilCarto" destinationName="utilCarto" isExported="true" skipIfEmpty="true" type="gest.cartographie.ParamUtilisateurCartographie" embedContents="true" />
-        <field source="mVectIDGroupeParents" destinationName="vectIdGroupeParents" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" embedContents="false" childrenType="gest.utilGroupe.IDGroupe" />
+        <field source="mVectIDGroupeParents" destinationName="vectIdGroupeParents" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="gest.utilGroupe.IDGroupe" />
         <field source="mVectIDSSSI" destinationName="vectIdsSSI" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="int" />
         <field source="mVectLicConcur" destinationName="vectLicConcur" isExported="true" skipIfEmpty="true" type="java.util.Vector" collection="true" childrenType="int" />
         <field source="mIDLangue" destinationName="idLangue" isExported="true" skipIfEmpty="true" type="gest.langue.IDLangue" />
@@ -3899,7 +3899,7 @@
         <field source="mIdentification" destinationName="identification" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mNom" destinationName="nom" isExported="true" skipIfEmpty="true" type="string" />
         <field source="mReserve" destinationName="reserve" isExported="true" skipIfEmpty="true" type="boolean" />
-        <field source="mIDParent" destinationName="idParent" isExported="true" skipIfEmpty="true" type="gest.gen.IDEntite" embedContents="false" />
+        <field source="mIDParent" destinationName="idParent" isExported="true" skipIfEmpty="true" type="gest.gen.IDEntite" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
     </class>
     <class source="gest.vehicule.IDCompartiment" destinationName="IDCompartiment" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.vehicule.Compartiment">

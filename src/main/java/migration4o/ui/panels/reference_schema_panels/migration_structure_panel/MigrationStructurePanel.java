@@ -17,7 +17,6 @@ import java.awt.dnd.DropTargetDragEvent;
 import java.awt.dnd.DropTargetDropEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
@@ -26,7 +25,6 @@ import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
-import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -743,68 +741,63 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String simpleName = schemaClass.getSourceName();
 
-        // Ask user for output directory (changed from file chooser)
-        JFileChooser dirChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
-        dirChooser.setDialogTitle("Export " + simpleName + " - Select Output Directory");
-        dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        // Use default output directory automatically (output/<db-folder>/Data and
+        // Definitions)
+        String outputPath = "output";
 
-        if (dirChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            String outputPath = dirChooser.getSelectedFile().getAbsolutePath();
+        // Run export in background
+        SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
+            @Override
+            protected ExportResult doInBackground() throws Exception {
+                publish("Exporting " + simpleName + "...");
+                return exportService.exportClass(schemaClass, outputPath);
+            }
 
-            // Run export in background
-            SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
-                @Override
-                protected ExportResult doInBackground() throws Exception {
-                    publish("Exporting " + simpleName + "...");
-                    return exportService.exportClass(schemaClass, outputPath);
+            @Override
+            protected void process(List<String> chunks) {
+                for (String message : chunks) {
+                    System.out.println(message);
                 }
+            }
 
-                @Override
-                protected void process(List<String> chunks) {
-                    for (String message : chunks) {
-                        System.out.println(message);
-                    }
-                }
+            @Override
+            protected void done() {
+                try {
+                    ExportResult result = get();
+                    // Show detailed result dialog
+                    ExportResultDialog dialog = new ExportResultDialog(
+                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                            result);
+                    dialog.setVisible(true);
 
-                @Override
-                protected void done() {
-                    try {
-                        ExportResult result = get();
-                        // Show detailed result dialog
-                        ExportResultDialog dialog = new ExportResultDialog(
-                                (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                                result);
-                        dialog.setVisible(true);
-
-                        // Update migration coverage with exported object counts
-                        if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Notifying MainWindow with " +
-                                    result.exportedClassCounts.size() + " classes");
-                            java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                            if (window instanceof MainWindow) {
-                                MainWindow mainWindow = (MainWindow) window;
-                                mainWindow.notifyExportCompleted(result.exportedClassCounts);
-                            } else {
-                                System.out.println("DEBUG: Window is not MainWindow: " +
-                                        (window != null ? window.getClass().getName() : "null"));
-                            }
+                    // Update migration coverage with exported object counts
+                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
+                        System.out.println("DEBUG MigrationStructurePanel (CLASS): Notifying MainWindow with " +
+                                result.exportedClassCounts.size() + " classes");
+                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                        if (window instanceof MainWindow) {
+                            MainWindow mainWindow = (MainWindow) window;
+                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
                         } else {
-                            System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success="
-                                    +
-                                    result.errors.isEmpty() + ", counts size=" + result.exportedClassCounts.size());
+                            System.out.println("DEBUG: Window is not MainWindow: " +
+                                    (window != null ? window.getClass().getName() : "null"));
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                                "Error during export: " + e.getMessage(),
-                                "Export Error",
-                                JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        System.out.println("DEBUG MigrationStructurePanel (CLASS): Not updating coverage - success="
+                                +
+                                result.errors.isEmpty() + ", counts size=" + result.exportedClassCounts.size());
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                            "Error during export: " + e.getMessage(),
+                            "Export Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
-            };
+            }
+        };
 
-            worker.execute();
-        }
+        worker.execute();
     }
 
     /**
@@ -834,75 +827,67 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Ask user for output directory instead of file
-        JFileChooser fileChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
-        fileChooser.setDialogTitle("Export Module: " + moduleNode.getName());
-        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-        String suggestedDirName = exportService.suggestModuleDirectoryName(moduleNode.getId(), moduleNode.getName());
-        fileChooser.setSelectedFile(
-                new File(exportService.getDefaultOutputDirectory(), suggestedDirName));
+        // Use default output directory automatically (output/<db-folder>/Data and
+        // Definitions)
+        String outputPath = "output";
 
-        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
+        // Run export in background
+        SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
+            @Override
+            protected ExportResult doInBackground() throws Exception {
+                publish("Exporting module " + moduleNode.getName() + " with folder structure...");
+                return exportService.exportModuleStructured(module, outputPath);
+            }
 
-            // Run export in background
-            SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
-                @Override
-                protected ExportResult doInBackground() throws Exception {
-                    publish("Exporting module " + moduleNode.getName() + " with folder structure...");
-                    return exportService.exportModuleStructured(module, outputPath);
+            @Override
+            protected void process(List<String> chunks) {
+                for (String message : chunks) {
+                    System.out.println(message);
                 }
+            }
 
-                @Override
-                protected void process(List<String> chunks) {
-                    for (String message : chunks) {
-                        System.out.println(message);
-                    }
-                }
+            @Override
+            protected void done() {
+                System.out.println("DEBUG: MODULE export done() called");
+                try {
+                    ExportResult result = get();
+                    System.out.println("DEBUG: Got export result, showing dialog...");
+                    // Show detailed result dialog
+                    ExportResultDialog dialog = new ExportResultDialog(
+                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                            result);
+                    dialog.setVisible(true);
+                    System.out.println("DEBUG: Dialog closed, continuing...");
 
-                @Override
-                protected void done() {
-                    System.out.println("DEBUG: MODULE export done() called");
-                    try {
-                        ExportResult result = get();
-                        System.out.println("DEBUG: Got export result, showing dialog...");
-                        // Show detailed result dialog
-                        ExportResultDialog dialog = new ExportResultDialog(
-                                (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                                result);
-                        dialog.setVisible(true);
-                        System.out.println("DEBUG: Dialog closed, continuing...");
-
-                        // Update migration coverage with exported object counts
-                        if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                            System.out.println("DEBUG MigrationStructurePanel (MODULE): Notifying MainWindow with " +
-                                    result.exportedClassCounts.size() + " classes");
-                            java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                            if (window instanceof MainWindow) {
-                                MainWindow mainWindow = (MainWindow) window;
-                                mainWindow.notifyExportCompleted(result.exportedClassCounts);
-                            } else {
-                                System.out.println("DEBUG: Window is not MainWindow: " +
-                                        (window != null ? window.getClass().getName() : "null"));
-                            }
+                    // Update migration coverage with exported object counts
+                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
+                        System.out.println("DEBUG MigrationStructurePanel (MODULE): Notifying MainWindow with " +
+                                result.exportedClassCounts.size() + " classes");
+                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                        if (window instanceof MainWindow) {
+                            MainWindow mainWindow = (MainWindow) window;
+                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
                         } else {
-                            System.out.println(
-                                    "DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
-                                            result.errors.isEmpty() + ", counts size="
-                                            + result.exportedClassCounts.size());
+                            System.out.println("DEBUG: Window is not MainWindow: " +
+                                    (window != null ? window.getClass().getName() : "null"));
                         }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                                "Error during export: " + e.getMessage(),
-                                "Export Error",
-                                JOptionPane.ERROR_MESSAGE);
+                    } else {
+                        System.out.println(
+                                "DEBUG MigrationStructurePanel (MODULE): Not updating coverage - success=" +
+                                        result.errors.isEmpty() + ", counts size="
+                                        + result.exportedClassCounts.size());
                     }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                            "Error during export: " + e.getMessage(),
+                            "Export Error",
+                            JOptionPane.ERROR_MESSAGE);
                 }
-            };
+            }
+        };
 
-            worker.execute();
-        }
+        worker.execute();
     }
 
     /**
