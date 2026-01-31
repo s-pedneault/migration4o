@@ -743,13 +743,13 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String simpleName = schemaClass.getSourceName();
 
-        // Ask user for output file
-        JFileChooser fileChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
-        fileChooser.setDialogTitle("Export " + simpleName + " to XML");
-        fileChooser.setSelectedFile(new File(exportService.suggestClassFilename(schemaClass)));
+        // Ask user for output directory (changed from file chooser)
+        JFileChooser dirChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
+        dirChooser.setDialogTitle("Export " + simpleName + " - Select Output Directory");
+        dirChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
 
-        if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
-            String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
+        if (dirChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+            String outputPath = dirChooser.getSelectedFile().getAbsolutePath();
 
             // Run export in background
             SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
@@ -823,11 +823,10 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Collect all class names in this module and its children
-        List<String> classNames = new ArrayList<>();
-        collectClassNamesFromModule(moduleTreeNode, classNames);
+        // Build the module structure from the tree
+        MigrationModule module = buildModuleFromTree(moduleTreeNode, moduleNode);
 
-        if (classNames.isEmpty()) {
+        if (module.getClassNames().isEmpty() && module.getChildModules().isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "Module '" + moduleNode.getName() + "' contains no classes.",
                     "Empty Module",
@@ -835,11 +834,13 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Ask user for output file
+        // Ask user for output directory instead of file
         JFileChooser fileChooser = new JFileChooser(exportService.getDefaultOutputDirectory());
         fileChooser.setDialogTitle("Export Module: " + moduleNode.getName());
+        fileChooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        String suggestedDirName = exportService.suggestModuleDirectoryName(moduleNode.getId(), moduleNode.getName());
         fileChooser.setSelectedFile(
-                new File(exportService.suggestModuleFilename(moduleNode.getId(), moduleNode.getName())));
+                new File(exportService.getDefaultOutputDirectory(), suggestedDirName));
 
         if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
             String outputPath = fileChooser.getSelectedFile().getAbsolutePath();
@@ -848,8 +849,8 @@ public class MigrationStructurePanel extends JPanel {
             SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
                 @Override
                 protected ExportResult doInBackground() throws Exception {
-                    publish("Exporting module " + moduleNode.getName() + " (" + classNames.size() + " classes)...");
-                    return exportService.exportModule(classNames, moduleNode.getName(), outputPath);
+                    publish("Exporting module " + moduleNode.getName() + " with folder structure...");
+                    return exportService.exportModuleStructured(module, outputPath);
                 }
 
                 @Override
@@ -902,6 +903,33 @@ public class MigrationStructurePanel extends JPanel {
 
             worker.execute();
         }
+    }
+
+    /**
+     * Builds a MigrationModule from a tree node with all its children.
+     */
+    private MigrationModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
+        List<String> classNames = new ArrayList<>();
+        List<MigrationModule> childModules = new ArrayList<>();
+
+        // Iterate through children
+        for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
+            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) moduleTreeNode.getChildAt(i);
+            Object userObject = childNode.getUserObject();
+
+            if (userObject instanceof ClassNode) {
+                // Add class name
+                ClassNode classNode = (ClassNode) userObject;
+                classNames.add(classNode.getSchemaClass().source);
+            } else if (userObject instanceof ModuleNode) {
+                // Recursively build child module
+                ModuleNode childModuleNode = (ModuleNode) userObject;
+                MigrationModule childModule = buildModuleFromTree(childNode, childModuleNode);
+                childModules.add(childModule);
+            }
+        }
+
+        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classNames, childModules);
     }
 
     /**
