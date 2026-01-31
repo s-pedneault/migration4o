@@ -371,30 +371,25 @@ public class MigrationStructurePanel extends JPanel {
             }
         });
 
-        // Double-click on available tree to add to export
+        // Context menu for available tree
         availableTree.addMouseListener(new MouseAdapter() {
             @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    addSelectedClassToExport();
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showAvailableContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    showAvailableContextMenu(e);
                 }
             }
         });
 
-        // Double-click on export tree to remove
+        // Context menu for export tree
         exportTree.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    TreePath path = exportTree.getPathForLocation(e.getX(), e.getY());
-                    if (path != null) {
-                        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-                        if (isClassNode(node)) {
-                            removeClassFromExport(node);
-                        }
-                    }
-                }
-            }
 
             @Override
             public void mousePressed(MouseEvent e) {
@@ -689,7 +684,33 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Shows context menu for export tree with Export option
+     * Shows context menu for available tree with Add to Export option
+     */
+    private void showAvailableContextMenu(MouseEvent e) {
+        TreePath path = availableTree.getPathForLocation(e.getX(), e.getY());
+        if (path == null) {
+            return;
+        }
+
+        DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+        availableTree.setSelectionPath(path);
+
+        JPopupMenu contextMenu = new JPopupMenu();
+
+        // Add to Export option for classes
+        if (node.getUserObject() instanceof ClassNode) {
+            JMenuItem addToExportItem = new JMenuItem("Add to Export...");
+            addToExportItem.addActionListener(evt -> addSelectedClassToExport());
+            contextMenu.add(addToExportItem);
+        }
+
+        if (contextMenu.getComponentCount() > 0) {
+            contextMenu.show(availableTree, e.getX(), e.getY());
+        }
+    }
+
+    /**
+     * Shows context menu for export tree with Export and Remove options
      */
     private void showExportContextMenu(MouseEvent e) {
         TreePath path = exportTree.getPathForLocation(e.getX(), e.getY());
@@ -709,12 +730,18 @@ public class MigrationStructurePanel extends JPanel {
             exportModuleItem.addActionListener(evt -> exportModule(node, moduleNode));
             contextMenu.add(exportModuleItem);
         }
-        // Export option for classes
+        // Options for classes
         else if (node.getUserObject() instanceof ClassNode) {
             ClassNode classNode = (ClassNode) node.getUserObject();
             JMenuItem exportClassItem = new JMenuItem("Export Class to XML...");
             exportClassItem.addActionListener(evt -> exportClass(classNode));
             contextMenu.add(exportClassItem);
+
+            contextMenu.addSeparator();
+
+            JMenuItem removeFromExportItem = new JMenuItem("Remove from Export");
+            removeFromExportItem.addActionListener(evt -> removeClassFromExport(node));
+            contextMenu.add(removeFromExportItem);
         }
 
         if (contextMenu.getComponentCount() > 0) {
