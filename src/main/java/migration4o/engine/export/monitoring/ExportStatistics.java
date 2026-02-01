@@ -7,19 +7,52 @@ import java.util.List;
 import java.util.Map;
 
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.ui.common.DOExportMonitor;
 
 /**
  * Tracks statistics and errors during export operations.
+ * Now supports optional progress monitoring for UI feedback.
  */
 public class ExportStatistics {
+    private final DOExportMonitor monitor;
     private final List<ExportError> errors = new ArrayList<>();
     private final List<SchemaWarning> schemaWarnings = new ArrayList<>();
     private int objectsAttempted = 0;
     private int objectsSucceeded = 0;
     private final Map<String, Integer> exportedClassCounts = new HashMap<>();
+    private String currentClassName = "";
+    private int currentClassTotal = 0;
+
+    /**
+     * Creates export statistics without monitor (for backwards compatibility).
+     */
+    public ExportStatistics() {
+        this(null);
+    }
+
+    /**
+     * Creates export statistics with optional monitor for progress callbacks.
+     */
+    public ExportStatistics(DOExportMonitor monitor) {
+        this.monitor = monitor;
+    }
+
+    /**
+     * Sets the current class being exported (for progress reporting).
+     */
+    public void setCurrentClass(String className, int totalObjects) {
+        this.currentClassName = className;
+        this.currentClassTotal = totalObjects;
+    }
 
     public void incrementAttempted() {
         objectsAttempted++;
+
+        // Report progress every 10 objects to reduce UI overhead
+        if (monitor != null && objectsAttempted % 10 == 0 && currentClassTotal > 0) {
+            int current = exportedClassCounts.getOrDefault(currentClassName, 0);
+            monitor.onObjectProgress(currentClassName, current, currentClassTotal);
+        }
     }
 
     public void incrementSucceeded() {
@@ -29,12 +62,23 @@ public class ExportStatistics {
     public void recordClassExport(DOSchemaClass schemaClass) {
         if (schemaClass != null) {
             String className = schemaClass.destinationName;
-            exportedClassCounts.put(className, exportedClassCounts.getOrDefault(className, 0) + 1);
+            int count = exportedClassCounts.getOrDefault(className, 0) + 1;
+            exportedClassCounts.put(className, count);
+
+            // Notify monitor
+            if (monitor != null) {
+                monitor.onObjectExported(className, 0); // Object ID not available here
+            }
         }
     }
 
     public void addError(long objectId, String className, String errorMessage, Exception exception) {
         errors.add(new ExportError(objectId, className, errorMessage, exception));
+
+        // Notify monitor
+        if (monitor != null) {
+            monitor.onObjectError(className, objectId, errorMessage);
+        }
     }
 
     public void addSchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId,
@@ -43,6 +87,11 @@ public class ExportStatistics {
             String message, int referenceCount) {
         schemaWarnings.add(new SchemaWarning(type, objectId, className, fieldName, containingClass,
                 sourceContainingClass, sourceFieldName, message, referenceCount));
+
+        // Notify monitor
+        if (monitor != null) {
+            monitor.onWarning(type.toString(), className, message);
+        }
     }
 
     public int getObjectsAttempted() {
@@ -75,48 +124,11 @@ public class ExportStatistics {
 
     /**
      * Prints a comprehensive export summary.
+     * Summary output removed - use export progress dialog instead.
      */
     public void printSummary(String outputPath, String exportName) {
-        System.out.println("\n" + "=".repeat(80));
-        System.out.println("EXPORT SUMMARY: " + exportName);
-        System.out.println("=".repeat(80));
-        System.out.println("Output file:       " + outputPath);
-        System.out.println("Objects attempted: " + objectsAttempted);
-        System.out.println("Objects succeeded: " + objectsSucceeded);
-        System.out.println("Objects failed:    " + errors.size());
-
-        if (!errors.isEmpty()) {
-            System.out.println("\n" + "!".repeat(80));
-            System.out.println("ERRORS ENCOUNTERED:");
-            System.out.println("!".repeat(80));
-
-            // Group errors by error message
-            Map<String, List<ExportError>> errorsByMessage = new LinkedHashMap<>();
-            for (ExportError error : errors) {
-                errorsByMessage.computeIfAbsent(error.errorMessage, k -> new ArrayList<>()).add(error);
-            }
-
-            for (Map.Entry<String, List<ExportError>> entry : errorsByMessage.entrySet()) {
-                String errorMsg = entry.getKey();
-                List<ExportError> errorList = entry.getValue();
-
-                System.out.println("\n[" + errorList.size() + " occurrences] " + errorMsg);
-                System.out.print("  Object IDs: ");
-                int showCount = Math.min(10, errorList.size());
-                for (int i = 0; i < showCount; i++) {
-                    if (i > 0)
-                        System.out.print(", ");
-                    System.out.print(errorList.get(i).objectId);
-                }
-                if (errorList.size() > showCount) {
-                    System.out.print(" ... and " + (errorList.size() - showCount) + " more");
-                }
-                System.out.println();
-            }
-            System.out.println("!".repeat(80));
-        }
-
-        System.out.println("=".repeat(80) + "\n");
+        // Summary output removed - all information is now displayed in
+        // ExportProgressDialog
     }
 
     /**

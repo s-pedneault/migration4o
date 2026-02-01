@@ -39,7 +39,7 @@ public class ExportHistory {
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
             props.store(writer, "Last export operation - automatically generated");
         } catch (IOException e) {
-            System.err.println("Warning: Could not save export history: " + e.getMessage());
+            // Silently ignore export history save errors
         }
     }
 

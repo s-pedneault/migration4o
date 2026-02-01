@@ -1004,7 +1004,7 @@
         <field source="mDateDernPrev" destinationName="dateDernPrev" isExported="true" skipIfEmpty="true" type="date" />
         <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipIfEmpty="true" type="int" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" />
-        <field source="mIDTypePrevention" destinationName="idTypePrevention" isExported="true" skipIfEmpty="true" type="gest.typePrev.IDTypePrev" embedContents="true" />
+        <field source="mIDTypePrevention" destinationName="idTypePrevention" isExported="true" skipIfEmpty="true" type="gest.typePrev.IDTypePrev" embedContents="false" />
     </class>
     <class source="gest.dossPrev.PersonneRess" destinationName="PersonneRess" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.DossPrev" field="mVectPersonneRess" />
@@ -3177,7 +3177,7 @@
         <field source="mIDPreventionSrc" destinationName="idPreventionSrc" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipIfEmpty="true" type="gest.employe.IDEmploye" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipIfEmpty="true" type="int" embedContents="true" />
-        <field source="mIDTypePrev" destinationName="idTypePrev" isExported="true" skipIfEmpty="true" type="gest.typePrev.IDTypePrev" embedContents="true" />
+        <field source="mIDTypePrev" destinationName="idTypePrev" isExported="true" skipIfEmpty="true" type="gest.typePrev.IDTypePrev" embedContents="false" />
     </class>
     <class source="gest.prevention.RapportAvis" destinationName="RapportAvis" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.prevention.PrevAvis" field="mVectRapportAvis" />

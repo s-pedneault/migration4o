@@ -15,6 +15,7 @@ import migration4o.engine.export.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.MigrationModule;
+import migration4o.ui.common.DOExportMonitor;
 
 /**
  * Orchestrates XML export operations by coordinating specialized components.
@@ -88,17 +89,22 @@ public class XMLExportEngine {
      * 
      * @param className     The class name to export
      * @param baseOutputDir The base output directory (typically "output")
+     * @param monitor       Progress monitor (can be null)
      * @return Export result
      * @throws Exception if export fails
      */
-    public ExportResult exportClass(String className, String baseOutputDir) throws Exception {
+    public ExportResult exportClass(String className, String baseOutputDir, DOExportMonitor monitor) throws Exception {
+        if (monitor != null) {
+            monitor.onExportStart(className, 1); // 1 class to export
+        }
+
         DOSchemaClass schemaClass = schema.findClassByName(className);
         if (schemaClass == null) {
             throw new IllegalArgumentException("Class not found: " + className);
         }
 
         // Initialize components
-        ExportStatistics statistics = new ExportStatistics();
+        ExportStatistics statistics = new ExportStatistics(monitor);
         XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
@@ -139,30 +145,59 @@ public class XMLExportEngine {
             if (dbSchemaClass != null) {
                 xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
                 long[] objectIds = dbSchemaClass.objectIds;
-                System.out.println("DEBUG: Found " + (objectIds != null ? objectIds.length : 0)
-                        + " objects for class " + className);
+                int objectCount = (objectIds != null ? objectIds.length : 0);
+
+                if (monitor != null) {
+                    monitor.onClassStart(className, schemaClass.destinationName, objectCount);
+                }
 
                 if (objectIds != null) {
+                    statistics.setCurrentClass(className, objectIds.length);
+
                     for (long objectId : objectIds) {
+                        if (monitor != null && monitor.isCancelled()) {
+                            break;
+                        }
                         objectExporter.exportObjectRecursively(container, objectId, 2);
                     }
                 }
-            } else {
-                System.err.println("Warning: Class not found in database schema: " + className);
             }
+            // If class not in database schema, just continue with empty export
 
             // Write XML footer
             xmlWriter.writeExportFooter();
 
+            if (monitor != null) {
+                monitor.onXSDGenerationStart(xsdPath.toString());
+            }
+
             // Generate XSD schema
             xsdBuilder.writeXSD(xsdPath.toString());
-            System.out.println("Generated XSD schema: " + xsdPath);
+
+            if (monitor != null) {
+                monitor.onXSDGenerationComplete(xsdPath.toString());
+                int exportedCount = statistics.getObjectsSucceeded();
+                monitor.onClassComplete(className, exportedCount);
+            }
 
             // Print summary and create result
             String fullOutputPath = dbBasePath.toString();
             statistics.printSummary(fullOutputPath, className);
-            return statistics.createResult(className, fullOutputPath);
 
+            ExportResult result = statistics.createResult(className, fullOutputPath);
+
+            if (monitor != null) {
+                monitor.onExportComplete(className, statistics.getObjectsSucceeded(),
+                        statistics.getSchemaWarnings().size());
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            if (monitor != null) {
+                monitor.onExportError(className, e.getMessage());
+            }
+            throw e;
         } finally {
             if (container != null) {
                 container.close();
@@ -195,12 +230,21 @@ public class XMLExportEngine {
      * 
      * @param module         The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
+     * @param monitor        Progress monitor (can be null)
      * @return ExportResult with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath) throws Exception {
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+            throws Exception {
+        // Count total classes for progress reporting
+        int totalClasses = countTotalClasses(module);
+
+        if (monitor != null) {
+            monitor.onExportStart(module.getName(), totalClasses);
+        }
+
         // Initialize components
-        ExportStatistics statistics = new ExportStatistics();
+        ExportStatistics statistics = new ExportStatistics(monitor);
 
         try {
             // Use the in-memory container (already open)
@@ -214,16 +258,40 @@ public class XMLExportEngine {
             Files.createDirectories(defsPath);
 
             // Export module recursively
-            exportModuleRecursive(container, module, dataPath, defsPath, statistics);
+            exportModuleRecursive(container, module, dataPath, defsPath, statistics, monitor, 0);
 
             // Print summary and create result
             String fullOutputPath = dbBasePath.toString();
             statistics.printSummary(fullOutputPath, module.getName());
-            return statistics.createResult(module.getName(), fullOutputPath);
 
+            ExportResult result = statistics.createResult(module.getName(), fullOutputPath);
+
+            if (monitor != null) {
+                monitor.onExportComplete(module.getName(), statistics.getObjectsSucceeded(),
+                        statistics.getSchemaWarnings().size());
+            }
+
+            return result;
+
+        } catch (Exception e) {
+            if (monitor != null) {
+                monitor.onExportError(module.getName(), e.getMessage());
+            }
+            throw e;
         } finally {
             // Don't close container - it's shared and managed by MainWindow
         }
+    }
+
+    /**
+     * Counts total number of classes in a module and all its children.
+     */
+    private int countTotalClasses(MigrationModule module) {
+        int count = module.getClassNames().size();
+        for (MigrationModule child : module.getChildModules()) {
+            count += countTotalClasses(child);
+        }
+        return count;
     }
 
     /**
@@ -232,7 +300,12 @@ public class XMLExportEngine {
      */
     private void exportModuleRecursive(ExtObjectContainer container, MigrationModule module,
             Path currentDataPath, Path currentDefsPath,
-            ExportStatistics statistics) throws Exception {
+            ExportStatistics statistics, DOExportMonitor monitor, int depth) throws Exception {
+
+        if (monitor != null) {
+            monitor.onModuleStart(module.getName(), module.getClassNames().size(), depth);
+        }
+
         // Create folder for this module in both Data and Definitions
         // Use module name (not ID) to preserve proper casing
         Path moduleDataPath = currentDataPath.resolve(sanitizeFolderName(module.getName()));
@@ -242,16 +315,18 @@ public class XMLExportEngine {
 
         // Export each class in this module to its own file
         for (String className : module.getClassNames()) {
+            if (monitor != null && monitor.isCancelled()) {
+                break;
+            }
+
             DOSchemaClass schemaClass = schema.findClassByName(className);
             if (schemaClass == null) {
-                System.err.println("Warning: Class not found in schema: " + className);
-                continue;
+                continue; // Skip missing classes silently - errors tracked via monitor
             }
 
             DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
             if (dbSchemaClass == null) {
-                System.err.println("Warning: Class not found in database schema: " + className);
-                continue;
+                continue; // Skip missing classes silently - errors tracked via monitor
             }
 
             // Generate file name from destination class name
@@ -261,12 +336,20 @@ public class XMLExportEngine {
             Path xsdPath = moduleDefsPath.resolve(xsdFileName);
 
             // Export this class
-            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics);
+            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor);
         }
 
         // Recursively export child modules
         for (MigrationModule childModule : module.getChildModules()) {
-            exportModuleRecursive(container, childModule, moduleDataPath, moduleDefsPath, statistics);
+            if (monitor != null && monitor.isCancelled()) {
+                break;
+            }
+            exportModuleRecursive(container, childModule, moduleDataPath, moduleDefsPath, statistics, monitor,
+                    depth + 1);
+        }
+
+        if (monitor != null) {
+            monitor.onModuleComplete(module.getName());
         }
     }
 
@@ -275,7 +358,8 @@ public class XMLExportEngine {
      */
     private void exportClassToFile(ExtObjectContainer container, DOSchemaClass schemaClass,
             DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath,
-            ExportStatistics statistics) throws Exception {
+            ExportStatistics statistics, DOExportMonitor monitor) throws Exception {
+
         XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
@@ -298,9 +382,19 @@ public class XMLExportEngine {
             // Export all objects of this class
             xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
             long[] objectIds = dbSchemaClass.objectIds;
+            int objectCount = (objectIds != null ? objectIds.length : 0);
+
+            if (monitor != null) {
+                monitor.onClassStart(schemaClass.source, schemaClass.destinationName, objectCount);
+            }
 
             if (objectIds != null) {
+                statistics.setCurrentClass(schemaClass.source, objectIds.length);
+
                 for (long objectId : objectIds) {
+                    if (monitor != null && monitor.isCancelled()) {
+                        break;
+                    }
                     objectExporter.exportObjectRecursively(container, objectId, 2);
                 }
             }
@@ -308,10 +402,21 @@ public class XMLExportEngine {
             // Write XML footer
             xmlWriter.writeExportFooter();
 
+            if (monitor != null) {
+                monitor.onXSDGenerationStart(xsdPath.toString());
+            }
+
             // Generate XSD schema
             xsdBuilder.writeXSD(xsdPath.toString());
 
-            System.out.println("Exported " + schemaClass.source + " to " + xmlPath);
+            if (monitor != null) {
+                monitor.onXSDGenerationComplete(xsdPath.toString());
+            }
+
+            if (monitor != null) {
+                int exportedCount = statistics.getObjectsSucceeded();
+                monitor.onClassComplete(schemaClass.source, exportedCount);
+            }
 
         } finally {
             if (fileWriter != null) {
@@ -377,8 +482,6 @@ public class XMLExportEngine {
                             objectExporter.exportObjectRecursively(container, objectId, 2);
                         }
                     }
-                } else {
-                    System.err.println("Warning: Class not found in database schema: " + className);
                 }
             }
 

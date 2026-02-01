@@ -100,11 +100,11 @@ public class FieldExporter {
                                 objectExportDelegate);
                     }
                 } catch (Exception e) {
-                    System.err.println("Error exporting field " + field.getName() + ": " + e.getMessage());
+                    // Error exporting field - silently skip
                 }
             }
         } catch (Exception e) {
-            System.err.println("Error accessing fields: " + e.getMessage());
+            // Error accessing fields
         }
     }
 
@@ -119,8 +119,6 @@ public class FieldExporter {
         String fieldName = schemaField.destinationName;
         String collectionType = schemaField.type != null ? schemaField.type : "unknown";
 
-        System.out.println("INFO: Exporting schema collection field '" + fieldName + "' of type " + collectionType);
-
         // Activate the collection object to access its fields
         long collectionId = container.ext().getID(collectionObj);
         if (collectionId > 0) {
@@ -132,15 +130,7 @@ public class FieldExporter {
         // internal array
         Collection<?> items = extractCollectionItems(container, collectionObj);
 
-        if (items == null) {
-            System.err.println("WARNING: Failed to extract items from collection field '" + fieldName + "' (type: "
-                    + collectionType + ")");
-        } else if (items.isEmpty()) {
-            System.out.println("INFO: Collection field '" + fieldName + "' is empty (0 items)");
-        } else {
-            System.out.println("INFO: Successfully extracted " + items.size() + " items from collection field '"
-                    + fieldName + "'");
-        }
+        // Items extracted (or null/empty)
 
         if (items == null || items.isEmpty()) {
             // Check skipIfEmpty
@@ -161,24 +151,12 @@ public class FieldExporter {
                 // Find the corresponding ID class for this entity type
                 idClass = findIDClassForEntity(schemaField.childrenType);
                 shouldExportAsIDReferences = (idClass != null);
-
-                if (shouldExportAsIDReferences) {
-                    System.out.println("DEBUG: Will export " + fieldName + " as ID references using " + idClass.source);
-                } else {
-                    System.out.println(
-                            "DEBUG: No ID class found for " + schemaField.childrenType + ", exporting normally");
-                }
-            } else {
-                System.out.println("DEBUG: " + fieldName + " - schemaField=" + (schemaField != null) +
-                        ", embedContents=" + (schemaField != null ? schemaField.embedContents : "N/A") +
-                        ", childrenType=" + (schemaField != null ? schemaField.childrenType : "N/A"));
             }
 
             for (Object item : items) {
                 if (item != null) {
                     if (shouldExportAsIDReferences) {
                         // Export as ID reference
-                        System.out.println("DEBUG: Exporting ID reference for object: " + item.getClass().getName());
                         exportAsIDReference(container, item, idClass, indentLevel + 1, objectExportDelegate);
                     } else {
                         // Export normally
@@ -213,7 +191,6 @@ public class FieldExporter {
         GenericObject genericObj = (GenericObject) collectionObj;
         StoredClass storedClass = container.ext().storedClass(genericObj);
         if (storedClass == null) {
-            System.err.println("ERROR: Cannot get StoredClass for collection object");
             return null;
         }
 
@@ -249,14 +226,10 @@ public class FieldExporter {
                                 }
                             }
 
-                            System.out.println("INFO: Extracted " + list.size() + " items from DB4O translator field '"
-                                    + fieldName + "' in " + className + " (array length: " + length + ", nulls: "
-                                    + nullCount + ")");
                             return list;
                         }
                     } catch (Exception e) {
-                        System.err.println("ERROR: Failed to extract from DB4O translator field '" + fieldName
-                                + "': " + e.getMessage());
+                        // Failed to extract from DB4O translator field
                     }
                 }
             }
@@ -264,8 +237,6 @@ public class FieldExporter {
             currentClass = currentClass.getParentStoredClass();
         }
 
-        System.err.println("ERROR: No DB4O translator field found in " + className
-                + ". Cannot extract collection items.");
         return null;
     }
 
@@ -292,24 +263,12 @@ public class FieldExporter {
                 // Find the corresponding ID class for this entity type
                 idClass = findIDClassForEntity(schemaField.childrenType);
                 shouldExportAsIDReferences = (idClass != null);
-
-                if (shouldExportAsIDReferences) {
-                    System.out.println("DEBUG: Will export " + fieldName + " as ID references using " + idClass.source);
-                } else {
-                    System.out.println(
-                            "DEBUG: No ID class found for " + schemaField.childrenType + ", exporting normally");
-                }
-            } else {
-                System.out.println("DEBUG: " + fieldName + " - schemaField=" + (schemaField != null) +
-                        ", embedContents=" + (schemaField != null ? schemaField.embedContents : "N/A") +
-                        ", childrenType=" + (schemaField != null ? schemaField.childrenType : "N/A"));
             }
 
             for (Object item : collection) {
                 if (item != null) {
                     if (shouldExportAsIDReferences) {
                         // Export as ID reference
-                        System.out.println("DEBUG: Exporting ID reference for object: " + item.getClass().getName());
                         exportAsIDReference(container, item, idClass, indentLevel + 1, objectExportDelegate);
                     } else {
                         // Export normally
@@ -457,11 +416,8 @@ public class FieldExporter {
             int indentLevel, ObjectExportDelegate objectExportDelegate) throws IOException {
         // Get the DB object ID of the entity
         long entityObjectId = container.ext().getID(entity);
-        System.out.println(
-                "DEBUG: exportAsIDReference - entity=" + entity.getClass().getName() + ", objectId=" + entityObjectId);
 
         if (entityObjectId <= 0) {
-            System.err.println("WARNING: Cannot get object ID for entity, skipping ID reference export");
             return;
         }
 
@@ -475,7 +431,6 @@ public class FieldExporter {
             xsdBuilder.addField(idClass, field);
         }
 
-        System.out.println("DEBUG: Writing ID class: " + simpleClassName + " with id=" + entityObjectId);
         xmlWriter.writeStartElement(simpleClassName, indentLevel);
 
         // Find the mID field in the ID class schema
@@ -490,8 +445,6 @@ public class FieldExporter {
         if (idField != null) {
             // Export the ID value
             xmlWriter.writeElement(idField.destinationName, String.valueOf(entityObjectId), indentLevel + 1);
-        } else {
-            System.err.println("WARNING: No mID field found in ID class " + idClassName);
         }
 
         xmlWriter.writeEndElement(simpleClassName, indentLevel);

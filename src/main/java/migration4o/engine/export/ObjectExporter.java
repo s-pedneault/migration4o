@@ -101,8 +101,6 @@ public class ObjectExporter {
         // Check if object was already exported
         if (!exportedObjectIds.add(objectId)) {
             // Object already exported
-            System.err.println("DEBUG: Object " + objectId + " already exported. isEmbedded=" + isEmbedded
-                    + ", fieldName=" + fieldName + ", inMap=" + embeddedObjectRefs.containsKey(objectId));
 
             // If embedContents=false, this should have been handled by ID reference logic
             // in FieldExporter
@@ -154,7 +152,6 @@ public class ObjectExporter {
                     sourceFieldName,
                     message,
                     referenceCount);
-            System.err.println("WARNING: " + message);
             return;
         }
 
@@ -166,8 +163,6 @@ public class ObjectExporter {
                 if (obj != null) {
                     className = ClassUtil.getClassName(obj);
                     embeddedObjectRefs.put(objectId, new EmbeddedObjectInfo(className, fieldName));
-                    System.err.println("DEBUG: Tracking embedded object " + objectId + " (class=" + className
-                            + ", field=" + fieldName + ")");
                 }
             } catch (Exception e) {
                 // Ignore errors in tracking - we'll still export

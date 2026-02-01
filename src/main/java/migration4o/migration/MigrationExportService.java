@@ -12,6 +12,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.MigrationModule;
 import migration4o.schema.modules.DOModuleStructureReader;
+import migration4o.ui.common.DOExportMonitor;
 
 /**
  * Service class for coordinating XML export operations.
@@ -61,10 +62,12 @@ public class MigrationExportService {
      * 
      * @param schemaClass The schema class to export
      * @param outputPath  The output file path
+     * @param monitor     Optional progress monitor for UI feedback
      * @return ExportResult with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportResult exportClass(DOSchemaClass schemaClass, String outputPath) throws Exception {
+    public ExportResult exportClass(DOSchemaClass schemaClass, String outputPath, DOExportMonitor monitor)
+            throws Exception {
         String className = schemaClass.source;
 
         DOSchema referenceSchema = schemaService.getReferenceSchema();
@@ -72,7 +75,7 @@ public class MigrationExportService {
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
-        ExportResult result = exporter.exportClass(className, outputPath);
+        ExportResult result = exporter.exportClass(className, outputPath, monitor);
 
         // Save to history if successful
         if (result.errors.isEmpty()) {
@@ -126,16 +129,18 @@ public class MigrationExportService {
      * 
      * @param module         The module to export (including child modules)
      * @param baseOutputPath The base output directory path
+     * @param monitor        Optional progress monitor for UI feedback
      * @return ExportResult with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath) throws Exception {
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+            throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
-        ExportResult result = exporter.exportModuleStructured(module, baseOutputPath);
+        ExportResult result = exporter.exportModuleStructured(module, baseOutputPath, monitor);
 
         // Save to history if successful
         if (result.errors.isEmpty()) {
@@ -158,7 +163,7 @@ public class MigrationExportService {
      *         history exists
      * @throws Exception if export fails
      */
-    public ExportResult repeatLastExport() throws Exception {
+    public ExportResult repeatLastExport(DOExportMonitor monitor) throws Exception {
         ExportHistory.ExportParams params = ExportHistory.loadLastExport();
 
         if (params == null) {
@@ -181,7 +186,7 @@ public class MigrationExportService {
                 baseOutput = outputFile.getParent();
             }
 
-            return exporter.exportClass(params.targetName, baseOutput);
+            return exporter.exportClass(params.targetName, baseOutput, monitor);
         } else {
             // Module export - rebuild module from migration format
             MigrationModule module = findModuleByName(params.targetName);
@@ -202,7 +207,7 @@ public class MigrationExportService {
                     baseOutput = outputFile.getParent();
                 }
 
-                return exporter.exportModuleStructured(module, baseOutput);
+                return exporter.exportModuleStructured(module, baseOutput, monitor);
             } else {
                 throw new IllegalStateException("Could not find module '" + params.targetName +
                         "' in migration structure. Please re-export manually.");
