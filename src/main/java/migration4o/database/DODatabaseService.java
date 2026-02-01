@@ -2,6 +2,7 @@ package migration4o.database;
 
 import com.db4o.ext.ExtObjectContainer;
 import migration4o.models.schema.DOSchema;
+import migration4o.ui.common.DatabaseProgressMonitor;
 import java.io.IOException;
 
 /**
@@ -42,11 +43,28 @@ public class DODatabaseService {
      * @throws IOException If the database cannot be opened
      */
     public synchronized ExtObjectContainer openDatabase(String databasePath) throws IOException {
+        return openDatabase(databasePath, null);
+    }
+
+    /**
+     * Open a database and load it into memory with progress monitoring.
+     * If a database is already open, it will be closed first.
+     * 
+     * @param databasePath Path to the database file
+     * @param monitor      Progress monitor for UI feedback (can be null)
+     * @return The opened database container
+     * @throws IOException If the database cannot be opened
+     */
+    public synchronized ExtObjectContainer openDatabase(String databasePath, DatabaseProgressMonitor monitor)
+            throws IOException {
         // Close existing database if any
         closeDatabase();
 
+        // Create opener with monitor if provided
+        DODatabaseOpener openerWithMonitor = monitor != null ? new DODatabaseOpener(monitor) : opener;
+
         // Open new database in memory
-        container = opener.openDatabase(databasePath, true);
+        container = openerWithMonitor.openDatabase(databasePath, true);
         currentDatabasePath = databasePath;
 
         // Clear cached schema since we have a new database
@@ -90,6 +108,18 @@ public class DODatabaseService {
      * @return The database schema, or null if no database is open
      */
     public synchronized DOSchema getDatabaseSchema() {
+        return getDatabaseSchema(null);
+    }
+
+    /**
+     * Get the database schema from the currently open database with progress
+     * monitoring.
+     * The schema is cached after the first read.
+     * 
+     * @param monitor Progress monitor for UI feedback (can be null)
+     * @return The database schema, or null if no database is open
+     */
+    public synchronized DOSchema getDatabaseSchema(DatabaseProgressMonitor monitor) {
         if (!isDatabaseOpen()) {
             return null;
         }
@@ -100,7 +130,7 @@ public class DODatabaseService {
         }
 
         // Read schema from database and cache it
-        DODatabaseReader reader = new DODatabaseReader();
+        DODatabaseReader reader = monitor != null ? new DODatabaseReader(monitor) : new DODatabaseReader();
         databaseSchema = reader.readDatabaseAsSchema(container);
         return databaseSchema;
     }

@@ -40,6 +40,8 @@ import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
+import migration4o.schema.DOReferenceSchemaConstants;
+import migration4o.schema.DOSchemaService;
 import migration4o.schema.DOReferenceSchemaReader;
 import migration4o.schema.DOReferenceSchemaWriter;
 import migration4o.ui.common.PropertyPanel;
@@ -537,9 +539,9 @@ public class SchemaEditorPanel extends JPanel {
         try {
             setStatus("Loading schema...");
 
-            // Load schema using DODatabaseSchemaReader
-            DOReferenceSchemaReader reader = new DOReferenceSchemaReader();
-            schema = reader.readSchema();
+            // Load schema using the central service (business logic is centralized)
+            schema = DOSchemaService.getInstance().loadReferenceSchema(
+                    DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
 
             // Debug: print loaded classes count and check for ParamConfig
             int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;

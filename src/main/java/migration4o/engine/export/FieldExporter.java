@@ -60,6 +60,11 @@ public class FieldExporter {
                     DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByName(parentClass, sourceFieldName);
                     String fieldName = schemaField != null ? schemaField.destinationName : sourceFieldName;
 
+                    // Skip fields marked as not exported
+                    if (schemaField != null && !schemaField.isExported) {
+                        continue;
+                    }
+
                     // XSD: record field type
                     if (schemaField != null) {
                         xsdBuilder.addField(parentClass, schemaField);

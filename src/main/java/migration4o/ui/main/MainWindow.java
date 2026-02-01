@@ -25,8 +25,6 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
-import migration4o.database.DODatabaseOpener;
-import migration4o.database.DODatabaseReader;
 import migration4o.database.DODatabaseService;
 import migration4o.schema.DOSchemaService;
 import migration4o.models.schema.DOSchema;
@@ -230,16 +228,10 @@ public class MainWindow extends JFrame {
                     // Show the progress dialog
                     monitor.show();
 
-                    // Open database using the service (loads into memory, reused everywhere)
-                    DODatabaseOpener opener = new DODatabaseOpener(monitor);
-                    var objectContainer = opener.openDatabase(selectedFile.getAbsolutePath(), true);
-
-                    // Register with service
-                    databaseService.openDatabase(selectedFile.getAbsolutePath());
-
-                    // Read database as schema using DODatabaseReader with monitor
-                    DODatabaseReader reader = new DODatabaseReader(monitor);
-                    DOSchema schema = reader.readDatabaseAsSchema(objectContainer);
+                    // Open database and read schema using the central service
+                    // All business logic is in DODatabaseService
+                    databaseService.openDatabase(selectedFile.getAbsolutePath(), monitor);
+                    DOSchema schema = databaseService.getDatabaseSchema(monitor);
 
                     return schema;
 

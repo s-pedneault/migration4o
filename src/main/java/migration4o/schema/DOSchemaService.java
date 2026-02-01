@@ -65,6 +65,16 @@ public class DOSchemaService {
     }
 
     /**
+     * Set the reference schema directly (used when schema is already loaded).
+     * 
+     * @param schema The schema to set
+     */
+    public synchronized void setReferenceSchema(DOSchema schema) {
+        this.referenceSchema = schema;
+        this.currentSchemaPath = null; // Path not known when setting directly
+    }
+
+    /**
      * Check if a reference schema is currently loaded.
      * 
      * @return true if a schema is loaded, false otherwise

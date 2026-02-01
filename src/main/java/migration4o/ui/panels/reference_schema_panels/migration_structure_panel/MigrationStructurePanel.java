@@ -19,8 +19,10 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.swing.BorderFactory;
@@ -39,6 +41,7 @@ import javax.swing.SwingWorker;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
+import javax.swing.tree.TreeSelectionModel;
 
 import migration4o.engine.export.ExportHistory;
 import migration4o.engine.export.monitoring.ExportResult;
@@ -168,6 +171,8 @@ public class MigrationStructurePanel extends JPanel {
         exportTree.setFont(new Font("Monospaced", Font.PLAIN, 12));
         exportTree.setRootVisible(true);
         exportTree.setShowsRootHandles(true);
+        // Enable multi-selection for exporting multiple modules at once
+        exportTree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
 
         JScrollPane exportScrollPane = new JScrollPane(exportTree);
         exportScrollPane.setBorder(BorderFactory.createTitledBorder("Export Structure"));
@@ -214,6 +219,13 @@ public class MigrationStructurePanel extends JPanel {
         JButton removeClassButton = new JButton("← Remove Class");
         removeClassButton.addActionListener(e -> removeSelectedClassFromExport());
         toolbar.add(removeClassButton);
+
+        toolbar.addSeparator();
+
+        JButton exportSelectedButton = new JButton("Export Selected");
+        exportSelectedButton.setToolTipText("Export all selected modules");
+        exportSelectedButton.addActionListener(e -> exportSelectedModules());
+        toolbar.add(exportSelectedButton);
 
         toolbar.addSeparator();
 
@@ -719,7 +731,22 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        exportTree.setSelectionPath(path);
+
+        // Only change selection if the right-clicked node is not already selected
+        // This preserves multi-selection when right-clicking on a selected item
+        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+        boolean isAlreadySelected = false;
+        if (selectedPaths != null) {
+            for (TreePath selectedPath : selectedPaths) {
+                if (selectedPath.equals(path)) {
+                    isAlreadySelected = true;
+                    break;
+                }
+            }
+        }
+        if (!isAlreadySelected) {
+            exportTree.setSelectionPath(path);
+        }
 
         JPopupMenu contextMenu = new JPopupMenu();
 
@@ -915,6 +942,171 @@ public class MigrationStructurePanel extends JPanel {
         };
 
         worker.execute();
+    }
+
+    /**
+     * Exports all currently selected modules in the export tree.
+     */
+    private void exportSelectedModules() {
+        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+
+        if (selectedPaths == null || selectedPaths.length == 0) {
+            JOptionPane.showMessageDialog(this,
+                    "Please select one or more modules to export.",
+                    "No Selection",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Collect selected modules (filter out non-module nodes)
+        List<ModuleExportInfo> modulesToExport = new ArrayList<>();
+        for (TreePath path : selectedPaths) {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            if (node.getUserObject() instanceof ModuleNode) {
+                ModuleNode moduleNode = (ModuleNode) node.getUserObject();
+                MigrationModule module = buildModuleFromTree(node, moduleNode);
+                if (!module.getClassNames().isEmpty() || !module.getChildModules().isEmpty()) {
+                    modulesToExport.add(new ModuleExportInfo(moduleNode.getName(), module));
+                }
+            }
+        }
+
+        if (modulesToExport.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No valid modules selected. Please select modules (not classes).",
+                    "No Modules",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Validate prerequisites once
+        MigrationExportService exportService = new MigrationExportService();
+        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
+
+        if (!validation.isValid()) {
+            JOptionPane.showMessageDialog(this,
+                    validation.getErrorMessage(),
+                    validation.getErrorTitle(),
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Confirm with user
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Export " + modulesToExport.size() + " module(s) to XML?",
+                "Confirm Bulk Export",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        String outputPath = "output";
+
+        // Run bulk export in background
+        SwingWorker<List<ExportResult>, String> worker = new SwingWorker<>() {
+            @Override
+            protected List<ExportResult> doInBackground() throws Exception {
+                List<ExportResult> results = new ArrayList<>();
+                int count = 1;
+
+                for (ModuleExportInfo info : modulesToExport) {
+                    publish("Exporting module " + count + "/" + modulesToExport.size() + ": " + info.name);
+                    try {
+                        ExportResult result = exportService.exportModuleStructured(info.module, outputPath);
+                        results.add(result);
+                    } catch (Exception e) {
+                        // Create error result
+                        List<ExportResult.ExportError> errorList = new ArrayList<>();
+                        errorList.add(new ExportResult.ExportError(-1, info.name,
+                                "Error exporting " + info.name + ": " + e.getMessage(), e));
+                        ExportResult errorResult = new ExportResult(
+                                info.name, outputPath, 0, 0, errorList);
+                        results.add(errorResult);
+                    }
+                    count++;
+                }
+
+                return results;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String message : chunks) {
+                    System.out.println(message);
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<ExportResult> results = get();
+
+                    // Combine results for summary
+                    List<ExportResult.ExportError> allErrors = new ArrayList<>();
+                    Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+                    int successCount = 0;
+
+                    for (ExportResult result : results) {
+                        if (result.errors.isEmpty()) {
+                            successCount++;
+                        }
+                        allErrors.addAll(result.errors);
+                        allClassCounts.putAll(result.exportedClassCounts);
+                    }
+
+                    ExportResult combinedResult = new ExportResult(
+                            "Bulk Export", outputPath, 0, successCount, allErrors, new ArrayList<>(), allClassCounts);
+
+                    // Show summary dialog
+                    String summaryMessage = "Exported " + successCount + " of " + results.size()
+                            + " modules successfully.";
+                    if (!combinedResult.errors.isEmpty()) {
+                        summaryMessage += "\n" + combinedResult.errors.size() + " errors occurred.";
+                    }
+
+                    ExportResultDialog dialog = new ExportResultDialog(
+                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
+                            combinedResult);
+                    dialog.setTitle("Bulk Export Results");
+                    dialog.setVisible(true);
+
+                    // Update migration coverage with all exported object counts
+                    if (!combinedResult.exportedClassCounts.isEmpty()) {
+                        System.out.println("DEBUG MigrationStructurePanel (BULK): Notifying MainWindow with " +
+                                combinedResult.exportedClassCounts.size() + " classes");
+                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                        if (window instanceof MainWindow) {
+                            MainWindow mainWindow = (MainWindow) window;
+                            mainWindow.notifyExportCompleted(combinedResult.exportedClassCounts);
+                        }
+                    }
+
+                    System.out.println("Bulk export completed: " + successCount + "/" + results.size() + " modules");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                            "Error during bulk export: " + e.getMessage(),
+                            "Export Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+
+        worker.execute();
+    }
+
+    /**
+     * Helper class to hold module export information
+     */
+    private static class ModuleExportInfo {
+        final String name;
+        final MigrationModule module;
+
+        ModuleExportInfo(String name, MigrationModule module) {
+            this.name = name;
+            this.module = module;
+        }
     }
 
     /**
