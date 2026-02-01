@@ -5,7 +5,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
 
@@ -228,13 +230,19 @@ public class XMLExportEngine {
      * XML files go to output/<db-folder>/Data/, XSD files go to
      * output/<db-folder>/Definitions/
      * 
+     * Automatically tracks and exports referenced classes that are not in the
+     * module structure.
+     * Referenced classes are exported to a virtual "Referenced" module.
+     * 
      * @param module         The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
      * @param monitor        Progress monitor (can be null)
+     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
      * @return ExportResult with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor,
+            ReferencedClassTracker sharedTracker)
             throws Exception {
         // Count total classes for progress reporting
         int totalClasses = countTotalClasses(module);
@@ -245,6 +253,11 @@ public class XMLExportEngine {
 
         // Initialize components
         ExportStatistics statistics = new ExportStatistics(monitor);
+
+        // Use shared tracker if provided, otherwise create new one
+        ReferencedClassTracker referencedClassTracker = sharedTracker != null
+                ? sharedTracker
+                : new ReferencedClassTracker();
 
         try {
             // Use the in-memory container (already open)
@@ -257,8 +270,29 @@ public class XMLExportEngine {
             Files.createDirectories(dataPath);
             Files.createDirectories(defsPath);
 
+            // Register all modules and their classes with the tracker
+            registerModuleClasses(module, referencedClassTracker);
+
             // Export module recursively
-            exportModuleRecursive(container, module, dataPath, defsPath, statistics, monitor, 0);
+            exportModuleRecursive(container, module, dataPath, defsPath, statistics, monitor, 0,
+                    referencedClassTracker);
+
+            // Only export referenced classes if we created the tracker (not shared)
+            // For shared trackers, the caller will handle referenced classes
+            if (sharedTracker == null) {
+                // After exporting requested modules, check for referenced classes
+                Set<String> referencedClasses = referencedClassTracker.getReferencedClasses();
+                if (!referencedClasses.isEmpty() && monitor != null) {
+                    monitor.onStatusMessage(
+                            "Discovered " + referencedClasses.size() + " referenced classes not in export request");
+                }
+
+                // Export referenced classes to a "Referenced" module
+                if (!referencedClasses.isEmpty()) {
+                    exportReferencedClasses(container, referencedClasses, dataPath, defsPath,
+                            statistics, monitor, referencedClassTracker);
+                }
+            }
 
             // Print summary and create result
             String fullOutputPath = dbBasePath.toString();
@@ -284,6 +318,60 @@ public class XMLExportEngine {
     }
 
     /**
+     * Exports a module with folder structure (convenience method without shared
+     * tracker).
+     * 
+     * @param module         The module to export (including child modules)
+     * @param baseOutputPath The base output directory (typically "output")
+     * @param monitor        Progress monitor (can be null)
+     * @return ExportResult with details about the export operation
+     * @throws Exception if export fails
+     */
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+            throws Exception {
+        return exportModuleStructured(module, baseOutputPath, monitor, null);
+    }
+
+    /**
+     * Exports referenced classes that were discovered during bulk export.
+     * Should be called after all modules have been exported with a shared tracker.
+     * 
+     * @param baseOutputPath The base output directory (typically "output")
+     * @param monitor        Progress monitor (can be null)
+     * @param tracker        The shared reference tracker from bulk export
+     * @throws Exception if export fails
+     */
+    public void exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor,
+            ReferencedClassTracker tracker) throws Exception {
+
+        Set<String> referencedClasses = tracker.getReferencedClasses();
+        if (referencedClasses.isEmpty()) {
+            return;
+        }
+
+        ExportStatistics statistics = new ExportStatistics(monitor);
+
+        if (monitor != null) {
+            monitor.onStatusMessage("Exporting " + referencedClasses.size() + " referenced classes");
+        }
+
+        try {
+            Path dbBasePath = getBaseOutputPath(baseOutputPath);
+            Path dataPath = dbBasePath.resolve("Data");
+            Path defsPath = dbBasePath.resolve("Definitions");
+
+            exportReferencedClasses(container, referencedClasses, dataPath, defsPath,
+                    statistics, monitor, tracker);
+
+        } catch (Exception e) {
+            if (monitor != null) {
+                monitor.onExportError("Referenced", e.getMessage());
+            }
+            throw e;
+        }
+    }
+
+    /**
      * Counts total number of classes in a module and all its children.
      */
     private int countTotalClasses(MigrationModule module) {
@@ -300,7 +388,8 @@ public class XMLExportEngine {
      */
     private void exportModuleRecursive(ExtObjectContainer container, MigrationModule module,
             Path currentDataPath, Path currentDefsPath,
-            ExportStatistics statistics, DOExportMonitor monitor, int depth) throws Exception {
+            ExportStatistics statistics, DOExportMonitor monitor, int depth,
+            ReferencedClassTracker referencedClassTracker) throws Exception {
 
         if (monitor != null) {
             monitor.onModuleStart(module.getName(), module.getClassNames().size(), depth);
@@ -308,8 +397,8 @@ public class XMLExportEngine {
 
         // Create folder for this module in both Data and Definitions
         // Use module name (not ID) to preserve proper casing
-        Path moduleDataPath = currentDataPath.resolve(sanitizeFolderName(module.getName()));
-        Path moduleDefsPath = currentDefsPath.resolve(sanitizeFolderName(module.getName()));
+        Path moduleDataPath = currentDataPath.resolve(migration4o.util.FileUtil.sanitizeName(module.getName()));
+        Path moduleDefsPath = currentDefsPath.resolve(migration4o.util.FileUtil.sanitizeName(module.getName()));
         Files.createDirectories(moduleDataPath);
         Files.createDirectories(moduleDefsPath);
 
@@ -336,7 +425,8 @@ public class XMLExportEngine {
             Path xsdPath = moduleDefsPath.resolve(xsdFileName);
 
             // Export this class
-            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor);
+            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor,
+                    referencedClassTracker);
         }
 
         // Recursively export child modules
@@ -345,7 +435,7 @@ public class XMLExportEngine {
                 break;
             }
             exportModuleRecursive(container, childModule, moduleDataPath, moduleDefsPath, statistics, monitor,
-                    depth + 1);
+                    depth + 1, referencedClassTracker);
         }
 
         if (monitor != null) {
@@ -358,7 +448,8 @@ public class XMLExportEngine {
      */
     private void exportClassToFile(ExtObjectContainer container, DOSchemaClass schemaClass,
             DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath,
-            ExportStatistics statistics, DOExportMonitor monitor) throws Exception {
+            ExportStatistics statistics, DOExportMonitor monitor,
+            ReferencedClassTracker referencedClassTracker) throws Exception {
 
         XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
@@ -374,6 +465,17 @@ public class XMLExportEngine {
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
                     xsdBuilder, statistics);
             objectExporter.reset();
+
+            // Enable reference tracking if we have a tracker
+            if (referencedClassTracker != null) {
+                objectExporter.setReferenceTracking(true);
+                // Share the same tracker instance
+                objectExporter.getReferencedClassTracker().reset();
+                // Copy the tracker state
+                for (String className : referencedClassTracker.getReferencedClasses()) {
+                    objectExporter.getReferencedClassTracker().registerReferencedClass(className);
+                }
+            }
 
             // Write XML header and metadata
             xmlWriter.writeXMLHeader();
@@ -396,6 +498,13 @@ public class XMLExportEngine {
                         break;
                     }
                     objectExporter.exportObjectRecursively(container, objectId, 2);
+                }
+            }
+
+            // Merge discovered references back to main tracker
+            if (referencedClassTracker != null) {
+                for (String className : objectExporter.getReferencedClassTracker().getReferencedClasses()) {
+                    referencedClassTracker.registerReferencedClass(className);
                 }
             }
 
@@ -430,14 +539,84 @@ public class XMLExportEngine {
     }
 
     /**
-     * Sanitizes a folder name by removing or replacing invalid characters.
+     * Recursively registers all modules and their classes with the reference
+     * tracker.
      */
-    private String sanitizeFolderName(String name) {
-        if (name == null) {
-            return "unnamed";
+    private void registerModuleClasses(MigrationModule module, ReferencedClassTracker tracker) {
+        Set<String> classNames = new HashSet<>(module.getClassNames());
+        tracker.registerModule(module.getName(), classNames);
+
+        for (MigrationModule childModule : module.getChildModules()) {
+            registerModuleClasses(childModule, tracker);
         }
-        // Replace invalid characters with underscores
-        return name.replaceAll("[^a-zA-Z0-9._-]", "_");
+    }
+
+    /**
+     * Exports referenced classes that were discovered during export but not in the
+     * original request.
+     * Creates a "Referenced" module to hold these classes.
+     */
+    private void exportReferencedClasses(ExtObjectContainer container, Set<String> referencedClasses,
+            Path dataPath, Path defsPath, ExportStatistics statistics, DOExportMonitor monitor,
+            ReferencedClassTracker referencedClassTracker) throws Exception {
+
+        if (monitor != null) {
+            monitor.onModuleStart("Referenced", referencedClasses.size(), 0);
+        }
+
+        // Create "Referenced" module folder
+        Path referencedDataPath = dataPath.resolve("Referenced");
+        Path referencedDefsPath = defsPath.resolve("Referenced");
+        Files.createDirectories(referencedDataPath);
+        Files.createDirectories(referencedDefsPath);
+
+        for (String className : referencedClasses) {
+            if (monitor != null && monitor.isCancelled()) {
+                break;
+            }
+
+            // Skip if already exported as a referenced class
+            if (referencedClassTracker.isReferencedClassExported(className)) {
+                continue;
+            }
+
+            DOSchemaClass schemaClass = schema.findClassByName(className);
+            if (schemaClass == null) {
+                if (monitor != null) {
+                    monitor.onStatusMessage("Referenced class not found in schema: " + className);
+                }
+                continue;
+            }
+
+            DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
+            if (dbSchemaClass == null) {
+                if (monitor != null) {
+                    monitor.onStatusMessage("Referenced class not found in database: " + className);
+                }
+                continue;
+            }
+
+            // Generate file name from destination class name
+            String fileName = schemaClass.destinationName + ".xml";
+            String xsdFileName = schemaClass.destinationName + ".xsd";
+            Path xmlPath = referencedDataPath.resolve(fileName);
+            Path xsdPath = referencedDefsPath.resolve(xsdFileName);
+
+            // Export this referenced class (without further reference tracking to avoid
+            // infinite loops)
+            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, null);
+
+            // Mark as exported
+            referencedClassTracker.markReferencedClassAsExported(className);
+
+            if (monitor != null) {
+                monitor.onStatusMessage("Exported referenced class: " + schemaClass.destinationName);
+            }
+        }
+
+        if (monitor != null) {
+            monitor.onModuleComplete("Referenced");
+        }
     }
 
     /**

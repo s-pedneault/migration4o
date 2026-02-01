@@ -26,12 +26,24 @@ public class FileUtil {
 
     /**
      * Sanitize a name for use in XML (remove invalid characters).
+     * Converts accentuated characters to their non-accentuated equivalents
+     * (e.g., é→e, à→a, ñ→n) and preserves single quotes.
      */
     public static String sanitizeName(String name) {
         if (name == null) {
             return "unnamed";
         }
-        return name.replaceAll("[^a-zA-Z0-9_.-]", "_");
+
+        // Normalize to NFD (decompose accented characters into base + diacritical
+        // marks)
+        String normalized = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD);
+
+        // Remove diacritical marks (accents) using Unicode category "Mark"
+        String withoutAccents = normalized.replaceAll("\\p{M}", "");
+
+        // Keep alphanumeric, underscore, dot, hyphen, and single quote
+        // Replace everything else with underscore
+        return withoutAccents.replaceAll("[^a-zA-Z0-9_.'-]", "_");
     }
 
 }

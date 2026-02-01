@@ -1,7 +1,9 @@
 package migration4o.migration;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import migration4o.database.DODatabaseService;
 import migration4o.schema.DOSchemaService;
@@ -130,10 +132,13 @@ public class MigrationExportService {
      * @param module         The module to export (including child modules)
      * @param baseOutputPath The base output directory path
      * @param monitor        Optional progress monitor for UI feedback
+     * @param saveHistory    Whether to save this export to history (false for bulk
+     *                       exports)
      * @return ExportResult with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath,
+            DOExportMonitor monitor, boolean saveHistory)
             throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
@@ -142,8 +147,8 @@ public class MigrationExportService {
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         ExportResult result = exporter.exportModuleStructured(module, baseOutputPath, monitor);
 
-        // Save to history if successful
-        if (result.errors.isEmpty()) {
+        // Save to history if successful and requested
+        if (saveHistory && result.errors.isEmpty()) {
             ExportHistory.saveExport(
                     ExportHistory.ExportType.MODULE,
                     module.getName(),
@@ -152,6 +157,74 @@ public class MigrationExportService {
         }
 
         return result;
+    }
+
+    /**
+     * Exports a module with folder structure (with history save by default).
+     * 
+     * @param module         The module to export (including child modules)
+     * @param baseOutputPath The base output directory path
+     * @param monitor        Optional progress monitor for UI feedback
+     * @return ExportResult with details about the export operation
+     * @throws Exception if export fails
+     */
+    public ExportResult exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor)
+            throws Exception {
+        return exportModuleStructured(module, baseOutputPath, monitor, true);
+    }
+
+    /**
+     * Exports multiple modules with a shared reference tracker.
+     * Used for bulk export operations to ensure referenced classes are only
+     * exported once.
+     * 
+     * @param modules        List of modules to export
+     * @param baseOutputPath The base output directory path
+     * @param monitor        Optional progress monitor for UI feedback
+     * @return List of ExportResults for each module
+     * @throws Exception if export fails
+     */
+    public java.util.List<ExportResult> exportModulesWithSharedTracker(
+            java.util.List<MigrationModule> modules, String baseOutputPath, DOExportMonitor monitor)
+            throws Exception {
+        DOSchema referenceSchema = schemaService.getReferenceSchema();
+        DOSchema databaseSchema = databaseService.getDatabaseSchema();
+        String databasePath = databaseService.getCurrentDatabasePath();
+
+        XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
+        migration4o.engine.export.ReferencedClassTracker sharedTracker = new migration4o.engine.export.ReferencedClassTracker();
+
+        // Pre-register ALL modules before exporting any of them
+        // This ensures the tracker knows about all classes that will be exported
+        for (MigrationModule module : modules) {
+            registerAllModuleClasses(module, sharedTracker);
+        }
+
+        java.util.List<ExportResult> results = new java.util.ArrayList<>();
+
+        // Export all modules with the shared tracker
+        for (MigrationModule module : modules) {
+            ExportResult result = exporter.exportModuleStructured(module, baseOutputPath, monitor, sharedTracker);
+            results.add(result);
+        }
+
+        // Export referenced classes once at the end
+        exporter.exportReferencedClasses(baseOutputPath, monitor, sharedTracker);
+
+        return results;
+    }
+
+    /**
+     * Recursively registers all classes in a module and its children.
+     */
+    private void registerAllModuleClasses(MigrationModule module,
+            migration4o.engine.export.ReferencedClassTracker tracker) {
+        java.util.Set<String> classNames = new java.util.HashSet<>(module.getClassNames());
+        tracker.registerModule(module.getName(), classNames);
+
+        for (MigrationModule childModule : module.getChildModules()) {
+            registerAllModuleClasses(childModule, tracker);
+        }
     }
 
     /**
@@ -188,29 +261,75 @@ public class MigrationExportService {
 
             return exporter.exportClass(params.targetName, baseOutput, monitor);
         } else {
-            // Module export - rebuild module from migration format
-            MigrationModule module = findModuleByName(params.targetName);
-            if (module != null) {
-                // Extract base directory - could be "output/54060" or legacy
-                // "output/migration/Module"
-                // We want to go back to just "output"
+            // Module export - check if this is a bulk export (multiple modules)
+            if (params.moduleNames != null && params.moduleNames.size() > 1) {
+                // Bulk export - rebuild all modules
+                List<MigrationModule> modules = new ArrayList<>();
+                for (String moduleName : params.moduleNames) {
+                    MigrationModule module = findModuleByName(moduleName);
+                    if (module == null) {
+                        throw new IllegalStateException("Could not find module '" + moduleName +
+                                "' in migration structure. Please re-export manually.");
+                    }
+                    modules.add(module);
+                }
+
+                // Extract base directory
                 String baseOutput = "output"; // safe default
                 File outputFile = new File(params.outputPath);
-
-                // Try to find "output" directory in the path
                 String path = outputFile.getAbsolutePath();
                 int outputIndex = path.lastIndexOf("/output");
                 if (outputIndex >= 0) {
                     baseOutput = path.substring(0, outputIndex + 7); // includes "/output"
                 } else if (outputFile.getParent() != null) {
-                    // Fallback: use parent directory
                     baseOutput = outputFile.getParent();
                 }
 
-                return exporter.exportModuleStructured(module, baseOutput, monitor);
+                // Use bulk export with shared tracker
+                List<ExportResult> results = exportModulesWithSharedTracker(modules, baseOutput, monitor);
+
+                // Combine results for return
+                List<ExportResult.ExportError> allErrors = new ArrayList<>();
+                List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
+                Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+                int totalObjectsAttempted = 0;
+                int totalObjectsSucceeded = 0;
+
+                for (ExportResult result : results) {
+                    allErrors.addAll(result.errors);
+                    allWarnings.addAll(result.schemaWarnings);
+                    allClassCounts.putAll(result.exportedClassCounts);
+                    totalObjectsAttempted += result.objectsAttempted;
+                    totalObjectsSucceeded += result.objectsSucceeded;
+                }
+
+                return new ExportResult("Bulk Export", baseOutput, totalObjectsAttempted,
+                        totalObjectsSucceeded, allErrors, allWarnings, allClassCounts);
             } else {
-                throw new IllegalStateException("Could not find module '" + params.targetName +
-                        "' in migration structure. Please re-export manually.");
+                // Single module export
+                MigrationModule module = findModuleByName(params.targetName);
+                if (module != null) {
+                    // Extract base directory - could be "output/54060" or legacy
+                    // "output/migration/Module"
+                    // We want to go back to just "output"
+                    String baseOutput = "output"; // safe default
+                    File outputFile = new File(params.outputPath);
+
+                    // Try to find "output" directory in the path
+                    String path = outputFile.getAbsolutePath();
+                    int outputIndex = path.lastIndexOf("/output");
+                    if (outputIndex >= 0) {
+                        baseOutput = path.substring(0, outputIndex + 7); // includes "/output"
+                    } else if (outputFile.getParent() != null) {
+                        // Fallback: use parent directory
+                        baseOutput = outputFile.getParent();
+                    }
+
+                    return exporter.exportModuleStructured(module, baseOutput, monitor);
+                } else {
+                    throw new IllegalStateException("Could not find module '" + params.targetName +
+                            "' in migration structure. Please re-export manually.");
+                }
             }
         }
     }

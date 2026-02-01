@@ -754,9 +754,24 @@ public class MigrationStructurePanel extends JPanel {
 
         // Export option for modules
         if (node.getUserObject() instanceof ModuleNode) {
-            ModuleNode moduleNode = (ModuleNode) node.getUserObject();
-            JMenuItem exportModuleItem = new JMenuItem("Export Module to XML...");
-            exportModuleItem.addActionListener(evt -> exportModule(node, moduleNode));
+            // Check if multiple modules are selected
+            TreePath[] allSelectedPaths = exportTree.getSelectionPaths();
+            int moduleCount = 0;
+            if (allSelectedPaths != null) {
+                for (TreePath selectedPath : allSelectedPaths) {
+                    DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                    if (selectedNode.getUserObject() instanceof ModuleNode) {
+                        moduleCount++;
+                    }
+                }
+            }
+
+            // Always use the same export method - handles 1 or multiple modules
+            String menuText = moduleCount > 1
+                    ? "Export " + moduleCount + " Modules to XML..."
+                    : "Export Module to XML...";
+            JMenuItem exportModuleItem = new JMenuItem(menuText);
+            exportModuleItem.addActionListener(evt -> exportSelectedModules());
             contextMenu.add(exportModuleItem);
         }
         // Options for classes
@@ -846,90 +861,6 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Exports an entire module (with all its classes and nested modules) to XML
-     */
-    private void exportModule(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
-        // Create export service (uses singletons for database and schema)
-        MigrationExportService exportService = new MigrationExportService();
-        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
-
-        if (!validation.isValid()) {
-            JOptionPane.showMessageDialog(this,
-                    validation.getErrorMessage(),
-                    validation.getErrorTitle(),
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Build the module structure from the tree
-        MigrationModule module = buildModuleFromTree(moduleTreeNode, moduleNode);
-
-        if (module.getClassNames().isEmpty() && module.getChildModules().isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "Module '" + moduleNode.getName() + "' contains no classes.",
-                    "Empty Module",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        // Use default output directory automatically (output/<db-folder>/Data and
-        // Definitions)
-        String outputPath = "output";
-
-        // Create and show progress dialog
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-        ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame, "Exporting Module");
-        progressDialog.setVisible(true);
-
-        // Run export in background
-        SwingWorker<ExportResult, String> worker = new SwingWorker<>() {
-            @Override
-            protected ExportResult doInBackground() throws Exception {
-                return exportService.exportModuleStructured(module, outputPath, progressDialog);
-            }
-
-            @Override
-            protected void process(List<String> chunks) {
-                // Progress updates now handled by monitor
-            }
-
-            @Override
-            protected void done() {
-                System.out.println("DEBUG: MODULE export done() called");
-                try {
-                    ExportResult result = get();
-                    System.out.println("DEBUG: Got export result, showing dialog...");
-                    // Show detailed result dialog
-                    ExportResultDialog dialog = new ExportResultDialog(
-                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                            result);
-                    dialog.setVisible(true);
-                    System.out.println("DEBUG: Dialog closed, continuing...");
-
-                    // Update migration coverage with exported object counts
-                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                        System.out.println("DEBUG MigrationStructurePanel (MODULE): Notifying MainWindow with " +
-                                result.exportedClassCounts.size() + " classes");
-                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                        if (window instanceof MainWindow) {
-                            MainWindow mainWindow = (MainWindow) window;
-                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                            "Error during export: " + e.getMessage(),
-                            "Export Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-
-        worker.execute();
-    }
-
-    /**
      * Exports all currently selected modules in the export tree.
      */
     private void exportSelectedModules() {
@@ -998,31 +929,16 @@ public class MigrationStructurePanel extends JPanel {
         SwingWorker<List<ExportResult>, Void> worker = new SwingWorker<>() {
             @Override
             protected List<ExportResult> doInBackground() throws Exception {
-                List<ExportResult> results = new ArrayList<>();
-                int count = 1;
+                List<ExportResult> results;
 
+                // Extract modules list
+                List<MigrationModule> modules = new ArrayList<>();
                 for (ModuleExportInfo info : modulesToExport) {
-                    if (progressDialog.isCancelled()) {
-                        break;
-                    }
-
-                    progressDialog.onStatusMessage(
-                            "Exporting module " + count + "/" + modulesToExport.size() + ": " + info.name);
-                    try {
-                        ExportResult result = exportService.exportModuleStructured(info.module, outputPath,
-                                progressDialog);
-                        results.add(result);
-                    } catch (Exception e) {
-                        // Create error result
-                        List<ExportResult.ExportError> errorList = new ArrayList<>();
-                        errorList.add(new ExportResult.ExportError(-1, info.name,
-                                "Error exporting " + info.name + ": " + e.getMessage(), e));
-                        ExportResult errorResult = new ExportResult(
-                                info.name, outputPath, 0, 0, errorList);
-                        results.add(errorResult);
-                    }
-                    count++;
+                    modules.add(info.module);
                 }
+
+                // Use bulk export with shared tracker
+                results = exportService.exportModulesWithSharedTracker(modules, outputPath, progressDialog);
 
                 return results;
             }
@@ -1035,19 +951,44 @@ public class MigrationStructurePanel extends JPanel {
 
                     // Combine results for summary
                     List<ExportResult.ExportError> allErrors = new ArrayList<>();
+                    List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
                     Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+                    List<String> allClassNames = new ArrayList<>();
+                    List<String> allModuleNames = new ArrayList<>();
                     int successCount = 0;
+                    int totalObjectsAttempted = 0;
+                    int totalObjectsSucceeded = 0;
 
-                    for (ExportResult result : results) {
+                    for (int i = 0; i < results.size(); i++) {
+                        ExportResult result = results.get(i);
                         if (result.errors.isEmpty()) {
                             successCount++;
+                            allModuleNames.add(modulesToExport.get(i).name);
                         }
                         allErrors.addAll(result.errors);
+                        allWarnings.addAll(result.schemaWarnings);
                         allClassCounts.putAll(result.exportedClassCounts);
+                        allClassNames.addAll(result.exportedClassCounts.keySet());
+                        totalObjectsAttempted += result.objectsAttempted;
+                        totalObjectsSucceeded += result.objectsSucceeded;
+                    }
+
+                    // Save bulk export to history if any modules succeeded
+                    if (successCount > 0) {
+                        String targetName = allModuleNames.size() == 1
+                                ? allModuleNames.get(0)
+                                : allModuleNames.size() + " modules";
+                        ExportHistory.saveExport(
+                                ExportHistory.ExportType.MODULE,
+                                targetName,
+                                outputPath,
+                                allClassNames,
+                                allModuleNames);
                     }
 
                     ExportResult combinedResult = new ExportResult(
-                            "Bulk Export", outputPath, 0, successCount, allErrors, new ArrayList<>(), allClassCounts);
+                            "Bulk Export", outputPath, totalObjectsAttempted, totalObjectsSucceeded, allErrors,
+                            allWarnings, allClassCounts);
 
                     // Show summary dialog
                     String summaryMessage = "Exported " + successCount + " of " + results.size()

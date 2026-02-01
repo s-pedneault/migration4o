@@ -29,6 +29,7 @@ public class FieldExporter {
     private final XMLWriter xmlWriter;
     private final XSDBuilder xsdBuilder;
     private final ReferenceObjectExporter idEntiteResolver;
+    private ReferencedClassTracker referencedClassTracker;
 
     public FieldExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter, XSDBuilder xsdBuilder,
             ReferenceObjectExporter idEntiteResolver) {
@@ -37,6 +38,13 @@ public class FieldExporter {
         this.xmlWriter = xmlWriter;
         this.xsdBuilder = xsdBuilder;
         this.idEntiteResolver = idEntiteResolver;
+    }
+
+    /**
+     * Sets the reference tracker for tracking referenced classes.
+     */
+    public void setReferencedClassTracker(ReferencedClassTracker tracker) {
+        this.referencedClassTracker = tracker;
     }
 
     /**
@@ -364,6 +372,14 @@ public class FieldExporter {
         // Check if this is an IDEntite reference (reference object pattern)
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
         if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
+            // Track the referenced entity class if this is a non-embedded reference
+            if (referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {
+                // Use the pointsTo field to find what entity class this IDEntite references
+                if (fieldClass.pointsTo != null && !fieldClass.pointsTo.isEmpty()) {
+                    referencedClassTracker.registerReferencedClass(fieldClass.pointsTo);
+                }
+            }
+
             // Pass through the embedded flag and field name for tracking
             idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField,
                     (objectId, indent) -> objectExportDelegate.exportObject(objectId, indent, isEmbedded, fieldName,

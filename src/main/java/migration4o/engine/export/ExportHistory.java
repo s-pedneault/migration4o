@@ -16,6 +16,7 @@ public class ExportHistory {
     private static final String PROP_OUTPUT = "export.output";
     private static final String PROP_TIMESTAMP = "export.timestamp";
     private static final String PROP_CLASS_NAMES = "export.classNames";
+    private static final String PROP_MODULE_NAMES = "export.moduleNames";
 
     public enum ExportType {
         CLASS, MODULE
@@ -26,6 +27,14 @@ public class ExportHistory {
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames) {
+        saveExport(type, targetName, outputPath, classNames, null);
+    }
+
+    /**
+     * Saves export parameters for bulk module export.
+     */
+    public static void saveExport(ExportType type, String targetName, String outputPath,
+            List<String> classNames, List<String> moduleNames) {
         Properties props = new Properties();
         props.setProperty(PROP_TYPE, type.name());
         props.setProperty(PROP_TARGET, targetName);
@@ -34,6 +43,10 @@ public class ExportHistory {
 
         if (type == ExportType.MODULE && classNames != null) {
             props.setProperty(PROP_CLASS_NAMES, String.join(",", classNames));
+        }
+
+        if (moduleNames != null && !moduleNames.isEmpty()) {
+            props.setProperty(PROP_MODULE_NAMES, String.join(",", moduleNames));
         }
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
@@ -61,15 +74,21 @@ public class ExportHistory {
             String output = props.getProperty(PROP_OUTPUT);
             String timestamp = props.getProperty(PROP_TIMESTAMP);
             List<String> classNames = null;
+            List<String> moduleNames = null;
 
             if (type == ExportType.MODULE) {
                 String classNamesStr = props.getProperty(PROP_CLASS_NAMES);
                 if (classNamesStr != null && !classNamesStr.isEmpty()) {
                     classNames = Arrays.asList(classNamesStr.split(","));
                 }
+
+                String moduleNamesStr = props.getProperty(PROP_MODULE_NAMES);
+                if (moduleNamesStr != null && !moduleNamesStr.isEmpty()) {
+                    moduleNames = Arrays.asList(moduleNamesStr.split(","));
+                }
             }
 
-            return new ExportParams(type, target, output, classNames,
+            return new ExportParams(type, target, output, classNames, moduleNames,
                     timestamp != null ? Long.parseLong(timestamp) : 0);
         } catch (IOException | IllegalArgumentException e) {
             System.err.println("Warning: Could not load export history: " + e.getMessage());
@@ -92,14 +111,16 @@ public class ExportHistory {
         public final String targetName;
         public final String outputPath;
         public final List<String> classNames;
+        public final List<String> moduleNames;
         public final long timestamp;
 
         public ExportParams(ExportType type, String targetName, String outputPath,
-                List<String> classNames, long timestamp) {
+                List<String> classNames, List<String> moduleNames, long timestamp) {
             this.type = type;
             this.targetName = targetName;
             this.outputPath = outputPath;
             this.classNames = classNames;
+            this.moduleNames = moduleNames;
             this.timestamp = timestamp;
         }
 
@@ -107,8 +128,12 @@ public class ExportHistory {
             if (type == ExportType.CLASS) {
                 return "Export class '" + targetName + "' to " + outputPath;
             } else {
-                return "Export module '" + targetName + "' (" +
-                        (classNames != null ? classNames.size() : 0) + " classes) to " + outputPath;
+                if (moduleNames != null && moduleNames.size() > 1) {
+                    return "Export " + moduleNames.size() + " modules to " + outputPath;
+                } else {
+                    return "Export module '" + targetName + "' (" +
+                            (classNames != null ? classNames.size() : 0) + " classes) to " + outputPath;
+                }
             }
         }
 

@@ -28,6 +28,13 @@
             <classRef sourceName="gest.rci.ParamRci"/>
             <classRef sourceName="gest.schema.ParamSchema"/>
             <classRef sourceName="gest.secCiv.ParamSecCiv"/>
+            <classRef sourceName="gest.champPerso.TypeChampPerso"/>
+            <classRef sourceName="gest.listePerso.ListePerso"/>
+            <classRef sourceName="gest.activite.Acte"/>
+            <classRef sourceName="gest.activite.TypeActivQuart"/>
+            <classRef sourceName="gest.mobile.Mobile"/>
+            <classRef sourceName="gest.preference.Preference"/>
+            <classRef sourceName="gest.gen.ParamStatPresActivite"/>
         </module>
         <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
@@ -48,6 +55,15 @@
             <classRef sourceName="gest.dossPrev.PersonneRess"/>
             <classRef sourceName="gest.dossPrev.ProdDang"/>
             <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
+            <module name="Caractéristiques" id="Caractéristiques">
+                <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
+                <classRef sourceName="gest.typeCheminee.TypeCheminee"/>
+                <classRef sourceName="gest.typeChauffage.TypeChauffage"/>
+                <classRef sourceName="gest.typeToit.TypeToit"/>
+                <classRef sourceName="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere"/>
+                <classRef sourceName="gest.plancher.Plancher"/>
+                <classRef sourceName="gest.parement.Parement"/>
+            </module>
         </module>
         <module name="Prévention" id="Prévention">
             <classRef sourceName="gest.prevention.Prevention"/>
@@ -207,6 +223,13 @@
         </module>
         <module name="Rapports" id="Rapports">
             <classRef sourceName="gest.centreDesRapports.RapportCentral"/>
+        </module>
+        <module name="Documents" id="documents">
+            <classRef sourceName="gest.fichier.Fichier"/>
+            <classRef sourceName="gest.rapport.Rapport"/>
+            <classRef sourceName="gest.rapport.RapportPerso"/>
+            <classRef sourceName="gest.rapport.SousRapport"/>
+            <classRef sourceName="gest.rapport.SousRapportPageSupp"/>
         </module>
     </modules>
 </database>

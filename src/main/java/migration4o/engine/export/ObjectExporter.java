@@ -32,6 +32,8 @@ public class ObjectExporter {
     private final ExportStatistics statistics;
     private final Set<Long> exportedObjectIds = new HashSet<>();
     private final Map<Long, EmbeddedObjectInfo> embeddedObjectRefs = new HashMap<>();
+    private final ReferencedClassTracker referencedClassTracker;
+    private boolean trackReferences = false;
 
     /**
      * Tracks information about embedded objects for detecting duplicates.
@@ -57,6 +59,33 @@ public class ObjectExporter {
         this.xmlWriter = xmlWriter;
         this.xsdBuilder = xsdBuilder;
         this.statistics = statistics;
+        this.referencedClassTracker = new ReferencedClassTracker();
+    }
+
+    /**
+     * Enables automatic tracking of referenced classes during export.
+     * When enabled, any class referenced during export that is not in the export
+     * request
+     * will be automatically registered for export.
+     * 
+     * @param enabled true to enable tracking
+     */
+    public void setReferenceTracking(boolean enabled) {
+        this.trackReferences = enabled;
+        if (enabled) {
+            fieldExporter.setReferencedClassTracker(referencedClassTracker);
+        } else {
+            fieldExporter.setReferencedClassTracker(null);
+        }
+    }
+
+    /**
+     * Gets the reference tracker to query discovered classes.
+     * 
+     * @return the reference tracker
+     */
+    public ReferencedClassTracker getReferencedClassTracker() {
+        return referencedClassTracker;
     }
 
     /**
@@ -65,6 +94,7 @@ public class ObjectExporter {
     public void reset() {
         exportedObjectIds.clear();
         embeddedObjectRefs.clear();
+        referencedClassTracker.reset();
     }
 
     /**
