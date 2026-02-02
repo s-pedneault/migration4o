@@ -81,4 +81,116 @@ public class ValueUtil {
 
         return false;
     }
+
+    /**
+     * Evaluates whether a value matches skip conditions specified in skipWhen.
+     * 
+     * Supported keywords:
+     * - NULL: value is null
+     * - ZERO: numeric value equals 0
+     * - MINUS_ONE: numeric value equals -1
+     * - EMPTY_STRING: string is null or empty (after trim)
+     * - EMPTY_COLLECTION: collection/array is null or empty
+     * - FALSE: boolean is false
+     * - DEFAULT: uses legacy isEmpty() logic
+     * 
+     * @param value    The value to check
+     * @param skipWhen Comma-separated skip conditions (e.g., "NULL,ZERO,MINUS_ONE")
+     * @param field    The schema field (can be null)
+     * @param schema   The schema to use for type checking (can be null)
+     * @return true if value matches any skip condition, false otherwise
+     */
+    public static boolean matchesSkipCondition(Object value, String skipWhen, DOSchemaField field, DOSchema schema) {
+        if (skipWhen == null || skipWhen.trim().isEmpty()) {
+            return false;
+        }
+
+        // Split by comma and check each condition
+        String[] conditions = skipWhen.split(",");
+        for (String condition : conditions) {
+            condition = condition.trim().toUpperCase();
+
+            switch (condition) {
+                case "NULL":
+                    if (value == null) {
+                        return true;
+                    }
+                    break;
+
+                case "ZERO":
+                    if (value instanceof Number && ((Number) value).doubleValue() == 0.0) {
+                        return true;
+                    }
+                    break;
+
+                case "MINUS_ONE":
+                    if (value instanceof Number && ((Number) value).longValue() == -1) {
+                        return true;
+                    }
+                    break;
+
+                case "EMPTY_STRING":
+                    if (value == null || (value instanceof String && ((String) value).trim().isEmpty())) {
+                        return true;
+                    }
+                    break;
+
+                case "EMPTY_COLLECTION":
+                    if (value == null) {
+                        return true;
+                    }
+                    if (value instanceof Collection && ((Collection<?>) value).isEmpty()) {
+                        return true;
+                    }
+                    if (value.getClass().isArray() && java.lang.reflect.Array.getLength(value) == 0) {
+                        return true;
+                    }
+                    break;
+
+                case "FALSE":
+                    if (value instanceof Boolean && !((Boolean) value)) {
+                        return true;
+                    }
+                    break;
+
+                case "DEFAULT":
+                    if (isEmpty(value, field, schema)) {
+                        return true;
+                    }
+                    break;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Determines if a field should be skipped based on its skipWhen or skipIfEmpty
+     * settings.
+     * This combines the new skipWhen keyword-based approach with backward
+     * compatibility
+     * for the legacy skipIfEmpty boolean.
+     * 
+     * @param value  The field value
+     * @param field  The schema field
+     * @param schema The schema for type checking
+     * @return true if the field should be skipped, false otherwise
+     */
+    public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema) {
+        if (field == null) {
+            return false;
+        }
+
+        // New skipWhen takes precedence
+        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
+            return matchesSkipCondition(value, field.skipWhen, field, schema);
+        }
+
+        // Fall back to legacy skipIfEmpty
+        if (field.skipIfEmpty) {
+            return isEmpty(value, field, schema);
+        }
+
+        return false;
+    }
 }

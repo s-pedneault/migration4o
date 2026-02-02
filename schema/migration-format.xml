@@ -35,6 +35,8 @@
             <classRef sourceName="gest.mobile.Mobile"/>
             <classRef sourceName="gest.preference.Preference"/>
             <classRef sourceName="gest.gen.ParamStatPresActivite"/>
+            <classRef sourceName="gest.schema.ForceFrappe"/>
+            <classRef sourceName="gest.cartographie.ParamServeurCartographie"/>
         </module>
         <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
@@ -223,6 +225,7 @@
         </module>
         <module name="Rapports" id="Rapports">
             <classRef sourceName="gest.centreDesRapports.RapportCentral"/>
+            <classRef sourceName="gest.centreDesRapports.SectionRapportCentral"/>
         </module>
         <module name="Documents" id="documents">
             <classRef sourceName="gest.fichier.Fichier"/>

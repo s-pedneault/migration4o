@@ -229,6 +229,11 @@ public class MigrationStructurePanel extends JPanel {
         exportSelectedButton.addActionListener(e -> exportSelectedModules());
         toolbar.add(exportSelectedButton);
 
+        JButton exportAllButton = new JButton("Export All Modules");
+        exportAllButton.setToolTipText("Export all modules in the migration structure");
+        exportAllButton.addActionListener(e -> exportAllModules());
+        toolbar.add(exportAllButton);
+
         toolbar.addSeparator();
 
         JButton saveButton = new JButton("Save");
@@ -1024,6 +1029,51 @@ public class MigrationStructurePanel extends JPanel {
         };
 
         worker.execute();
+    }
+
+    /**
+     * Exports all modules in the migration structure.
+     */
+    private void exportAllModules() {
+        // Get the root node of the export tree
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+
+        // Collect all module nodes
+        List<TreePath> allModulePaths = new ArrayList<>();
+        collectAllModulePaths(root, new TreePath(root), allModulePaths);
+
+        if (allModulePaths.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "No modules found in the migration structure.",
+                    "No Modules",
+                    JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        // Select all module paths
+        exportTree.setSelectionPaths(allModulePaths.toArray(new TreePath[0]));
+
+        // Call the existing export selected modules method
+        exportSelectedModules();
+    }
+
+    /**
+     * Recursively collects all module nodes from the tree.
+     */
+    private void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
+        Object userObject = node.getUserObject();
+
+        // If this node is a module, add it to the list
+        if (userObject instanceof ModuleNode) {
+            modulePaths.add(currentPath);
+        }
+
+        // Recursively process all children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+            TreePath childPath = currentPath.pathByAddingChild(child);
+            collectAllModulePaths(child, childPath, modulePaths);
+        }
     }
 
     /**

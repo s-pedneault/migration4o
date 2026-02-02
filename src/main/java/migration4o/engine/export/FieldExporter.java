@@ -79,8 +79,8 @@ public class FieldExporter {
                     }
 
                     if (fieldValue == null) {
-                        // Skip this field if skipIfEmpty is true
-                        if (schemaField != null && schemaField.skipIfEmpty) {
+                        // Skip this field if skip conditions are met
+                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
                             continue;
                         }
                         xmlWriter.writeIndent(indentLevel);
@@ -141,8 +141,8 @@ public class FieldExporter {
         // Items extracted (or null/empty)
 
         if (items == null || items.isEmpty()) {
-            // Check skipIfEmpty
-            if (schemaField.skipIfEmpty) {
+            // Check skip conditions
+            if (ValueUtil.shouldSkipField(items, schemaField, schema)) {
                 return;
             }
             xmlWriter.writeIndent(indentLevel);
@@ -253,8 +253,8 @@ public class FieldExporter {
             ObjectExportDelegate objectExportDelegate) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
         if (ValueUtil.isEmpty(collection, schemaField, schema)) {
-            // Skip this field if skipIfEmpty is true
-            if (schemaField != null && schemaField.skipIfEmpty) {
+            // Skip this field if skip conditions are met
+            if (ValueUtil.shouldSkipField(collection, schemaField, schema)) {
                 return;
             }
             xmlWriter.writeIndent(indentLevel);
@@ -294,8 +294,8 @@ public class FieldExporter {
             throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
         if (ValueUtil.isEmpty(fieldValue, schemaField, schema)) {
-            // Skip this field if skipIfEmpty is true
-            if (schemaField != null && schemaField.skipIfEmpty) {
+            // Skip this field if skip conditions are met
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
                 return;
             }
             xmlWriter.writeIndent(indentLevel);
@@ -322,17 +322,9 @@ public class FieldExporter {
         if (refId > 0) {
             // This is a persistent object reference
 
-            // Check if this is an IDEntite with mID == -1 (empty reference)
-            if (schemaField != null && schemaField.skipIfEmpty) {
-                String className = ClassUtil.getClassName(fieldValue);
-                DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
-                if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
-                    Long mID = ReferenceUtil.extractMIDField(container, fieldValue);
-                    if (mID != null && mID == -1) {
-                        // Skip this field - it's an empty IDEntite reference
-                        return;
-                    }
-                }
+            // Check if field should be skipped (includes IDEntite with mID == -1)
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
+                return;
             }
 
             xmlWriter.writeStartElement(fieldName, indentLevel);
@@ -343,8 +335,8 @@ public class FieldExporter {
             // Primitive or non-persistent value - write inline
             String stringValue = fieldValue.toString();
 
-            // Skip this field if skipIfEmpty is true and value is empty
-            if (schemaField != null && schemaField.skipIfEmpty && ValueUtil.isEmpty(fieldValue, schemaField, schema)) {
+            // Skip this field if skip conditions are met
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
                 return;
             }
 

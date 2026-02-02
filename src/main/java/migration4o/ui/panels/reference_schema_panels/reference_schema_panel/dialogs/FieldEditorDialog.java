@@ -23,6 +23,14 @@ public class FieldEditorDialog extends JDialog {
     private final JLabel pointsToLabel;
     private final JCheckBox exportedCheckBox;
     private final JCheckBox skipIfEmptyCheckBox;
+    private final JPanel skipWhenPanel;
+    private final JCheckBox skipWhenNull;
+    private final JCheckBox skipWhenZero;
+    private final JCheckBox skipWhenMinusOne;
+    private final JCheckBox skipWhenEmptyString;
+    private final JCheckBox skipWhenEmptyCollection;
+    private final JCheckBox skipWhenFalse;
+    private final JCheckBox skipWhenDefault;
     private final JCheckBox embedContentsCheckBox;
     private final JCheckBox collectionCheckBox;
     private final JPanel childrenTypePanel;
@@ -107,6 +115,59 @@ public class FieldEditorDialog extends JDialog {
         skipIfEmptyCheckBox = new JCheckBox();
         skipIfEmptyCheckBox.setSelected(field.skipIfEmpty);
 
+        // Create skip when checkboxes
+        skipWhenNull = new JCheckBox("NULL");
+        skipWhenZero = new JCheckBox("ZERO");
+        skipWhenMinusOne = new JCheckBox("MINUS_ONE");
+        skipWhenEmptyString = new JCheckBox("EMPTY_STRING");
+        skipWhenEmptyCollection = new JCheckBox("EMPTY_COLLECTION");
+        skipWhenFalse = new JCheckBox("FALSE");
+        skipWhenDefault = new JCheckBox("DEFAULT");
+
+        // Parse existing skipWhen value and check appropriate boxes
+        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
+            String[] keywords = field.skipWhen.split(",");
+            for (String keyword : keywords) {
+                String trimmed = keyword.trim();
+                switch (trimmed) {
+                    case "NULL":
+                        skipWhenNull.setSelected(true);
+                        break;
+                    case "ZERO":
+                        skipWhenZero.setSelected(true);
+                        break;
+                    case "MINUS_ONE":
+                        skipWhenMinusOne.setSelected(true);
+                        break;
+                    case "EMPTY_STRING":
+                        skipWhenEmptyString.setSelected(true);
+                        break;
+                    case "EMPTY_COLLECTION":
+                        skipWhenEmptyCollection.setSelected(true);
+                        break;
+                    case "FALSE":
+                        skipWhenFalse.setSelected(true);
+                        break;
+                    case "DEFAULT":
+                        skipWhenDefault.setSelected(true);
+                        break;
+                }
+            }
+        }
+
+        // Create panel with checkboxes in a grid layout
+        skipWhenPanel = new JPanel(new GridLayout(0, 2, 5, 2));
+        skipWhenPanel.add(skipWhenNull);
+        skipWhenPanel.add(skipWhenZero);
+        skipWhenPanel.add(skipWhenMinusOne);
+        skipWhenPanel.add(skipWhenEmptyString);
+        skipWhenPanel.add(skipWhenEmptyCollection);
+        skipWhenPanel.add(skipWhenFalse);
+        skipWhenPanel.add(skipWhenDefault);
+        skipWhenPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
         // Children Type - show as text with Edit button and status
         childrenTypePanel = new JPanel(new BorderLayout(5, 0));
         JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
@@ -179,6 +240,7 @@ public class FieldEditorDialog extends JDialog {
         addFormRow(innerPanel, gbc, "Description:", descField);
         addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
         addFormRow(innerPanel, gbc, "Skip If Empty:", skipIfEmptyCheckBox);
+        addFormRow(innerPanel, gbc, "Skip When:", skipWhenPanel);
         addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
         addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
 
@@ -424,6 +486,25 @@ public class FieldEditorDialog extends JDialog {
 
     public boolean isFieldSkipIfEmpty() {
         return skipIfEmptyCheckBox.isSelected();
+    }
+
+    public String getFieldSkipWhen() {
+        java.util.List<String> keywords = new java.util.ArrayList<>();
+        if (skipWhenNull.isSelected())
+            keywords.add("NULL");
+        if (skipWhenZero.isSelected())
+            keywords.add("ZERO");
+        if (skipWhenMinusOne.isSelected())
+            keywords.add("MINUS_ONE");
+        if (skipWhenEmptyString.isSelected())
+            keywords.add("EMPTY_STRING");
+        if (skipWhenEmptyCollection.isSelected())
+            keywords.add("EMPTY_COLLECTION");
+        if (skipWhenFalse.isSelected())
+            keywords.add("FALSE");
+        if (skipWhenDefault.isSelected())
+            keywords.add("DEFAULT");
+        return keywords.isEmpty() ? null : String.join(",", keywords);
     }
 
     public boolean isFieldCollection() {

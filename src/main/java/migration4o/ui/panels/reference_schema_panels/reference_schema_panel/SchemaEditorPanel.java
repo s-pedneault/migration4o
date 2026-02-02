@@ -1421,6 +1421,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.type = dialog.getFieldType();
             newFieldWithData.isExported = dialog.isFieldExported();
             newFieldWithData.skipIfEmpty = dialog.isFieldSkipIfEmpty();
+            newFieldWithData.skipWhen = dialog.getFieldSkipWhen();
             newFieldWithData.isCollection = dialog.isFieldCollection();
             newFieldWithData.embedContents = dialog.isFieldEmbedContents();
             newFieldWithData.childrenType = dialog.getFieldChildrenType();

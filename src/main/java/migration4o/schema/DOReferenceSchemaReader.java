@@ -165,6 +165,7 @@ public class DOReferenceSchemaReader {
         String type = fieldElement.getAttribute("type");
         String isExportedAttr = fieldElement.getAttribute("isExported");
         String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
+        String skipWhen = fieldElement.getAttribute("skipWhen");
         String collection = fieldElement.getAttribute("collection");
         String embedContents = fieldElement.getAttribute("embedContents");
         String childrenType = fieldElement.getAttribute("childrenType");
@@ -187,6 +188,7 @@ public class DOReferenceSchemaReader {
         field.type = type;
         field.isExported = isExported;
         field.skipIfEmpty = isSkipIfEmpty;
+        field.skipWhen = skipWhen.isEmpty() ? null : skipWhen;
         field.isCollection = isCollection;
         field.embedContents = isEmbedContents;
         field.childrenType = childrenClassName;
