@@ -162,12 +162,11 @@ public class ClassObjectsDialog extends JDialog {
     }
 
     private void loadObjectsFromDatabase(int startIdx, int endIdx) {
-        ExtObjectContainer container = null;
         try {
             // Get the shared in-memory database container
-            container = DODatabaseService.getInstance().getContainer();
+            ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
 
-            if (container == null) {
+            if (container == null || container.ext().isClosed()) {
                 throw new IllegalStateException("No database is currently open.");
             }
 
@@ -224,14 +223,12 @@ public class ClassObjectsDialog extends JDialog {
         } catch (Exception ex) {
             ex.printStackTrace();
             SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
-                    "Error opening database: " + ex.getMessage(),
+                    "Error loading objects: " + ex.getMessage(),
                     "Error",
                     JOptionPane.ERROR_MESSAGE));
-        } finally {
-            if (container != null) {
-                container.close();
-            }
         }
+        // Note: We do NOT close the container here as it's a shared resource managed by
+        // DODatabaseService
     }
 
     /**

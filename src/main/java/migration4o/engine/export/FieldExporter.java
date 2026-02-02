@@ -327,6 +327,21 @@ public class FieldExporter {
                 return;
             }
 
+            // Additional check for IDEntite objects - check if they'll be filtered by
+            // resolveAndExport
+            String className = ClassUtil.getClassName(fieldValue);
+            DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, schema);
+            if (fieldClass != null && fieldClass.isIDEntite(databaseSchema)) {
+                // Check if this IDEntite will be skipped due to mID == -1
+                if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
+                    Long mID = migration4o.util.ReferenceUtil.extractMIDField(container, fieldValue);
+                    if (mID != null && mID == -1 && schemaField.skipWhen.contains("MINUS_ONE")) {
+                        // This field will produce empty content, skip it entirely
+                        return;
+                    }
+                }
+            }
+
             xmlWriter.writeStartElement(fieldName, indentLevel);
             exportFieldValue(container, fieldValue, schemaField, parentClass, indentLevel + 1,
                     objectExportDelegate);

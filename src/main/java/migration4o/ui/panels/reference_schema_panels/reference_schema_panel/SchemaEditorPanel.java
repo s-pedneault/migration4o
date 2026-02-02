@@ -44,8 +44,10 @@ import migration4o.schema.DOReferenceSchemaConstants;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.DOReferenceSchemaReader;
 import migration4o.schema.DOReferenceSchemaWriter;
+import migration4o.database.DODatabaseService;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.util.TypeUtil;
@@ -1143,8 +1145,57 @@ public class SchemaEditorPanel extends JPanel {
         int fieldCount = schemaClass.fields != null ? schemaClass.fields.length : 0;
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));
 
+        // Add View Objects button if database is open
+        if (DODatabaseService.getInstance().isDatabaseOpen()) {
+            JButton viewObjectsButton = new JButton("View Objects...");
+            viewObjectsButton.addActionListener(e -> viewClassObjects(schemaClass));
+            propertyPanel.addCustomField("", viewObjectsButton);
+        }
+
         // Populate fields table
         populateFieldsTable(schemaClass);
+    }
+
+    /**
+     * Opens the ClassObjectsDialog to view objects of the given class
+     */
+    private void viewClassObjects(DOSchemaClass schemaClass) {
+        // Get database schema
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        if (databaseSchema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Database schema not available.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the class in the database schema
+        DOSchemaClass dbSchemaClass = null;
+        for (DOSchemaClass cls : databaseSchema.getClasses()) {
+            if (cls.source.equals(schemaClass.source)) {
+                dbSchemaClass = cls;
+                break;
+            }
+        }
+
+        if (dbSchemaClass == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Class not found in database schema: " + schemaClass.source,
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Open dialog
+        String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
+        ClassObjectsDialog dialog = new ClassObjectsDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                schemaClass.source,
+                dbSchemaClass,
+                databaseSchema,
+                databasePath);
+        dialog.setVisible(true);
     }
 
     private JComboBox<String> createParentClassComboBox(String currentParent) {

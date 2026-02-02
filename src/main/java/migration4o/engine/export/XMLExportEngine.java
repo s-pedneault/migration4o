@@ -32,6 +32,7 @@ public class XMLExportEngine {
     private final DOSchema databaseSchema;
     private final String databasePath;
     private final ExtObjectContainer container;
+    private Integer maxObjectsPerClass = null; // null = all objects
 
     /**
      * Creates export engine using the shared in-memory database from
@@ -53,6 +54,16 @@ public class XMLExportEngine {
             throw new IllegalStateException(
                     "No database is open. Please open a database first using DODatabaseService.");
         }
+    }
+
+    /**
+     * Sets the maximum number of objects to export per class.
+     * 
+     * @param maxObjectsPerClass Maximum objects to export per class, or null for
+     *                           all objects
+     */
+    public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
+        this.maxObjectsPerClass = maxObjectsPerClass;
     }
 
     /**
@@ -201,9 +212,8 @@ public class XMLExportEngine {
             }
             throw e;
         } finally {
-            if (container != null) {
-                container.close();
-            }
+            // Note: We do NOT close the container here as it's a shared resource managed by
+            // DODatabaseService
             if (fileWriter != null) {
                 try {
                     fileWriter.close();
@@ -486,18 +496,32 @@ public class XMLExportEngine {
             long[] objectIds = dbSchemaClass.objectIds;
             int objectCount = (objectIds != null ? objectIds.length : 0);
 
+            // Apply object limit if set
+            int actualCount = objectCount;
+            if (maxObjectsPerClass != null && objectCount > maxObjectsPerClass) {
+                actualCount = maxObjectsPerClass;
+            }
+
             if (monitor != null) {
-                monitor.onClassStart(schemaClass.source, schemaClass.destinationName, objectCount);
+                monitor.onClassStart(schemaClass.source, schemaClass.destinationName, actualCount);
             }
 
             if (objectIds != null) {
-                statistics.setCurrentClass(schemaClass.source, objectIds.length);
+                statistics.setCurrentClass(schemaClass.source, actualCount);
 
+                // Export up to maxObjectsPerClass objects
+                int exportedCount = 0;
                 for (long objectId : objectIds) {
                     if (monitor != null && monitor.isCancelled()) {
                         break;
                     }
+
+                    if (maxObjectsPerClass != null && exportedCount >= maxObjectsPerClass) {
+                        break; // Stop at limit
+                    }
+
                     objectExporter.exportObjectRecursively(container, objectId, 2);
+                    exportedCount++;
                 }
             }
 
@@ -680,9 +704,8 @@ public class XMLExportEngine {
             return statistics.createResult(moduleName, outputPath);
 
         } finally {
-            if (container != null) {
-                container.close();
-            }
+            // Note: We do NOT close the container here as it's a shared resource managed by
+            // DODatabaseService
             if (fileWriter != null) {
                 try {
                     fileWriter.close();

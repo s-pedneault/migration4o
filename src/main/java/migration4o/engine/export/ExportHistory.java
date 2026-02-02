@@ -17,6 +17,7 @@ public class ExportHistory {
     private static final String PROP_TIMESTAMP = "export.timestamp";
     private static final String PROP_CLASS_NAMES = "export.classNames";
     private static final String PROP_MODULE_NAMES = "export.moduleNames";
+    private static final String PROP_MAX_OBJECTS_PER_CLASS = "export.maxObjectsPerClass";
 
     public enum ExportType {
         CLASS, MODULE
@@ -27,7 +28,7 @@ public class ExportHistory {
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames) {
-        saveExport(type, targetName, outputPath, classNames, null);
+        saveExport(type, targetName, outputPath, classNames, null, null);
     }
 
     /**
@@ -35,6 +36,14 @@ public class ExportHistory {
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames, List<String> moduleNames) {
+        saveExport(type, targetName, outputPath, classNames, moduleNames, null);
+    }
+
+    /**
+     * Saves export parameters with object limit for bulk module export.
+     */
+    public static void saveExport(ExportType type, String targetName, String outputPath,
+            List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass) {
         Properties props = new Properties();
         props.setProperty(PROP_TYPE, type.name());
         props.setProperty(PROP_TARGET, targetName);
@@ -47,6 +56,10 @@ public class ExportHistory {
 
         if (moduleNames != null && !moduleNames.isEmpty()) {
             props.setProperty(PROP_MODULE_NAMES, String.join(",", moduleNames));
+        }
+
+        if (maxObjectsPerClass != null) {
+            props.setProperty(PROP_MAX_OBJECTS_PER_CLASS, String.valueOf(maxObjectsPerClass));
         }
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
@@ -75,6 +88,7 @@ public class ExportHistory {
             String timestamp = props.getProperty(PROP_TIMESTAMP);
             List<String> classNames = null;
             List<String> moduleNames = null;
+            Integer maxObjectsPerClass = null;
 
             if (type == ExportType.MODULE) {
                 String classNamesStr = props.getProperty(PROP_CLASS_NAMES);
@@ -88,8 +102,17 @@ public class ExportHistory {
                 }
             }
 
+            String maxObjectsStr = props.getProperty(PROP_MAX_OBJECTS_PER_CLASS);
+            if (maxObjectsStr != null && !maxObjectsStr.isEmpty()) {
+                try {
+                    maxObjectsPerClass = Integer.parseInt(maxObjectsStr);
+                } catch (NumberFormatException e) {
+                    // Ignore invalid values
+                }
+            }
+
             return new ExportParams(type, target, output, classNames, moduleNames,
-                    timestamp != null ? Long.parseLong(timestamp) : 0);
+                    timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass);
         } catch (IOException | IllegalArgumentException e) {
             System.err.println("Warning: Could not load export history: " + e.getMessage());
             return null;
@@ -113,27 +136,37 @@ public class ExportHistory {
         public final List<String> classNames;
         public final List<String> moduleNames;
         public final long timestamp;
+        public final Integer maxObjectsPerClass; // null = all objects
 
         public ExportParams(ExportType type, String targetName, String outputPath,
-                List<String> classNames, List<String> moduleNames, long timestamp) {
+                List<String> classNames, List<String> moduleNames, long timestamp,
+                Integer maxObjectsPerClass) {
             this.type = type;
             this.targetName = targetName;
             this.outputPath = outputPath;
             this.classNames = classNames;
             this.moduleNames = moduleNames;
             this.timestamp = timestamp;
+            this.maxObjectsPerClass = maxObjectsPerClass;
         }
 
         public String getDescription() {
             if (type == ExportType.CLASS) {
                 return "Export class '" + targetName + "' to " + outputPath;
             } else {
+                String baseDesc;
                 if (moduleNames != null && moduleNames.size() > 1) {
-                    return "Export " + moduleNames.size() + " modules to " + outputPath;
+                    baseDesc = "Export " + moduleNames.size() + " modules to " + outputPath;
                 } else {
-                    return "Export module '" + targetName + "' (" +
+                    baseDesc = "Export module '" + targetName + "' (" +
                             (classNames != null ? classNames.size() : 0) + " classes) to " + outputPath;
                 }
+
+                if (maxObjectsPerClass != null) {
+                    baseDesc += " (max " + maxObjectsPerClass + " objects per class)";
+                }
+
+                return baseDesc;
             }
         }
 

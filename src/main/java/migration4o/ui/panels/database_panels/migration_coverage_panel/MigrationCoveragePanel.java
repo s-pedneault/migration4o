@@ -437,12 +437,11 @@ public class MigrationCoveragePanel extends JPanel {
             protected Void doInBackground() throws Exception {
                 publish(new TreeUpdate(TreeUpdateType.STATUS, "Getting database connection..."));
 
-                ExtObjectContainer container = null;
                 try {
                     // Get the shared in-memory database container
-                    container = DODatabaseService.getInstance().getContainer();
+                    ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
 
-                    if (container == null) {
+                    if (container == null || container.ext().isClosed()) {
                         throw new IllegalStateException("No database is currently open.");
                     }
 
@@ -535,10 +534,11 @@ public class MigrationCoveragePanel extends JPanel {
 
                     publish(new TreeUpdate(TreeUpdateType.STATUS, "Finalizing reach analysis..."));
 
-                } finally {
-                    if (container != null) {
-                        container.close();
-                    }
+                    // Note: We do NOT close the container here as it's a shared resource managed by
+                    // DODatabaseService
+
+                } catch (Exception e) {
+                    throw e; // Propagate the exception to doInBackground's caller
                 }
 
                 return null;

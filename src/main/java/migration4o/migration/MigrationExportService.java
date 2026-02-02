@@ -70,6 +70,22 @@ public class MigrationExportService {
      */
     public ExportResult exportClass(DOSchemaClass schemaClass, String outputPath, DOExportMonitor monitor)
             throws Exception {
+        return exportClass(schemaClass, outputPath, monitor, null);
+    }
+
+    /**
+     * Exports a single class to XML with optional object limit.
+     * 
+     * @param schemaClass        The schema class to export
+     * @param outputPath         The output file path
+     * @param monitor            Optional progress monitor for UI feedback
+     * @param maxObjectsPerClass Maximum objects to export, or null for all
+     * @return ExportResult with details about the export operation
+     * @throws Exception if export fails
+     */
+    public ExportResult exportClass(DOSchemaClass schemaClass, String outputPath, DOExportMonitor monitor,
+            Integer maxObjectsPerClass)
+            throws Exception {
         String className = schemaClass.source;
 
         DOSchema referenceSchema = schemaService.getReferenceSchema();
@@ -77,6 +93,7 @@ public class MigrationExportService {
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
+        exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         ExportResult result = exporter.exportClass(className, outputPath, monitor);
 
         // Save to history if successful
@@ -85,7 +102,9 @@ public class MigrationExportService {
                     ExportHistory.ExportType.CLASS,
                     className,
                     outputPath,
-                    null);
+                    null,
+                    null,
+                    maxObjectsPerClass);
         }
 
         return result;
@@ -187,11 +206,19 @@ public class MigrationExportService {
     public java.util.List<ExportResult> exportModulesWithSharedTracker(
             java.util.List<MigrationModule> modules, String baseOutputPath, DOExportMonitor monitor)
             throws Exception {
+        return exportModulesWithSharedTracker(modules, baseOutputPath, monitor, null);
+    }
+
+    public java.util.List<ExportResult> exportModulesWithSharedTracker(
+            java.util.List<MigrationModule> modules, String baseOutputPath, DOExportMonitor monitor,
+            Integer maxObjectsPerClass)
+            throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
+        exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         migration4o.engine.export.ReferencedClassTracker sharedTracker = new migration4o.engine.export.ReferencedClassTracker();
 
         // Pre-register ALL modules before exporting any of them
@@ -248,6 +275,7 @@ public class MigrationExportService {
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
+        exporter.setMaxObjectsPerClass(params.maxObjectsPerClass);
 
         if (params.type == ExportHistory.ExportType.CLASS) {
             // Class export - extract base directory (one level up from db folder)
@@ -285,8 +313,9 @@ public class MigrationExportService {
                     baseOutput = outputFile.getParent();
                 }
 
-                // Use bulk export with shared tracker
-                List<ExportResult> results = exportModulesWithSharedTracker(modules, baseOutput, monitor);
+                // Use bulk export with shared tracker and object limit
+                List<ExportResult> results = exportModulesWithSharedTracker(modules, baseOutput, monitor,
+                        params.maxObjectsPerClass);
 
                 // Combine results for return
                 List<ExportResult.ExportError> allErrors = new ArrayList<>();

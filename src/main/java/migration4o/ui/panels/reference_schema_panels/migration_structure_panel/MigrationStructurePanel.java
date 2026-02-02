@@ -41,6 +41,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 import migration4o.ui.common.ExportProgressDialog;
+import migration4o.ui.dialogs.ExportConfirmationDialog;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
@@ -48,6 +49,7 @@ import javax.swing.tree.TreeSelectionModel;
 
 import migration4o.engine.export.ExportHistory;
 import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.database.DODatabaseService;
 import migration4o.migration.MigrationExportService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -57,8 +59,10 @@ import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
 import migration4o.schema.modules.DOModuleStructureReader;
+import migration4o.ui.common.ExportProgressDialog;
 import migration4o.ui.common.dialogs.ExportResultDialog;
 import migration4o.ui.main.MainWindow;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 
 /**
@@ -734,6 +738,15 @@ public class MigrationStructurePanel extends JPanel {
             JMenuItem addToExportItem = new JMenuItem("Add to Export...");
             addToExportItem.addActionListener(evt -> addSelectedClassToExport());
             contextMenu.add(addToExportItem);
+
+            // Add View Objects option if database is open
+            if (DODatabaseService.getInstance().isDatabaseOpen()) {
+                contextMenu.addSeparator();
+                ClassNode classNode = (ClassNode) node.getUserObject();
+                JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
+                viewObjectsItem.addActionListener(evt -> viewClassObjects(classNode.getSchemaClass()));
+                contextMenu.add(viewObjectsItem);
+            }
         }
 
         if (contextMenu.getComponentCount() > 0) {
@@ -804,11 +817,61 @@ public class MigrationStructurePanel extends JPanel {
             JMenuItem removeFromExportItem = new JMenuItem("Remove from Export");
             removeFromExportItem.addActionListener(evt -> removeClassFromExport(node));
             contextMenu.add(removeFromExportItem);
+
+            // Add View Objects option if database is open
+            if (DODatabaseService.getInstance().isDatabaseOpen()) {
+                contextMenu.addSeparator();
+                JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
+                viewObjectsItem.addActionListener(evt -> viewClassObjects(classNode.getSchemaClass()));
+                contextMenu.add(viewObjectsItem);
+            }
         }
 
         if (contextMenu.getComponentCount() > 0) {
             contextMenu.show(exportTree, e.getX(), e.getY());
         }
+    }
+
+    /**
+     * Opens the ClassObjectsDialog to view objects of the given class
+     */
+    private void viewClassObjects(DOSchemaClass schemaClass) {
+        // Get database schema
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        if (databaseSchema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Database schema not available.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the class in the database schema
+        DOSchemaClass dbSchemaClass = null;
+        for (DOSchemaClass cls : databaseSchema.getClasses()) {
+            if (cls.source.equals(schemaClass.source)) {
+                dbSchemaClass = cls;
+                break;
+            }
+        }
+
+        if (dbSchemaClass == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Class not found in database schema: " + schemaClass.source,
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Open dialog
+        String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
+        ClassObjectsDialog dialog = new ClassObjectsDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                schemaClass.source,
+                dbSchemaClass,
+                databaseSchema,
+                databasePath);
+        dialog.setVisible(true);
     }
 
     /**
@@ -830,12 +893,31 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String simpleName = schemaClass.getSourceName();
 
+        // Get previous export limit from history (for default value)
+        Integer defaultLimit = 50; // default
+        ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
+        if (lastExport != null && lastExport.maxObjectsPerClass != null) {
+            defaultLimit = lastExport.maxObjectsPerClass;
+        }
+
+        // Show confirmation dialog with object limit options
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(
+                parentFrame, 1, defaultLimit);
+        confirmDialog.setTitle("Confirm Export");
+        confirmDialog.showDialog();
+
+        if (!confirmDialog.isConfirmed()) {
+            return;
+        }
+
+        Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
+
         // Use default output directory automatically (output/<db-folder>/Data and
         // Definitions)
         String outputPath = "output";
 
         // Create and show progress dialog
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame, "Exporting Class: " + simpleName);
         progressDialog.setVisible(true);
 
@@ -843,7 +925,7 @@ public class MigrationStructurePanel extends JPanel {
         SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
             @Override
             protected ExportResult doInBackground() throws Exception {
-                return exportService.exportClass(schemaClass, outputPath, progressDialog);
+                return exportService.exportClass(schemaClass, outputPath, progressDialog, maxObjectsPerClass);
             }
 
             @Override
@@ -925,20 +1007,27 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Confirm with user
-        int confirm = JOptionPane.showConfirmDialog(this,
-                "Export " + modulesToExport.size() + " module(s) to XML?",
-                "Confirm Bulk Export",
-                JOptionPane.YES_NO_OPTION);
+        // Get previous export limit from history (for default value)
+        Integer defaultLimit = 50; // default
+        ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
+        if (lastExport != null && lastExport.maxObjectsPerClass != null) {
+            defaultLimit = lastExport.maxObjectsPerClass;
+        }
 
-        if (confirm != JOptionPane.YES_OPTION) {
+        // Show confirmation dialog with object limit options
+        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(
+                parentFrame, modulesToExport.size(), defaultLimit);
+        confirmDialog.showDialog();
+
+        if (!confirmDialog.isConfirmed()) {
             return;
         }
 
+        Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
         String outputPath = "output";
 
         // Create and show progress dialog
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame,
                 "Exporting " + modulesToExport.size() + " Module(s)");
         progressDialog.setVisible(true);
@@ -955,8 +1044,9 @@ public class MigrationStructurePanel extends JPanel {
                     modules.add(info.module);
                 }
 
-                // Use bulk export with shared tracker
-                results = exportService.exportModulesWithSharedTracker(modules, outputPath, progressDialog);
+                // Use bulk export with shared tracker and object limit
+                results = exportService.exportModulesWithSharedTracker(modules, outputPath, progressDialog,
+                        maxObjectsPerClass);
 
                 return results;
             }
@@ -1001,7 +1091,8 @@ public class MigrationStructurePanel extends JPanel {
                                 targetName,
                                 outputPath,
                                 allClassNames,
-                                allModuleNames);
+                                allModuleNames,
+                                maxObjectsPerClass);
                     }
 
                     ExportResult combinedResult = new ExportResult(
