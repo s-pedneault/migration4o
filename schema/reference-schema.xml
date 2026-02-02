@@ -521,7 +521,7 @@
         <reference class="gest.maintEquip.MaintEquipHisto" field="mVectChampPerso" />
         <reference class="gest.prevention.Prevention" field="mVectChampPerso" />
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="object" />
-        <field source="mIDTypeChampPerso" destinationName="idTypeChampPerso" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.champPerso.IDTypeChampPerso" embedContents="true" />
+        <field source="mIDTypeChampPerso" destinationName="idTypeChampPerso" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.champPerso.IDTypeChampPerso" />
     </class>
     <class source="gest.champPerso.ChampPersoChoix" destinationName="ChampPersoChoix" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.champPerso.TypeChampPerso" field="mVectChoix" />
@@ -837,12 +837,12 @@
         <reference class="gest.gen.VoieCircul" field="mVectTempIDDossPrevAssoc" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="INDEX_toString" destinationName="index_toString" isExported="false" skipWhen="DEFAULT" type="string" />
-        <field source="NbrEtage" destinationName="nbrEtage" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="NbrEtage" destinationName="nbrEtage" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipWhen="DEFAULT" type="gest.gen.Adresse" />
-        <field source="mAireAuSol" destinationName="aireAuSol" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mAnneeConstruction" destinationName="anneeConstruction" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mAnneeDernRenov" destinationName="anneeDernRenov" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mAssoc" destinationName="assoc" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mAireAuSol" destinationName="aireAuSol" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
+        <field source="mAnneeConstruction" destinationName="anneeConstruction" isExported="true" skipWhen="ZERO" type="int" />
+        <field source="mAnneeDernRenov" destinationName="anneeDerniereRenovation" isExported="true" skipWhen="ZERO" type="int" />
+        <field source="mAssoc" destinationName="associationBatiment" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mDateCreation" destinationName="dateCreation" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateDernResolution" destinationName="dateDernResolution" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateDernSync" destinationName="dateDernSync" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -859,11 +859,11 @@
         <field source="mLongLat" destinationName="longLat" isExported="true" skipWhen="DEFAULT" type="gest.gen.LongLat" />
         <field source="mMatricule" destinationName="matricule" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNbPhotosParPagePourGraph" destinationName="nbPhotosParPagePourGraph" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mNbrAttique" destinationName="nbrAttique" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mNbrAutresLocaux" destinationName="nbrAutresLocaux" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mNbrLogement" destinationName="nbrLogement" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mNbrSousSol" destinationName="nbrSousSol" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mNoCivFin" destinationName="noCivFin" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mNbrAttique" destinationName="nbrAttique" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
+        <field source="mNbrAutresLocaux" destinationName="nbrAutresLocaux" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
+        <field source="mNbrLogement" destinationName="nbrLogement" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
+        <field source="mNbrSousSol" destinationName="nbrSousSol" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
+        <field source="mNoCivFin" destinationName="noCivFin" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Periodicite" />
         <field source="mPermetSynchro" destinationName="permettSynchro" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -876,12 +876,12 @@
         <field source="mTransfertCAUCAFait" destinationName="transfertCAUCAFait" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mTypeConstrAutreDetail" destinationName="typeConstrAutreDetail" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mUtilisePeriodicite" destinationName="utilisePeriodicite" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="double" />
-        <field source="mValeurImmeuble" destinationName="valeurImmeuble" isExported="true" skipWhen="DEFAULT" type="double" />
-        <field source="mValeurTerrain" destinationName="valeurTerrain" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="ZERO,DEFAULT" type="double" />
+        <field source="mValeurImmeuble" destinationName="valeurImmeuble" isExported="true" skipWhen="ZERO,DEFAULT" type="double" />
+        <field source="mValeurTerrain" destinationName="valeurTerrain" isExported="true" skipWhen="ZERO,DEFAULT" type="double" />
         <field source="mVectAliasAdresse" destinationName="vectAliasAdresse" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.gen.Adresse" />
         <field source="mVectAliasNom" destinationName="vectAliasNom" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.dossPrev.DossPrev$NAliasNom" />
-        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" />
+        <field source="mVectChampPerso" destinationName="vectChampPerso" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
         <field source="mVectIDCodeRef" destinationName="vectIdCodeRef" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.codeRef.IDCodeRef" />
         <field source="mVectOldMatricule" destinationName="vectOldMatricule" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="string" />
         <field source="mVectPeriodicites" destinationName="vectPeriodicites" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.dossPrev.PeriodiciteDossPrev" />
@@ -905,7 +905,7 @@
         <field source="mIDUsageDuLocal" destinationName="idUsageDuLocal" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
         <field source="mIDUsagePrincipal" destinationName="idUsagePrincipal" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="NAliasNom" isExported="true" parentClass="gest.gen.Entite">
+    <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="AliasNom" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.dossPrev.DossPrev" field="mVectAliasNom" />
         <field source="iNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
@@ -943,7 +943,7 @@
         <field source="mPropNombre" destinationName="propNombre" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mPropQuant" destinationName="propQuant" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" />
     </class>
-    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossPrev" isExported="true" title="HistoImportDossPrev" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="HistoImportDossPrev" parentClass="gest.gen.EntiteContientID">
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mDateImport" destinationName="dateImport" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -977,7 +977,7 @@
         <reference class="gest.planInterv.PlanContact" field="mIDPersonneRess" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.ParamDossPrev" destinationName="ParamDossPrev" isExported="true" title="Paramètres de dossiers adresse" parentClass="gest.gen.EntiteParam">
+    <class source="gest.dossPrev.ParamDossPrev" destinationName="ParamDossierAdresse" isExported="true" title="Paramètres de dossiers adresse" parentClass="gest.gen.EntiteParam">
         <field source="mActiverExport" destinationName="activerExport" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mChercherMatriculeAnterieurDansVectOldMatricule" destinationName="chercherMatriculeAnterieurDansVectOldMatricule" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mConfigCompressionImages" destinationName="configCompressionImages" isExported="true" skipWhen="DEFAULT" type="gest.config.ConfigCompressionImages" embedContents="true" />
@@ -999,7 +999,7 @@
         <field source="iVoie" destinationName="voie" isExported="true" skipWhen="DEFAULT" type="gest.gen.VoieCircul" embedContents="true" />
         <field source="iVoieRempl" destinationName="voieRempl" isExported="true" skipWhen="DEFAULT" type="gest.gen.VoieCircul" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.PeriodiciteDossPrev" destinationName="PeriodiciteDossPrev" isExported="true" parentClass="gest.gen.Periodicite">
+    <class source="gest.dossPrev.PeriodiciteDossPrev" destinationName="PeriodiciteDossierAdresse" isExported="true" parentClass="gest.gen.Periodicite">
         <reference class="gest.dossPrev.DossPrev" field="mVectPeriodicites" />
         <field source="mDateDernPrev" destinationName="dateDernPrev" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipWhen="DEFAULT" type="int" />
@@ -1643,8 +1643,8 @@
     <class source="gest.gen.LongLat" destinationName="LongLat" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.dossPrev.DossPrev" field="mLongLat" />
         <reference class="gest.borne.Borne" field="mLongLat" />
-        <field source="mLat" destinationName="lat" isExported="true" skipWhen="DEFAULT" type="double" />
-        <field source="mLong" destinationName="long" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mLat" destinationName="lat" isExported="true" skipWhen="ZERO,DEFAULT" type="double" />
+        <field source="mLong" destinationName="long" isExported="true" skipWhen="ZERO,DEFAULT" type="double" />
     </class>
     <class source="gest.gen.Message" destinationName="Message" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.processus.Etape" field="mNote" />

@@ -340,6 +340,16 @@ public class FieldExporter {
                         return;
                     }
                 }
+
+                // For non-embedded IDEntite references, export as simple ID value
+                // instead of nested structure
+                if (schemaField != null && !schemaField.embedContents) {
+                    Long mID = migration4o.util.ReferenceUtil.extractMIDField(container, fieldValue);
+                    if (mID != null) {
+                        xmlWriter.writeElement(fieldName, mID.toString(), indentLevel);
+                        return;
+                    }
+                }
             }
 
             xmlWriter.writeStartElement(fieldName, indentLevel);

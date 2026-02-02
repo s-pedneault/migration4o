@@ -20,6 +20,14 @@ public class XSDBuilder {
     private final Map<String, Map<String, DOSchemaField>> fieldsByClass = new LinkedHashMap<>();
     private final Set<String> topLevelObjects = new LinkedHashSet<>();
     private final Set<String> referencedTypes = new LinkedHashSet<>(); // Types used in fields
+    private final migration4o.models.schema.DOSchema referenceSchema;
+    private final migration4o.models.schema.DOSchema databaseSchema;
+
+    public XSDBuilder(migration4o.models.schema.DOSchema referenceSchema,
+            migration4o.models.schema.DOSchema databaseSchema) {
+        this.referenceSchema = referenceSchema;
+        this.databaseSchema = databaseSchema;
+    }
 
     public void startExportRoot() {
         // Marks the beginning of schema recording
@@ -168,10 +176,18 @@ public class XSDBuilder {
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
                     + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
         } else {
-            String refClassName = getSimpleClassName(fieldType) + "Type";
-            referencedTypes.add(refClassName); // Track that this type is referenced
-            xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
-                    + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            // Check if this is a non-embedded IDEntite reference
+            DOSchemaClass fieldClass = migration4o.util.SchemaUtil.findClassByName(fieldType, referenceSchema);
+            if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
+                // Non-embedded IDEntite references are exported as simple long values
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
+                        + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            } else {
+                String refClassName = getSimpleClassName(fieldType) + "Type";
+                referencedTypes.add(refClassName); // Track that this type is referenced
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                        + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            }
         }
     }
 

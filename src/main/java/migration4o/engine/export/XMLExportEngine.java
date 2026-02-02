@@ -118,7 +118,7 @@ public class XMLExportEngine {
 
         // Initialize components
         ExportStatistics statistics = new ExportStatistics(monitor);
-        XSDBuilder xsdBuilder = new XSDBuilder();
+        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
         xsdBuilder.startExportRoot();
 
         FileWriter fileWriter = null;
@@ -461,7 +461,7 @@ public class XMLExportEngine {
             ExportStatistics statistics, DOExportMonitor monitor,
             ReferencedClassTracker referencedClassTracker) throws Exception {
 
-        XSDBuilder xsdBuilder = new XSDBuilder();
+        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
         xsdBuilder.startExportRoot();
 
         FileWriter fileWriter = null;
@@ -651,7 +651,7 @@ public class XMLExportEngine {
 
         // Initialize components
         ExportStatistics statistics = new ExportStatistics();
-        XSDBuilder xsdBuilder = new XSDBuilder();
+        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
         xsdBuilder.startExportRoot();
 
         FileWriter fileWriter = null;
