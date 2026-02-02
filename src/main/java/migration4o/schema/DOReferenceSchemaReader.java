@@ -175,9 +175,18 @@ public class DOReferenceSchemaReader {
 
         // Parse boolean attributes
         boolean isExported = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
-        boolean isSkipIfEmpty = skipIfEmpty.isEmpty() || "true".equalsIgnoreCase(skipIfEmpty);
         boolean isCollection = "true".equalsIgnoreCase(collection);
         boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
+
+        // Convert legacy skipIfEmpty to skipWhen if skipWhen is not set
+        String effectiveSkipWhen = skipWhen;
+        if ((effectiveSkipWhen == null || effectiveSkipWhen.trim().isEmpty()) && !skipIfEmpty.isEmpty()) {
+            boolean isSkipIfEmpty = "true".equalsIgnoreCase(skipIfEmpty);
+            if (isSkipIfEmpty) {
+                // Convert legacy skipIfEmpty=true to appropriate skipWhen keywords
+                effectiveSkipWhen = "NULL,MINUS_ONE";
+            }
+        }
 
         // Children class name
         String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
@@ -187,8 +196,7 @@ public class DOReferenceSchemaReader {
         field.destinationName = destinationName;
         field.type = type;
         field.isExported = isExported;
-        field.skipIfEmpty = isSkipIfEmpty;
-        field.skipWhen = skipWhen.isEmpty() ? null : skipWhen;
+        field.skipWhen = effectiveSkipWhen != null && !effectiveSkipWhen.trim().isEmpty() ? effectiveSkipWhen : null;
         field.isCollection = isCollection;
         field.embedContents = isEmbedContents;
         field.childrenType = childrenClassName;

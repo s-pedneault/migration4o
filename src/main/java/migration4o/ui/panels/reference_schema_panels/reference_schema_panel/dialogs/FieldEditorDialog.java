@@ -22,7 +22,6 @@ public class FieldEditorDialog extends JDialog {
     private final JPanel pointsToPanel;
     private final JLabel pointsToLabel;
     private final JCheckBox exportedCheckBox;
-    private final JCheckBox skipIfEmptyCheckBox;
     private final JPanel skipWhenPanel;
     private final JCheckBox skipWhenNull;
     private final JCheckBox skipWhenZero;
@@ -111,9 +110,6 @@ public class FieldEditorDialog extends JDialog {
 
         exportedCheckBox = new JCheckBox();
         exportedCheckBox.setSelected(field.isExported);
-
-        skipIfEmptyCheckBox = new JCheckBox();
-        skipIfEmptyCheckBox.setSelected(field.skipIfEmpty);
 
         // Create skip when checkboxes
         skipWhenNull = new JCheckBox("NULL");
@@ -239,7 +235,6 @@ public class FieldEditorDialog extends JDialog {
         addFormRow(innerPanel, gbc, "Title:", titleField);
         addFormRow(innerPanel, gbc, "Description:", descField);
         addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
-        addFormRow(innerPanel, gbc, "Skip If Empty:", skipIfEmptyCheckBox);
         addFormRow(innerPanel, gbc, "Skip When:", skipWhenPanel);
         addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
         addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
@@ -482,10 +477,6 @@ public class FieldEditorDialog extends JDialog {
 
     public boolean isFieldExported() {
         return exportedCheckBox.isSelected();
-    }
-
-    public boolean isFieldSkipIfEmpty() {
-        return skipIfEmptyCheckBox.isSelected();
     }
 
     public String getFieldSkipWhen() {

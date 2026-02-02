@@ -65,7 +65,7 @@ public class DOFieldConverter {
         field.destinationName = destination;
         field.type = type;
         field.isExported = true; // Assume all database fields are exported
-        field.skipIfEmpty = true; // Default behavior
+        field.skipWhen = "NULL,MINUS_ONE"; // Default behavior
         field.isCollection = isCollection;
         field.embedContents = false; // Default - don't embed
         field.childrenType = childrenType;

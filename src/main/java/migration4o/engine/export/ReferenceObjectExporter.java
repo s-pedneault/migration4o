@@ -32,10 +32,11 @@ public class ReferenceObjectExporter {
     public void resolveAndExport(ExtObjectContainer container, Object idEntiteObj, String idClassName,
             DOSchemaField schemaField, ObjectExportCallback objectExportCallback, int indentLevel) throws IOException {
 
-        // Check if we should skip empty IDEntite references (mID == -1)
-        if (schemaField != null && schemaField.skipIfEmpty) {
+        // Check if we should skip based on skipWhen conditions
+        if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
             Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
-            if (mID != null && mID == -1) {
+            // Check if MINUS_ONE is in skipWhen and mID is -1
+            if (mID != null && mID == -1 && schemaField.skipWhen.contains("MINUS_ONE")) {
                 // Skip this field - it's an empty reference
                 return;
             }

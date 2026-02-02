@@ -27,6 +27,7 @@ import java.util.Set;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -89,6 +90,9 @@ public class MigrationStructurePanel extends JPanel {
     // Track which classes are exported
     private Set<String> exportedClasses = new HashSet<>();
 
+    // Checkbox to include/exclude IDEntite classes
+    private JCheckBox includeIDEntitesCheckbox;
+
     private static final String MIGRATION_FORMAT_FILE = "schema/migration-format.xml";
 
     public MigrationStructurePanel(DOSchema schema) {
@@ -126,6 +130,13 @@ public class MigrationStructurePanel extends JPanel {
         JLabel infoLabel = new JLabel("Organize classes into migration modules");
         infoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         infoPanel.add(infoLabel);
+
+        // Add checkbox for including IDEntite classes
+        includeIDEntitesCheckbox = new JCheckBox("Include IDEntites");
+        includeIDEntitesCheckbox.setSelected(false);
+        includeIDEntitesCheckbox.addActionListener(e -> refreshAvailableTree());
+        infoPanel.add(includeIDEntitesCheckbox);
+
         add(infoPanel, BorderLayout.NORTH);
 
         // Create left tree structure (Available and Exported)
@@ -431,9 +442,10 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Categorize classes using util
+        // Categorize classes using util, filtering IDEntites if checkbox is unchecked
+        boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
         CategorizedClasses categorized = MigrationStructurePanelUtil
-                .categorizeClasses(schema, exportedClasses);
+                .categorizeClasses(schema, exportedClasses, includeIDEntites);
 
         // Sort by package and add to tree
         MigrationStructurePanelUtil.addSortedClassesToNode(availableEntitiesNode, categorized.availableEntities);
@@ -464,9 +476,10 @@ public class MigrationStructurePanel extends JPanel {
         // schema
         DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
 
-        // Categorize classes using util
+        // Categorize classes using util, filtering IDEntites if checkbox is unchecked
+        boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
         CategorizedClasses categorized = MigrationStructurePanelUtil
-                .categorizeClasses(sourceSchema, exportedClasses);
+                .categorizeClasses(sourceSchema, exportedClasses, includeIDEntites);
 
         // Sort by package and add to tree
         MigrationStructurePanelUtil.addSortedClassesToNode(availableEntitiesNode, categorized.availableEntities);

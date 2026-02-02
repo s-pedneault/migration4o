@@ -198,11 +198,14 @@ public class MigrationStructurePanelUtil {
      * Categorizes schema classes into Entities, Params, and Others,
      * separated by exported vs available.
      * 
-     * @param schema          the schema containing classes
-     * @param exportedClasses set of class names that have been exported
+     * @param schema           the schema containing classes
+     * @param exportedClasses  set of class names that have been exported
+     * @param includeIDEntites whether to include IDEntite classes in the
+     *                         categorization
      * @return categorized classes ready for tree population
      */
-    public static CategorizedClasses categorizeClasses(DOSchema schema, Set<String> exportedClasses) {
+    public static CategorizedClasses categorizeClasses(DOSchema schema, Set<String> exportedClasses,
+            boolean includeIDEntites) {
         CategorizedClasses categorized = new CategorizedClasses();
 
         if (schema == null || schema.getClasses() == null) {
@@ -210,6 +213,11 @@ public class MigrationStructurePanelUtil {
         }
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
+            // Skip IDEntite classes if the flag is false
+            if (!includeIDEntites && schemaClass.isIDEntite(schema)) {
+                continue;
+            }
+
             if (exportedClasses.contains(schemaClass.source)) {
                 // Add to Exported section
                 if (schemaClass.isEntite(schema)) {

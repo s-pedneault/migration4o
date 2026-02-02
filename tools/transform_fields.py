@@ -4,7 +4,7 @@ Transform field elements in migration-schema.xml according to the specified rule
 1. Change "name" attribute to "sourceName"
 2. Add "destinationName" attribute (remove leading 'm', handle 'ID' prefix, lowercase first letter)
 3. Add "migrate" attribute set to true
-4. Add "skipIfEmpty" attribute set to true
+4. Add "skipWhen" attribute (deprecated: skipIfEmpty is no longer used)
 5. Replace "java.lang.String" type with "String"
 """
 
@@ -48,8 +48,8 @@ def transform_field(match):
     # Generate destinationName
     dest_name = transform_destination_name(name_value)
     
-    # Build the transformed field
-    transformed = f'{indent}<field sourceName="{name_value}" destinationName="{dest_name}" migrate="true" skipIfEmpty="true" type="{type_value}"{rest}'
+    # Build the transformed field (Note: skipWhen should be added manually based on requirements)
+    transformed = f'{indent}<field sourceName="{name_value}" destinationName="{dest_name}" migrate="true" skipWhen="NULL,MINUS_ONE" type="{type_value}"{rest}'
     
     return transformed
 

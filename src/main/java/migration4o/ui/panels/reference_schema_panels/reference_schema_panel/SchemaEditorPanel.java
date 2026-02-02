@@ -443,7 +443,7 @@ public class SchemaEditorPanel extends JPanel {
                 new ColumnDefinition("Destination", 150, String.class),
                 new ColumnDefinition("Type", 150, String.class),
                 new ColumnDefinition("Exported", 60, Boolean.class),
-                new ColumnDefinition("Skip If Empty", 90, Boolean.class),
+                new ColumnDefinition("Skip When", 150, String.class),
                 new ColumnDefinition("Collection", 70, Boolean.class),
                 new ColumnDefinition("Embed Contents", 120, Boolean.class),
                 new ColumnDefinition("Children Type", 200, String.class)
@@ -1224,7 +1224,7 @@ public class SchemaEditorPanel extends JPanel {
                     field.destinationName,
                     field.type != null ? field.type : "",
                     field.isExported,
-                    field.skipIfEmpty,
+                    field.skipWhen != null ? field.skipWhen : "",
                     field.isCollection,
                     field.embedContents,
                     field.childrenType != null ? field.childrenType : ""
@@ -1393,7 +1393,6 @@ public class SchemaEditorPanel extends JPanel {
         newField.destinationName = "";
         newField.type = "java.lang.String";
         newField.isExported = true;
-        newField.skipIfEmpty = true;
         newField.isCollection = false;
         newField.embedContents = false;
         newField.childrenType = "";
@@ -1420,7 +1419,6 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.destinationName = dialog.getFieldDestination();
             newFieldWithData.type = dialog.getFieldType();
             newFieldWithData.isExported = dialog.isFieldExported();
-            newFieldWithData.skipIfEmpty = dialog.isFieldSkipIfEmpty();
             newFieldWithData.skipWhen = dialog.getFieldSkipWhen();
             newFieldWithData.isCollection = dialog.isFieldCollection();
             newFieldWithData.embedContents = dialog.isFieldEmbedContents();
@@ -1436,7 +1434,7 @@ public class SchemaEditorPanel extends JPanel {
                     dialog.getFieldDestination(),
                     dialog.getFieldType(),
                     dialog.isFieldExported(),
-                    dialog.isFieldSkipIfEmpty(),
+                    dialog.getFieldSkipWhen(),
                     dialog.isFieldCollection(),
                     dialog.isFieldEmbedContents(),
                     dialog.getFieldChildrenType()
@@ -1491,7 +1489,7 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.getFieldDestination(), rowIndex, 1);
             fieldsTableModel.setValueAt(dialog.getFieldType(), rowIndex, 2);
             fieldsTableModel.setValueAt(dialog.isFieldExported(), rowIndex, 3);
-            fieldsTableModel.setValueAt(dialog.isFieldSkipIfEmpty(), rowIndex, 4);
+            fieldsTableModel.setValueAt(dialog.getFieldSkipWhen(), rowIndex, 4);
             fieldsTableModel.setValueAt(dialog.isFieldCollection(), rowIndex, 5);
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
@@ -1584,7 +1582,7 @@ public class SchemaEditorPanel extends JPanel {
             String destination = (String) fieldsTableModel.getValueAt(i, 1);
             String type = (String) fieldsTableModel.getValueAt(i, 2);
             Boolean exported = (Boolean) fieldsTableModel.getValueAt(i, 3);
-            Boolean skipIfEmpty = (Boolean) fieldsTableModel.getValueAt(i, 4);
+            String skipWhen = (String) fieldsTableModel.getValueAt(i, 4);
             Boolean collection = (Boolean) fieldsTableModel.getValueAt(i, 5);
             Boolean embedContents = (Boolean) fieldsTableModel.getValueAt(i, 6);
             String childrenType = (String) fieldsTableModel.getValueAt(i, 7);
@@ -1606,7 +1604,7 @@ public class SchemaEditorPanel extends JPanel {
             field.destinationName = destination != null ? destination : "";
             field.type = type != null ? type : "";
             field.isExported = exported != null ? exported : false;
-            field.skipIfEmpty = skipIfEmpty != null ? skipIfEmpty : true;
+            field.skipWhen = skipWhen != null ? skipWhen : "";
             field.isCollection = collection != null ? collection : false;
             field.embedContents = embedContents != null ? embedContents : false;
             field.childrenType = childrenType != null ? childrenType : "";

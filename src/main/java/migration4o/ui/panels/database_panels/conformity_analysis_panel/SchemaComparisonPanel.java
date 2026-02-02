@@ -802,7 +802,6 @@ public class SchemaComparisonPanel extends JPanel {
             newField.destinationName = dialog.getFieldDestination();
             newField.type = dialog.getFieldType();
             newField.isExported = dialog.isFieldExported();
-            newField.skipIfEmpty = dialog.isFieldSkipIfEmpty();
             newField.skipWhen = dialog.getFieldSkipWhen();
             newField.isCollection = dialog.isFieldCollection();
             newField.embedContents = dialog.isFieldEmbedContents();

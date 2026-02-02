@@ -133,7 +133,6 @@ public class DOReferenceSchemaWriter {
                 writeAttribute(writer, "destinationName", field.destinationName);
             }
             writeAttribute(writer, "isExported", String.valueOf(field.isExported));
-            writeAttribute(writer, "skipIfEmpty", String.valueOf(field.skipIfEmpty));
             if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
                 writeAttribute(writer, "skipWhen", field.skipWhen);
             }

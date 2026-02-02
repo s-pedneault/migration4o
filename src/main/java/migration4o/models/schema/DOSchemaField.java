@@ -6,7 +6,6 @@ public class DOSchemaField {
     public String destinationName;
     public String type;
     public boolean isExported;
-    public boolean skipIfEmpty; // Deprecated: use skipWhen instead
     public String skipWhen; // Comma-separated skip conditions (NULL,ZERO,MINUS_ONE,etc.)
     public boolean isCollection;
     public boolean embedContents;

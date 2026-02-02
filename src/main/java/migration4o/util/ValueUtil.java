@@ -165,11 +165,7 @@ public class ValueUtil {
     }
 
     /**
-     * Determines if a field should be skipped based on its skipWhen or skipIfEmpty
-     * settings.
-     * This combines the new skipWhen keyword-based approach with backward
-     * compatibility
-     * for the legacy skipIfEmpty boolean.
+     * Determines if a field should be skipped based on its skipWhen settings.
      * 
      * @param value  The field value
      * @param field  The schema field
@@ -181,14 +177,9 @@ public class ValueUtil {
             return false;
         }
 
-        // New skipWhen takes precedence
+        // Check skipWhen conditions
         if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
             return matchesSkipCondition(value, field.skipWhen, field, schema);
-        }
-
-        // Fall back to legacy skipIfEmpty
-        if (field.skipIfEmpty) {
-            return isEmpty(value, field, schema);
         }
 
         return false;
