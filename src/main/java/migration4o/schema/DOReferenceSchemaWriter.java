@@ -5,8 +5,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Comparator;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -32,12 +30,9 @@ public class DOReferenceSchemaWriter {
             writer.write("<?xml version='1.0' encoding='UTF-8'?>\n");
             writer.write("<classes>\n");
 
-            // Sort classes alphabetically by absolute name before writing
+            // Write classes in their original order (do NOT sort)
             if (schema.getClasses() != null) {
-                DOSchemaClass[] sortedClasses = Arrays.copyOf(schema.getClasses(), schema.getClasses().length);
-                Arrays.sort(sortedClasses, Comparator.comparing(c -> c.source));
-
-                for (DOSchemaClass schemaClass : sortedClasses) {
+                for (DOSchemaClass schemaClass : schema.getClasses()) {
                     writeClass(writer, schemaClass, 1);
                 }
             }
@@ -171,7 +166,35 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", field.description);
         }
 
-        writer.write(" />\n");
+        // Check if we have child elements (valueMap)
+        boolean hasChildren = field.valueMap != null && !field.valueMap.isEmpty();
+        
+        if (hasChildren) {
+            writer.write(">\n");
+            
+            // Write valueMap
+            if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                writeValueMap(writer, field.valueMap, indentLevel + 1);
+            }
+            
+            writer.write(indent + "</field>\n");
+        } else {
+            writer.write(" />\n");
+        }
+    }
+    
+    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel) throws IOException {
+        String indent = getIndent(indentLevel);
+        writer.write(indent + "<valueMap>\n");
+        
+        for (java.util.Map.Entry<String, String> entry : valueMap.entrySet()) {
+            writer.write(indent + "    <mapping");
+            writeAttribute(writer, "from", entry.getKey());
+            writeAttribute(writer, "to", entry.getValue());
+            writer.write(" />\n");
+        }
+        
+        writer.write(indent + "</valueMap>\n");
     }
 
     private void writeReference(FileWriter writer, DOSchemaReference ref, int indentLevel) throws IOException {

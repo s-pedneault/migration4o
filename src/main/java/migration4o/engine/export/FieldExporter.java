@@ -365,6 +365,14 @@ public class FieldExporter {
                 return;
             }
 
+            // Apply value mapping if defined for this field
+            if (schemaField != null && schemaField.valueMap != null && !schemaField.valueMap.isEmpty()) {
+                String mappedValue = schemaField.getMappedValue(stringValue);
+                if (mappedValue != null) {
+                    stringValue = mappedValue;
+                }
+            }
+
             xmlWriter.writeElement(fieldName, stringValue, indentLevel);
         }
     }

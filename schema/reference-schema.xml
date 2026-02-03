@@ -843,7 +843,12 @@
         <field source="mAireAuSol" destinationName="aireAuSol" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
         <field source="mAnneeConstruction" destinationName="anneeConstruction" isExported="true" skipWhen="ZERO" type="int" />
         <field source="mAnneeDernRenov" destinationName="anneeDerniereRenovation" isExported="true" skipWhen="ZERO" type="int" />
-        <field source="mAssoc" destinationName="associationBatiment" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mAssoc" destinationName="associationBatiment" isExported="true" skipWhen="DEFAULT" type="int">
+            <valueMap>
+                <mapping from="1" to="BATIMENT_PRINCIPAL" />
+                <mapping from="2" to="BATIMENT_ENFANT" />
+            </valueMap>
+        </field>
         <field source="mDateCreation" destinationName="dateCreation" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateDernResolution" destinationName="dateDernResolution" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateDernSync" destinationName="dateDernSync" isExported="true" skipWhen="DEFAULT" type="date" />

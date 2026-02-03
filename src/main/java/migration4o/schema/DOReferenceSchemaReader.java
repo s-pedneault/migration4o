@@ -204,6 +204,22 @@ public class DOReferenceSchemaReader {
         field.description = description.isEmpty() ? null : description;
         field.pointsTo = pointsTo.isEmpty() ? null : pointsTo;
         field.childrenSchemaClass = null;
+
+        // Parse value mappings from child elements
+        NodeList valueMapNodes = fieldElement.getElementsByTagName("valueMap");
+        if (valueMapNodes.getLength() > 0) {
+            Element valueMapElement = (Element) valueMapNodes.item(0);
+            NodeList mappingNodes = valueMapElement.getElementsByTagName("mapping");
+            for (int i = 0; i < mappingNodes.getLength(); i++) {
+                Element mappingElement = (Element) mappingNodes.item(i);
+                String fromValue = mappingElement.getAttribute("from");
+                String toValue = mappingElement.getAttribute("to");
+                if (!fromValue.isEmpty() && !toValue.isEmpty()) {
+                    field.addValueMapping(fromValue, toValue);
+                }
+            }
+        }
+
         return field;
     }
 

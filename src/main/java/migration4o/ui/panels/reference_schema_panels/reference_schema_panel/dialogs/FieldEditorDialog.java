@@ -7,7 +7,10 @@ import migration4o.ui.common.PropertyPanel;
 import migration4o.util.TypeUtil;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
  * Dialog for editing a schema field.
@@ -39,6 +42,9 @@ public class FieldEditorDialog extends JDialog {
     private final JTextField titleField;
     private final JTextField descField;
     private final boolean isNewField;
+    
+    private final DefaultTableModel valueMappingTableModel;
+    private final JTable valueMappingTable;
 
     private JPanel formPanel;
 
@@ -197,6 +203,24 @@ public class FieldEditorDialog extends JDialog {
         statusPanel.add(createChildrenClassButton);
 
         childrenTypePanel.add(statusPanel, BorderLayout.SOUTH);
+        
+        // Value Mapping table
+        valueMappingTableModel = new DefaultTableModel(new String[]{"From", "To"}, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return true;
+            }
+        };
+        
+        // Load existing value mappings
+        if (field.valueMap != null && !field.valueMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : field.valueMap.entrySet()) {
+                valueMappingTableModel.addRow(new Object[]{entry.getKey(), entry.getValue()});
+            }
+        }
+        
+        valueMappingTable = new JTable(valueMappingTableModel);
+        valueMappingTable.setFillsViewportHeight(true);
 
         // Build the form initially
         rebuildForm();
@@ -243,6 +267,9 @@ public class FieldEditorDialog extends JDialog {
         if (collectionCheckBox.isSelected()) {
             addFormRow(innerPanel, gbc, "Children Type:", childrenTypePanel);
         }
+        
+        // Add value mapping section
+        addValueMappingSection(innerPanel, gbc);
 
         // Add a filler component to push everything to the top
         gbc.weighty = 1.0;
@@ -282,6 +309,55 @@ public class FieldEditorDialog extends JDialog {
         panel.add(component, gbc);
 
         gbc.gridy++;
+    }
+    
+    private void addValueMappingSection(JPanel panel, GridBagConstraints gbc) {
+        gbc.gridx = 0;
+        gbc.gridwidth = 2;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weightx = 1.0;
+        gbc.weighty = 0.0;
+        
+        JLabel label = new JLabel("Value Mappings (from database value to exported value):");
+        label.setFont(label.getFont().deriveFont(Font.BOLD));
+        panel.add(label, gbc);
+        gbc.gridy++;
+        
+        // Create table panel with scroll pane and buttons
+        JPanel tablePanel = new JPanel(new BorderLayout(5, 5));
+        
+        JScrollPane scrollPane = new JScrollPane(valueMappingTable);
+        scrollPane.setPreferredSize(new Dimension(400, 100));
+        tablePanel.add(scrollPane, BorderLayout.CENTER);
+        
+        // Button panel
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JButton addButton = new JButton("Add");
+        addButton.addActionListener(e -> {
+            valueMappingTableModel.addRow(new Object[]{"", ""});
+        });
+        
+        JButton removeButton = new JButton("Remove");
+        removeButton.addActionListener(e -> {
+            int selectedRow = valueMappingTable.getSelectedRow();
+            if (selectedRow >= 0) {
+                valueMappingTableModel.removeRow(selectedRow);
+            }
+        });
+        
+        buttonPanel.add(addButton);
+        buttonPanel.add(removeButton);
+        tablePanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        tablePanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(Color.GRAY),
+            BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        
+        panel.add(tablePanel, gbc);
+        gbc.gridy++;
+        
+        // Reset gridwidth
+        gbc.gridwidth = 1;
     }
 
     private void updateEmbedContentsState() {
@@ -521,6 +597,18 @@ public class FieldEditorDialog extends JDialog {
     public String getFieldPointsTo() {
         String pointsTo = pointsToLabel.getText();
         return (pointsTo != null && !pointsTo.isEmpty()) ? pointsTo : null;
+    }
+    
+    public Map<String, String> getValueMappings() {
+        Map<String, String> mappings = new LinkedHashMap<>();
+        for (int i = 0; i < valueMappingTableModel.getRowCount(); i++) {
+            String from = (String) valueMappingTableModel.getValueAt(i, 0);
+            String to = (String) valueMappingTableModel.getValueAt(i, 1);
+            if (from != null && !from.trim().isEmpty() && to != null && !to.trim().isEmpty()) {
+                mappings.put(from.trim(), to.trim());
+            }
+        }
+        return mappings.isEmpty() ? null : mappings;
     }
 
     /**

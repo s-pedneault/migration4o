@@ -1477,6 +1477,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.title = dialog.getFieldTitle();
             newFieldWithData.description = dialog.getFieldDescription();
             newFieldWithData.pointsTo = dialog.getFieldPointsTo();
+            newFieldWithData.valueMap = dialog.getValueMappings();
             newFieldWithData.childrenSchemaClass = null;
 
             // Add the new field to the table
@@ -1544,6 +1545,12 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.isFieldCollection(), rowIndex, 5);
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
+            
+            // Update fields not shown in the table (title, description, pointsTo, valueMap)
+            field.title = dialog.getFieldTitle();
+            field.description = dialog.getFieldDescription();
+            field.pointsTo = dialog.getFieldPointsTo();
+            field.valueMap = dialog.getValueMappings();
 
             // Rebuild the class with the updated fields
             rebuildCurrentClassFields();
@@ -1643,11 +1650,13 @@ public class SchemaEditorPanel extends JPanel {
             String title = null;
             String description = null;
             String pointsTo = null;
+            java.util.Map<String, String> valueMap = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
             if (originalField != null) {
                 title = originalField.title;
                 description = originalField.description;
                 pointsTo = originalField.pointsTo;
+                valueMap = originalField.valueMap;
             }
 
             DOSchemaField field = new DOSchemaField();
@@ -1662,6 +1671,7 @@ public class SchemaEditorPanel extends JPanel {
             field.title = title;
             field.description = description;
             field.pointsTo = pointsTo;
+            field.valueMap = valueMap;
             field.childrenSchemaClass = null;
             newFields[i] = field;
         }
