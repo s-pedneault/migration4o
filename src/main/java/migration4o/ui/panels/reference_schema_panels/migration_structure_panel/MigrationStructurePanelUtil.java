@@ -458,6 +458,19 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
+     * Helper class for module export information.
+     */
+    public static class ModuleExportInfo {
+        public final String name;
+        public final MigrationModule module;
+
+        public ModuleExportInfo(String name, MigrationModule module) {
+            this.name = name;
+            this.module = module;
+        }
+    }
+
+    /**
      * Builds a MigrationModule from a tree node with all its children.
      * 
      * @param moduleTreeNode the tree node representing the module
@@ -495,16 +508,4 @@ public class MigrationStructurePanelUtil {
         return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classConfigs, childModules);
     }
 
-    /**
-     * Helper class for module export information.
-     */
-    public static class ModuleExportInfo {
-        public final String name;
-        public final MigrationModule module;
-
-        public ModuleExportInfo(String name, MigrationModule module) {
-            this.name = name;
-            this.module = module;
-        }
-    }
 }
