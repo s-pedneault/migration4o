@@ -45,4 +45,15 @@ public class DOSchemaClass {
         return isDescendantOf("gest.gen.EntiteParam", schema);
     }
 
+    public DOSchemaField findField(String fieldName) {
+        if (fields != null) {
+            for (DOSchemaField field : fields) {
+                if (field.destinationName.equals(fieldName)) {
+                    return field;
+                }
+            }
+        }
+        return null;
+    }
+
 }

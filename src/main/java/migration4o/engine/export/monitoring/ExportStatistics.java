@@ -19,6 +19,7 @@ public class ExportStatistics {
     private final List<SchemaWarning> schemaWarnings = new ArrayList<>();
     private int objectsAttempted = 0;
     private int objectsSucceeded = 0;
+    private int objectsFiltered = 0; // Objects filtered out by export criteria
     private final Map<String, Integer> exportedClassCounts = new HashMap<>();
     private String currentClassName = "";
     private int currentClassTotal = 0;
@@ -57,6 +58,10 @@ public class ExportStatistics {
 
     public void incrementSucceeded() {
         objectsSucceeded++;
+    }
+
+    public void incrementFiltered() {
+        objectsFiltered++;
     }
 
     public void recordClassExport(DOSchemaClass schemaClass) {
@@ -104,6 +109,10 @@ public class ExportStatistics {
 
     public int getObjectsFailed() {
         return errors.size();
+    }
+
+    public int getObjectsFiltered() {
+        return objectsFiltered;
     }
 
     public List<ExportError> getErrors() {
@@ -161,7 +170,7 @@ public class ExportStatistics {
         }
 
         return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded,
-                publicErrors, publicWarnings, exportedClassCounts);
+                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts);
     }
 
     /**

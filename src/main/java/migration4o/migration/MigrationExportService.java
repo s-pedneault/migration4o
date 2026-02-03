@@ -94,7 +94,11 @@ public class MigrationExportService {
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
-        ExportResult result = exporter.exportClass(className, outputPath, monitor);
+
+        // Find ClassExportConfig for this class to apply criteria
+        migration4o.models.ui.ClassExportConfig config = findClassConfig(className);
+
+        ExportResult result = exporter.exportClass(className, outputPath, monitor, config);
 
         // Save to history if successful
         if (result.errors.isEmpty()) {
@@ -255,6 +259,44 @@ public class MigrationExportService {
     }
 
     /**
+     * Finds ClassExportConfig for a given class name across all modules.
+     * Returns null if no config found (class will be exported without criteria).
+     */
+    private migration4o.models.ui.ClassExportConfig findClassConfig(String className) {
+        java.util.List<migration4o.models.ui.MigrationModule> modules = DOModuleService.getInstance().getModules();
+
+        for (migration4o.models.ui.MigrationModule module : modules) {
+            migration4o.models.ui.ClassExportConfig config = findClassConfigInModule(module, className);
+            if (config != null) {
+                return config;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Recursively searches for ClassExportConfig in a module and its children.
+     */
+    private migration4o.models.ui.ClassExportConfig findClassConfigInModule(
+            migration4o.models.ui.MigrationModule module, String className) {
+
+        for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
+            if (config.getClassName().equals(className)) {
+                return config;
+            }
+        }
+
+        for (migration4o.models.ui.MigrationModule childModule : module.getChildModules()) {
+            migration4o.models.ui.ClassExportConfig config = findClassConfigInModule(childModule, className);
+            if (config != null) {
+                return config;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Repeats the last export operation if history exists.
      * Automatically detects whether to use structured (folder-based) or legacy
      * (single-file) export.
@@ -287,7 +329,10 @@ public class MigrationExportService {
                 baseOutput = outputFile.getParent();
             }
 
-            return exporter.exportClass(params.targetName, baseOutput, monitor);
+            // Find ClassExportConfig for this class to apply criteria
+            migration4o.models.ui.ClassExportConfig config = findClassConfig(params.targetName);
+
+            return exporter.exportClass(params.targetName, baseOutput, monitor, config);
         } else {
             // Module export - check if this is a bulk export (multiple modules)
             if (params.moduleNames != null && params.moduleNames.size() > 1) {

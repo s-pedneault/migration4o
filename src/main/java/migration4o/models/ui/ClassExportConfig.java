@@ -4,6 +4,17 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import com.db4o.ext.ExtObjectContainer;
+import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+import com.db4o.reflect.generic.GenericObject;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
+import migration4o.schema.DOSchemaService;
+import migration4o.util.ClassUtil;
+import migration4o.util.ObjectResolverUtil;
+
 /**
  * Configuration for exporting a specific class within a module.
  * Includes destination file name and optional filter criteria.
@@ -49,7 +60,7 @@ public class ClassExportConfig {
     public String getDestinationFileName() {
         return destinationFileName != null && !destinationFileName.isEmpty()
                 ? destinationFileName
-                : className;
+                : ClassUtil.getSimpleName(className);
     }
 
     /**
@@ -91,25 +102,47 @@ public class ClassExportConfig {
     /**
      * Evaluates if an object matches all criteria.
      * Returns true if there are no criteria, or if all criteria match.
+     * 
+     * @param container     The database container for accessing stored class info
+     * @param genericObject The GenericObject from db4o to check against criteria
+     * @return true if all criteria match or no criteria exist
      */
-    public boolean matchesAllCriteria(Object object) {
+    public boolean matchesAllCriteria(ExtObjectContainer container, GenericObject genericObject) {
         if (criteria.isEmpty()) {
+            // System.out.println("DEBUG no criteria applied to " + getClassName());
             return true; // No criteria means accept all
+        }
+
+        // System.out.println("DEBUG checking criteria for " + getClassName() + " with "
+        // + criteria.size() + " criteria");
+
+        // Get stored class info to access fields
+        StoredClass storedClass = container.ext().storedClass(genericObject);
+        if (storedClass == null) {
+            // System.out.println("DEBUG matchesAllCriteria: No StoredClass found");
+            return false;
         }
 
         // All criteria must match
         for (ExportCriteria criterion : criteria) {
             try {
-                // Use reflection to get field value
-                java.lang.reflect.Field field = findField(object.getClass(), criterion.getFieldName());
-                if (field == null) {
-                    System.out.println("DEBUG matchesAllCriteria: Field not found: " + criterion.getFieldName() + " in "
-                            + object.getClass().getName());
+                // Find the field by name
+                StoredField storedField = null;
+                for (StoredField field : storedClass.getStoredFields()) {
+                    if (field.getName().equals(criterion.getFieldName())) {
+                        storedField = field;
+                        break;
+                    }
+                }
+
+                if (storedField == null) {
+                    // System.out.println("DEBUG matchesAllCriteria: Field not found: " +
+                    // criterion.getFieldName());
                     return false; // Field not found
                 }
 
-                field.setAccessible(true);
-                Object fieldValue = field.get(object);
+                // Get field value using StoredField.get()
+                Object fieldValue = storedField.get(genericObject);
 
                 System.out.println("DEBUG matchesAllCriteria: Field=" + criterion.getFieldName() +
                         ", Value=" + fieldValue + " ("
@@ -117,34 +150,19 @@ public class ClassExportConfig {
                         ", Criterion=" + criterion.getOperator().getSymbol() + " " + criterion.getValue());
 
                 if (!criterion.matches(fieldValue)) {
-                    System.out.println("DEBUG matchesAllCriteria: FAILED to match");
+                    // System.out.println("DEBUG matchesAllCriteria: FAILED to match");
                     return false; // Criterion doesn't match
                 }
-                System.out.println("DEBUG matchesAllCriteria: MATCHED");
+                // System.out.println("DEBUG matchesAllCriteria: MATCHED");
             } catch (Exception e) {
-                System.out.println("DEBUG matchesAllCriteria: Exception: " + e.getMessage());
+                System.out.println("DEBUG matchesAllCriteria: Exception accessing field " + criterion.getFieldName()
+                        + ": " + e.getMessage());
                 e.printStackTrace();
                 return false; // Error accessing field
             }
         }
 
         return true; // All criteria matched
-    }
-
-    /**
-     * Finds a field in the class hierarchy (including private fields from parent
-     * classes).
-     */
-    private java.lang.reflect.Field findField(Class<?> clazz, String fieldName) {
-        Class<?> current = clazz;
-        while (current != null) {
-            try {
-                return current.getDeclaredField(fieldName);
-            } catch (NoSuchFieldException e) {
-                current = current.getSuperclass();
-            }
-        }
-        return null;
     }
 
     @Override

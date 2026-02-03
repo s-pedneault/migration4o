@@ -55,6 +55,13 @@
             <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-actif">
                 <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
             </classRef>
+            <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
+                <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
+            </classRef>
+            <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
+                <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
+                <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
+            </classRef>
             <classRef sourceName="gest.dossPrev.DossPrevSuppr"/>
             <classRef sourceName="gest.dossPrev.PersonneRess"/>
             <classRef sourceName="gest.dossPrev.ProdDang"/>

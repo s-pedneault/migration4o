@@ -220,10 +220,16 @@ public class ObjectExporter {
             ObjectResolverUtil.activateObject(container, obj, objectId);
 
             // Apply export criteria filtering if configured (only for top-level objects)
-            if (!isEmbedded && exportConfig != null && !exportConfig.getCriteria().isEmpty()) {
-                if (!exportConfig.matchesAllCriteria(obj)) {
-                    // Object doesn't match criteria, skip export
-                    return;
+            if (!isEmbedded && exportConfig != null && exportConfig.hasCriteria()) {
+                // Only apply criteria if object is a GenericObject
+                if (obj instanceof GenericObject) {
+                    if (!exportConfig.matchesAllCriteria(container.ext(), (GenericObject) obj)) {
+                        // Object doesn't match criteria, skip export
+                        statistics.incrementFiltered(); // Track filtered objects
+                        return;
+                    }
+                } else {
+                    System.out.println("DEBUG: Cannot apply criteria to non-GenericObject: " + className);
                 }
             }
 
@@ -240,6 +246,8 @@ public class ObjectExporter {
 
             // If it's a GenericObject, export all its fields
             if (obj instanceof GenericObject) {
+                // System.err.println("WARNING: Exporting GenericObject of class: " +
+                // className);
                 GenericObject genericObj = (GenericObject) obj;
                 StoredClass storedClass = container.ext().storedClass(genericObj);
                 if (storedClass != null) {

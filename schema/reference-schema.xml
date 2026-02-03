@@ -3183,7 +3183,7 @@
         <field source="mIDCaserne" destinationName="idCaserne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.caserne.IDCaserne" />
         <field source="mIDDossPrev" destinationName="idDossPrev" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" />
         <field source="mIDPrevAvisAssoc" destinationName="idPrevAvisAssoc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.prevention.IDPrevention" embedContents="true" />
-        <field source="mIDPrevSrc" destinationName="idPrevSrc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.prevention.IDPrevention" embedContents="true" />
+        <field source="mIDPrevSrc" destinationName="idPrevSrc" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.prevention.IDPrevention" />
         <field source="mIDPreventionSrc" destinationName="idPreventionSrc" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />

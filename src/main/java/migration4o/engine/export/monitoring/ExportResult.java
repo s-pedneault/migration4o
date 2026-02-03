@@ -14,23 +14,32 @@ public class ExportResult {
     public String outputPath;
     public int objectsAttempted;
     public int objectsSucceeded;
+    public int objectsFiltered; // Objects filtered out by export criteria
     public List<ExportError> errors;
     public List<SchemaWarning> schemaWarnings;
     public Map<String, Integer> exportedClassCounts;
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, List<ExportError> errors) {
-        this(exportName, outputPath, objectsAttempted, objectsSucceeded, errors, new ArrayList<>(),
+        this(exportName, outputPath, objectsAttempted, objectsSucceeded, 0, errors, new ArrayList<>(),
                 new java.util.HashMap<>());
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts) {
+        this(exportName, outputPath, objectsAttempted, objectsSucceeded, 0, errors, schemaWarnings,
+                exportedClassCounts);
+    }
+
+    public ExportResult(String exportName, String outputPath, int objectsAttempted,
+            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
+            Map<String, Integer> exportedClassCounts) {
         this.exportName = exportName;
         this.outputPath = outputPath;
         this.objectsAttempted = objectsAttempted;
         this.objectsSucceeded = objectsSucceeded;
+        this.objectsFiltered = objectsFiltered;
         this.errors = errors != null ? new ArrayList<>(errors) : new ArrayList<>();
         this.schemaWarnings = schemaWarnings != null ? new ArrayList<>(schemaWarnings) : new ArrayList<>();
         this.exportedClassCounts = exportedClassCounts != null ? new java.util.HashMap<>(exportedClassCounts)

@@ -98,15 +98,23 @@ public class DOModuleStructureReader {
         // Parse criteria if any
         List<ExportCriteria> criteria = new ArrayList<>();
         NodeList criteriaNodes = classRefElement.getElementsByTagName("criteria");
+        System.out.println("DEBUG parseClassRef: sourceName=" + sourceName + ", criteriaNodes.length="
+                + criteriaNodes.getLength());
         for (int i = 0; i < criteriaNodes.getLength(); i++) {
             Element criteriaElement = (Element) criteriaNodes.item(i);
             ExportCriteria criterion = parseCriteria(criteriaElement);
             if (criterion != null) {
+                System.out.println("DEBUG parseClassRef: Added criterion: " + criterion);
                 criteria.add(criterion);
             }
         }
 
-        return new ClassExportConfig(sourceName, destinationFile, criteria);
+        ClassExportConfig config = new ClassExportConfig(sourceName, destinationFile, criteria);
+        if (!criteria.isEmpty()) {
+            System.out.println(
+                    "DEBUG parseClassRef: Created config for " + sourceName + " with " + criteria.size() + " criteria");
+        }
+        return config;
     }
 
     /**

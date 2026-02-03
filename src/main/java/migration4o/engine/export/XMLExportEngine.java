@@ -107,6 +107,11 @@ public class XMLExportEngine {
      * @throws Exception if export fails
      */
     public ExportResult exportClass(String className, String baseOutputDir, DOExportMonitor monitor) throws Exception {
+        return exportClass(className, baseOutputDir, monitor, null);
+    }
+
+    public ExportResult exportClass(String className, String baseOutputDir, DOExportMonitor monitor,
+            migration4o.models.ui.ClassExportConfig config) throws Exception {
         if (monitor != null) {
             monitor.onExportStart(className, 1); // 1 class to export
         }
@@ -144,9 +149,9 @@ public class XMLExportEngine {
             fileWriter = new FileWriter(xmlPath.toFile());
             XMLWriter xmlWriter = new XMLWriter(fileWriter);
 
-            // Create object exporter
+            // Create object exporter with export configuration for filtering
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
-                    xsdBuilder, statistics);
+                    xsdBuilder, statistics, config);
             objectExporter.reset();
 
             // Write XML header and metadata
@@ -413,12 +418,23 @@ public class XMLExportEngine {
         Files.createDirectories(moduleDefsPath);
 
         // Export each class configuration in this module
+        System.out.println("DEBUG exportModuleRecursive: Module '" + module.getName() + "' has "
+                + module.getClassConfigs().size() + " class configs");
         for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
             if (monitor != null && monitor.isCancelled()) {
                 break;
             }
 
             String className = config.getClassName();
+            System.out.println("DEBUG exportModuleRecursive: Processing class " + className + ", hasCriteria="
+                    + config.hasCriteria() + ", criteria count=" + config.getCriteria().size());
+
+            // DEBUG: Log if this class has criteria
+            if (config.hasCriteria()) {
+                System.out.println("DEBUG: Exporting " + className + " with " + config.getCriteria().size()
+                        + " criteria: " + config.getCriteria());
+            }
+
             DOSchemaClass schemaClass = schema.findClassByName(className);
             if (schemaClass == null) {
                 continue; // Skip missing classes silently - errors tracked via monitor
