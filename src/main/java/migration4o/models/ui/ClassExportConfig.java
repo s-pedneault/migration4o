@@ -103,16 +103,18 @@ public class ClassExportConfig {
                 // Use reflection to get field value
                 java.lang.reflect.Field field = findField(object.getClass(), criterion.getFieldName());
                 if (field == null) {
-                    System.out.println("DEBUG matchesAllCriteria: Field not found: " + criterion.getFieldName() + " in " + object.getClass().getName());
+                    System.out.println("DEBUG matchesAllCriteria: Field not found: " + criterion.getFieldName() + " in "
+                            + object.getClass().getName());
                     return false; // Field not found
                 }
 
                 field.setAccessible(true);
                 Object fieldValue = field.get(object);
-                
-                System.out.println("DEBUG matchesAllCriteria: Field=" + criterion.getFieldName() + 
-                                 ", Value=" + fieldValue + " (" + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")" +
-                                 ", Criterion=" + criterion.getOperator().getSymbol() + " " + criterion.getValue());
+
+                System.out.println("DEBUG matchesAllCriteria: Field=" + criterion.getFieldName() +
+                        ", Value=" + fieldValue + " ("
+                        + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")" +
+                        ", Criterion=" + criterion.getOperator().getSymbol() + " " + criterion.getValue());
 
                 if (!criterion.matches(fieldValue)) {
                     System.out.println("DEBUG matchesAllCriteria: FAILED to match");
