@@ -402,7 +402,7 @@ public class XMLExportEngine {
             ReferencedClassTracker referencedClassTracker) throws Exception {
 
         if (monitor != null) {
-            monitor.onModuleStart(module.getName(), module.getClassNames().size(), depth);
+            monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
         }
 
         // Create folder for this module in both Data and Definitions
@@ -412,12 +412,13 @@ public class XMLExportEngine {
         Files.createDirectories(moduleDataPath);
         Files.createDirectories(moduleDefsPath);
 
-        // Export each class in this module to its own file
-        for (String className : module.getClassNames()) {
+        // Export each class configuration in this module
+        for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
             if (monitor != null && monitor.isCancelled()) {
                 break;
             }
 
+            String className = config.getClassName();
             DOSchemaClass schemaClass = schema.findClassByName(className);
             if (schemaClass == null) {
                 continue; // Skip missing classes silently - errors tracked via monitor
@@ -428,15 +429,15 @@ public class XMLExportEngine {
                 continue; // Skip missing classes silently - errors tracked via monitor
             }
 
-            // Generate file name from destination class name
-            String fileName = schemaClass.destinationName + ".xml";
-            String xsdFileName = schemaClass.destinationName + ".xsd";
+            // Use the destination file name from config (defaults to class name if not set)
+            String fileName = config.getDestinationFileName() + ".xml";
+            String xsdFileName = config.getDestinationFileName() + ".xsd";
             Path xmlPath = moduleDataPath.resolve(fileName);
             Path xsdPath = moduleDefsPath.resolve(xsdFileName);
 
-            // Export this class
+            // Export this class with criteria filtering
             exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor,
-                    referencedClassTracker);
+                    referencedClassTracker, config);
         }
 
         // Recursively export child modules
@@ -455,11 +456,15 @@ public class XMLExportEngine {
 
     /**
      * Exports a single class to the specified file paths.
+     * 
+     * @param config Optional export configuration with criteria filtering. If null,
+     *               exports all objects.
      */
     private void exportClassToFile(ExtObjectContainer container, DOSchemaClass schemaClass,
             DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath,
             ExportStatistics statistics, DOExportMonitor monitor,
-            ReferencedClassTracker referencedClassTracker) throws Exception {
+            ReferencedClassTracker referencedClassTracker, migration4o.models.ui.ClassExportConfig config)
+            throws Exception {
 
         XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
         xsdBuilder.startExportRoot();
@@ -471,9 +476,9 @@ public class XMLExportEngine {
             fileWriter = new FileWriter(xmlPath.toFile());
             XMLWriter xmlWriter = new XMLWriter(fileWriter);
 
-            // Create object exporter
+            // Create object exporter with export configuration for filtering
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
-                    xsdBuilder, statistics);
+                    xsdBuilder, statistics, config);
             objectExporter.reset();
 
             // Enable reference tracking if we have a tracker
@@ -509,7 +514,7 @@ public class XMLExportEngine {
             if (objectIds != null) {
                 statistics.setCurrentClass(schemaClass.source, actualCount);
 
-                // Export up to maxObjectsPerClass objects
+                // Export up to maxObjectsPerClass objects that match criteria
                 int exportedCount = 0;
                 for (long objectId : objectIds) {
                     if (monitor != null && monitor.isCancelled()) {
@@ -627,8 +632,8 @@ public class XMLExportEngine {
             Path xsdPath = referencedDefsPath.resolve(xsdFileName);
 
             // Export this referenced class (without further reference tracking to avoid
-            // infinite loops)
-            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, null);
+            // infinite loops, and without criteria filtering)
+            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, null, null);
 
             // Mark as exported
             referencedClassTracker.markReferencedClassAsExported(className);

@@ -52,7 +52,9 @@
             </module>
         </module>
         <module name="Dossier adresse" id="Dossier adresse">
-            <classRef sourceName="gest.dossPrev.DossPrev"/>
+            <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-actif">
+                <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
+            </classRef>
             <classRef sourceName="gest.dossPrev.DossPrevSuppr"/>
             <classRef sourceName="gest.dossPrev.PersonneRess"/>
             <classRef sourceName="gest.dossPrev.ProdDang"/>

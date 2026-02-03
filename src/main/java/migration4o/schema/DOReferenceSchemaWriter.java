@@ -23,7 +23,7 @@ public class DOReferenceSchemaWriter {
 
     private void writeSchema(DOSchema schema, String filePath) throws IOException {
         // Create backup first
-        createBackup(filePath);
+        createBackup(filePath, DOReferenceSchemaConstants.BACKUP_SCHEMA_PATH);
 
         // Write the schema
         try (FileWriter writer = new FileWriter(filePath)) {
@@ -41,7 +41,7 @@ public class DOReferenceSchemaWriter {
         }
     }
 
-    private void createBackup(String filePath) throws IOException {
+    private void createBackup(String filePath, String destinationFile) throws IOException {
         File originalFile = new File(filePath);
         if (!originalFile.exists()) {
             return; // No need to backup if file doesn't exist yet
@@ -51,7 +51,7 @@ public class DOReferenceSchemaWriter {
         int backupNumber = 1;
         File backupFile;
         do {
-            String backupPath = filePath + "." + String.format("%04d", backupNumber) + ".bak";
+            String backupPath = destinationFile + "." + String.format("%04d", backupNumber) + ".bak";
             backupFile = new File(backupPath);
             backupNumber++;
         } while (backupFile.exists());

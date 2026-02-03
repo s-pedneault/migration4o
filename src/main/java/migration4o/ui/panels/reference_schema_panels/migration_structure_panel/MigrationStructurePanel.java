@@ -64,6 +64,8 @@ import migration4o.ui.common.dialogs.ExportResultDialog;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ClassExportConfigDialog;
+import migration4o.models.ui.ClassExportConfig;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -710,6 +712,55 @@ public class MigrationStructurePanel extends JPanel {
         refreshAvailableTree();
     }
 
+    /**
+     * Opens the configuration dialog for a class export.
+     * Allows editing destination file name and export criteria.
+     */
+    private void configureClassExport(DefaultMutableTreeNode treeNode) {
+        if (!(treeNode.getUserObject() instanceof ClassNode)) {
+            return;
+        }
+
+        ClassNode classNode = (ClassNode) treeNode.getUserObject();
+        DOSchemaClass schemaClass = classNode.getSchemaClass();
+
+        // Get current configuration (if any stored in the node)
+        ClassExportConfig currentConfig = null;
+        if (classNode.getExportConfig() != null) {
+            currentConfig = classNode.getExportConfig();
+        }
+
+        // Show configuration dialog
+        ClassExportConfigDialog dialog = new ClassExportConfigDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                schemaClass,
+                currentConfig);
+        dialog.setVisible(true);
+
+        // If user clicked OK, store the configuration in the ClassNode
+        ClassExportConfig newConfig = dialog.getResult();
+        if (newConfig != null) {
+            classNode.setExportConfig(newConfig);
+
+            // Update the tree display to show configuration indicator
+            exportModel.nodeChanged(treeNode);
+
+            // Show feedback message
+            StringBuilder message = new StringBuilder("Configuration saved for " + schemaClass.source);
+            if (newConfig.hasCustomDestination()) {
+                message.append("\n→ Destination: ").append(newConfig.getDestinationFileName());
+            }
+            if (newConfig.hasCriteria()) {
+                message.append("\n→ Criteria: ").append(newConfig.getCriteria().size()).append(" filter(s)");
+            }
+
+            JOptionPane.showMessageDialog(this,
+                    message.toString(),
+                    "Configuration Saved",
+                    JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
     private boolean isClassNode(DefaultMutableTreeNode node) {
         return MigrationStructurePanelUtil.isClassNode(node);
     }
@@ -808,6 +859,13 @@ public class MigrationStructurePanel extends JPanel {
         // Options for classes
         else if (node.getUserObject() instanceof ClassNode) {
             ClassNode classNode = (ClassNode) node.getUserObject();
+
+            JMenuItem configureItem = new JMenuItem("Configure Export...");
+            configureItem.addActionListener(evt -> configureClassExport(node));
+            contextMenu.add(configureItem);
+
+            contextMenu.addSeparator();
+
             JMenuItem exportClassItem = new JMenuItem("Export Class to XML...");
             exportClassItem.addActionListener(evt -> exportClass(classNode));
             contextMenu.add(exportClassItem);
@@ -1197,7 +1255,7 @@ public class MigrationStructurePanel extends JPanel {
      * Builds a MigrationModule from a tree node with all its children.
      */
     private MigrationModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
-        List<String> classNames = new ArrayList<>();
+        List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<MigrationModule> childModules = new ArrayList<>();
 
         // Iterate through children
@@ -1206,9 +1264,16 @@ public class MigrationStructurePanel extends JPanel {
             Object userObject = childNode.getUserObject();
 
             if (userObject instanceof ClassNode) {
-                // Add class name
+                // Add class configuration
                 ClassNode classNode = (ClassNode) userObject;
-                classNames.add(classNode.getSchemaClass().source);
+                ClassExportConfig config = classNode.getExportConfig();
+
+                // If no configuration exists, create a simple one
+                if (config == null) {
+                    config = new ClassExportConfig(classNode.getSchemaClass().source);
+                }
+
+                classConfigs.add(config);
             } else if (userObject instanceof ModuleNode) {
                 // Recursively build child module
                 ModuleNode childModuleNode = (ModuleNode) userObject;
@@ -1217,7 +1282,7 @@ public class MigrationStructurePanel extends JPanel {
             }
         }
 
-        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classNames, childModules);
+        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classConfigs, childModules);
     }
 
     /**

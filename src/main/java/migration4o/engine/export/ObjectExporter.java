@@ -12,6 +12,7 @@ import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportStatistics;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ClassUtil;
@@ -34,6 +35,7 @@ public class ObjectExporter {
     private final Map<Long, EmbeddedObjectInfo> embeddedObjectRefs = new HashMap<>();
     private final ReferencedClassTracker referencedClassTracker;
     private boolean trackReferences = false;
+    private ClassExportConfig exportConfig; // Optional export configuration with criteria
 
     /**
      * Tracks information about embedded objects for detecting duplicates.
@@ -52,8 +54,14 @@ public class ObjectExporter {
 
     public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
             XSDBuilder xsdBuilder, ExportStatistics statistics) {
+        this(schema, databaseSchema, xmlWriter, xsdBuilder, statistics, null);
+    }
+
+    public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
+            XSDBuilder xsdBuilder, ExportStatistics statistics, ClassExportConfig exportConfig) {
         this.schema = schema;
         this.databaseSchema = databaseSchema;
+        this.exportConfig = exportConfig;
         ReferenceObjectExporter idEntiteResolver = new ReferenceObjectExporter(databaseSchema);
         this.fieldExporter = new FieldExporter(schema, databaseSchema, xmlWriter, xsdBuilder, idEntiteResolver);
         this.xmlWriter = xmlWriter;
@@ -210,6 +218,14 @@ public class ObjectExporter {
 
             className = ClassUtil.getClassName(obj);
             ObjectResolverUtil.activateObject(container, obj, objectId);
+
+            // Apply export criteria filtering if configured (only for top-level objects)
+            if (!isEmbedded && exportConfig != null && !exportConfig.getCriteria().isEmpty()) {
+                if (!exportConfig.matchesAllCriteria(obj)) {
+                    // Object doesn't match criteria, skip export
+                    return;
+                }
+            }
 
             // Write object opening tag using destination class name as element name
             DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);

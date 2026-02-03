@@ -3,6 +3,7 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
@@ -92,13 +93,31 @@ public class MigrationStructurePanelUtil {
         Object userObject = node.getUserObject();
         if (userObject instanceof ClassNode) {
             ClassNode classNode = (ClassNode) userObject;
-            // Find the class with updated counts from databaseSchema
-            DOSchemaClass updatedClass = SchemaUtil.findClassByName(classNode.getSchemaClass().source,
-                    new DOSchema[] { schema,
-                            databaseSchema });
-            if (updatedClass != null) {
-                // Create new ClassNode with updated class data
-                node.setUserObject(new ClassNode(updatedClass));
+            String className = classNode.getSchemaClass().source;
+
+            // Get from reference schema first (has destinationName)
+            DOSchemaClass referenceClass = SchemaUtil.findClassByName(className, schema);
+            // Get from database schema (has object counts)
+            DOSchemaClass dbClass = SchemaUtil.findClassByName(className, databaseSchema);
+
+            // Merge: use reference class properties, but copy object counts from database
+            if (referenceClass != null && dbClass != null) {
+                referenceClass.objectIds = dbClass.objectIds;
+                referenceClass.uniqueObjectIds = dbClass.uniqueObjectIds;
+                referenceClass.reachedObjectIds = dbClass.reachedObjectIds;
+
+                // Preserve the export configuration when updating
+                ClassExportConfig existingConfig = classNode.getExportConfig();
+                ClassNode newNode = new ClassNode(referenceClass);
+                newNode.setExportConfig(existingConfig);
+                node.setUserObject(newNode);
+            } else if (referenceClass != null || dbClass != null) {
+                // Use whichever one we found
+                DOSchemaClass updatedClass = referenceClass != null ? referenceClass : dbClass;
+                ClassExportConfig existingConfig = classNode.getExportConfig();
+                ClassNode newNode = new ClassNode(updatedClass);
+                newNode.setExportConfig(existingConfig);
+                node.setUserObject(newNode);
             }
         }
 
@@ -120,29 +139,6 @@ public class MigrationStructurePanelUtil {
      * @param databaseSchema the database schema (may be null)
      * @return the schema class, or null if not found
      */
-    public static DOSchemaClass findClassByName(String className, DOSchema schema, DOSchema databaseSchema) {
-        // Try databaseSchema first if available (has object counts)
-        if (databaseSchema != null && databaseSchema.getClasses() != null) {
-            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (schemaClass.source.equals(className)) {
-                    return schemaClass;
-                }
-            }
-        }
-
-        // Fall back to reference schema
-        if (schema == null || schema.getClasses() == null) {
-            return null;
-        }
-
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
-                return schemaClass;
-            }
-        }
-
-        return null;
-    }
 
     /**
      * Extracts a MigrationModule from a tree node and its children.
@@ -153,22 +149,27 @@ public class MigrationStructurePanelUtil {
      */
     public static MigrationModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
         ModuleNode module = (ModuleNode) moduleTreeNode.getUserObject();
-        List<String> classNames = new ArrayList<>();
+        List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<MigrationModule> childModules = new ArrayList<>();
 
         Enumeration<?> children = moduleTreeNode.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) children.nextElement();
             if (childNode.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) childNode
-                        .getUserObject();
-                classNames.add(classNode.getSchemaClass().source);
+                ClassNode classNode = (ClassNode) childNode.getUserObject();
+                // Get the export config from the node, or create a simple one if not set
+                ClassExportConfig config = classNode.getExportConfig();
+                if (config == null) {
+                    // Create a simple config with just the class name (for backward compatibility)
+                    config = new ClassExportConfig(classNode.getSchemaClass().source, null, new ArrayList<>());
+                }
+                classConfigs.add(config);
             } else if (childNode.getUserObject() instanceof ModuleNode) {
                 childModules.add(extractModule(childNode));
             }
         }
 
-        return new MigrationModule(module.getName(), module.getId(), classNames, childModules);
+        return new MigrationModule(module.getName(), module.getId(), classConfigs, childModules);
     }
 
     /**
@@ -298,11 +299,19 @@ public class MigrationStructurePanelUtil {
         DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
         parentNode.add(moduleTreeNode);
 
-        // Add classes to module
-        for (String className : module.getClassNames()) {
-            DOSchemaClass schemaClass = findClassByName(className, schema, databaseSchema);
+        // Add classes to module with their configurations
+        for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
+            String className = config.getClassName();
+            // Use reference schema first (has destinationName), fall back to database
+            // schema
+            DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
+            if (schemaClass == null && databaseSchema != null) {
+                schemaClass = SchemaUtil.findClassByName(className, databaseSchema);
+            }
             if (schemaClass != null) {
                 ClassNode classNode = new ClassNode(schemaClass);
+                // Store the configuration in the ClassNode
+                classNode.setExportConfig(config);
                 DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
                 moduleTreeNode.add(classTreeNode);
                 exportedClasses.add(className);
