@@ -520,6 +520,7 @@
         <reference class="gest.secCiv.LogSinistre" field="mCP" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mVectChampPerso" />
         <reference class="gest.prevention.Prevention" field="mVectChampPerso" />
+        <reference class="gest.dossPrev.DossPrev" field="mVectChampPerso" />
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="object" />
         <field source="mIDTypeChampPerso" destinationName="idTypeChampPerso" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.champPerso.IDTypeChampPerso" />
     </class>
