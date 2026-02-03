@@ -421,6 +421,33 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
+     * Collects only root-level module paths (modules without a parent module).
+     * This prevents nested modules from being exported multiple times.
+     * 
+     * @param node        the current node
+     * @param currentPath the current tree path
+     * @param modulePaths the list to collect module paths into
+     */
+    public static void collectRootModulePaths(DefaultMutableTreeNode node, TreePath currentPath,
+            List<TreePath> modulePaths) {
+        Object userObject = node.getUserObject();
+
+        // If this node is a module, add it (it's a root level module)
+        // and don't recurse into its children (they are nested modules)
+        if (userObject instanceof ModuleNode) {
+            modulePaths.add(currentPath);
+            return; // Don't recurse - nested modules will be exported as part of their parent
+        }
+
+        // Recursively process all children (only if current node is NOT a module)
+        for (int i = 0; i < node.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+            TreePath childPath = currentPath.pathByAddingChild(child);
+            collectRootModulePaths(child, childPath, modulePaths);
+        }
+    }
+
+    /**
      * Collects all module nodes from a selection of tree paths.
      * 
      * @param selectedPaths the selected tree paths

@@ -144,10 +144,13 @@ public class ClassExportConfig {
                 // Get field value using StoredField.get()
                 Object fieldValue = storedField.get(genericObject);
 
-                System.out.println("DEBUG matchesAllCriteria: Field=" + criterion.getFieldName() +
-                        ", Value=" + fieldValue + " ("
-                        + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")" +
-                        ", Criterion=" + criterion.getOperator().getSymbol() + " " + criterion.getValue());
+                // System.out.println("DEBUG matchesAllCriteria: Field=" +
+                // criterion.getFieldName() +
+                // ", Value=" + fieldValue + " ("
+                // + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")"
+                // +
+                // ", Criterion=" + criterion.getOperator().getSymbol() + " " +
+                // criterion.getValue());
 
                 if (!criterion.matches(fieldValue)) {
                     // System.out.println("DEBUG matchesAllCriteria: FAILED to match");

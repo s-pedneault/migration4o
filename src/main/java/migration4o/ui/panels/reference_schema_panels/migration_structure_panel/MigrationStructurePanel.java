@@ -1054,11 +1054,11 @@ public class MigrationStructurePanel extends JPanel {
         // Get the root node of the export tree
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
 
-        // Collect all module nodes
-        List<TreePath> allModulePaths = new ArrayList<>();
-        MigrationStructurePanelUtil.collectAllModulePaths(root, new TreePath(root), allModulePaths);
+        // Collect only root-level module nodes (not nested ones)
+        List<TreePath> rootModulePaths = new ArrayList<>();
+        MigrationStructurePanelUtil.collectRootModulePaths(root, new TreePath(root), rootModulePaths);
 
-        if (allModulePaths.isEmpty()) {
+        if (rootModulePaths.isEmpty()) {
             JOptionPane.showMessageDialog(this,
                     "No modules found in the migration structure.",
                     "No Modules",
@@ -1066,8 +1066,9 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Select all module paths
-        exportTree.setSelectionPaths(allModulePaths.toArray(new TreePath[0]));
+        // Select all root module paths (nested modules will be exported as part of
+        // their parents)
+        exportTree.setSelectionPaths(rootModulePaths.toArray(new TreePath[0]));
 
         // Call the existing export selected modules method
         exportSelectedModules();
