@@ -20,6 +20,8 @@ public class XSDBuilder {
     private final Map<String, Map<String, DOSchemaField>> fieldsByClass = new LinkedHashMap<>();
     private final Set<String> topLevelObjects = new LinkedHashSet<>();
     private final Set<String> referencedTypes = new LinkedHashSet<>(); // Types used in fields
+    private final Map<String, DOSchemaField> fieldsWithValueMappings = new LinkedHashMap<>(); // Fields that need
+                                                                                              // enumeration types
     private final migration4o.models.schema.DOSchema referenceSchema;
     private final migration4o.models.schema.DOSchema databaseSchema;
 
@@ -54,6 +56,12 @@ public class XSDBuilder {
             return;
         fieldsByClass.computeIfAbsent(parentClass.source, k -> new LinkedHashMap<>())
                 .put(field.destinationName, field);
+
+        // Track fields with value mappings for enumeration type generation
+        if (field.valueMap != null && !field.valueMap.isEmpty()) {
+            String uniqueKey = parentClass.destinationName + "_" + field.destinationName;
+            fieldsWithValueMappings.put(uniqueKey, field);
+        }
     }
 
     public void writeXSD(String xsdPath) throws IOException {
@@ -98,7 +106,13 @@ public class XSDBuilder {
                 boolean isReferenced = referencedTypes.contains(getSimpleClassName(schemaClass.source) + "Type");
                 writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isReferenced);
             }
-
+            // Generate enumeration types for fields with value mappings
+            if (!fieldsWithValueMappings.isEmpty()) {
+                xsdWriter.write("\n  <!-- Enumeration types for fields with value mappings -->\n");
+                for (Map.Entry<String, DOSchemaField> entry : fieldsWithValueMappings.entrySet()) {
+                    writeEnumerationType(xsdWriter, entry.getKey(), entry.getValue());
+                }
+            }
             xsdWriter.write("</xs:schema>\n");
         }
     }
@@ -172,7 +186,13 @@ public class XSDBuilder {
             xsdWriter.write(indent + "  </xs:complexType>\n");
             xsdWriter.write(indent + "</xs:element>\n");
         } else if (isPrimitiveType(fieldType)) {
-            String xsdType = getXSDType(fieldType);
+            // Check if this field has value mappings (enumeration)
+            String xsdType;
+            if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                xsdType = fieldName + "Type"; // Use custom enumeration type
+            } else {
+                xsdType = getXSDType(fieldType);
+            }
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
                     + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
         } else {
@@ -180,7 +200,14 @@ public class XSDBuilder {
             DOSchemaClass fieldClass = migration4o.util.SchemaUtil.findClassByName(fieldType, referenceSchema);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
+                // But if they have value mappings, use enumeration type
+                String xsdType;
+                if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                    xsdType = fieldName + "Type"; // Use custom enumeration type
+                } else {
+                    xsdType = "xs:long";
+                }
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" "
                         + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 String refClassName = getSimpleClassName(fieldType) + "Type";
@@ -232,5 +259,30 @@ public class XSDBuilder {
         }
         int lastDot = fullClassName.lastIndexOf('.');
         return lastDot >= 0 ? fullClassName.substring(lastDot + 1) : fullClassName;
+    }
+
+    private void writeEnumerationType(FileWriter xsdWriter, String typeKey, DOSchemaField field) throws IOException {
+        String typeName = field.destinationName + "Type";
+        xsdWriter.write("\n  <xs:simpleType name=\"" + typeName + "\">\n");
+        xsdWriter.write("    <xs:restriction base=\"xs:string\">\n");
+
+        // Write enumeration values (the mapped "to" values)
+        for (String mappedValue : field.valueMap.values()) {
+            xsdWriter.write("      <xs:enumeration value=\"" + escapeXml(mappedValue) + "\"/>\n");
+        }
+
+        xsdWriter.write("    </xs:restriction>\n");
+        xsdWriter.write("  </xs:simpleType>\n");
+    }
+
+    private String escapeXml(String text) {
+        if (text == null) {
+            return "";
+        }
+        return text.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&apos;");
     }
 }

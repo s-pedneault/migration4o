@@ -24,7 +24,8 @@ public class DOSchemaField {
     }
 
     /**
-     * Gets the mapped value for the given database value, or returns the original value if no mapping exists.
+     * Gets the mapped value for the given database value, or returns the original
+     * value if no mapping exists.
      */
     public String getMappedValue(String databaseValue) {
         if (valueMap == null || valueMap.isEmpty() || databaseValue == null) {

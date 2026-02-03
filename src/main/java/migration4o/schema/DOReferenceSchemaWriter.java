@@ -168,32 +168,33 @@ public class DOReferenceSchemaWriter {
 
         // Check if we have child elements (valueMap)
         boolean hasChildren = field.valueMap != null && !field.valueMap.isEmpty();
-        
+
         if (hasChildren) {
             writer.write(">\n");
-            
+
             // Write valueMap
             if (field.valueMap != null && !field.valueMap.isEmpty()) {
                 writeValueMap(writer, field.valueMap, indentLevel + 1);
             }
-            
+
             writer.write(indent + "</field>\n");
         } else {
             writer.write(" />\n");
         }
     }
-    
-    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel) throws IOException {
+
+    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel)
+            throws IOException {
         String indent = getIndent(indentLevel);
         writer.write(indent + "<valueMap>\n");
-        
+
         for (java.util.Map.Entry<String, String> entry : valueMap.entrySet()) {
             writer.write(indent + "    <mapping");
             writeAttribute(writer, "from", entry.getKey());
             writeAttribute(writer, "to", entry.getValue());
             writer.write(" />\n");
         }
-        
+
         writer.write(indent + "</valueMap>\n");
     }
 

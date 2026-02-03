@@ -42,7 +42,7 @@ public class FieldEditorDialog extends JDialog {
     private final JTextField titleField;
     private final JTextField descField;
     private final boolean isNewField;
-    
+
     private final DefaultTableModel valueMappingTableModel;
     private final JTable valueMappingTable;
 
@@ -203,22 +203,22 @@ public class FieldEditorDialog extends JDialog {
         statusPanel.add(createChildrenClassButton);
 
         childrenTypePanel.add(statusPanel, BorderLayout.SOUTH);
-        
+
         // Value Mapping table
-        valueMappingTableModel = new DefaultTableModel(new String[]{"From", "To"}, 0) {
+        valueMappingTableModel = new DefaultTableModel(new String[] { "From", "To" }, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
                 return true;
             }
         };
-        
+
         // Load existing value mappings
         if (field.valueMap != null && !field.valueMap.isEmpty()) {
             for (Map.Entry<String, String> entry : field.valueMap.entrySet()) {
-                valueMappingTableModel.addRow(new Object[]{entry.getKey(), entry.getValue()});
+                valueMappingTableModel.addRow(new Object[] { entry.getKey(), entry.getValue() });
             }
         }
-        
+
         valueMappingTable = new JTable(valueMappingTableModel);
         valueMappingTable.setFillsViewportHeight(true);
 
@@ -267,7 +267,7 @@ public class FieldEditorDialog extends JDialog {
         if (collectionCheckBox.isSelected()) {
             addFormRow(innerPanel, gbc, "Children Type:", childrenTypePanel);
         }
-        
+
         // Add value mapping section
         addValueMappingSection(innerPanel, gbc);
 
@@ -310,33 +310,33 @@ public class FieldEditorDialog extends JDialog {
 
         gbc.gridy++;
     }
-    
+
     private void addValueMappingSection(JPanel panel, GridBagConstraints gbc) {
         gbc.gridx = 0;
         gbc.gridwidth = 2;
         gbc.fill = GridBagConstraints.BOTH;
         gbc.weightx = 1.0;
         gbc.weighty = 0.0;
-        
+
         JLabel label = new JLabel("Value Mappings (from database value to exported value):");
         label.setFont(label.getFont().deriveFont(Font.BOLD));
         panel.add(label, gbc);
         gbc.gridy++;
-        
+
         // Create table panel with scroll pane and buttons
         JPanel tablePanel = new JPanel(new BorderLayout(5, 5));
-        
+
         JScrollPane scrollPane = new JScrollPane(valueMappingTable);
         scrollPane.setPreferredSize(new Dimension(400, 100));
         tablePanel.add(scrollPane, BorderLayout.CENTER);
-        
+
         // Button panel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton addButton = new JButton("Add");
         addButton.addActionListener(e -> {
-            valueMappingTableModel.addRow(new Object[]{"", ""});
+            valueMappingTableModel.addRow(new Object[] { "", "" });
         });
-        
+
         JButton removeButton = new JButton("Remove");
         removeButton.addActionListener(e -> {
             int selectedRow = valueMappingTable.getSelectedRow();
@@ -344,18 +344,18 @@ public class FieldEditorDialog extends JDialog {
                 valueMappingTableModel.removeRow(selectedRow);
             }
         });
-        
+
         buttonPanel.add(addButton);
         buttonPanel.add(removeButton);
         tablePanel.add(buttonPanel, BorderLayout.SOUTH);
-        
+
         tablePanel.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(Color.GRAY),
-            BorderFactory.createEmptyBorder(5, 5, 5, 5)));
-        
+                BorderFactory.createLineBorder(Color.GRAY),
+                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
         panel.add(tablePanel, gbc);
         gbc.gridy++;
-        
+
         // Reset gridwidth
         gbc.gridwidth = 1;
     }
@@ -598,7 +598,7 @@ public class FieldEditorDialog extends JDialog {
         String pointsTo = pointsToLabel.getText();
         return (pointsTo != null && !pointsTo.isEmpty()) ? pointsTo : null;
     }
-    
+
     public Map<String, String> getValueMappings() {
         Map<String, String> mappings = new LinkedHashMap<>();
         for (int i = 0; i < valueMappingTableModel.getRowCount(); i++) {

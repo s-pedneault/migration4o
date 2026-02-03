@@ -1545,7 +1545,7 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.isFieldCollection(), rowIndex, 5);
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
-            
+
             // Update fields not shown in the table (title, description, pointsTo, valueMap)
             field.title = dialog.getFieldTitle();
             field.description = dialog.getFieldDescription();
