@@ -174,7 +174,7 @@ public class DOReferenceSchemaReader {
         String pointsTo = fieldElement.getAttribute("pointsTo");
 
         // Parse boolean attributes
-        boolean isExported = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
+        boolean isExported = isExportedAttr.isEmpty() ? true : "true".equalsIgnoreCase(isExportedAttr);
         boolean isCollection = "true".equalsIgnoreCase(collection);
         boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
 

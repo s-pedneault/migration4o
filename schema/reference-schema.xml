@@ -847,6 +847,10 @@
             <valueMap>
                 <mapping from="1" to="BATIMENT_PRINCIPAL" />
                 <mapping from="2" to="BATIMENT_ENFANT" />
+                <mapping from="4" to="LOCAL_DE" />
+                <mapping from="7" to="APPARTEMENT_DE" />
+                <mapping from="8" to="SUITE_DE" />
+                <mapping from="9" to="TERRAIN" />
             </valueMap>
         </field>
         <field source="mDateCreation" destinationName="dateCreation" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -899,7 +903,7 @@
         <field source="mIDClassif" destinationName="idClassif" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.classif.IDClassif" />
         <field source="mIDDossPrevAssoc" destinationName="idDossPrevAssoc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" />
         <field source="mIDDossPrevAttach" destinationName="idDossPrevAttach" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" />
-        <field source="mIDDossPrevOld" destinationName="idDossPrevOld" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
+        <field source="mIDDossPrevOld" destinationName="idDossPrevOld" isExported="true" type="int" />
         <field source="mIDExterne" destinationName="idExterne" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" embedContents="true" />
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" />
         <field source="mIDParementExt" destinationName="idParementExt" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.parement.IDParement" />
@@ -2615,7 +2619,7 @@
         <field source="mPremiereValeurReelle" destinationName="premiereValeurReelle" isExported="true" skipWhen="DEFAULT" type="object" />
         <field source="mPremiereValeurRendue" destinationName="premiereValeurRendue" isExported="true" skipWhen="DEFAULT" type="object" />
         <field source="mTraceFormattage" destinationName="traceFormattage" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mValeurParDefaut" isExported="true" skipWhen="DEFAULT" type="object" />
+        <field source="mValeurParDefaut" destinationName="valeurParDefaut" isExported="true" skipWhen="DEFAULT" type="object" />
     </class>
     <class source="gest.listePerso.ListePerso" destinationName="ListePerso" isExported="true" parentClass="gest.gen.EntiteContientID">
     </class>
