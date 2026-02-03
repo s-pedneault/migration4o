@@ -1,16 +1,12 @@
 
 package migration4o.models.schema;
 
-import migration4o.models.ui.MigrationModule;
 import migration4o.util.SchemaUtil;
-
-import java.util.List;
 
 public class DOSchema {
     private final DOSchemaClass[] classes;
     private final DOSchemaModule[] modules;
     private final DOSchemaClass[] foundationClasses;
-    private List<MigrationModule> migrationModules;
 
     public DOSchema(DOSchemaClass[] classes, DOSchemaModule[] modules) {
         this(classes, modules, new DOSchemaClass[0]);
@@ -40,13 +36,5 @@ public class DOSchema {
 
     public DOSchemaClass findClassByName(String className) {
         return SchemaUtil.findClassByName(className, this);
-    }
-
-    public List<MigrationModule> getMigrationModules() {
-        return migrationModules;
-    }
-
-    public void setMigrationModules(List<MigrationModule> migrationModules) {
-        this.migrationModules = migrationModules;
     }
 }

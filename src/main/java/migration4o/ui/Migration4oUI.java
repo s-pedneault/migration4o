@@ -1,8 +1,10 @@
 package migration4o.ui;
 
+import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
 
+import migration4o.application.ApplicationService;
 import migration4o.ui.main.MainWindow;
 
 /**
@@ -27,6 +29,19 @@ public class Migration4oUI {
 
         final String finalDatabasePath = databasePath;
         final boolean finalRepeatExport = repeatExport;
+
+        // Initialize application services (schema, modules) before UI starts
+        try {
+            ApplicationService.getInstance().initialize();
+        } catch (Exception e) {
+            System.err.println("Failed to initialize application services: " + e.getMessage());
+            e.printStackTrace();
+            JOptionPane.showMessageDialog(null,
+                    "Failed to initialize application:\n" + e.getMessage(),
+                    "Initialization Error",
+                    JOptionPane.ERROR_MESSAGE);
+            System.exit(1);
+        }
 
         // Set look and feel before creating any UI components
         SwingUtilities.invokeLater(() -> {

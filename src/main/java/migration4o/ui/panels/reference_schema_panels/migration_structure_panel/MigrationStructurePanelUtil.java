@@ -7,10 +7,11 @@ import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
-import migration4o.schema.modules.DOModuleStructureWriter;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.util.SchemaUtil;
 
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.TreePath;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -191,8 +192,7 @@ public class MigrationStructurePanelUtil {
             }
         }
 
-        DOModuleStructureWriter writer = new DOModuleStructureWriter();
-        writer.writeMigrationFormat(modules, formatFilePath);
+        DOModuleService.getInstance().saveModuleStructure(modules, formatFilePath);
     }
 
     /**
@@ -340,6 +340,171 @@ public class MigrationStructurePanelUtil {
                         .getUserObject();
                 exportedClasses.remove(classNode.getSchemaClass().source);
             }
+        }
+    }
+
+    /**
+     * Adds a class to a module node in the tree structure.
+     * 
+     * @param schemaClass     the schema class to add
+     * @param targetModule    the target module node
+     * @param exportedClasses set of already exported class names
+     * @return true if added successfully, false if already exported
+     */
+    public static boolean addClassToModule(DOSchemaClass schemaClass, DefaultMutableTreeNode targetModule,
+            Set<String> exportedClasses) {
+        // Check if already exported
+        if (exportedClasses.contains(schemaClass.source)) {
+            return false;
+        }
+
+        // Create class node and add to module
+        ClassNode newClassNode = new ClassNode(schemaClass);
+        DefaultMutableTreeNode newTreeNode = new DefaultMutableTreeNode(newClassNode);
+        targetModule.add(newTreeNode);
+
+        // Mark as exported
+        exportedClasses.add(schemaClass.source);
+
+        return true;
+    }
+
+    /**
+     * Removes a class from the export tree.
+     * 
+     * @param treeNode        the tree node containing the class
+     * @param exportedClasses set of exported class names
+     * @return true if removed successfully
+     */
+    public static boolean removeClassFromExport(DefaultMutableTreeNode treeNode, Set<String> exportedClasses) {
+        if (!(treeNode.getUserObject() instanceof ClassNode)) {
+            return false;
+        }
+
+        ClassNode classNode = (ClassNode) treeNode.getUserObject();
+        DOSchemaClass schemaClass = classNode.getSchemaClass();
+
+        // Remove from exported set
+        exportedClasses.remove(schemaClass.source);
+
+        // Remove from export tree
+        DefaultMutableTreeNode parent = (DefaultMutableTreeNode) treeNode.getParent();
+        if (parent != null) {
+            parent.remove(treeNode);
+        }
+
+        return true;
+    }
+
+    /**
+     * Collects all module paths from a tree recursively.
+     * 
+     * @param node        the current node
+     * @param currentPath the current tree path
+     * @param modulePaths the list to collect module paths into
+     */
+    public static void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath,
+            List<TreePath> modulePaths) {
+        Object userObject = node.getUserObject();
+
+        // If this node is a module, add it to the list
+        if (userObject instanceof ModuleNode) {
+            modulePaths.add(currentPath);
+        }
+
+        // Recursively process all children
+        for (int i = 0; i < node.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+            TreePath childPath = currentPath.pathByAddingChild(child);
+            collectAllModulePaths(child, childPath, modulePaths);
+        }
+    }
+
+    /**
+     * Collects all module nodes from a selection of tree paths.
+     * 
+     * @param selectedPaths the selected tree paths
+     * @return list of module nodes with their associated data
+     */
+    public static List<ModuleTreeInfo> collectModulesFromSelection(TreePath[] selectedPaths) {
+        List<ModuleTreeInfo> modules = new ArrayList<>();
+
+        if (selectedPaths == null || selectedPaths.length == 0) {
+            return modules;
+        }
+
+        for (TreePath path : selectedPaths) {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            if (node.getUserObject() instanceof ModuleNode) {
+                ModuleNode moduleNode = (ModuleNode) node.getUserObject();
+                modules.add(new ModuleTreeInfo(node, moduleNode));
+            }
+        }
+
+        return modules;
+    }
+
+    /**
+     * Helper class to hold module tree node information.
+     */
+    public static class ModuleTreeInfo {
+        public final DefaultMutableTreeNode treeNode;
+        public final ModuleNode moduleNode;
+
+        public ModuleTreeInfo(DefaultMutableTreeNode treeNode, ModuleNode moduleNode) {
+            this.treeNode = treeNode;
+            this.moduleNode = moduleNode;
+        }
+    }
+
+    /**
+     * Builds a MigrationModule from a tree node with all its children.
+     * 
+     * @param moduleTreeNode the tree node representing the module
+     * @param moduleNode     the module metadata
+     * @return the constructed MigrationModule
+     */
+    public static MigrationModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
+        List<ClassExportConfig> classConfigs = new ArrayList<>();
+        List<MigrationModule> childModules = new ArrayList<>();
+
+        // Iterate through children
+        for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
+            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) moduleTreeNode.getChildAt(i);
+            Object userObject = childNode.getUserObject();
+
+            if (userObject instanceof ClassNode) {
+                // Add class configuration
+                ClassNode classNode = (ClassNode) userObject;
+                ClassExportConfig config = classNode.getExportConfig();
+
+                // If no configuration exists, create a simple one
+                if (config == null) {
+                    config = new ClassExportConfig(classNode.getSchemaClass().source);
+                }
+
+                classConfigs.add(config);
+            } else if (userObject instanceof ModuleNode) {
+                // Recursively build child module
+                ModuleNode childModuleNode = (ModuleNode) userObject;
+                MigrationModule childModule = buildModuleFromTree(childNode, childModuleNode);
+                childModules.add(childModule);
+            }
+        }
+
+        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classConfigs, childModules);
+    }
+
+    /**
+     * Helper class for module export information.
+     */
+    public static class ModuleExportInfo {
+        public final String name;
+        public final MigrationModule module;
+
+        public ModuleExportInfo(String name, MigrationModule module) {
+            this.name = name;
+            this.module = module;
         }
     }
 }

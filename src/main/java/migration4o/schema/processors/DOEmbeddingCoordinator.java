@@ -4,6 +4,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.MigrationModule;
+import migration4o.schema.modules.DOModuleService;
 
 import java.util.*;
 import java.util.stream.Collectors;
@@ -104,8 +105,7 @@ public class DOEmbeddingCoordinator {
                 // All in same package
                 allowEmbed = true;
                 groupingReason = "same package (" + referencingPackages.iterator().next() + ")";
-            } else if (referenceSchema.getMigrationModules() != null
-                    && !referenceSchema.getMigrationModules().isEmpty()) {
+            } else if (DOModuleService.getInstance().hasModules()) {
                 // Check if all references are in the same module
                 Set<String> referencingModules = new HashSet<>();
                 for (FieldReference ref : allReferences) {
@@ -236,11 +236,12 @@ public class DOEmbeddingCoordinator {
      * modules and their children
      */
     private String findModuleForClass(String className) {
-        if (referenceSchema.getMigrationModules() == null) {
+        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        if (modules == null || modules.isEmpty()) {
             return null;
         }
 
-        for (MigrationModule module : referenceSchema.getMigrationModules()) {
+        for (MigrationModule module : modules) {
             String result = findModuleForClassRecursive(module, className);
             if (result != null) {
                 return result;

@@ -451,12 +451,11 @@ public class MainWindow extends JFrame {
 
     /**
      * Notifies all tabs that a database has been opened.
-     * Updates migration structure panel with database path and schema.
+     * Updates migration structure panel that database schema has changed.
      */
     private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
         if (migrationStructurePanel != null) {
-            migrationStructurePanel.setDatabasePath(databasePath);
-            migrationStructurePanel.setDatabaseSchema(inferredSchema);
+            migrationStructurePanel.onDatabaseSchemaChanged();
         }
     }
 

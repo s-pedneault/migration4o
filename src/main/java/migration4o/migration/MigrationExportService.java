@@ -13,7 +13,7 @@ import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.MigrationModule;
-import migration4o.schema.modules.DOModuleStructureReader;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.ui.common.DOExportMonitor;
 
 /**
@@ -367,8 +367,8 @@ public class MigrationExportService {
      * Finds a module by name in the migration structure.
      */
     private MigrationModule findModuleByName(String moduleName) throws Exception {
-        DOModuleStructureReader reader = new DOModuleStructureReader();
-        List<MigrationModule> modules = reader.readMigrationFormat("schema/migration-format.xml");
+        List<MigrationModule> modules = DOModuleService.getInstance()
+                .loadModuleStructure("schema/migration-format.xml");
         return findModuleRecursive(modules, moduleName);
     }
 
@@ -465,5 +465,57 @@ public class MigrationExportService {
         public String getErrorTitle() {
             return errorTitle;
         }
+    }
+
+    /**
+     * Combines multiple export results into a single summary result.
+     * 
+     * @param results     the list of individual export results
+     * @param moduleNames the names of the modules that were exported
+     * @param outputPath  the output directory path
+     * @return combined export result
+     */
+    public ExportResult combineExportResults(List<ExportResult> results, List<String> moduleNames, String outputPath) {
+        List<ExportResult.ExportError> allErrors = new ArrayList<>();
+        List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
+        Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+        int totalObjectsAttempted = 0;
+        int totalObjectsSucceeded = 0;
+
+        for (ExportResult result : results) {
+            allErrors.addAll(result.errors);
+            allWarnings.addAll(result.schemaWarnings);
+            allClassCounts.putAll(result.exportedClassCounts);
+            totalObjectsAttempted += result.objectsAttempted;
+            totalObjectsSucceeded += result.objectsSucceeded;
+        }
+
+        return new ExportResult(
+                "Bulk Export", outputPath, totalObjectsAttempted, totalObjectsSucceeded,
+                allErrors, allWarnings, allClassCounts);
+    }
+
+    /**
+     * Saves module export operation to history.
+     * 
+     * @param moduleNames        the names of exported modules
+     * @param exportedClasses    the list of exported class names
+     * @param outputPath         the output directory path
+     * @param maxObjectsPerClass optional limit on objects per class
+     */
+    public void saveModuleExportHistory(List<String> moduleNames, List<String> exportedClasses,
+            String outputPath, Integer maxObjectsPerClass) {
+
+        String targetName = moduleNames.size() == 1
+                ? moduleNames.get(0)
+                : moduleNames.size() + " modules";
+
+        ExportHistory.saveExport(
+                ExportHistory.ExportType.MODULE,
+                targetName,
+                outputPath,
+                exportedClasses,
+                moduleNames,
+                maxObjectsPerClass);
     }
 }

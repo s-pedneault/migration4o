@@ -1,8 +1,8 @@
 package migration4o.schema;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.schema.DOReferenceSchemaReader;
 import java.io.File;
+
+import migration4o.models.schema.DOSchema;
 
 /**
  * Singleton service for managing the reference schema.

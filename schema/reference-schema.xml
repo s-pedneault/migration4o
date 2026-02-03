@@ -907,13 +907,13 @@
         <field source="mIDExterne" destinationName="idExterne" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" embedContents="true" />
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" />
         <field source="mIDParementExt" destinationName="idParementExt" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.parement.IDParement" />
-        <field source="mIDPlancher" destinationName="idPlancher" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.plancher.IDPlancher" embedContents="true" />
+        <field source="mIDPlancher" destinationName="idPlancher" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.plancher.IDPlancher" />
         <field source="mIDSSI" destinationName="idssi" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mIDTypeBatiment" destinationName="idTypeBatiment" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeBatiment.IDTypeBatiment" />
-        <field source="mIDTypeConstruction" destinationName="idTypeConstruction" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E8" embedContents="true" />
+        <field source="mIDTypeConstruction" destinationName="idTypeConstruction" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003E8" />
         <field source="mIDTypeToit" destinationName="idTypeToit" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeToit.IDTypeToit" />
-        <field source="mIDUsageDuLocal" destinationName="idUsageDuLocal" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
-        <field source="mIDUsagePrincipal" destinationName="idUsagePrincipal" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E3" embedContents="true" />
+        <field source="mIDUsageDuLocal" destinationName="idUsageDuLocal" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003E3" />
+        <field source="mIDUsagePrincipal" destinationName="idUsagePrincipal" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003E3" />
     </class>
     <class source="gest.dossPrev.DossPrev$NAliasNom" destinationName="AliasNom" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.dossPrev.DossPrev" field="mVectAliasNom" />
@@ -3760,7 +3760,7 @@
     <class source="gest.typeAssistanceParticuliere.AssistanceParticuliere" destinationName="AssistanceParticuliere" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.dossPrev.PersonneRess" field="mAssistanceParticuliere" />
         <field source="mInformationsAdditionnelles" destinationName="informationsAdditionnelles" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mIDTypeAssistanceParticuliere" destinationName="idTypeAssistanceParticuliere" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" embedContents="true" />
+        <field source="mIDTypeAssistanceParticuliere" destinationName="idTypeAssistanceParticuliere" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" />
     </class>
     <class source="gest.typeAssistanceParticuliere.IDTypeAssistanceParticuliere" destinationName="IDTypeAssistanceParticuliere" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere">
         <reference class="gest.typeAssistanceParticuliere.AssistanceParticuliere" field="mIDTypeAssistanceParticuliere" />

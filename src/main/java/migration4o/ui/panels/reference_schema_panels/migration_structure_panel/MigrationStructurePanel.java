@@ -19,10 +19,8 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import javax.swing.BorderFactory;
@@ -38,34 +36,30 @@ import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
-import javax.swing.SwingWorker;
-
-import migration4o.ui.common.ExportProgressDialog;
-import migration4o.ui.dialogs.ExportConfirmationDialog;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
+import migration4o.database.DODatabaseService;
 import migration4o.engine.export.ExportHistory;
 import migration4o.engine.export.monitoring.ExportResult;
-import migration4o.database.DODatabaseService;
 import migration4o.migration.MigrationExportService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
-import migration4o.schema.modules.DOModuleStructureReader;
-import migration4o.ui.common.ExportProgressDialog;
-import migration4o.ui.common.dialogs.ExportResultDialog;
+import migration4o.schema.DOSchemaService;
+import migration4o.schema.modules.DOModuleService;
+import migration4o.ui.dialogs.ExportConfirmationDialog;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
-import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ClassExportConfigDialog;
-import migration4o.models.ui.ClassExportConfig;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 
 /**
  * Panel for organizing classes into a migration structure with modules.
@@ -73,9 +67,6 @@ import migration4o.models.ui.ClassExportConfig;
  * modules.
  */
 public class MigrationStructurePanel extends JPanel {
-    private DOSchema schema; // Reference schema with class definitions
-    private DOSchema databaseSchema; // Database schema with actual object IDs
-    private String databasePath; // Path to the currently opened database
     private JTree availableTree;
     private JTree exportTree;
     private DefaultTreeModel availableModel;
@@ -99,30 +90,55 @@ public class MigrationStructurePanel extends JPanel {
     // Checkbox to include/exclude IDEntite classes
     private JCheckBox includeIDEntitesCheckbox;
 
+    // Service classes for business logic
+    private final MigrationServiceCallback exportOrchestrator;
+
     private static final String MIGRATION_FORMAT_FILE = "schema/migration-format.xml";
 
     public MigrationStructurePanel(DOSchema schema) {
-        this.schema = schema;
-        this.databaseSchema = null;
-        this.databasePath = null;
+        // Initialize service classes
+        this.exportOrchestrator = new MigrationServiceCallback(this);
+
+        // Set up export result callback
+        setupExportResultCallback();
+
         initializeUI();
         loadMigrationStructure();
         populateAvailableTree();
     }
 
     /**
-     * Updates the database path when a database is opened
+     * Sets up the callback for export results to update the migration coverage
+     * panel.
      */
-    public void setDatabasePath(String databasePath) {
-        this.databasePath = databasePath;
+    private void setupExportResultCallback() {
+        exportOrchestrator.setResultCallback(new MigrationServiceCallback.ExportResultCallback() {
+            @Override
+            public void onExportCompleted(ExportResult result) {
+                // Update migration coverage with exported object counts
+                if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
+                    java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                    if (window instanceof MainWindow) {
+                        MainWindow mainWindow = (MainWindow) window;
+                        mainWindow.notifyExportCompleted(result.exportedClassCounts);
+                    }
+                }
+            }
+
+            @Override
+            public void onExportError(Exception error) {
+                JOptionPane.showMessageDialog(MigrationStructurePanel.this,
+                        "Error during export: " + error.getMessage(),
+                        "Export Error",
+                        JOptionPane.ERROR_MESSAGE);
+            }
+        });
     }
 
     /**
-     * Sets the database schema which contains actual object IDs from the opened
-     * database
+     * Called when database schema changes to refresh the UI.
      */
-    public void setDatabaseSchema(DOSchema databaseSchema) {
-        this.databaseSchema = databaseSchema;
+    public void onDatabaseSchemaChanged() {
         // Refresh trees to show updated object counts
         refreshAvailableTree();
         reloadExportTree();
@@ -444,6 +460,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void populateAvailableTree() {
+        DOSchema schema = DOSchemaService.getInstance().getReferenceSchema();
         if (schema == null || schema.getClasses() == null) {
             return;
         }
@@ -480,7 +497,9 @@ public class MigrationStructurePanel extends JPanel {
 
         // Use databaseSchema if available (has object counts), otherwise use reference
         // schema
-        DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : schema;
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : referenceSchema;
 
         // Categorize classes using util, filtering IDEntites if checkbox is unchecked
         boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
@@ -580,7 +599,7 @@ public class MigrationStructurePanel extends JPanel {
             // If it's a module, move all its classes back to available
             if (node.getUserObject() instanceof ModuleNode) {
                 moveChildrenToAvailable(node);
-            } else if (isClassNode(node)) {
+            } else if (MigrationStructurePanelUtil.isClassNode(node)) {
                 // Single class node
                 removeClassFromExport(node);
                 return; // Don't delete the node, it's already moved
@@ -645,8 +664,10 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void addClassToModule(DOSchemaClass schemaClass, DefaultMutableTreeNode targetModule) {
-        // Check if already exported
-        if (exportedClasses.contains(schemaClass.source)) {
+        // Use util to add class
+        boolean added = MigrationStructurePanelUtil.addClassToModule(schemaClass, targetModule, exportedClasses);
+
+        if (!added) {
             JOptionPane.showMessageDialog(this,
                     "Class '" + schemaClass.getSourceName()
                             + "' is already in the export structure.",
@@ -654,14 +675,6 @@ public class MigrationStructurePanel extends JPanel {
                     JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-
-        // Create class node and add to module
-        ClassNode newClassNode = new ClassNode(schemaClass);
-        DefaultMutableTreeNode newTreeNode = new DefaultMutableTreeNode(newClassNode);
-        targetModule.add(newTreeNode);
-
-        // Mark as exported
-        exportedClasses.add(schemaClass.source);
 
         // Refresh trees
         exportModel.reload();
@@ -676,7 +689,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        if (isClassNode(node)) {
+        if (MigrationStructurePanelUtil.isClassNode(node)) {
             removeClassFromExport(node);
         }
     }
@@ -686,26 +699,22 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        ClassNode classNode = (ClassNode) treeNode.getUserObject();
-        DOSchemaClass schemaClass = classNode.getSchemaClass();
-
-        // Remove from exported set
-        exportedClasses.remove(schemaClass.source);
-
-        // Remove from export tree
+        // Save the expanded state before reload
         DefaultMutableTreeNode parent = (DefaultMutableTreeNode) treeNode.getParent();
+        TreePath parentPath = null;
+        boolean wasExpanded = false;
         if (parent != null) {
-            // Save the expanded state before reload
-            TreePath parentPath = new TreePath(parent.getPath());
-            boolean wasExpanded = exportTree.isExpanded(parentPath);
+            parentPath = new TreePath(parent.getPath());
+            wasExpanded = exportTree.isExpanded(parentPath);
+        }
 
-            parent.remove(treeNode);
-            exportModel.reload();
+        // Use util to remove class
+        MigrationStructurePanelUtil.removeClassFromExport(treeNode, exportedClasses);
 
-            // Restore the expanded state
-            if (wasExpanded) {
-                exportTree.expandPath(parentPath);
-            }
+        // Reload and restore expanded state
+        exportModel.reload();
+        if (wasExpanded && parentPath != null) {
+            exportTree.expandPath(parentPath);
         }
 
         // Refresh available tree
@@ -759,10 +768,6 @@ public class MigrationStructurePanel extends JPanel {
                     "Configuration Saved",
                     JOptionPane.INFORMATION_MESSAGE);
         }
-    }
-
-    private boolean isClassNode(DefaultMutableTreeNode node) {
-        return MigrationStructurePanelUtil.isClassNode(node);
     }
 
     private DefaultMutableTreeNode findClassNodeInExportTree(String className) {
@@ -936,9 +941,8 @@ public class MigrationStructurePanel extends JPanel {
      * Exports a single class to XML
      */
     private void exportClass(ClassNode classNode) {
-        // Create export service (uses singletons for database and schema)
-        MigrationExportService exportService = new MigrationExportService();
-        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
+        // Validate export prerequisites
+        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
@@ -948,9 +952,6 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        DOSchemaClass schemaClass = classNode.getSchemaClass();
-        String simpleName = schemaClass.getSourceName();
-
         // Get previous export limit from history (for default value)
         Integer defaultLimit = 50; // default
         ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
@@ -959,9 +960,8 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Show confirmation dialog with object limit options
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
         ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(
-                parentFrame, 1, defaultLimit);
+                (Frame) SwingUtilities.getWindowAncestor(this), 1, defaultLimit);
         confirmDialog.setTitle("Confirm Export");
         confirmDialog.showDialog();
 
@@ -970,52 +970,10 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
-
-        // Use default output directory automatically (output/<db-folder>/Data and
-        // Definitions)
         String outputPath = "output";
 
-        // Create and show progress dialog
-        ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame, "Exporting Class: " + simpleName);
-        progressDialog.setVisible(true);
-
-        // Run export in background
-        SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
-            @Override
-            protected ExportResult doInBackground() throws Exception {
-                return exportService.exportClass(schemaClass, outputPath, progressDialog, maxObjectsPerClass);
-            }
-
-            @Override
-            protected void done() {
-                progressDialog.dispose();
-                try {
-                    ExportResult result = get();
-                    // Show detailed result dialog
-                    ExportResultDialog dialog = new ExportResultDialog(
-                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                            result);
-                    dialog.setVisible(true);
-
-                    // Update migration coverage with exported object counts
-                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                        if (window instanceof MainWindow) {
-                            MainWindow mainWindow = (MainWindow) window;
-                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                            "Error during export: " + e.getMessage(),
-                            "Export Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-
-        worker.execute();
+        // Use orchestrator to run export asynchronously
+        exportOrchestrator.exportClassAsync(classNode, maxObjectsPerClass, outputPath);
     }
 
     /**
@@ -1032,16 +990,17 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Collect selected modules (filter out non-module nodes)
-        List<ModuleExportInfo> modulesToExport = new ArrayList<>();
-        for (TreePath path : selectedPaths) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-            if (node.getUserObject() instanceof ModuleNode) {
-                ModuleNode moduleNode = (ModuleNode) node.getUserObject();
-                MigrationModule module = buildModuleFromTree(node, moduleNode);
-                if (!module.getClassNames().isEmpty() || !module.getChildModules().isEmpty()) {
-                    modulesToExport.add(new ModuleExportInfo(moduleNode.getName(), module));
-                }
+        // Collect selected modules using util
+        List<MigrationStructurePanelUtil.ModuleTreeInfo> moduleInfos = MigrationStructurePanelUtil
+                .collectModulesFromSelection(selectedPaths);
+
+        // Build modules for export using util
+        List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
+        for (MigrationStructurePanelUtil.ModuleTreeInfo info : moduleInfos) {
+            MigrationModule module = MigrationStructurePanelUtil.buildModuleFromTree(info.treeNode, info.moduleNode);
+            if (!module.getClassNames().isEmpty() || !module.getChildModules().isEmpty()) {
+                modulesToExport
+                        .add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.getName(), module));
             }
         }
 
@@ -1053,9 +1012,8 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Validate prerequisites once
-        MigrationExportService exportService = new MigrationExportService();
-        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
+        // Validate prerequisites
+        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
@@ -1085,112 +1043,8 @@ public class MigrationStructurePanel extends JPanel {
         Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
         String outputPath = "output";
 
-        // Create and show progress dialog
-        ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame,
-                "Exporting " + modulesToExport.size() + " Module(s)");
-        progressDialog.setVisible(true);
-
-        // Run bulk export in background
-        SwingWorker<List<ExportResult>, Void> worker = new SwingWorker<>() {
-            @Override
-            protected List<ExportResult> doInBackground() throws Exception {
-                List<ExportResult> results;
-
-                // Extract modules list
-                List<MigrationModule> modules = new ArrayList<>();
-                for (ModuleExportInfo info : modulesToExport) {
-                    modules.add(info.module);
-                }
-
-                // Use bulk export with shared tracker and object limit
-                results = exportService.exportModulesWithSharedTracker(modules, outputPath, progressDialog,
-                        maxObjectsPerClass);
-
-                return results;
-            }
-
-            @Override
-            protected void done() {
-                progressDialog.dispose();
-                try {
-                    List<ExportResult> results = get();
-
-                    // Combine results for summary
-                    List<ExportResult.ExportError> allErrors = new ArrayList<>();
-                    List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
-                    Map<String, Integer> allClassCounts = new java.util.HashMap<>();
-                    List<String> allClassNames = new ArrayList<>();
-                    List<String> allModuleNames = new ArrayList<>();
-                    int successCount = 0;
-                    int totalObjectsAttempted = 0;
-                    int totalObjectsSucceeded = 0;
-
-                    for (int i = 0; i < results.size(); i++) {
-                        ExportResult result = results.get(i);
-                        if (result.errors.isEmpty()) {
-                            successCount++;
-                            allModuleNames.add(modulesToExport.get(i).name);
-                        }
-                        allErrors.addAll(result.errors);
-                        allWarnings.addAll(result.schemaWarnings);
-                        allClassCounts.putAll(result.exportedClassCounts);
-                        allClassNames.addAll(result.exportedClassCounts.keySet());
-                        totalObjectsAttempted += result.objectsAttempted;
-                        totalObjectsSucceeded += result.objectsSucceeded;
-                    }
-
-                    // Save bulk export to history if any modules succeeded
-                    if (successCount > 0) {
-                        String targetName = allModuleNames.size() == 1
-                                ? allModuleNames.get(0)
-                                : allModuleNames.size() + " modules";
-                        ExportHistory.saveExport(
-                                ExportHistory.ExportType.MODULE,
-                                targetName,
-                                outputPath,
-                                allClassNames,
-                                allModuleNames,
-                                maxObjectsPerClass);
-                    }
-
-                    ExportResult combinedResult = new ExportResult(
-                            "Bulk Export", outputPath, totalObjectsAttempted, totalObjectsSucceeded, allErrors,
-                            allWarnings, allClassCounts);
-
-                    // Show summary dialog
-                    String summaryMessage = "Exported " + successCount + " of " + results.size()
-                            + " modules successfully.";
-                    if (!combinedResult.errors.isEmpty()) {
-                        summaryMessage += "\n" + combinedResult.errors.size() + " errors occurred.";
-                    }
-
-                    ExportResultDialog dialog = new ExportResultDialog(
-                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                            combinedResult);
-                    dialog.setTitle("Bulk Export Results");
-                    dialog.setVisible(true);
-
-                    // Update migration coverage with all exported object counts
-                    if (!combinedResult.exportedClassCounts.isEmpty()) {
-                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                        if (window instanceof MainWindow) {
-                            MainWindow mainWindow = (MainWindow) window;
-                            mainWindow.notifyExportCompleted(combinedResult.exportedClassCounts);
-                        }
-                    }
-
-                    System.out.println("Bulk export completed: " + successCount + "/" + results.size() + " modules");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                            "Error during bulk export: " + e.getMessage(),
-                            "Export Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-
-        worker.execute();
+        // Use orchestrator to run export asynchronously
+        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, outputPath);
     }
 
     /**
@@ -1202,7 +1056,7 @@ public class MigrationStructurePanel extends JPanel {
 
         // Collect all module nodes
         List<TreePath> allModulePaths = new ArrayList<>();
-        collectAllModulePaths(root, new TreePath(root), allModulePaths);
+        MigrationStructurePanelUtil.collectAllModulePaths(root, new TreePath(root), allModulePaths);
 
         if (allModulePaths.isEmpty()) {
             JOptionPane.showMessageDialog(this,
@@ -1219,83 +1073,9 @@ public class MigrationStructurePanel extends JPanel {
         exportSelectedModules();
     }
 
-    /**
-     * Recursively collects all module nodes from the tree.
-     */
-    private void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
-        Object userObject = node.getUserObject();
-
-        // If this node is a module, add it to the list
-        if (userObject instanceof ModuleNode) {
-            modulePaths.add(currentPath);
-        }
-
-        // Recursively process all children
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
-            TreePath childPath = currentPath.pathByAddingChild(child);
-            collectAllModulePaths(child, childPath, modulePaths);
-        }
-    }
-
-    /**
-     * Helper class to hold module export information
-     */
-    private static class ModuleExportInfo {
-        final String name;
-        final MigrationModule module;
-
-        ModuleExportInfo(String name, MigrationModule module) {
-            this.name = name;
-            this.module = module;
-        }
-    }
-
-    /**
-     * Builds a MigrationModule from a tree node with all its children.
-     */
-    private MigrationModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
-        List<ClassExportConfig> classConfigs = new ArrayList<>();
-        List<MigrationModule> childModules = new ArrayList<>();
-
-        // Iterate through children
-        for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
-            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) moduleTreeNode.getChildAt(i);
-            Object userObject = childNode.getUserObject();
-
-            if (userObject instanceof ClassNode) {
-                // Add class configuration
-                ClassNode classNode = (ClassNode) userObject;
-                ClassExportConfig config = classNode.getExportConfig();
-
-                // If no configuration exists, create a simple one
-                if (config == null) {
-                    config = new ClassExportConfig(classNode.getSchemaClass().source);
-                }
-
-                classConfigs.add(config);
-            } else if (userObject instanceof ModuleNode) {
-                // Recursively build child module
-                ModuleNode childModuleNode = (ModuleNode) userObject;
-                MigrationModule childModule = buildModuleFromTree(childNode, childModuleNode);
-                childModules.add(childModule);
-            }
-        }
-
-        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classConfigs, childModules);
-    }
-
-    /**
-     * Recursively collects all class names from a module and its children
-     */
-    private void collectClassNamesFromModule(DefaultMutableTreeNode moduleNode, List<String> classNames) {
-        MigrationStructurePanelUtil.collectClassNamesFromModule(moduleNode, classNames);
-    }
-
     private void loadMigrationStructure() {
         try {
-            DOModuleStructureReader reader = new DOModuleStructureReader();
-            List<MigrationModule> modules = reader.readMigrationFormat(MIGRATION_FORMAT_FILE);
+            List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure(MIGRATION_FORMAT_FILE);
 
             DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
             root.removeAllChildren();
@@ -1315,7 +1095,10 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module) {
-        MigrationStructurePanelUtil.addModuleToTree(parentNode, module, schema, databaseSchema, exportedClasses);
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        MigrationStructurePanelUtil.addModuleToTree(parentNode, module, referenceSchema, databaseSchema,
+                exportedClasses);
     }
 
     /**
@@ -1323,7 +1106,9 @@ public class MigrationStructurePanel extends JPanel {
      */
     private void reloadExportTree() {
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
-        MigrationStructurePanelUtil.updateNodeCounts(root, schema, databaseSchema);
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        MigrationStructurePanelUtil.updateNodeCounts(root, referenceSchema, databaseSchema);
         exportModel.reload();
     }
 
@@ -1351,9 +1136,8 @@ public class MigrationStructurePanel extends JPanel {
      * Repeats the last export operation if history exists.
      */
     public void repeatLastExport() {
-        // Create export service (uses singletons for database and schema)
-        MigrationExportService exportService = new MigrationExportService();
-        MigrationExportService.ValidationResult validation = exportService.validateExportPrerequisites();
+        // Validate export prerequisites
+        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
@@ -1363,64 +1147,7 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Check if history exists
-        ExportHistory.ExportParams params = ExportHistory.loadLastExport();
-
-        if (params == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No export history found.",
-                    "No History",
-                    JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        // Execute the export (no confirmation needed - command-line flag is explicit
-        // intent)
-
-        // Create and show progress dialog
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-        String dialogTitle = params.type == ExportHistory.ExportType.CLASS
-                ? "Repeating Class Export"
-                : "Repeating Module Export";
-        ExportProgressDialog progressDialog = new ExportProgressDialog(parentFrame, dialogTitle);
-        progressDialog.setVisible(true);
-
-        SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
-            @Override
-            protected ExportResult doInBackground() throws Exception {
-                return exportService.repeatLastExport(progressDialog);
-            }
-
-            @Override
-            protected void done() {
-                progressDialog.dispose();
-                try {
-                    ExportResult result = get();
-                    // Don't save to history again - we're repeating
-                    // Show detailed result dialog
-                    ExportResultDialog dialog = new ExportResultDialog(
-                            (Frame) SwingUtilities.getWindowAncestor(MigrationStructurePanel.this),
-                            result);
-                    dialog.setVisible(true);
-
-                    // Update migration coverage with exported object counts
-                    if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                        java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                        if (window instanceof MainWindow) {
-                            MainWindow mainWindow = (MainWindow) window;
-                            mainWindow.notifyExportCompleted(result.exportedClassCounts);
-                        }
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    JOptionPane.showMessageDialog(MigrationStructurePanel.this,
-                            "Error during export: " + e.getMessage(),
-                            "Export Error",
-                            JOptionPane.ERROR_MESSAGE);
-                }
-            }
-        };
-
-        worker.execute();
+        // Use orchestrator to repeat last export
+        exportOrchestrator.repeatLastExportAsync();
     }
 }
