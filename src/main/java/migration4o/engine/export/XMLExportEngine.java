@@ -16,8 +16,10 @@ import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
+import migration4o.util.FileUtil;
 
 /**
  * Orchestrates XML export operations by coordinating specialized components.
@@ -412,22 +414,24 @@ public class XMLExportEngine {
 
         // Create folder for this module in both Data and Definitions
         // Use module name (not ID) to preserve proper casing
-        Path moduleDataPath = currentDataPath.resolve(migration4o.util.FileUtil.sanitizeName(module.getName()));
-        Path moduleDefsPath = currentDefsPath.resolve(migration4o.util.FileUtil.sanitizeName(module.getName()));
+        Path moduleDataPath = currentDataPath.resolve(FileUtil.sanitizeName(module.getName()));
+        Path moduleDefsPath = currentDefsPath.resolve(FileUtil.sanitizeName(module.getName()));
         Files.createDirectories(moduleDataPath);
         Files.createDirectories(moduleDefsPath);
 
         // Export each class configuration in this module
-        System.out.println("DEBUG exportModuleRecursive: Module '" + module.getName() + "' has "
-                + module.getClassConfigs().size() + " class configs");
-        for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
+        // System.out.println("DEBUG exportModuleRecursive: Module '" + module.getName()
+        // + "' has "
+        // + module.getClassConfigs().size() + " class configs");
+        for (ClassExportConfig config : module.getClassConfigs()) {
             if (monitor != null && monitor.isCancelled()) {
                 break;
             }
 
             String className = config.getClassName();
-            System.out.println("DEBUG exportModuleRecursive: Processing class " + className + ", hasCriteria="
-                    + config.hasCriteria() + ", criteria count=" + config.getCriteria().size());
+            // System.out.println("DEBUG exportModuleRecursive: Processing class " +
+            // className + ", hasCriteria="
+            // + config.hasCriteria() + ", criteria count=" + config.getCriteria().size());
 
             // DEBUG: Log if this class has criteria
             if (config.hasCriteria()) {

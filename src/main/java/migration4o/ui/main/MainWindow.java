@@ -35,6 +35,7 @@ import migration4o.models.ui.SchemaTabInfo;
 import migration4o.ui.common.DatabaseProgressMonitor;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
+import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
@@ -64,6 +65,7 @@ public class MainWindow extends JFrame {
     private Component databaseSchemaTab = null;
     private Component conformityAnalysisTab = null;
     private Component migrationCoverageTab = null;
+    private Component costTab = null;
     private DOSchema currentDatabaseSchema = null;
 
     // Services manage the actual database and schema
@@ -130,9 +132,9 @@ public class MainWindow extends JFrame {
 
             addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);
 
-            // Add schema structure tab
-            schemaStructurePanel = new SchemaStructurePanel(schema);
-            addTab("Schema structure", schemaStructurePanel);
+            // Add schema structure tab (commented out - less useful now)
+            // schemaStructurePanel = new SchemaStructurePanel(schema);
+            // addTab("Schema structure", schemaStructurePanel);
 
             // Add migration structure tab
             migrationStructurePanel = new MigrationStructurePanel(schema);
@@ -305,6 +307,9 @@ public class MainWindow extends JFrame {
                     // Create migration coverage tab
                     createMigrationCoverageTab(inferredSchema);
 
+                    // Create cost tab
+                    createCostTab(inferredSchema);
+
                     // Notify all tabs that a database has been opened
                     notifyTabsDatabaseOpened(databaseService.getCurrentDatabasePath(), inferredSchema);
 
@@ -406,6 +411,18 @@ public class MainWindow extends JFrame {
     }
 
     /**
+     * Creates the cost analysis tab.
+     */
+    private void createCostTab(DOSchema databaseSchema) {
+        // Create cost panel
+        CostPanel costPanel = new CostPanel(databaseSchema);
+
+        // Store and add cost tab
+        costTab = costPanel;
+        addTab("Cost", costPanel);
+    }
+
+    /**
      * Closes the database and removes all database-related tabs.
      */
     private void closeDatabase() {
@@ -428,6 +445,11 @@ public class MainWindow extends JFrame {
         if (migrationCoverageTab != null) {
             tabbedPane.remove(migrationCoverageTab);
             migrationCoverageTab = null;
+        }
+
+        if (costTab != null) {
+            tabbedPane.remove(costTab);
+            costTab = null;
         }
 
         currentDatabaseSchema = null;

@@ -6,22 +6,34 @@ import javax.swing.table.TableCellRenderer;
 
 import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportResult.ExportError;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
+import migration4o.schema.DOSchemaService;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.util.*;
 import java.util.List;
 
 /**
- * Dialog that displays detailed export results including success/error
+ * Window that displays detailed export results including success/error
  * statistics
  * and a breakdown of any errors encountered.
  */
-public class ExportResultDialog extends JDialog {
+public class ExportResultDialog extends JFrame {
     private final ExportResult result;
+    private final Frame parentFrame;
+    private final Set<Integer> editedRows = new HashSet<>();
+    private JTable warningsTable;
 
     public ExportResultDialog(Frame parent, ExportResult result) {
-        super(parent, "Export Results", false);
+        super("Export Results");
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.result = result;
+        this.parentFrame = parent;
         System.err.println("DEBUG ExportResultDialog: errors=" + result.errors.size()
                 + ", warnings=" + result.schemaWarnings.size());
         if (!result.schemaWarnings.isEmpty()) {
@@ -47,7 +59,7 @@ public class ExportResultDialog extends JDialog {
         add(createButtonPanel(), BorderLayout.SOUTH);
 
         setSize(800, 600);
-        setLocationRelativeTo(getParent());
+        setLocationRelativeTo(parentFrame);
     }
 
     private JPanel createHeaderPanel() {
@@ -278,15 +290,8 @@ public class ExportResultDialog extends JDialog {
     private JPanel createSchemaWarningsPanel() {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
 
-        // Group warnings by type and message
-        Map<String, List<ExportResult.SchemaWarning>> warningsByMessage = new LinkedHashMap<>();
-        for (ExportResult.SchemaWarning warning : result.schemaWarnings) {
-            String key = warning.type + ": " + warning.className;
-            warningsByMessage.computeIfAbsent(key, k -> new ArrayList<>()).add(warning);
-        }
-
-        // Create table model
-        String[] columnNames = { "Warning Type", "Embedded Class", "Count", "Sample Object IDs",
+        // Create table model - group by source class + source field combination
+        String[] columnNames = { "Warning Type", "Count", "Sample Embedded Classes", "Sample Object IDs",
                 "Source Class (from schema)", "Source Field (from schema)" };
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -295,70 +300,89 @@ public class ExportResultDialog extends JDialog {
             }
         };
 
-        // Populate table
-        for (Map.Entry<String, List<ExportResult.SchemaWarning>> entry : warningsByMessage.entrySet()) {
-            List<ExportResult.SchemaWarning> warnings = entry.getValue();
-            ExportResult.SchemaWarning first = warnings.get(0);
+        // Group warnings by source class + source field combination
+        Map<String, List<ExportResult.SchemaWarning>> groupedWarnings = new LinkedHashMap<>();
+        for (ExportResult.SchemaWarning warning : result.schemaWarnings) {
+            String sourceClass = warning.sourceContainingClass != null ? warning.sourceContainingClass : "N/A";
+            String sourceField = warning.sourceFieldName != null ? warning.sourceFieldName : "N/A";
+            String groupKey = sourceClass + "::" + sourceField;
+
+            groupedWarnings.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(warning);
+        }
+
+        // Add one row per unique source class + source field combination
+        for (List<ExportResult.SchemaWarning> warnings : groupedWarnings.values()) {
+            ExportResult.SchemaWarning firstWarning = warnings.get(0);
 
             // Warning type description
-            String warningType = first.type == ExportResult.SchemaWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
+            String warningType = firstWarning.type == ExportResult.SchemaWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
                     ? "Duplicate Embedded Reference"
-                    : first.type.toString();
+                    : firstWarning.type.toString();
 
-            // Get sample object IDs (first 3)
-            StringBuilder sampleIds = new StringBuilder();
-            int showCount = Math.min(3, warnings.size());
-            for (int i = 0; i < showCount; i++) {
-                if (i > 0)
-                    sampleIds.append(", ");
-                sampleIds.append(warnings.get(i).objectId);
-            }
-            if (warnings.size() > showCount) {
-                sampleIds.append(" ... +").append(warnings.size() - showCount);
-            }
+            String sourceContainingClass = firstWarning.sourceContainingClass != null
+                    ? firstWarning.sourceContainingClass
+                    : "N/A";
+            String sourceFieldName = firstWarning.sourceFieldName != null ? firstWarning.sourceFieldName : "N/A";
 
-            // Get source containing class names (full package names from schema)
-            Set<String> sourceContainingClasses = new TreeSet<>();
+            // Collect sample embedded classes and object IDs
+            Set<String> embeddedClasses = new LinkedHashSet<>();
+            List<String> objectIds = new ArrayList<>();
             for (ExportResult.SchemaWarning warning : warnings) {
-                if (warning.sourceContainingClass != null && !warning.sourceContainingClass.isEmpty()) {
-                    sourceContainingClasses.add(warning.sourceContainingClass);
-                }
+                embeddedClasses.add(warning.className);
+                objectIds.add(String.valueOf(warning.objectId));
             }
-            String sourceContainingClassStr = sourceContainingClasses.isEmpty() ? "N/A"
-                    : String.join(", ", sourceContainingClasses);
 
-            // Get source field names (original field names from schema like
-            // mVectCompartiment)
-            Set<String> sourceFieldNames = new TreeSet<>();
-            for (ExportResult.SchemaWarning warning : warnings) {
-                if (warning.sourceFieldName != null) {
-                    sourceFieldNames.add(warning.sourceFieldName);
-                }
+            // Limit samples to first 5 for display
+            String embeddedClassesSample = embeddedClasses.stream()
+                    .limit(5)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            if (embeddedClasses.size() > 5) {
+                embeddedClassesSample += "...";
             }
-            String sourceFieldsStr = sourceFieldNames.isEmpty() ? "N/A" : String.join(", ", sourceFieldNames);
+
+            String objectIdsSample = objectIds.stream()
+                    .limit(5)
+                    .collect(java.util.stream.Collectors.joining(", "));
+            if (objectIds.size() > 5) {
+                objectIdsSample += "...";
+            }
 
             tableModel.addRow(new Object[] {
                     warningType,
-                    first.className,
-                    warnings.size(),
-                    sampleIds.toString(),
-                    sourceContainingClassStr,
-                    sourceFieldsStr
+                    String.valueOf(warnings.size()),
+                    embeddedClassesSample,
+                    objectIdsSample,
+                    sourceContainingClass,
+                    sourceFieldName
             });
         }
 
         // Create table
         JTable table = new JTable(tableModel);
-        table.setRowHeight(50);
-        table.getColumnModel().getColumn(0).setPreferredWidth(180); // Warning Type
-        table.getColumnModel().getColumn(1).setPreferredWidth(150); // Embedded Class
-        table.getColumnModel().getColumn(2).setPreferredWidth(60); // Count
-        table.getColumnModel().getColumn(3).setPreferredWidth(150); // Sample Object IDs
-        table.getColumnModel().getColumn(4).setPreferredWidth(180); // Containing Classes
-        table.getColumnModel().getColumn(5).setPreferredWidth(150); // Fields
+        this.warningsTable = table; // Store reference for later updates
+        table.setRowHeight(30);
+        table.getColumnModel().getColumn(0).setPreferredWidth(200); // Warning Type
+        table.getColumnModel().getColumn(1).setPreferredWidth(60); // Count
+        table.getColumnModel().getColumn(2).setPreferredWidth(150); // Sample Embedded Classes
+        table.getColumnModel().getColumn(3).setPreferredWidth(120); // Sample Object IDs
+        table.getColumnModel().getColumn(4).setPreferredWidth(200); // Source Class
+        table.getColumnModel().getColumn(5).setPreferredWidth(180); // Source Field
 
-        // Custom renderer for wrapped text
+        // Custom renderer for wrapped text with highlighting for edited rows
         table.setDefaultRenderer(Object.class, new MultiLineTableCellRenderer());
+
+        // Add double-click handler to open field editor
+        table.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = table.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        openFieldEditor(row, tableModel);
+                    }
+                }
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(table);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -384,7 +408,9 @@ public class ExportResultDialog extends JDialog {
                         +
                         "from another). The first reference exports the full object, subsequent references create empty elements.\n\n"
                         +
-                        "TO FIX: In reference-schema.xml, use the exact values from the warning table:\n" +
+                        "QUICK FIX: Double-click any row above to open the field editor and change the embedContents setting.\n\n"
+                        +
+                        "MANUAL FIX: In reference-schema.xml, use the exact values from the warning table:\n" +
                         "  1. Search for: <class source=\"[value from 'Source Class' column]\"\n" +
                         "  2. Find: <field source=\"[value from 'Source Field' column]\">\n" +
                         "  3. Add or change: embedContents=\"false\"\n\n" +
@@ -423,6 +449,100 @@ public class ExportResultDialog extends JDialog {
         panel.add(closeButton);
 
         return panel;
+    }
+
+    /**
+     * Opens the field editor dialog for the selected warning row.
+     */
+    private void openFieldEditor(int row, DefaultTableModel tableModel) {
+        String sourceClass = (String) tableModel.getValueAt(row, 4); // Source Class column
+        String sourceField = (String) tableModel.getValueAt(row, 5); // Source Field column
+
+        if ("N/A".equals(sourceClass) || "N/A".equals(sourceField)) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot open field editor: Source class or field information is not available.",
+                    "Field Editor",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Get the reference schema
+        DOSchema schema = DOSchemaService.getInstance().getReferenceSchema();
+        if (schema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot open field editor: Reference schema is not loaded.",
+                    "Field Editor",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the class in the schema
+        DOSchemaClass schemaClass = null;
+        for (DOSchemaClass cls : schema.getClasses()) {
+            if (cls.source.equals(sourceClass)) {
+                schemaClass = cls;
+                break;
+            }
+        }
+
+        if (schemaClass == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot open field editor: Class '" + sourceClass + "' not found in reference schema.",
+                    "Field Editor",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the field in the class
+        DOSchemaField field = null;
+        if (schemaClass.fields != null) {
+            for (DOSchemaField f : schemaClass.fields) {
+                if (f.source.equals(sourceField)) {
+                    field = f;
+                    break;
+                }
+            }
+        }
+
+        if (field == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot open field editor: Field '" + sourceField + "' not found in class '" + sourceClass + "'.",
+                    "Field Editor",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Open the field editor dialog - use null as owner to avoid modal blocking
+        // issues
+        // The FieldEditorDialog is modal, but by not tying it to a specific owner,
+        // it won't block the entire application
+        FieldEditorDialog dialog = new FieldEditorDialog(null, schema, field, false);
+        dialog.setLocationRelativeTo(this);
+        dialog.setVisible(true);
+
+        // If the user saved changes, apply them to the field and mark schema as
+        // modified
+        if (dialog.isOkClicked()) {
+            // Apply all changes from the dialog to the field object
+            field.source = dialog.getFieldSource();
+            field.destinationName = dialog.getFieldDestination();
+            field.type = dialog.getFieldType();
+            field.isExported = dialog.isFieldExported();
+            field.skipWhen = dialog.getFieldSkipWhen();
+            field.isCollection = dialog.isFieldCollection();
+            field.embedContents = dialog.isFieldEmbedContents();
+            field.childrenType = dialog.getFieldChildrenType();
+            field.title = dialog.getFieldTitle();
+            field.description = dialog.getFieldDescription();
+            field.pointsTo = dialog.getFieldPointsTo();
+            field.valueMap = dialog.getValueMappings();
+
+            // Mark this row as edited (highlight in green)
+            editedRows.add(row);
+            if (warningsTable != null) {
+                warningsTable.repaint();
+            }
+        }
     }
 
     private void copyErrorDetailsToClipboard() {
@@ -487,9 +607,10 @@ public class ExportResultDialog extends JDialog {
     }
 
     /**
-     * Custom table cell renderer that supports multi-line text wrapping.
+     * Custom table cell renderer that supports multi-line text wrapping
+     * and highlights edited rows in green.
      */
-    private static class MultiLineTableCellRenderer extends JTextArea implements TableCellRenderer {
+    private class MultiLineTableCellRenderer extends JTextArea implements TableCellRenderer {
         public MultiLineTableCellRenderer() {
             setLineWrap(true);
             setWrapStyleWord(true);
@@ -503,6 +624,10 @@ public class ExportResultDialog extends JDialog {
             if (isSelected) {
                 setForeground(table.getSelectionForeground());
                 setBackground(table.getSelectionBackground());
+            } else if (editedRows.contains(row)) {
+                // Highlight edited rows in light green
+                setForeground(table.getForeground());
+                setBackground(new Color(200, 255, 200)); // Light green
             } else {
                 setForeground(table.getForeground());
                 setBackground(table.getBackground());
