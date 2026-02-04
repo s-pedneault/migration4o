@@ -16,6 +16,7 @@ import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.ExportProgressDialog;
 import migration4o.ui.common.dialogs.ExportResultDialog;
+import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
 
 /**
@@ -60,6 +61,9 @@ public class MigrationServiceCallback {
      * @param outputPath         the output directory path
      */
     public void exportClassAsync(ClassNode classNode, Integer maxObjectsPerClass, String outputPath) {
+        // Reset reached values before starting export
+        resetReachedValuesInCoveragePanel();
+
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String simpleName = schemaClass.getSourceName();
 
@@ -99,6 +103,9 @@ public class MigrationServiceCallback {
      */
     public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass,
             String outputPath) {
+        // Reset reached values before starting export
+        resetReachedValuesInCoveragePanel();
+
         // Extract modules list
         List<MigrationModule> modules = new ArrayList<>();
         for (ModuleExportInfo info : modulesToExport) {
@@ -198,6 +205,20 @@ public class MigrationServiceCallback {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Resets reached values in the migration coverage panel before starting a new
+     * export.
+     */
+    private void resetReachedValuesInCoveragePanel() {
+        if (parentComponent != null) {
+            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
+            if (window instanceof MainWindow) {
+                MainWindow mainWindow = (MainWindow) window;
+                mainWindow.resetCoverageReachedValues();
+            }
+        }
+    }
 
     /**
      * Handles successful export completion.

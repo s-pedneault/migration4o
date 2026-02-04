@@ -21,6 +21,7 @@ public class ExportStatistics {
     private int objectsSucceeded = 0;
     private int objectsFiltered = 0; // Objects filtered out by export criteria
     private final Map<String, Integer> exportedClassCounts = new HashMap<>();
+    private final Map<String, List<Long>> exportedObjectIds = new HashMap<>(); // Track actual object IDs per class
     private String currentClassName = "";
     private int currentClassTotal = 0;
 
@@ -64,15 +65,19 @@ public class ExportStatistics {
         objectsFiltered++;
     }
 
-    public void recordClassExport(DOSchemaClass schemaClass) {
+    public void recordClassExport(DOSchemaClass schemaClass, long objectId) {
         if (schemaClass != null) {
-            String className = schemaClass.destinationName;
+            // Use source name (not destinationName) for database schema lookup
+            String className = schemaClass.source;
             int count = exportedClassCounts.getOrDefault(className, 0) + 1;
             exportedClassCounts.put(className, count);
 
+            // Track the actual object ID
+            exportedObjectIds.computeIfAbsent(className, k -> new ArrayList<>()).add(objectId);
+
             // Notify monitor
             if (monitor != null) {
-                monitor.onObjectExported(className, 0); // Object ID not available here
+                monitor.onObjectExported(className, objectId);
             }
         }
     }
@@ -127,6 +132,10 @@ public class ExportStatistics {
         return new HashMap<>(exportedClassCounts);
     }
 
+    public Map<String, List<Long>> getExportedObjectIds() {
+        return new HashMap<>(exportedObjectIds);
+    }
+
     public boolean hasErrors() {
         return !errors.isEmpty();
     }
@@ -170,7 +179,7 @@ public class ExportStatistics {
         }
 
         return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded,
-                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts);
+                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts, exportedObjectIds);
     }
 
     /**

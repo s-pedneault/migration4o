@@ -223,6 +223,11 @@ public class MigrationExportService {
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
+
+        // Initialize shared tracking to prevent counting objects multiple times across
+        // modules
+        exporter.initializeSharedTracking();
+
         migration4o.engine.export.ReferencedClassTracker sharedTracker = new migration4o.engine.export.ReferencedClassTracker();
 
         // Pre-register ALL modules before exporting any of them
@@ -241,6 +246,9 @@ public class MigrationExportService {
 
         // Export referenced classes once at the end
         exporter.exportReferencedClasses(baseOutputPath, monitor, sharedTracker);
+
+        // Clean up shared tracking
+        exporter.resetSharedTracking();
 
         return results;
     }
@@ -366,6 +374,7 @@ public class MigrationExportService {
                 List<ExportResult.ExportError> allErrors = new ArrayList<>();
                 List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
                 Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+                Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
                 int totalObjectsAttempted = 0;
                 int totalObjectsSucceeded = 0;
 
@@ -373,12 +382,21 @@ public class MigrationExportService {
                     allErrors.addAll(result.errors);
                     allWarnings.addAll(result.schemaWarnings);
                     allClassCounts.putAll(result.exportedClassCounts);
+
+                    // Combine object IDs - merge lists for same class
+                    if (result.exportedObjectIds != null) {
+                        for (Map.Entry<String, List<Long>> entry : result.exportedObjectIds.entrySet()) {
+                            allObjectIds.computeIfAbsent(entry.getKey(), k -> new ArrayList<>())
+                                    .addAll(entry.getValue());
+                        }
+                    }
+
                     totalObjectsAttempted += result.objectsAttempted;
                     totalObjectsSucceeded += result.objectsSucceeded;
                 }
 
                 return new ExportResult("Bulk Export", baseOutput, totalObjectsAttempted,
-                        totalObjectsSucceeded, allErrors, allWarnings, allClassCounts);
+                        totalObjectsSucceeded, 0, allErrors, allWarnings, allClassCounts, allObjectIds);
             } else {
                 // Single module export
                 MigrationModule module = findModuleByName(params.targetName);
@@ -524,6 +542,7 @@ public class MigrationExportService {
         List<ExportResult.ExportError> allErrors = new ArrayList<>();
         List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
         Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+        Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
         int totalObjectsAttempted = 0;
         int totalObjectsSucceeded = 0;
 
@@ -531,13 +550,21 @@ public class MigrationExportService {
             allErrors.addAll(result.errors);
             allWarnings.addAll(result.schemaWarnings);
             allClassCounts.putAll(result.exportedClassCounts);
+
+            // Combine object IDs
+            if (result.exportedObjectIds != null) {
+                for (Map.Entry<String, List<Long>> entry : result.exportedObjectIds.entrySet()) {
+                    allObjectIds.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).addAll(entry.getValue());
+                }
+            }
+
             totalObjectsAttempted += result.objectsAttempted;
             totalObjectsSucceeded += result.objectsSucceeded;
         }
 
         return new ExportResult(
-                "Bulk Export", outputPath, totalObjectsAttempted, totalObjectsSucceeded,
-                allErrors, allWarnings, allClassCounts);
+                "Bulk Export", outputPath, totalObjectsAttempted, totalObjectsSucceeded, 0,
+                allErrors, allWarnings, allClassCounts, allObjectIds);
     }
 
     /**

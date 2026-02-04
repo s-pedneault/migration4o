@@ -1294,7 +1294,7 @@
         <field source="mEtatComportement" destinationName="etatComportement" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mIDCaserne" destinationName="idCaserne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.caserne.IDCaserne" />
         <field source="mIDCentreServ" destinationName="idCentreServ" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
-        <field source="mIDCompartiment" destinationName="idCompartiment" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.vehicule.IDCompartiment" embedContents="true" />
+        <field source="mIDCompartiment" destinationName="idCompartiment" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.vehicule.IDCompartiment" />
         <field source="mIDEmplAssoc" destinationName="idEmplAssoc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
         <field source="mIDEquipConsom" destinationName="idEquipConsom" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipConsom" embedContents="true" />
         <field source="mIDEquipExist" destinationName="idEquipExist" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
@@ -2733,7 +2733,7 @@
         <field source="mIDEquipConsom" destinationName="idEquipConsom" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipConsom" embedContents="true" />
         <field source="mIDEquipExist" destinationName="idEquipExist" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
         <field source="mIDEquipExistAssemble" destinationName="idEquipExistAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
-        <field source="mIDMaintEquip" destinationName="idMaintEquip" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.maintEquip.IDMaintEquip" embedContents="true" />
+        <field source="mIDMaintEquip" destinationName="idMaintEquip" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintEquip.IDMaintEquip" />
         <field source="mIDMaintEquipHistoOriginal" destinationName="idMaintEquipHistoOriginal" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintEquip.IDMaintEquipHisto" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.vehicule.IDVehicule" />
@@ -3730,7 +3730,7 @@
         <field source="mVectIDPPI" destinationName="vectIDPPI" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" childrenType="gest.secCiv.IDPPI" />
         <field source="mVectPhotoFich" destinationName="vectPhotoFich" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.gen.PhotoFich" />
         <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.secCiv.IDRessSecCiv" />
-        <field source="mIDNivAlerte" destinationName="idNivAlerte" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.secCiv.IDNivAlerte" embedContents="true" />
+        <field source="mIDNivAlerte" destinationName="idNivAlerte" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.secCiv.IDNivAlerte" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.secCiv.IDRessSecCiv" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>

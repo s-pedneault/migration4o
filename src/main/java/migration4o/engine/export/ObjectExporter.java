@@ -31,7 +31,8 @@ public class ObjectExporter {
     private final XMLWriter xmlWriter;
     private final XSDBuilder xsdBuilder;
     private final ExportStatistics statistics;
-    private final Set<Long> exportedObjectIds = new HashSet<>();
+    private final Set<Long> exportedObjectIds; // Can be shared across module exports
+    private final boolean isSharedSet; // Track if this is a shared Set to avoid clearing it
     private final Map<Long, EmbeddedObjectInfo> embeddedObjectRefs = new HashMap<>();
     private final ReferencedClassTracker referencedClassTracker;
     private boolean trackReferences = false;
@@ -54,11 +55,17 @@ public class ObjectExporter {
 
     public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
             XSDBuilder xsdBuilder, ExportStatistics statistics) {
-        this(schema, databaseSchema, xmlWriter, xsdBuilder, statistics, null);
+        this(schema, databaseSchema, xmlWriter, xsdBuilder, statistics, null, null);
     }
 
     public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
             XSDBuilder xsdBuilder, ExportStatistics statistics, ClassExportConfig exportConfig) {
+        this(schema, databaseSchema, xmlWriter, xsdBuilder, statistics, exportConfig, null);
+    }
+
+    public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
+            XSDBuilder xsdBuilder, ExportStatistics statistics, ClassExportConfig exportConfig,
+            Set<Long> sharedExportedObjectIds) {
         this.schema = schema;
         this.databaseSchema = databaseSchema;
         this.exportConfig = exportConfig;
@@ -68,6 +75,9 @@ public class ObjectExporter {
         this.xsdBuilder = xsdBuilder;
         this.statistics = statistics;
         this.referencedClassTracker = new ReferencedClassTracker();
+        // Use shared Set if provided, otherwise create new one
+        this.isSharedSet = (sharedExportedObjectIds != null);
+        this.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
     }
 
     /**
@@ -98,9 +108,15 @@ public class ObjectExporter {
 
     /**
      * Resets the state for a new export operation.
+     * Does NOT clear the exportedObjectIds Set if it's shared across module
+     * exports.
      */
     public void reset() {
-        exportedObjectIds.clear();
+        // Only clear the Set if it's not shared - shared Sets must persist across
+        // module exports
+        if (!isSharedSet) {
+            exportedObjectIds.clear();
+        }
         embeddedObjectRefs.clear();
         referencedClassTracker.reset();
     }
@@ -108,10 +124,13 @@ public class ObjectExporter {
     /**
      * Recursively exports an object and all its referenced objects.
      * This is the main entry point - assumes objects are NOT embedded by default.
+     * For root objects (those directly from a class's objectIds array), the shared
+     * deduplication set is NOT checked, allowing the same object to be exported
+     * in multiple criteria-based exports of the same class.
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel)
             throws IOException {
-        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null);
+        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true);
     }
 
     /**
@@ -132,12 +151,15 @@ public class ObjectExporter {
      *                                  mVectCompartiment)
      * @param sourceContainingClassName the source class name from schema (e.g.,
      *                                  gest.vehicule.Vehicule)
+     * @param isRootObject              true if this is a root object (from class's
+     *                                  objectIds), false if referenced
      */
     private void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel,
             boolean isEmbedded, String fieldName, String containingClassName,
-            String sourceFieldName, String sourceContainingClassName) throws IOException {
-        // Check if object was already exported
-        if (!exportedObjectIds.add(objectId)) {
+            String sourceFieldName, String sourceContainingClassName, boolean isRootObject) throws IOException {
+        // Check if object was already exported (skip check for root objects to allow
+        // multiple criteria-based exports of the same class)
+        if (!isRootObject && !exportedObjectIds.add(objectId)) {
             // Object already exported
 
             // If embedContents=false, this should have been handled by ID reference logic
@@ -256,14 +278,14 @@ public class ObjectExporter {
                     fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
                             (objId, indent, embedded, fldName, sourceFldName) -> exportObjectRecursively(container,
                                     objId, indent, embedded, fldName, currentClassName,
-                                    sourceFldName, currentSourceClassName));
+                                    sourceFldName, currentSourceClassName, false));
                 }
             }
 
             // Write object closing tag
             xmlWriter.writeEndElement(elementName, indentLevel);
             statistics.incrementSucceeded();
-            statistics.recordClassExport(schemaClass);
+            statistics.recordClassExport(schemaClass, objectId);
         } catch (Exception e) {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             statistics.addError(objectId, className, errorMsg, e);

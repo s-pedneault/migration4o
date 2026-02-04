@@ -484,12 +484,25 @@ public class MainWindow extends JFrame {
     /**
      * Notify the migration coverage panel about exported objects.
      * 
-     * @param exportedClasses Map of class name to number of exported objects
+     * @param exportedClasses   Map of class name to number of exported objects
+     * @param exportedObjectIds Map of class name to list of actual exported object
+     *                          IDs
      */
-    public void notifyExportCompleted(Map<String, Integer> exportedClasses) {
+    public void notifyExportCompleted(Map<String, Integer> exportedClasses, Map<String, List<Long>> exportedObjectIds) {
         if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
             migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
-            coveragePanel.updateExportedCounts(exportedClasses);
+            coveragePanel.updateExportedCounts(exportedClasses, exportedObjectIds);
+        }
+    }
+
+    /**
+     * Reset reached values in the migration coverage panel.
+     * Should be called before starting a new export.
+     */
+    public void resetCoverageReachedValues() {
+        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
+            migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
+            coveragePanel.resetReachedValues();
         }
     }
 

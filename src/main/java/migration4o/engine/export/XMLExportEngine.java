@@ -35,6 +35,7 @@ public class XMLExportEngine {
     private final String databasePath;
     private final ExtObjectContainer container;
     private Integer maxObjectsPerClass = null; // null = all objects
+    private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
 
     /**
      * Creates export engine using the shared in-memory database from
@@ -66,6 +67,23 @@ public class XMLExportEngine {
      */
     public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
         this.maxObjectsPerClass = maxObjectsPerClass;
+    }
+
+    /**
+     * Initializes shared object tracking for multi-module exports.
+     * Call this before exporting multiple modules to ensure objects are only
+     * counted once.
+     */
+    public void initializeSharedTracking() {
+        this.sharedExportedObjectIds = new HashSet<>();
+    }
+
+    /**
+     * Resets shared object tracking.
+     * Call this to clear tracking state between different export sessions.
+     */
+    public void resetSharedTracking() {
+        this.sharedExportedObjectIds = null;
     }
 
     /**
@@ -153,7 +171,7 @@ public class XMLExportEngine {
 
             // Create object exporter with export configuration for filtering
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
-                    xsdBuilder, statistics, config);
+                    xsdBuilder, statistics, config, sharedExportedObjectIds);
             objectExporter.reset();
 
             // Write XML header and metadata
@@ -498,7 +516,7 @@ public class XMLExportEngine {
 
             // Create object exporter with export configuration for filtering
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
-                    xsdBuilder, statistics, config);
+                    xsdBuilder, statistics, config, sharedExportedObjectIds);
             objectExporter.reset();
 
             // Enable reference tracking if we have a tracker
@@ -691,7 +709,7 @@ public class XMLExportEngine {
 
             // Create object exporter
             ObjectExporter objectExporter = new ObjectExporter(schema, databaseSchema, xmlWriter,
-                    xsdBuilder, statistics);
+                    xsdBuilder, statistics, null, sharedExportedObjectIds);
             objectExporter.reset();
 
             // Write XML header and metadata

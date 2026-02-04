@@ -292,11 +292,12 @@ public class ExportResultDialog extends JFrame {
 
         // Create table model - group by source class + source field combination
         String[] columnNames = { "Warning Type", "Count", "Sample Embedded Classes", "Sample Object IDs",
-                "Source Class (from schema)", "Source Field (from schema)" };
+                "Source Class (from schema)", "Source Field (from schema)", "Fix" };
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return false;
+                // Only the Fix column (index 6) is editable
+                return column == 6;
             }
         };
 
@@ -353,7 +354,8 @@ public class ExportResultDialog extends JFrame {
                     embeddedClassesSample,
                     objectIdsSample,
                     sourceContainingClass,
-                    sourceFieldName
+                    sourceFieldName,
+                    "Fix" // Button text
             });
         }
 
@@ -367,6 +369,11 @@ public class ExportResultDialog extends JFrame {
         table.getColumnModel().getColumn(3).setPreferredWidth(120); // Sample Object IDs
         table.getColumnModel().getColumn(4).setPreferredWidth(200); // Source Class
         table.getColumnModel().getColumn(5).setPreferredWidth(180); // Source Field
+        table.getColumnModel().getColumn(6).setPreferredWidth(80); // Fix button
+
+        // Set custom renderer and editor for the Fix button column
+        table.getColumnModel().getColumn(6).setCellRenderer(new ButtonRenderer());
+        table.getColumnModel().getColumn(6).setCellEditor(new ButtonEditor(new JCheckBox(), tableModel));
 
         // Custom renderer for wrapped text with highlighting for edited rows
         table.setDefaultRenderer(Object.class, new MultiLineTableCellRenderer());
@@ -603,6 +610,153 @@ public class ExportResultDialog extends JFrame {
         JOptionPane.showMessageDialog(this,
                 "Error details copied to clipboard",
                 "Copied",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /**
+     * Button renderer for the Fix column.
+     */
+    private class ButtonRenderer extends JButton implements TableCellRenderer {
+        public ButtonRenderer() {
+            setOpaque(true);
+        }
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            if (editedRows.contains(row)) {
+                setBackground(new Color(200, 255, 200)); // Light green for fixed rows
+                setEnabled(false);
+                setText("Fixed");
+            } else {
+                setBackground(UIManager.getColor("Button.background"));
+                setEnabled(true);
+                setText((value == null) ? "Fix" : value.toString());
+            }
+            return this;
+        }
+    }
+
+    /**
+     * Button editor for the Fix column.
+     */
+    private class ButtonEditor extends DefaultCellEditor {
+        protected JButton button;
+        private String label;
+        private boolean isPushed;
+        private int currentRow;
+        private DefaultTableModel tableModel;
+
+        public ButtonEditor(JCheckBox checkBox, DefaultTableModel model) {
+            super(checkBox);
+            this.tableModel = model;
+            button = new JButton();
+            button.setOpaque(true);
+            button.addActionListener(e -> fireEditingStopped());
+        }
+
+        @Override
+        public Component getTableCellEditorComponent(JTable table, Object value,
+                boolean isSelected, int row, int column) {
+            currentRow = row;
+            label = (value == null) ? "Fix" : value.toString();
+            button.setText(label);
+            isPushed = true;
+            return button;
+        }
+
+        @Override
+        public Object getCellEditorValue() {
+            if (isPushed) {
+                applyFix(currentRow, tableModel);
+            }
+            isPushed = false;
+            return label;
+        }
+
+        @Override
+        public boolean stopCellEditing() {
+            isPushed = false;
+            return super.stopCellEditing();
+        }
+    }
+
+    /**
+     * Applies the fix for the selected warning row by setting embedContents to
+     * false.
+     */
+    private void applyFix(int row, DefaultTableModel tableModel) {
+        String sourceClass = (String) tableModel.getValueAt(row, 4); // Source Class column
+        String sourceField = (String) tableModel.getValueAt(row, 5); // Source Field column
+
+        if ("N/A".equals(sourceClass) || "N/A".equals(sourceField)) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot apply fix: Source class or field information is not available.",
+                    "Fix Error",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Get the reference schema
+        DOSchema schema = DOSchemaService.getInstance().getReferenceSchema();
+        if (schema == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot apply fix: Reference schema is not loaded.",
+                    "Fix Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the class in the schema
+        DOSchemaClass schemaClass = null;
+        for (DOSchemaClass cls : schema.getClasses()) {
+            if (cls.source.equals(sourceClass)) {
+                schemaClass = cls;
+                break;
+            }
+        }
+
+        if (schemaClass == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot apply fix: Class '" + sourceClass + "' not found in reference schema.",
+                    "Fix Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Find the field in the class
+        DOSchemaField field = null;
+        if (schemaClass.fields != null) {
+            for (DOSchemaField f : schemaClass.fields) {
+                if (f.source.equals(sourceField)) {
+                    field = f;
+                    break;
+                }
+            }
+        }
+
+        if (field == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Cannot apply fix: Field '" + sourceField + "' not found in class '" + sourceClass + "'.",
+                    "Fix Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Apply the fix: set embedContents to false
+        field.embedContents = false;
+
+        // Mark this row as edited (highlight in green)
+        editedRows.add(row);
+        if (warningsTable != null) {
+            warningsTable.repaint();
+        }
+
+        // Show success message
+        JOptionPane.showMessageDialog(this,
+                "Fixed! Set embedContents=false for field '" + sourceField + "' in class '" + sourceClass + "'.\n\n" +
+                        "The row is now highlighted in green to indicate it has been fixed.",
+                "Fix Applied",
                 JOptionPane.INFORMATION_MESSAGE);
     }
 

@@ -57,9 +57,19 @@ public class MigrationCoveragePanel extends JPanel {
 
     private JTable table;
     private DefaultTableModel tableModel;
+    private DefaultTableModel fullTableModel; // Unfiltered data
     private DOSchema referenceSchema;
     private DOSchema databaseSchema;
     private String databasePath;
+
+    // Filter state
+    private boolean filterIDEntites = false; // Unchecked by default
+    private boolean filterEntites = true;
+    private boolean filterParams = true;
+    private boolean filterOthers = true;
+    private boolean filter100Percent = true;
+    private boolean filterPartial = true;
+    private boolean filterNotMigrated = true;
 
     public MigrationCoveragePanel(DOSchema referenceSchema, DOSchema databaseSchema, String databasePath) {
         setLayout(new BorderLayout());
@@ -121,8 +131,11 @@ public class MigrationCoveragePanel extends JPanel {
         JScrollPane scrollPane = new JScrollPane(table);
         add(scrollPane, BorderLayout.CENTER);
 
-        // Add summary panel at top
-        add(createSummaryPanel(referenceSchema, databaseSchema), BorderLayout.NORTH);
+        // Add summary panel and filters at top
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.add(createSummaryPanel(referenceSchema, databaseSchema), BorderLayout.NORTH);
+        topPanel.add(createFilterPanel(), BorderLayout.SOUTH);
+        add(topPanel, BorderLayout.NORTH);
 
         // Add button panel at bottom
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -135,6 +148,47 @@ public class MigrationCoveragePanel extends JPanel {
         buttonPanel.add(exportButton);
 
         add(buttonPanel, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Helper class to centralize migration status calculations.
+     * Ensures consistent logic between filtering and rendering.
+     */
+    private static class MigrationStatus {
+        final boolean isNotSetToMigrate;
+        final boolean is100Percent;
+        final boolean isPartial;
+        final boolean isNotMigrated;
+
+        MigrationStatus(DOSchemaClass refClass, int unique, int reached) {
+            // Check if class is not set to migrate
+            this.isNotSetToMigrate = refClass != null && !refClass.migrate;
+
+            // Categories are mutually exclusive:
+            // 1. Not migrated (highest priority): class not set to migrate OR (unique > 0
+            // AND reached == 0)
+            // 2. 100% migrated: reached == unique (including 0 == 0) AND class set to
+            // migrate
+            // 3. Partially migrated: 0 < reached < unique
+            this.is100Percent = !isNotSetToMigrate && reached == unique;
+            this.isPartial = !isNotSetToMigrate && reached > 0 && reached < unique;
+            this.isNotMigrated = isNotSetToMigrate || (unique > 0 && reached == 0);
+        }
+    }
+
+    /**
+     * Reset all reached values to 0 for all classes in the database schema.
+     * Should be called before starting a new export to avoid accumulating values.
+     */
+    public void resetReachedValues() {
+        if (databaseSchema != null && databaseSchema.getClasses() != null) {
+            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                schemaClass.reachedObjectIds = null;
+            }
+        }
+
+        // Refresh the table to show updated values
+        populateTable(referenceSchema, databaseSchema);
     }
 
     private JPanel createSummaryPanel(DOSchema referenceSchema, DOSchema databaseSchema) {
@@ -156,8 +210,134 @@ public class MigrationCoveragePanel extends JPanel {
         return panel;
     }
 
+    private JPanel createFilterPanel() {
+        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+        JLabel filterLabel = new JLabel("Show: ");
+        filterLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        panel.add(filterLabel);
+
+        // Create checkboxes
+        javax.swing.JCheckBox cbIDEntites = new javax.swing.JCheckBox("IDEntites", filterIDEntites);
+        javax.swing.JCheckBox cbEntites = new javax.swing.JCheckBox("Entites", filterEntites);
+        javax.swing.JCheckBox cbParams = new javax.swing.JCheckBox("Params", filterParams);
+        javax.swing.JCheckBox cbOthers = new javax.swing.JCheckBox("Others", filterOthers);
+        javax.swing.JCheckBox cb100Percent = new javax.swing.JCheckBox("100% migrated", filter100Percent);
+        javax.swing.JCheckBox cbPartial = new javax.swing.JCheckBox("Partially migrated", filterPartial);
+        javax.swing.JCheckBox cbNotMigrated = new javax.swing.JCheckBox("Not migrated", filterNotMigrated);
+
+        // Add action listeners to update filter state and refilter table
+        cbIDEntites.addActionListener(e -> {
+            filterIDEntites = cbIDEntites.isSelected();
+            applyFilters();
+        });
+        cbEntites.addActionListener(e -> {
+            filterEntites = cbEntites.isSelected();
+            applyFilters();
+        });
+        cbParams.addActionListener(e -> {
+            filterParams = cbParams.isSelected();
+            applyFilters();
+        });
+        cbOthers.addActionListener(e -> {
+            filterOthers = cbOthers.isSelected();
+            applyFilters();
+        });
+        cb100Percent.addActionListener(e -> {
+            filter100Percent = cb100Percent.isSelected();
+            applyFilters();
+        });
+        cbPartial.addActionListener(e -> {
+            filterPartial = cbPartial.isSelected();
+            applyFilters();
+        });
+        cbNotMigrated.addActionListener(e -> {
+            filterNotMigrated = cbNotMigrated.isSelected();
+            applyFilters();
+        });
+
+        panel.add(cbIDEntites);
+        panel.add(cbEntites);
+        panel.add(cbParams);
+        panel.add(cbOthers);
+        panel.add(new JLabel("  |  "));
+        panel.add(cb100Percent);
+        panel.add(cbPartial);
+        panel.add(cbNotMigrated);
+
+        return panel;
+    }
+
+    private void applyFilters() {
+        // Clear current table
+        tableModel.setRowCount(0);
+
+        // Re-add filtered rows from fullTableModel
+        for (int i = 0; i < fullTableModel.getRowCount(); i++) {
+            String className = (String) fullTableModel.getValueAt(i, 0);
+            int objects = (Integer) fullTableModel.getValueAt(i, 1);
+            int unique = (Integer) fullTableModel.getValueAt(i, 2);
+            int reached = (Integer) fullTableModel.getValueAt(i, 3);
+            int migrated = (Integer) fullTableModel.getValueAt(i, 4);
+
+            // Determine class type
+            DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
+            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
+            DOSchemaClass schemaClass = refClass != null ? refClass : dbClass;
+
+            boolean isIDEntite = schemaClass != null && schemaClass.isIDEntite(referenceSchema);
+            boolean isEntite = schemaClass != null && schemaClass.isEntite(referenceSchema);
+            boolean isParam = schemaClass != null && schemaClass.isParam(referenceSchema);
+            boolean isOther = !isIDEntite && !isEntite && !isParam;
+
+            // Check type filters
+            if (isIDEntite && !filterIDEntites)
+                continue;
+            if (isEntite && !filterEntites)
+                continue;
+            if (isParam && !filterParams)
+                continue;
+            if (isOther && !filterOthers)
+                continue;
+
+            // Calculate migration status using centralized logic
+            MigrationStatus status = new MigrationStatus(refClass, unique, reached);
+
+            if (status.is100Percent && !filter100Percent)
+                continue;
+            if (status.isPartial && !filterPartial)
+                continue;
+            if (status.isNotMigrated && !filterNotMigrated)
+                continue;
+
+            // Add row
+            tableModel.addRow(new Object[] { className, objects, unique, reached, migrated });
+        }
+    }
+
     private void populateTable(DOSchema referenceSchema, DOSchema databaseSchema) {
+        // Create fullTableModel if it doesn't exist
+        if (fullTableModel == null) {
+            String[] columnNames = { "Class Name", "Objects", "Unique", "Reached", "Migration" };
+            fullTableModel = new DefaultTableModel(columnNames, 0) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                    return false;
+                }
+
+                @Override
+                public Class<?> getColumnClass(int columnIndex) {
+                    if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3 || columnIndex == 4) {
+                        return Integer.class;
+                    }
+                    return String.class;
+                }
+            };
+        }
+
         // Clear existing rows before repopulating
+        fullTableModel.setRowCount(0);
         tableModel.setRowCount(0);
 
         // Build maps for quick lookup
@@ -188,23 +368,25 @@ public class MigrationCoveragePanel extends JPanel {
             int objectCount = 0;
             int uniqueCount = 0;
             int reachedCount = 0;
-            int migratedCount = 0;
 
             if (dbClass != null) {
                 objectCount = dbClass.objectIds != null ? dbClass.objectIds.length : 0;
                 uniqueCount = dbClass.uniqueObjectIds != null ? dbClass.uniqueObjectIds.length : 0;
                 reachedCount = dbClass.reachedObjectIds != null ? dbClass.reachedObjectIds.length : 0;
-                migratedCount = objectCount - uniqueCount; // Duplicates removed = migrated
             }
 
-            tableModel.addRow(new Object[] { className, objectCount, uniqueCount, reachedCount, migratedCount });
+            // Migration column now shows reached count (what we actually use for progress)
+            fullTableModel.addRow(new Object[] { className, objectCount, uniqueCount, reachedCount, reachedCount });
 
             // Debug specific class
             if (className.equals("gest.dossPrev.PersonneRess")) {
                 System.out.println("DEBUG TABLE: Adding PersonneRess row - Objects=" + objectCount + ", Unique="
-                        + uniqueCount + ", Reached=" + reachedCount + ", Migrated=" + migratedCount);
+                        + uniqueCount + ", Reached=" + reachedCount);
             }
         }
+
+        // Apply filters to populate tableModel from fullTableModel
+        applyFilters();
     }
 
     /**
@@ -264,12 +446,10 @@ public class MigrationCoveragePanel extends JPanel {
 
     /**
      * Custom cell renderer for Migration column showing progress bar
-     * Max = Objects count, Value = Objects - Unique (migrated/deduplicated count)
-     * Background = red, Progress = green
+     * Max = Unique objects count, Value = Reached objects count
+     * Background = gray, Progress = blue for partial, green for 100%
      * Special cases:
      * - Light grey if not flagged to migrate
-     * - Blue if descendant of EntiteContientID
-     * - Yellow if descendant of IDEntite
      */
     private class MigrationProgressRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
         private int value;
@@ -286,13 +466,21 @@ public class MigrationCoveragePanel extends JPanel {
                 boolean isSelected, boolean hasFocus, int row, int column) {
 
             if (val instanceof Integer) {
-                this.value = (Integer) val;
+                // This column (4) shows migration status but we need reached/unique for
+                // progress
 
-                // Get the Objects count from column 1
+                // Get the Reached count from column 3
+                this.value = 0;
+                Object reachedValue = table.getValueAt(row, 3);
+                if (reachedValue instanceof Integer) {
+                    this.value = (Integer) reachedValue;
+                }
+
+                // Get the Unique count from column 2
                 this.maximum = 0;
-                Object objectsValue = table.getValueAt(row, 1);
-                if (objectsValue instanceof Integer) {
-                    this.maximum = (Integer) objectsValue;
+                Object uniqueValue = table.getValueAt(row, 2);
+                if (uniqueValue instanceof Integer) {
+                    this.maximum = (Integer) uniqueValue;
                 }
 
                 // Get class name from column 0
@@ -312,32 +500,24 @@ public class MigrationCoveragePanel extends JPanel {
         private void determineColors(String className) {
             // Find the class in reference and database schemas
             DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
-            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
-            DOSchemaClass schemaClass = refClass != null ? refClass : dbClass;
 
-            // Default colors
-            backgroundColor = new Color(239, 68, 68); // Red
-            progressColor = new Color(34, 197, 94); // Green
+            // Calculate migration status using centralized logic
+            MigrationStatus status = new MigrationStatus(refClass, maximum, value);
 
-            if (schemaClass != null) {
-                // Check if class is not flagged to migrate
-                if (!schemaClass.migrate) {
-                    backgroundColor = new Color(211, 211, 211); // Light grey
-                    progressColor = new Color(169, 169, 169); // Darker grey for progress
-                }
-                // Check if descendant of EntiteContientID
-                else if (schemaClass.isEntite(referenceSchema)) {
-                    backgroundColor = new Color(59, 130, 246); // Blue
-                    progressColor = new Color(59, 130, 246); // Blue (fully)
-                } // Check if descendant of EntiteParam
-                else if (schemaClass.isParam(referenceSchema)) {
-                    backgroundColor = new Color(99, 190, 246); // Blue
-                    progressColor = new Color(99, 190, 246); // Blue (fully)
-                }
-                // Check if descendant of IDEntite
-                else if (schemaClass.isIDEntite(referenceSchema)) {
-                    backgroundColor = new Color(234, 179, 8); // Yellow
-                    progressColor = new Color(234, 179, 8); // Yellow (fully)
+            // Use migration status to determine colors
+            if (status.isNotSetToMigrate) {
+                // Light gray for classes not set to migrate
+                backgroundColor = new Color(211, 211, 211); // Light grey
+                progressColor = new Color(211, 211, 211); // Same light grey
+            } else {
+                // Darker grey background
+                backgroundColor = new Color(169, 169, 169);
+
+                // Color based on migration status
+                if (status.is100Percent) {
+                    progressColor = new Color(34, 197, 94); // Green for 100%
+                } else {
+                    progressColor = new Color(59, 130, 246); // Blue for partial
                 }
             }
         }
@@ -1041,12 +1221,23 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
-     * Removes a set of object IDs from a class's uniqueObjectIds array.
+     * Adds a set of object IDs to a class's reachedObjectIds array.
+     * Only IDs that exist in uniqueObjectIds are added (to avoid counting
+     * duplicates).
      */
     private void addIdsToReachedList(DOSchemaClass schemaClass, Set<Long> idsToAdd) {
         long[] currentReachedIds = schemaClass.reachedObjectIds;
         if (currentReachedIds == null) {
             currentReachedIds = new long[0];
+        }
+
+        // Create a set of unique IDs for this class (only these should be counted as
+        // reached)
+        Set<Long> uniqueIds = new HashSet<>();
+        if (schemaClass.uniqueObjectIds != null) {
+            for (long id : schemaClass.uniqueObjectIds) {
+                uniqueIds.add(id);
+            }
         }
 
         // Create a set of existing reached IDs to avoid duplicates
@@ -1055,9 +1246,17 @@ public class MigrationCoveragePanel extends JPanel {
             existingIds.add(id);
         }
 
-        // Add new IDs that aren't already in the list
+        // Add new IDs that are:
+        // 1. In the uniqueObjectIds list (not duplicates)
+        // 2. Not already in reachedObjectIds
         Set<Long> newIds = new HashSet<>();
+        int skippedDuplicates = 0;
         for (long id : idsToAdd) {
+            if (!uniqueIds.contains(id)) {
+                // Skip IDs that are not in the unique list (they're duplicates)
+                skippedDuplicates++;
+                continue;
+            }
             if (!existingIds.contains(id)) {
                 newIds.add(id);
             }
@@ -1074,7 +1273,11 @@ public class MigrationCoveragePanel extends JPanel {
             schemaClass.reachedObjectIds = combinedIds;
             System.out.println("Added " + newIds.size() +
                     " reached objects to class " + schemaClass.source +
-                    " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
+                    " (was " + currentReachedIds.length + ", now " + combinedIds.length +
+                    ", skipped " + skippedDuplicates + " duplicate object instances)");
+        } else if (skippedDuplicates > 0) {
+            System.out.println("Skipped " + skippedDuplicates +
+                    " duplicate object instances for class " + schemaClass.source);
         }
     }
 
@@ -1247,43 +1450,35 @@ public class MigrationCoveragePanel extends JPanel {
 
     /**
      * Update the reached object counts for exported classes.
-     * This should be called after an export completes successfully.
+     * Called after export to populate reachedObjectIds based on what was actually
+     * exported.
      * 
-     * @param exportedClasses Map of class name to number of exported objects
+     * @param exportedClasses   Map of class name to number of exported objects
+     * @param exportedObjectIds Map of class name to list of actual exported object
+     *                          IDs
      */
-    public void updateExportedCounts(Map<String, Integer> exportedClasses) {
+    public void updateExportedCounts(Map<String, Integer> exportedClasses, Map<String, List<Long>> exportedObjectIds) {
         if (exportedClasses == null || exportedClasses.isEmpty()) {
-            System.out.println("DEBUG MigrationCoveragePanel: No exported classes to update");
             return;
         }
-
-        System.out.println("DEBUG MigrationCoveragePanel: Updating " + exportedClasses.size() + " classes");
 
         // Update the database schema's reachedObjectIds for each exported class
         for (Map.Entry<String, Integer> entry : exportedClasses.entrySet()) {
             String className = entry.getKey();
-            int exportedCount = entry.getValue();
-
-            System.out.println("DEBUG: Updating class " + className + " with " + exportedCount + " objects");
+            List<Long> objectIdList = exportedObjectIds != null ? exportedObjectIds.get(className) : null;
 
             // Find the class in database schema
             DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
-            if (dbClass != null) {
-                System.out.println("DEBUG: Found class in schema, setting reachedObjectIds");
-                // Update the reached count to match exported count
-                // Note: We set the reachedObjectIds length to match the exported count
-                // This is a simplified approach - ideally we'd track actual object IDs
-                if (exportedCount > 0) {
-                    // Create a dummy array of the right size for display purposes
-                    long[] reachedIds = new long[exportedCount];
-                    dbClass.reachedObjectIds = reachedIds;
+            if (dbClass != null && objectIdList != null && !objectIdList.isEmpty()) {
+                // Convert List<Long> to long[] array with actual object IDs
+                long[] reachedIds = new long[objectIdList.size()];
+                for (int i = 0; i < objectIdList.size(); i++) {
+                    reachedIds[i] = objectIdList.get(i);
                 }
-            } else {
-                System.out.println("DEBUG: Class not found in database schema: " + className);
+                dbClass.reachedObjectIds = reachedIds;
             }
         }
 
-        System.out.println("DEBUG: Refreshing table...");
         // Refresh the table to show updated counts
         refreshTable();
     }

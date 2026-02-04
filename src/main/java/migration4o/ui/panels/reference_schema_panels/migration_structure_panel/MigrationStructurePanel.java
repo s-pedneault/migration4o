@@ -120,7 +120,7 @@ public class MigrationStructurePanel extends JPanel {
                     java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
                     if (window instanceof MainWindow) {
                         MainWindow mainWindow = (MainWindow) window;
-                        mainWindow.notifyExportCompleted(result.exportedClassCounts);
+                        mainWindow.notifyExportCompleted(result.exportedClassCounts, result.exportedObjectIds);
                     }
                 }
             }

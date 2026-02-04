@@ -46,9 +46,11 @@ public class ClassObjectsDialog extends JDialog {
     private JButton prevButton;
     private JButton nextButton;
     private JCheckBox showUniqueCheckbox;
+    private JCheckBox showUnreachedCheckbox;
     private int currentPage = 0;
     private long[] objectIds;
     private boolean showOnlyUnique = true;
+    private boolean showOnlyUnreached = false;
 
     public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass,
             DOSchema schema, String databasePath) {
@@ -67,20 +69,32 @@ public class ClassObjectsDialog extends JDialog {
         setSize(1000, 600);
         setLocationRelativeTo(getParent());
 
-        // Top panel with status label and checkbox
+        // Top panel with status label and checkboxes
         JPanel topPanel = new JPanel(new BorderLayout());
         statusLabel = new JLabel("Loading...");
         statusLabel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         topPanel.add(statusLabel, BorderLayout.CENTER);
 
+        // Right panel for checkboxes
+        JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+
         showUniqueCheckbox = new JCheckBox("Show only unique objects", true);
-        showUniqueCheckbox.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         showUniqueCheckbox.addActionListener(e -> {
             showOnlyUnique = showUniqueCheckbox.isSelected();
             loadObjectIds();
             loadPage(0);
         });
-        topPanel.add(showUniqueCheckbox, BorderLayout.EAST);
+        checkboxPanel.add(showUniqueCheckbox);
+
+        showUnreachedCheckbox = new JCheckBox("Show only unreached objects", false);
+        showUnreachedCheckbox.addActionListener(e -> {
+            showOnlyUnreached = showUnreachedCheckbox.isSelected();
+            loadObjectIds();
+            loadPage(0);
+        });
+        checkboxPanel.add(showUnreachedCheckbox);
+
+        topPanel.add(checkboxPanel, BorderLayout.EAST);
 
         add(topPanel, BorderLayout.NORTH);
 
@@ -113,10 +127,39 @@ public class ClassObjectsDialog extends JDialog {
     }
 
     private void loadObjectIds() {
+        // Start with the base set of IDs based on unique filter
+        long[] baseIds;
         if (showOnlyUnique) {
-            objectIds = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds : new long[0];
+            baseIds = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds : new long[0];
         } else {
-            objectIds = schemaClass.objectIds != null ? schemaClass.objectIds : new long[0];
+            baseIds = schemaClass.objectIds != null ? schemaClass.objectIds : new long[0];
+        }
+
+        // Apply unreached filter if enabled
+        if (showOnlyUnreached) {
+            // Get the set of reached object IDs
+            Set<Long> reachedIds = new HashSet<>();
+            if (schemaClass.reachedObjectIds != null) {
+                for (long id : schemaClass.reachedObjectIds) {
+                    reachedIds.add(id);
+                }
+            }
+
+            // Filter out reached objects
+            List<Long> unreachedList = new ArrayList<>();
+            for (long id : baseIds) {
+                if (!reachedIds.contains(id)) {
+                    unreachedList.add(id);
+                }
+            }
+
+            // Convert back to array
+            objectIds = new long[unreachedList.size()];
+            for (int i = 0; i < unreachedList.size(); i++) {
+                objectIds[i] = unreachedList.get(i);
+            }
+        } else {
+            objectIds = baseIds;
         }
     }
 
@@ -327,6 +370,17 @@ public class ClassObjectsDialog extends JDialog {
             return "";
         }
 
+        // Check if it's already been formatted as a string
+        if (value instanceof String) {
+            String strValue = (String) value;
+            if (strValue.equals("[Object]")) {
+                // This shouldn't happen - means value was pre-formatted
+                System.err.println("WARNING: Received pre-formatted [Object] string");
+                return strValue;
+            }
+            return strValue;
+        }
+
         // Handle collections
         if (value instanceof java.util.Collection) {
             java.util.Collection<?> collection = (java.util.Collection<?>) value;
@@ -360,10 +414,33 @@ public class ClassObjectsDialog extends JDialog {
                     }
                     sb.append("]");
                     return sb.toString();
+                } else {
+                    // Collection of non-IDEntite GenericObjects - show meaningful summaries
+                    StringBuilder sb = new StringBuilder("[");
+                    boolean first = true;
+                    int count = 0;
+                    int maxItems = 3; // Limit to 3 items to avoid huge strings
+                    for (Object item : collection) {
+                        if (item instanceof com.db4o.reflect.generic.GenericObject) {
+                            if (count >= maxItems) {
+                                sb.append(", ..."); // More items
+                                break;
+                            }
+                            if (!first) {
+                                sb.append(", ");
+                            }
+                            sb.append(formatGenericObjectSummary(container,
+                                    (com.db4o.reflect.generic.GenericObject) item));
+                            first = false;
+                            count++;
+                        }
+                    }
+                    sb.append("]");
+                    return sb.toString();
                 }
             }
 
-            // Non-IDEntite collection - show size
+            // Non-GenericObject collection - show size
             return "[Collection: " + collection.size() + " items]";
         }
 
@@ -389,7 +466,8 @@ public class ClassObjectsDialog extends JDialog {
                 }
             }
 
-            return "[Object]";
+            // For other objects, show type and meaningful field summary
+            return formatGenericObjectSummary(container, genericObj);
         }
 
         return value.toString();
@@ -461,6 +539,154 @@ public class ClassObjectsDialog extends JDialog {
             // Could not extract mID
         }
         return null;
+    }
+
+    /**
+     * Format a GenericObject into a meaningful summary showing type and key fields.
+     */
+    private String formatGenericObjectSummary(ExtObjectContainer container,
+            com.db4o.reflect.generic.GenericObject obj) {
+        try {
+            // Get the class name
+            com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
+            String className = storedClass != null ? storedClass.getName() : "Unknown";
+
+            System.out.println("DEBUG: Formatting GenericObject of type: " + className);
+
+            // Simplify class name (remove package)
+            String simpleClassName = className;
+            if (className.contains(".")) {
+                simpleClassName = className.substring(className.lastIndexOf('.') + 1);
+            }
+
+            // Try to activate the object to load its fields, but don't fail if activation
+            // fails
+            try {
+                container.activate(obj, 2);
+            } catch (Exception activateEx) {
+                // Activation failed - continue anyway, we'll try to get fields without full
+                // activation
+                System.out.println("DEBUG: Could not activate object, continuing without activation");
+            }
+
+            // Extract key fields for summary (prioritize common identifier fields)
+            StringBuilder summary = new StringBuilder();
+            summary.append(simpleClassName).append("(");
+
+            boolean foundField = false;
+            String[] priorityFields = { "mNom", "iNom", "mLibelle", "iSommaire", "mCode", "iCode", "mID", "iIdentCol" };
+
+            // Try priority fields first
+            for (String fieldName : priorityFields) {
+                Object fieldValue = getFieldValueFromObject(container, obj, fieldName);
+                if (fieldValue != null && !isEmptyValue(fieldValue)) {
+                    if (foundField) {
+                        summary.append(", ");
+                    }
+                    summary.append(formatSimpleValue(fieldValue));
+                    foundField = true;
+                    System.out.println("DEBUG: Found priority field " + fieldName + " = " + fieldValue);
+                    break; // Only show first meaningful field
+                }
+            }
+
+            // If no priority fields found, try to get any meaningful primitive field
+            if (!foundField) {
+                com.db4o.ext.StoredField[] fields = storedClass.getStoredFields();
+                if (fields != null) {
+                    for (com.db4o.ext.StoredField field : fields) {
+                        try {
+                            Object fieldValue = field.get(obj);
+                            System.out.println(
+                                    "DEBUG: Checking field " + field.getName() + " = " + fieldValue + " (type: "
+                                            + (fieldValue != null ? fieldValue.getClass().getName() : "null") + ")");
+                            if (fieldValue != null && isPrimitiveOrString(fieldValue) && !isEmptyValue(fieldValue)) {
+                                summary.append(formatSimpleValue(fieldValue));
+                                foundField = true;
+                                break;
+                            }
+                        } catch (Exception fieldEx) {
+                            // Skip this field if we can't get its value
+                            System.out.println(
+                                    "DEBUG: Could not get field " + field.getName() + ": " + fieldEx.getMessage());
+                        }
+                    }
+                }
+            }
+
+            summary.append(")");
+            String result = summary.toString();
+            System.out.println("DEBUG: Formatted summary: " + result);
+            return result;
+
+        } catch (Exception e) {
+            System.err.println("ERROR: Exception formatting GenericObject: " + e.getMessage());
+            e.printStackTrace();
+            return "[Object]";
+        }
+    }
+
+    /**
+     * Get a specific field value from a GenericObject.
+     */
+    private Object getFieldValueFromObject(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj,
+            String fieldName) {
+        try {
+            com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
+            while (storedClass != null) {
+                com.db4o.ext.StoredField[] fields = storedClass.getStoredFields();
+                if (fields != null) {
+                    for (com.db4o.ext.StoredField field : fields) {
+                        if (field.getName().equals(fieldName)) {
+                            return field.get(obj);
+                        }
+                    }
+                }
+                storedClass = storedClass.getParentStoredClass();
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return null;
+    }
+
+    /**
+     * Check if a value is a primitive type or String.
+     */
+    private boolean isPrimitiveOrString(Object value) {
+        return value instanceof String || value instanceof Number || value instanceof Boolean
+                || value instanceof Character;
+    }
+
+    /**
+     * Check if a value is considered empty.
+     */
+    private boolean isEmptyValue(Object value) {
+        if (value == null) {
+            return true;
+        }
+        if (value instanceof String) {
+            return ((String) value).trim().isEmpty();
+        }
+        if (value instanceof Number) {
+            return ((Number) value).longValue() == 0 || ((Number) value).longValue() == -1;
+        }
+        return false;
+    }
+
+    /**
+     * Format a simple value for display in summary.
+     */
+    private String formatSimpleValue(Object value) {
+        if (value instanceof String) {
+            String str = (String) value;
+            // Truncate long strings
+            if (str.length() > 30) {
+                return str.substring(0, 27) + "...";
+            }
+            return str;
+        }
+        return value.toString();
     }
 
     /**

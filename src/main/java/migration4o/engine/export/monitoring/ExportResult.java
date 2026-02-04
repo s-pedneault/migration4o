@@ -18,23 +18,31 @@ public class ExportResult {
     public List<ExportError> errors;
     public List<SchemaWarning> schemaWarnings;
     public Map<String, Integer> exportedClassCounts;
+    public Map<String, List<Long>> exportedObjectIds; // Actual object IDs exported per class
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, List<ExportError> errors) {
         this(exportName, outputPath, objectsAttempted, objectsSucceeded, 0, errors, new ArrayList<>(),
-                new java.util.HashMap<>());
+                new java.util.HashMap<>(), new java.util.HashMap<>());
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts) {
         this(exportName, outputPath, objectsAttempted, objectsSucceeded, 0, errors, schemaWarnings,
-                exportedClassCounts);
+                exportedClassCounts, new java.util.HashMap<>());
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
             int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts) {
+        this(exportName, outputPath, objectsAttempted, objectsSucceeded, objectsFiltered, errors, schemaWarnings,
+                exportedClassCounts, new java.util.HashMap<>());
+    }
+
+    public ExportResult(String exportName, String outputPath, int objectsAttempted,
+            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
+            Map<String, Integer> exportedClassCounts, Map<String, List<Long>> exportedObjectIds) {
         this.exportName = exportName;
         this.outputPath = outputPath;
         this.objectsAttempted = objectsAttempted;
@@ -43,6 +51,8 @@ public class ExportResult {
         this.errors = errors != null ? new ArrayList<>(errors) : new ArrayList<>();
         this.schemaWarnings = schemaWarnings != null ? new ArrayList<>(schemaWarnings) : new ArrayList<>();
         this.exportedClassCounts = exportedClassCounts != null ? new java.util.HashMap<>(exportedClassCounts)
+                : new java.util.HashMap<>();
+        this.exportedObjectIds = exportedObjectIds != null ? new java.util.HashMap<>(exportedObjectIds)
                 : new java.util.HashMap<>();
     }
 
