@@ -1,15 +1,13 @@
 package migration4o.schema.modules;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
 import migration4o.models.ui.MigrationModule;
+import migration4o.util.FileUtil;
 
 /**
  * Writes migration structure to migration-format.xml file.
@@ -19,7 +17,7 @@ public class DOModuleStructureWriter {
 
     public void writeMigrationFormat(List<MigrationModule> modules, String filePath) throws IOException {
         // Create backup first
-        createBackup(filePath);
+        FileUtil.createBackup(filePath, DOModuleService.BACKUP_MODULES_PATH);
 
         // Write the migration format
         try (FileWriter writer = new FileWriter(filePath)) {
@@ -34,26 +32,6 @@ public class DOModuleStructureWriter {
             writer.write("    </modules>\n");
             writer.write("</database>\n");
         }
-    }
-
-    private void createBackup(String filePath) throws IOException {
-        File originalFile = new File(filePath);
-        if (!originalFile.exists()) {
-            return; // No need to backup if file doesn't exist yet
-        }
-
-        // Find next available backup number
-        int backupNumber = 1;
-        File backupFile;
-        do {
-            String backupPath = filePath + "." + String.format("%04d", backupNumber) + ".bak";
-            backupFile = new File(backupPath);
-            backupNumber++;
-        } while (backupFile.exists());
-
-        // Create the backup
-        Files.copy(originalFile.toPath(), backupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
-        System.out.println("Created backup: " + backupFile.getName());
     }
 
     private void writeModule(FileWriter writer, MigrationModule module) throws IOException {

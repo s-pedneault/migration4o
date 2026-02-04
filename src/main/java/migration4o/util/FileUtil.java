@@ -1,5 +1,10 @@
 package migration4o.util;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 /**
  * Utility methods for file operations and formatting.
  */
@@ -44,6 +49,26 @@ public class FileUtil {
         // Keep alphanumeric, underscore, dot, hyphen, and single quote
         // Replace everything else with underscore
         return withoutAccents.replaceAll("[^a-zA-Z0-9_.'-]", "_");
+    }
+
+    public static void createBackup(String filePath, String destinationFile) throws IOException {
+        File originalFile = new File(filePath);
+        if (!originalFile.exists()) {
+            return; // No need to backup if file doesn't exist yet
+        }
+
+        // Find next available backup number
+        int backupNumber = 1;
+        File backupFile;
+        do {
+            String backupPath = destinationFile + "." + String.format("%04d", backupNumber) + ".bak";
+            backupFile = new File(backupPath);
+            backupNumber++;
+        } while (backupFile.exists());
+
+        // Create the backup
+        Files.copy(originalFile.toPath(), backupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
+        // System.out.println("Created backup: " + backupFile.getName());
     }
 
 }

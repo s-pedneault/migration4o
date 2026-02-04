@@ -27,7 +27,7 @@ import migration4o.schema.processors.DOReferenceDetector;
 public class DOReferenceSchemaReader {
 
     public DOSchema readSchema() {
-        return readSchema(DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
+        return readSchema(DOSchemaService.DEFAULT_SCHEMA_PATH);
     }
 
     private DOSchema readSchema(String filePath) {

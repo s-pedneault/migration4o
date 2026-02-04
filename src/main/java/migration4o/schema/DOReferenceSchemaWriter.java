@@ -1,15 +1,13 @@
 package migration4o.schema;
 
-import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.util.FileUtil;
 
 /**
  * Writes DOSchema back to XML format matching reference-schema.xml structure.
@@ -18,12 +16,12 @@ import migration4o.models.schema.DOSchemaReference;
 public class DOReferenceSchemaWriter {
 
     public void writeSchema(DOSchema schema) throws IOException {
-        writeSchema(schema, DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
+        writeSchema(schema, DOSchemaService.DEFAULT_SCHEMA_PATH);
     }
 
     private void writeSchema(DOSchema schema, String filePath) throws IOException {
         // Create backup first
-        createBackup(filePath, DOReferenceSchemaConstants.BACKUP_SCHEMA_PATH);
+        FileUtil.createBackup(filePath, DOSchemaService.BACKUP_SCHEMA_PATH);
 
         // Write the schema
         try (FileWriter writer = new FileWriter(filePath)) {
@@ -39,26 +37,6 @@ public class DOReferenceSchemaWriter {
 
             writer.write("</classes>\n");
         }
-    }
-
-    private void createBackup(String filePath, String destinationFile) throws IOException {
-        File originalFile = new File(filePath);
-        if (!originalFile.exists()) {
-            return; // No need to backup if file doesn't exist yet
-        }
-
-        // Find next available backup number
-        int backupNumber = 1;
-        File backupFile;
-        do {
-            String backupPath = destinationFile + "." + String.format("%04d", backupNumber) + ".bak";
-            backupFile = new File(backupPath);
-            backupNumber++;
-        } while (backupFile.exists());
-
-        // Create the backup
-        Files.copy(originalFile.toPath(), backupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
-        System.out.println("Created backup: " + backupFile.getName());
     }
 
     private void writeClass(FileWriter writer, DOSchemaClass schemaClass, int indentLevel) throws IOException {

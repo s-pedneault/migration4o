@@ -60,6 +60,7 @@ public class SchemaEditorPanel extends JPanel {
 
     private DOSchema schema;
     private boolean modified;
+    private boolean isReadOnly; // true for database structure panels (cannot be saved)
 
     private JTree schemaTree;
     private DefaultTreeModel treeModel;
@@ -79,6 +80,7 @@ public class SchemaEditorPanel extends JPanel {
 
     public SchemaEditorPanel() {
         this.modified = false;
+        this.isReadOnly = false; // Reference schema can be edited and saved
 
         initializeUI();
         loadSchema();
@@ -91,6 +93,7 @@ public class SchemaEditorPanel extends JPanel {
     public SchemaEditorPanel(DOSchema schema, String displayName) {
         this.schema = schema;
         this.modified = false;
+        this.isReadOnly = true; // Database structure panels are read-only
 
         initializeUI();
         buildTree();
@@ -317,23 +320,23 @@ public class SchemaEditorPanel extends JPanel {
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
 
-        // Reload button (only enabled if we have a file)
-        JButton reloadButton = new JButton("Reload");
-        reloadButton.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
-        reloadButton.addActionListener(e -> reloadSchema());
-        reloadButton.setEnabled(true);
-        toolbar.add(reloadButton);
+        // Reload button (only enabled for reference schema, not for database structure)
+        if (!isReadOnly) {
+            JButton reloadButton = new JButton("Reload");
+            reloadButton.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
+            reloadButton.addActionListener(e -> reloadSchema());
+            toolbar.add(reloadButton);
+        }
 
-        toolbar.addSeparator();
-
-        // Save button (only enabled if we have a file)
-        JButton saveButton = new JButton("Save");
-        saveButton.setIcon(UIManager.getIcon("FileView.floppyDriveIcon"));
-        saveButton.addActionListener(e -> saveSchema());
-        saveButton.setEnabled(true);
-        toolbar.add(saveButton);
-
-        toolbar.addSeparator();
+        // Save button (only enabled for reference schema, not for database structure)
+        if (!isReadOnly) {
+            toolbar.addSeparator();
+            JButton saveButton = new JButton("Save");
+            saveButton.setIcon(UIManager.getIcon("FileView.floppyDriveIcon"));
+            saveButton.addActionListener(e -> saveSchema());
+            toolbar.add(saveButton);
+            toolbar.addSeparator();
+        }
 
         // Expand/Collapse buttons
         JButton expandAllButton = new JButton("Expand All");
@@ -542,8 +545,7 @@ public class SchemaEditorPanel extends JPanel {
             setStatus("Loading schema...");
 
             // Load schema using the central service (business logic is centralized)
-            schema = DOSchemaService.getInstance().loadReferenceSchema(
-                    DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH);
+            schema = DOSchemaService.getInstance().loadReferenceSchema();
 
             // Debug: print loaded classes count and check for ParamConfig
             int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;

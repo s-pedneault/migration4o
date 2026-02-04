@@ -10,11 +10,13 @@ import migration4o.models.schema.DOSchema;
  * All components should use this service instead of loading schemas directly.
  */
 public class DOSchemaService {
+    static final String DEFAULT_SCHEMA_PATH = "schema/reference-schema.xml";
+    static final String BACKUP_SCHEMA_PATH = "local/schema/reference-schema.xml";
 
     private static DOSchemaService instance;
 
     private DOSchema referenceSchema;
-    private String currentSchemaPath;
+    // private String currentSchemaPath;
 
     private DOSchemaService() {
         // Private constructor for singleton
@@ -38,17 +40,13 @@ public class DOSchemaService {
      * @return The loaded schema
      * @throws Exception If the schema cannot be loaded
      */
-    public synchronized DOSchema loadReferenceSchema(String schemaPath) throws Exception {
-        File schemaFile = new File(schemaPath);
-        if (!schemaFile.exists()) {
-            throw new IllegalArgumentException("Schema file not found: " + schemaPath);
-        }
+    public synchronized DOSchema loadReferenceSchema() throws Exception {
 
         DOReferenceSchemaReader reader = new DOReferenceSchemaReader();
         referenceSchema = reader.readSchema();
-        currentSchemaPath = schemaPath;
+        // currentSchemaPath = schemaPath;
 
-        System.out.println("Reference schema loaded: " + schemaPath);
+        // System.out.println("Reference schema loaded: " + schemaPath);
         System.out.println(
                 "  Classes: " + (referenceSchema.getClasses() != null ? referenceSchema.getClasses().length : 0));
 
@@ -71,7 +69,7 @@ public class DOSchemaService {
      */
     public synchronized void setReferenceSchema(DOSchema schema) {
         this.referenceSchema = schema;
-        this.currentSchemaPath = null; // Path not known when setting directly
+        // this.currentSchemaPath = null; // Path not known when setting directly
     }
 
     /**
@@ -83,20 +81,20 @@ public class DOSchemaService {
         return referenceSchema != null;
     }
 
-    /**
-     * Get the path of the currently loaded schema.
-     * 
-     * @return The schema path, or null if no schema is loaded
-     */
-    public synchronized String getCurrentSchemaPath() {
-        return currentSchemaPath;
-    }
+    // /**
+    // * Get the path of the currently loaded schema.
+    // *
+    // * @return The schema path, or null if no schema is loaded
+    // */
+    // public synchronized String getCurrentSchemaPath() {
+    // return currentSchemaPath;
+    // }
 
     /**
      * Clear the currently loaded schema.
      */
     public synchronized void clearSchema() {
         referenceSchema = null;
-        currentSchemaPath = null;
+        // currentSchemaPath = null;
     }
 }

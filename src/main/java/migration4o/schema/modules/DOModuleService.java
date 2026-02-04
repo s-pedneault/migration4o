@@ -1,9 +1,9 @@
 package migration4o.schema.modules;
 
-import migration4o.models.ui.MigrationModule;
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import migration4o.models.ui.MigrationModule;
 
 /**
  * Singleton service for managing the module structure.
@@ -20,7 +20,8 @@ public class DOModuleService {
 
     private static DOModuleService instance;
 
-    private static final String DEFAULT_MODULE_FILE = "schema/migration-format.xml";
+    static final String DEFAULT_MODULE_FILE = "schema/migration-format.xml";
+    static final String BACKUP_MODULES_PATH = "local/schema/migration-format.xml";
 
     private List<MigrationModule> modules;
     private String currentModuleFilePath;
