@@ -20,6 +20,7 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -722,6 +723,51 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
+     * Removes all currently selected classes from export.
+     * Handles multiple class selection.
+     */
+    private void removeSelectedClassesFromExport() {
+        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+        if (selectedPaths == null || selectedPaths.length == 0) {
+            return;
+        }
+
+        // Collect all class nodes to remove
+        List<DefaultMutableTreeNode> classNodesToRemove = new ArrayList<>();
+        Set<TreePath> parentPaths = new LinkedHashSet<>();
+
+        for (TreePath path : selectedPaths) {
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            if (node.getUserObject() instanceof ClassNode) {
+                classNodesToRemove.add(node);
+                // Track parent for expanding later
+                DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
+                if (parent != null) {
+                    parentPaths.add(new TreePath(parent.getPath()));
+                }
+            }
+        }
+
+        if (classNodesToRemove.isEmpty()) {
+            return;
+        }
+
+        // Remove all selected classes
+        for (DefaultMutableTreeNode node : classNodesToRemove) {
+            MigrationStructurePanelUtil.removeClassFromExport(node, exportedClasses);
+        }
+
+        // Reload and restore expanded state
+        exportModel.reload();
+        for (TreePath parentPath : parentPaths) {
+            exportTree.expandPath(parentPath);
+        }
+
+        // Refresh available tree
+        refreshAvailableTree();
+    }
+
+    /**
      * Opens the configuration dialog for a class export.
      * Allows editing destination file name and export criteria.
      */
@@ -865,6 +911,18 @@ public class MigrationStructurePanel extends JPanel {
         else if (node.getUserObject() instanceof ClassNode) {
             ClassNode classNode = (ClassNode) node.getUserObject();
 
+            // Check if multiple classes are selected
+            TreePath[] allSelectedPaths = exportTree.getSelectionPaths();
+            int classCount = 0;
+            if (allSelectedPaths != null) {
+                for (TreePath selectedPath : allSelectedPaths) {
+                    DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                    if (selectedNode.getUserObject() instanceof ClassNode) {
+                        classCount++;
+                    }
+                }
+            }
+
             JMenuItem configureItem = new JMenuItem("Configure Export...");
             configureItem.addActionListener(evt -> configureClassExport(node));
             contextMenu.add(configureItem);
@@ -877,8 +935,11 @@ public class MigrationStructurePanel extends JPanel {
 
             contextMenu.addSeparator();
 
-            JMenuItem removeFromExportItem = new JMenuItem("Remove from Export");
-            removeFromExportItem.addActionListener(evt -> removeClassFromExport(node));
+            String removeMenuText = classCount > 1
+                    ? "Remove " + classCount + " Classes from Export"
+                    : "Remove from Export";
+            JMenuItem removeFromExportItem = new JMenuItem(removeMenuText);
+            removeFromExportItem.addActionListener(evt -> removeSelectedClassesFromExport());
             contextMenu.add(removeFromExportItem);
 
             // Add View Objects option if database is open

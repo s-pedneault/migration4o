@@ -3278,8 +3278,8 @@
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Periodicite" />
         <field source="mUtiliseDefaut" destinationName="utiliseDefaut" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mValidationV13Faite" destinationName="validationV13Faite" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mVectPageSupp" destinationName="vectPageSupp" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.rapport.SousRapportPageSupp" />
-        <field source="mVectSousRapport" destinationName="vectSousRapport" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.rapport.SousRapport" />
+        <field source="mVectPageSupp" destinationName="vectPageSupp" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.rapport.SousRapportPageSupp" />
+        <field source="mVectSousRapport" destinationName="vectSousRapport" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.rapport.SousRapport" />
         <field source="mIDFichJasper" destinationName="idFichJasper" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" />
         <field source="mIDFichXML" destinationName="idFichXML" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
@@ -3515,7 +3515,7 @@
         <field source="mPremMatDesc" destinationName="premMatDesc" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPropagationDesc" destinationName="propagationDesc" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPropagationDetail" destinationName="propagationDetail" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mRciCause" destinationName="rciCause" isExported="true" skipWhen="DEFAULT" type="gest.rci.RciCause" embedContents="true" />
+        <field source="mRciCause" destinationName="rciCause" isExported="true" skipWhen="DEFAULT" type="gest.rci.RciCause" />
         <field source="mIDCauseProbable" destinationName="idCauseProbable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003G4" />
         <field source="mIDEnergie" destinationName="idEnergie" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003M5" />
         <field source="mIDFichCroquisLieu" destinationName="idFichCroquisLieu" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" />

@@ -1,20 +1,17 @@
 package migration4o.engine.export;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.reflect.generic.GenericObject;
 
-import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportStatistics;
-import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.util.ClassUtil;
 import migration4o.util.ObjectResolverUtil;
 import migration4o.util.SchemaUtil;
@@ -33,25 +30,9 @@ public class ObjectExporter {
     private final ExportStatistics statistics;
     private final Set<Long> exportedObjectIds; // Can be shared across module exports
     private final boolean isSharedSet; // Track if this is a shared Set to avoid clearing it
-    private final Map<Long, EmbeddedObjectInfo> embeddedObjectRefs = new HashMap<>();
     private final ReferencedClassTracker referencedClassTracker;
     private boolean trackReferences = false;
     private ClassExportConfig exportConfig; // Optional export configuration with criteria
-
-    /**
-     * Tracks information about embedded objects for detecting duplicates.
-     */
-    private static class EmbeddedObjectInfo {
-        String className;
-        String firstFieldName;
-        int referenceCount;
-
-        EmbeddedObjectInfo(String className, String fieldName) {
-            this.className = className;
-            this.firstFieldName = fieldName;
-            this.referenceCount = 1;
-        }
-    }
 
     public ObjectExporter(DOSchema schema, DOSchema databaseSchema, XMLWriter xmlWriter,
             XSDBuilder xsdBuilder, ExportStatistics statistics) {
@@ -117,7 +98,6 @@ public class ObjectExporter {
         if (!isSharedSet) {
             exportedObjectIds.clear();
         }
-        embeddedObjectRefs.clear();
         referencedClassTracker.reset();
     }
 
@@ -130,7 +110,7 @@ public class ObjectExporter {
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel)
             throws IOException {
-        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true);
+        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true, null);
     }
 
     /**
@@ -153,84 +133,42 @@ public class ObjectExporter {
      *                                  gest.vehicule.Vehicule)
      * @param isRootObject              true if this is a root object (from class's
      *                                  objectIds), false if referenced
+     * @param parentObjectId            the ID of the parent object containing the
+     *                                  field that references this object
      */
     private void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel,
             boolean isEmbedded, String fieldName, String containingClassName,
-            String sourceFieldName, String sourceContainingClassName, boolean isRootObject) throws IOException {
+            String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId)
+            throws IOException {
+
+        // Record this reference for duplicate tracking
+        // Get className first to ensure we have it
+        String className = null;
+        try {
+            Object obj = container.ext().getByID(objectId);
+            if (obj != null) {
+                className = ClassUtil.getClassName(obj);
+            }
+        } catch (Exception e) {
+            // If we can't get class name, use a placeholder but still track
+            className = "Unknown_" + objectId;
+        }
+
+        // Always record the reference, even if we can't get perfect info
+        if (className != null) {
+            statistics.recordObjectReference(objectId, className, parentObjectId,
+                    sourceContainingClassName, sourceFieldName);
+        }
+
         // Check if object was already exported (skip check for root objects to allow
         // multiple criteria-based exports of the same class)
         if (!isRootObject && !exportedObjectIds.add(objectId)) {
-            // Object already exported
-
-            // If embedContents=false, this should have been handled by ID reference logic
-            // in FieldExporter
-            // If we reach here with isEmbedded=false, just skip - the object is already
-            // exported
-            if (!isEmbedded) {
-                return;
-            }
-
-            // If embedContents=true (embedded), this is a duplicate - warn user
-            // Get object info for warning message
-            String className = "Unknown";
-            String firstFieldName = "unknown";
-            int referenceCount = 2; // At least 2 (first export + this attempt)
-
-            if (embeddedObjectRefs.containsKey(objectId)) {
-                // Object was tracked, update reference count
-                EmbeddedObjectInfo info = embeddedObjectRefs.get(objectId);
-                info.referenceCount++;
-                className = info.className;
-                firstFieldName = info.firstFieldName;
-                referenceCount = info.referenceCount;
-            } else {
-                // Object wasn't tracked but was exported - get class name now
-                try {
-                    Object obj = container.ext().getByID(objectId);
-                    if (obj != null) {
-                        className = ClassUtil.getClassName(obj);
-                    }
-                } catch (Exception e) {
-                    // Ignore, use "Unknown"
-                }
-                firstFieldName = "first export location";
-            }
-
-            // Report duplicate reference warning for embedded objects only
-            String message = String.format(
-                    "Object (ID %d, class %s) already exported, reference from field '%s' will create empty element. " +
-                            "First reference: '%s'. Reference count: %d. " +
-                            "Consider using embedContents=\"false\" to export as separate object instead.",
-                    objectId, className, fieldName != null ? fieldName : "unknown", firstFieldName, referenceCount);
-            statistics.addSchemaWarning(
-                    ExportResult.SchemaWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE,
-                    objectId,
-                    className,
-                    fieldName,
-                    containingClassName,
-                    sourceContainingClassName,
-                    sourceFieldName,
-                    message,
-                    referenceCount);
+            // Object already exported - just return (warnings will be generated at end)
             return;
         }
 
-        // Track embedded objects for duplicate detection
-        if (isEmbedded) {
-            String className = null;
-            try {
-                Object obj = container.ext().getByID(objectId);
-                if (obj != null) {
-                    className = ClassUtil.getClassName(obj);
-                    embeddedObjectRefs.put(objectId, new EmbeddedObjectInfo(className, fieldName));
-                }
-            } catch (Exception e) {
-                // Ignore errors in tracking - we'll still export
-            }
-        }
-
         statistics.incrementAttempted();
-        String className = null;
+        // Reuse className variable declared above
         try {
             // Get and activate the object
             Object obj = container.ext().getByID(objectId);
@@ -275,10 +213,11 @@ public class ObjectExporter {
                 if (storedClass != null) {
                     final String currentClassName = schemaClass.destinationName;
                     final String currentSourceClassName = schemaClass.source; // Full source class name
+                    final long currentObjectId = objectId; // Capture for lambda
                     fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
                             (objId, indent, embedded, fldName, sourceFldName) -> exportObjectRecursively(container,
                                     objId, indent, embedded, fldName, currentClassName,
-                                    sourceFldName, currentSourceClassName, false));
+                                    sourceFldName, currentSourceClassName, false, currentObjectId));
                 }
             }
 

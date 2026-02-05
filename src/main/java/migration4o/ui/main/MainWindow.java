@@ -132,9 +132,9 @@ public class MainWindow extends JFrame {
 
             addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);
 
-            // Add schema structure tab (commented out - less useful now)
-            // schemaStructurePanel = new SchemaStructurePanel(schema);
-            // addTab("Schema structure", schemaStructurePanel);
+            // Add schema structure tab
+            schemaStructurePanel = new SchemaStructurePanel(schema);
+            addTab("Schema structure", schemaStructurePanel);
 
             // Add migration structure tab
             migrationStructurePanel = new MigrationStructurePanel(schema);

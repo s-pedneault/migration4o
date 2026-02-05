@@ -35,14 +35,11 @@
             <classRef sourceName="gest.mobile.Mobile"/>
             <classRef sourceName="gest.preference.Preference"/>
             <classRef sourceName="gest.gen.ParamStatPresActivite"/>
-            <classRef sourceName="gest.schema.ForceFrappe"/>
-            <classRef sourceName="gest.cartographie.ParamServeurCartographie"/>
         </module>
         <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
             <classRef sourceName="gest.grade.Grade"/>
             <classRef sourceName="gest.fournisseur.Fournisseur"/>
-            <classRef sourceName="gest.vehicule.Compartiment"/>
             <classRef sourceName="gest.vehicule.Vehicule"/>
             <module name="Personnel" id="personnel">
                 <classRef sourceName="gest.employe.Employe"/>
@@ -63,8 +60,6 @@
                 <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
             </classRef>
             <classRef sourceName="gest.dossPrev.DossPrevSuppr"/>
-            <classRef sourceName="gest.dossPrev.PersonneRess"/>
-            <classRef sourceName="gest.dossPrev.ProdDang"/>
             <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
             <module name="Caractéristiques" id="Caractéristiques">
                 <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
@@ -84,83 +79,18 @@
             <classRef sourceName="gest.prevention.RapportAvis"/>
             <classRef sourceName="gest.raisonReport.RaisonReport"/>
             <classRef sourceName="gest.typeAnom.TypeAnom"/>
-            <classRef sourceName="gest.prevention.PhotoFichPrev"/>
-            <classRef sourceName="gest.prevention.PrevAnom"/>
             <classRef sourceName="gest.prevention.TypeActivPrevention"/>
-            <classRef sourceName="gest.prevention.PrevAvis"/>
-            <classRef sourceName="gest.prevention.PrevForm"/>
         </module>
         <module name="Intervention" id="Intervention">
             <classRef sourceName="gest.intervention.Intervention"/>
             <classRef sourceName="gest.codeAppel.CodeAppel"/>
             <classRef sourceName="gest.intervention.FournSAAQ"/>
-            <classRef sourceName="gest.intervention.IntervVehicule"/>
-            <classRef sourceName="gest.intervention.MemoFacturation"/>
-            <classRef sourceName="gest.intervention.RapportOfficier"/>
-            <classRef sourceName="gest.intervention.SuiviIntervention"/>
-            <classRef sourceName="gest.intervention.IntervAutreBatiment"/>
-            <classRef sourceName="gest.intervention.IntervIntervEmploye"/>
-            <classRef sourceName="gest.intervention.IntervIntervEntraide"/>
-            <classRef sourceName="gest.intervention.IntervIntervEquipe"/>
-            <classRef sourceName="gest.intervention.IntervIntervRessource"/>
-            <classRef sourceName="gest.intervention.IntervMateriel"/>
-            <classRef sourceName="gest.intervention.IntervSauvetage"/>
-            <classRef sourceName="gest.intervention.IntervVictimeDetail"/>
             <classRef sourceName="gest.intervention.MemoFactDetail"/>
             <classRef sourceName="gest.intervention.TypeActivIntervention"/>
-            <classRef sourceName="gest.intervention.CarteAppel"/>
-            <classRef sourceName="gest.intervention.IntervCauseIncendie"/>
-            <classRef sourceName="gest.intervention.IntervChronologie"/>
-            <classRef sourceName="gest.intervention.IntervCompteRendu"/>
-            <classRef sourceName="gest.intervention.IntervCroquis"/>
-            <classRef sourceName="gest.intervention.IntervDescBatiment"/>
-            <classRef sourceName="gest.intervention.IntervEnquete"/>
-            <classRef sourceName="gest.intervention.IntervEquipement"/>
-            <classRef sourceName="gest.intervention.IntervFeuExterieur"/>
-            <classRef sourceName="gest.intervention.IntervIntervenant"/>
-            <classRef sourceName="gest.intervention.IntervMemoFacturation"/>
-            <classRef sourceName="gest.intervention.IntervPerte"/>
-            <classRef sourceName="gest.intervention.IntervPerteIndirecte"/>
-            <classRef sourceName="gest.intervention.IntervPhotoSaisie"/>
-            <classRef sourceName="gest.intervention.IntervPrevention"/>
-            <classRef sourceName="gest.intervention.IntervProtection"/>
-            <classRef sourceName="gest.intervention.IntervRemiseProp"/>
-            <classRef sourceName="gest.intervention.IntervRepondant"/>
-            <classRef sourceName="gest.intervention.IntervSourceChaleur"/>
-            <classRef sourceName="gest.intervention.IntervTemperature"/>
-            <classRef sourceName="gest.intervention.IntervVehAccident"/>
-            <classRef sourceName="gest.intervention.IntervVehFeu"/>
-            <classRef sourceName="gest.intervention.IntervVieHumaine"/>
         </module>
         <module name="RCCI" id="RCCI">
             <classRef sourceName="gest.rci.Rci"/>
-            <classRef sourceName="gest.rci.Combustible"/>
-            <classRef sourceName="gest.rci.Constat"/>
-            <classRef sourceName="gest.rci.Effraction"/>
-            <classRef sourceName="gest.rci.ElecTrace"/>
-            <classRef sourceName="gest.rci.Expertise"/>
-            <classRef sourceName="gest.rci.Observation"/>
-            <classRef sourceName="gest.rci.ProtLieu"/>
-            <classRef sourceName="gest.rci.RciDescBatiment$NDisjoncteur"/>
-            <classRef sourceName="gest.rci.RciDescBatiment$NElementPanneauElectrique"/>
-            <classRef sourceName="gest.rci.RciDescBatiment$NFusible"/>
-            <classRef sourceName="gest.rci.RciLieu"/>
-            <classRef sourceName="gest.rci.RciRapportEnquete$NIDPhotoFich"/>
-            <classRef sourceName="gest.rci.Saisie"/>
-            <classRef sourceName="gest.rci.SourceChaleur"/>
-            <classRef sourceName="gest.rci.Suivi"/>
-            <classRef sourceName="gest.rci.Temoin"/>
             <classRef sourceName="gest.rci.TypeActivRci"/>
-            <classRef sourceName="gest.rci.Disjoncteur"/>
-            <classRef sourceName="gest.rci.RciAnalyse"/>
-            <classRef sourceName="gest.rci.RciCause"/>
-            <classRef sourceName="gest.rci.RciConclusion"/>
-            <classRef sourceName="gest.rci.RciDescBatiment"/>
-            <classRef sourceName="gest.rci.RciDescExt"/>
-            <classRef sourceName="gest.rci.RciDescInt"/>
-            <classRef sourceName="gest.rci.RciEntrevue"/>
-            <classRef sourceName="gest.rci.RciInfluence"/>
-            <classRef sourceName="gest.rci.RciRapportEnquete"/>
         </module>
         <module name="Travail" id="Travail">
             <classRef sourceName="gest.quart.Quart"/>
@@ -181,20 +111,6 @@
             <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
             <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
             <classRef sourceName="gest.planInterv.EtatSection"/>
-            <classRef sourceName="gest.planInterv.PlanContact"/>
-            <classRef sourceName="gest.planInterv.PlanHreExploit"/>
-            <classRef sourceName="gest.planInterv.PlanAcces"/>
-            <classRef sourceName="gest.planInterv.PlanAdresseContact"/>
-            <classRef sourceName="gest.planInterv.PlanAlarme"/>
-            <classRef sourceName="gest.planInterv.PlanAlimEau"/>
-            <classRef sourceName="gest.planInterv.PlanConst"/>
-            <classRef sourceName="gest.planInterv.PlanCroquis"/>
-            <classRef sourceName="gest.planInterv.PlanExposition"/>
-            <classRef sourceName="gest.planInterv.PlanProtection"/>
-            <classRef sourceName="gest.planInterv.PlanRepartiteur"/>
-            <classRef sourceName="gest.planInterv.PlanRisque"/>
-            <classRef sourceName="gest.planInterv.PlanSecurite"/>
-            <classRef sourceName="gest.planInterv.PlanServPub"/>
         </module>
         <module name="Formation" id="Formation">
             <classRef sourceName="gest.formation.Formation"/>
@@ -234,14 +150,11 @@
         </module>
         <module name="Rapports" id="Rapports">
             <classRef sourceName="gest.centreDesRapports.RapportCentral"/>
-            <classRef sourceName="gest.centreDesRapports.SectionRapportCentral"/>
         </module>
         <module name="Documents" id="documents">
             <classRef sourceName="gest.fichier.Fichier"/>
             <classRef sourceName="gest.rapport.Rapport"/>
             <classRef sourceName="gest.rapport.RapportPerso"/>
-            <classRef sourceName="gest.rapport.SousRapport"/>
-            <classRef sourceName="gest.rapport.SousRapportPageSupp"/>
         </module>
     </modules>
 </database>

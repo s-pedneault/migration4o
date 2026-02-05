@@ -18,7 +18,8 @@ import migration4o.ui.common.DOExportMonitor;
 public class ExportStatistics {
     private final DOExportMonitor monitor;
     private final List<ExportError> errors = new ArrayList<>();
-    private final List<SchemaWarning> schemaWarnings = new ArrayList<>();
+    private final List<ExportWarning> schemaWarnings = new ArrayList<>();
+    private final Map<Long, List<ObjectReference>> objectReferences = new HashMap<>(); // Track all object references
     private int objectsAttempted = 0;
     private int objectsSucceeded = 0;
     private int objectsFiltered = 0; // Objects filtered out by export criteria
@@ -101,16 +102,62 @@ public class ExportStatistics {
         }
     }
 
-    public void addSchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId,
-            String className, String fieldName, String containingClass,
-            String sourceContainingClass, String sourceFieldName,
-            String message, int referenceCount) {
-        schemaWarnings.add(new SchemaWarning(type, objectId, className, fieldName, containingClass,
-                sourceContainingClass, sourceFieldName, message, referenceCount));
+    /**
+     * Records a reference to an exported object.
+     * Call this every time an object is exported to track all references.
+     * 
+     * IMPORTANT: Records EVERY reference, including:
+     * - Multiple fields from the same parent object referencing the same child
+     * - Multiple parent objects referencing the same child
+     * No deduplication is performed - this is intentional for complete tracking.
+     */
+    public void recordObjectReference(long objectId, String className, Long parentObjectId,
+            String sourceContainingClass, String sourceFieldName) {
+        ObjectReference ref;
+        if (parentObjectId != null) {
+            // Field reference from parent object
+            ref = new ObjectReference(objectId, className, parentObjectId, sourceContainingClass, sourceFieldName);
+        } else {
+            // Module/root export
+            ref = new ObjectReference(objectId, className);
+        }
+        objectReferences.computeIfAbsent(objectId, k -> new ArrayList<>()).add(ref);
+    }
 
-        // Notify monitor
-        if (monitor != null) {
-            monitor.onWarning(type.toString(), className, message);
+    /**
+     * Analyzes recorded references to generate duplicate warnings.
+     * Call this after export completes.
+     */
+    public void generateDuplicateWarnings() {
+        schemaWarnings.clear();
+
+        System.out.println("\n=== Generating Duplicate Warnings ===");
+        System.out.println("Total unique objects tracked: " + objectReferences.size());
+
+        for (Map.Entry<Long, List<ObjectReference>> entry : objectReferences.entrySet()) {
+            List<ObjectReference> refs = entry.getValue();
+
+            // Only create warning if object was exported multiple times
+            if (refs.size() > 1) {
+                long objectId = entry.getKey();
+                String className = refs.get(0).className;
+
+                // Create warning - it will analyze the references internally
+                ExportWarning warning = new ExportWarning(objectId, className, refs);
+                schemaWarnings.add(warning);
+
+                // Debug output
+                System.out.println(String.format("DUPLICATE EXPORT: Object %d (%s) exported %d times:",
+                        objectId, className, refs.size()));
+                for (String display : warning.getReferenceDisplayStrings()) {
+                    System.out.println("  - " + display);
+                }
+
+                if (warning.type == ExportWarning.WarningType.MISSING_EMBED_CONTENTS) {
+                    System.out.println("  ⚠️  SCHEMA ISSUE: Class exported as both embedded and standalone!");
+                    System.out.println("      Add embedContents=\"true\" to the parent field definition.");
+                }
+            }
         }
     }
 
@@ -134,7 +181,7 @@ public class ExportStatistics {
         return new ArrayList<>(errors);
     }
 
-    public List<SchemaWarning> getSchemaWarnings() {
+    public List<ExportWarning> getSchemaWarnings() {
         return new ArrayList<>(schemaWarnings);
     }
 
@@ -178,23 +225,8 @@ public class ExportStatistics {
                     internalError.exception));
         }
 
-        // Convert internal warnings to public ExportResult.SchemaWarning format
-        List<ExportResult.SchemaWarning> publicWarnings = new ArrayList<>();
-        for (SchemaWarning internalWarning : schemaWarnings) {
-            publicWarnings.add(new ExportResult.SchemaWarning(
-                    internalWarning.type,
-                    internalWarning.objectId,
-                    internalWarning.className,
-                    internalWarning.fieldName,
-                    internalWarning.containingClass,
-                    internalWarning.sourceContainingClass,
-                    internalWarning.sourceFieldName,
-                    internalWarning.message,
-                    internalWarning.referenceCount));
-        }
-
         return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded,
-                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts, getExportedObjectIds());
+                objectsFiltered, publicErrors, schemaWarnings, exportedClassCounts, getExportedObjectIds());
     }
 
     /**
@@ -214,32 +246,4 @@ public class ExportStatistics {
         }
     }
 
-    /**
-     * Internal representation of a schema warning.
-     */
-    private static class SchemaWarning {
-        final ExportResult.SchemaWarning.WarningType type;
-        final long objectId;
-        final String className;
-        final String fieldName;
-        final String containingClass;
-        final String sourceContainingClass;
-        final String sourceFieldName;
-        final String message;
-        final int referenceCount;
-
-        SchemaWarning(ExportResult.SchemaWarning.WarningType type, long objectId, String className,
-                String fieldName, String containingClass, String sourceContainingClass,
-                String sourceFieldName, String message, int referenceCount) {
-            this.type = type;
-            this.objectId = objectId;
-            this.className = className;
-            this.fieldName = fieldName;
-            this.containingClass = containingClass;
-            this.sourceContainingClass = sourceContainingClass;
-            this.sourceFieldName = sourceFieldName;
-            this.message = message;
-            this.referenceCount = referenceCount;
-        }
-    }
 }

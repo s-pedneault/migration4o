@@ -6,6 +6,8 @@ import javax.swing.table.TableCellRenderer;
 
 import migration4o.engine.export.monitoring.ExportResult;
 import migration4o.engine.export.monitoring.ExportResult.ExportError;
+import migration4o.engine.export.monitoring.ExportWarning;
+import migration4o.engine.export.monitoring.ObjectReference;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -37,7 +39,7 @@ public class ExportResultDialog extends JFrame {
         System.err.println("DEBUG ExportResultDialog: errors=" + result.errors.size()
                 + ", warnings=" + result.schemaWarnings.size());
         if (!result.schemaWarnings.isEmpty()) {
-            System.err.println("DEBUG ExportResultDialog: First warning: " + result.schemaWarnings.get(0).message);
+            System.err.println("DEBUG ExportResultDialog: First warning: " + result.schemaWarnings.get(0).getMessage());
         }
         initializeUI();
     }
@@ -58,7 +60,7 @@ public class ExportResultDialog extends JFrame {
         // Bottom button panel
         add(createButtonPanel(), BorderLayout.SOUTH);
 
-        setSize(800, 600);
+        setSize(1200, 700);
         setLocationRelativeTo(parentFrame);
     }
 
@@ -302,33 +304,47 @@ public class ExportResultDialog extends JFrame {
         };
 
         // Group warnings by source class + source field combination
-        Map<String, List<ExportResult.SchemaWarning>> groupedWarnings = new LinkedHashMap<>();
-        for (ExportResult.SchemaWarning warning : result.schemaWarnings) {
-            String sourceClass = warning.sourceContainingClass != null ? warning.sourceContainingClass : "N/A";
-            String sourceField = warning.sourceFieldName != null ? warning.sourceFieldName : "N/A";
+        // Extract from first embedded field reference in each warning
+        Map<String, List<ExportWarning>> groupedWarnings = new LinkedHashMap<>();
+        for (ExportWarning warning : result.schemaWarnings) {
+            // Find first embedded field reference to use for grouping
+            String sourceClass = "N/A";
+            String sourceField = "N/A";
+            for (ObjectReference ref : warning.references) {
+                if (ref.isEmbeddedField()) {
+                    sourceClass = ref.sourceContainingClass != null ? ref.sourceContainingClass : "N/A";
+                    sourceField = ref.sourceFieldName != null ? ref.sourceFieldName : "N/A";
+                    break;
+                }
+            }
             String groupKey = sourceClass + "::" + sourceField;
-
             groupedWarnings.computeIfAbsent(groupKey, k -> new ArrayList<>()).add(warning);
         }
 
         // Add one row per unique source class + source field combination
-        for (List<ExportResult.SchemaWarning> warnings : groupedWarnings.values()) {
-            ExportResult.SchemaWarning firstWarning = warnings.get(0);
+        for (List<ExportWarning> warnings : groupedWarnings.values()) {
+            ExportWarning firstWarning = warnings.get(0);
 
             // Warning type description
-            String warningType = firstWarning.type == ExportResult.SchemaWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
+            String warningType = firstWarning.type == ExportWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
                     ? "Duplicate Embedded Reference"
                     : firstWarning.type.toString();
 
-            String sourceContainingClass = firstWarning.sourceContainingClass != null
-                    ? firstWarning.sourceContainingClass
-                    : "N/A";
-            String sourceFieldName = firstWarning.sourceFieldName != null ? firstWarning.sourceFieldName : "N/A";
+            // Extract from first embedded field reference
+            String sourceContainingClass = "N/A";
+            String sourceFieldName = "N/A";
+            for (ObjectReference ref : firstWarning.references) {
+                if (ref.isEmbeddedField()) {
+                    sourceContainingClass = ref.sourceContainingClass != null ? ref.sourceContainingClass : "N/A";
+                    sourceFieldName = ref.sourceFieldName != null ? ref.sourceFieldName : "N/A";
+                    break;
+                }
+            }
 
             // Collect sample embedded classes and object IDs
             Set<String> embeddedClasses = new LinkedHashSet<>();
             List<String> objectIds = new ArrayList<>();
-            for (ExportResult.SchemaWarning warning : warnings) {
+            for (ExportWarning warning : warnings) {
                 embeddedClasses.add(warning.className);
                 objectIds.add(String.valueOf(warning.objectId));
             }
@@ -378,7 +394,18 @@ public class ExportResultDialog extends JFrame {
         // Custom renderer for wrapped text with highlighting for edited rows
         table.setDefaultRenderer(Object.class, new MultiLineTableCellRenderer());
 
-        // Add double-click handler to open field editor
+        // Create context menu
+        JPopupMenu contextMenu = new JPopupMenu();
+        JMenuItem listObjectsItem = new JMenuItem("List objects");
+        listObjectsItem.addActionListener(e -> {
+            int row = table.getSelectedRow();
+            if (row >= 0) {
+                showObjectsList(row, groupedWarnings);
+            }
+        });
+        contextMenu.add(listObjectsItem);
+
+        // Add mouse listener for both double-click and right-click
         table.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -389,54 +416,30 @@ public class ExportResultDialog extends JFrame {
                     }
                 }
             }
+
+            @Override
+            public void mousePressed(MouseEvent e) {
+                showPopup(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                showPopup(e);
+            }
+
+            private void showPopup(MouseEvent e) {
+                if (e.isPopupTrigger()) {
+                    int row = table.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        table.setRowSelectionInterval(row, row);
+                        contextMenu.show(e.getComponent(), e.getX(), e.getY());
+                    }
+                }
+            }
         });
 
         JScrollPane scrollPane = new JScrollPane(table);
         panel.add(scrollPane, BorderLayout.CENTER);
-
-        // Add explanation panel
-        JPanel explanationPanel = new JPanel();
-        explanationPanel.setLayout(new BoxLayout(explanationPanel, BoxLayout.Y_AXIS));
-        explanationPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(234, 179, 8), 2),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
-        explanationPanel.setBackground(new Color(254, 252, 232));
-
-        JLabel titleLabel = new JLabel("⚠ Schema Configuration Issues Detected");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 13));
-        titleLabel.setForeground(new Color(161, 98, 7));
-        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        explanationPanel.add(titleLabel);
-
-        explanationPanel.add(Box.createVerticalStrut(5));
-
-        JTextArea explanationText = new JTextArea(
-                "Duplicate Embedded Reference: Objects are being exported multiple times (embedded in one field, then referenced "
-                        +
-                        "from another). The first reference exports the full object, subsequent references create empty elements.\n\n"
-                        +
-                        "QUICK FIX: Double-click any row above to open the field editor and change the embedContents setting.\n\n"
-                        +
-                        "MANUAL FIX: In reference-schema.xml, use the exact values from the warning table:\n" +
-                        "  1. Search for: <class source=\"[value from 'Source Class' column]\"\n" +
-                        "  2. Find: <field source=\"[value from 'Source Field' column]\">\n" +
-                        "  3. Add or change: embedContents=\"false\"\n\n" +
-                        "EXAMPLE: For class 'gest.vehicule.Vehicule' and field 'mVectCompartiment', search for:\n" +
-                        "  <class source=\"gest.vehicule.Vehicule\" ...\n" +
-                        "Then find: <field source=\"mVectCompartiment\" ...\n" +
-                        "And add: embedContents=\"false\"\n\n" +
-                        "NOTE: Collection fields default to embedContents=\"true\" if not specified.");
-        explanationText.setWrapStyleWord(true);
-        explanationText.setLineWrap(true);
-        explanationText.setOpaque(false);
-        explanationText.setEditable(false);
-        explanationText.setFocusable(false);
-        explanationText.setFont(new Font("Arial", Font.PLAIN, 11));
-        explanationText.setForeground(new Color(120, 53, 15));
-        explanationText.setAlignmentX(Component.LEFT_ALIGNMENT);
-        explanationPanel.add(explanationText);
-
-        panel.add(explanationPanel, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -752,6 +755,155 @@ public class ExportResultDialog extends JFrame {
             warningsTable.repaint();
         }
 
+    }
+
+    /**
+     * Shows a detailed list of all objects mentioned in the selected warning group,
+     * with information about ALL their exports (not just from the selected group).
+     */
+    private void showObjectsList(int tableRow, Map<String, List<ExportWarning>> groupedWarnings) {
+        // Get the warnings for this row (selected group)
+        List<ExportWarning> selectedGroupWarnings = new ArrayList<>(groupedWarnings.values()).get(tableRow);
+
+        if (selectedGroupWarnings.isEmpty()) {
+            return;
+        }
+
+        ExportWarning firstWarning = selectedGroupWarnings.get(0);
+
+        // Extract source info from first embedded field reference
+        String sourceClass = "N/A";
+        String sourceField = "N/A";
+        for (ObjectReference ref : firstWarning.references) {
+            if (ref.isEmbeddedField()) {
+                sourceClass = ref.sourceContainingClass != null ? ref.sourceContainingClass : "N/A";
+                sourceField = ref.sourceFieldName != null ? ref.sourceFieldName : "N/A";
+                break;
+            }
+        }
+
+        // Create frame to display objects
+        JFrame objectsFrame = new JFrame("Duplicate Objects: " + sourceClass + " → " + sourceField);
+        objectsFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        objectsFrame.setLayout(new BorderLayout(10, 10));
+
+        // Create table model
+        String[] columnNames = { "Object ID", "Class", "Export Count", "All Exports" };
+        DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
+        };
+
+        // Get ALL warnings across ALL groups (not just selected group)
+        // This ensures we show field refs + module exports together
+        List<ExportWarning> allWarnings = new ArrayList<>();
+        for (List<ExportWarning> groupWarnings : groupedWarnings.values()) {
+            allWarnings.addAll(groupWarnings);
+        }
+
+        // Collect unique object IDs from the selected group
+        Set<Long> selectedObjectIds = new LinkedHashSet<>();
+        for (ExportWarning warning : selectedGroupWarnings) {
+            selectedObjectIds.add(warning.objectId);
+        }
+
+        // Now get ALL warnings for those objects (from any group)
+        Map<Long, List<ExportWarning>> objectWarnings = new LinkedHashMap<>();
+        for (Long objectId : selectedObjectIds) {
+            for (ExportWarning warning : allWarnings) {
+                if (warning.objectId == objectId) {
+                    objectWarnings.computeIfAbsent(objectId, k -> new ArrayList<>()).add(warning);
+                }
+            }
+        }
+
+        // Add rows for each unique object
+        for (Map.Entry<Long, List<ExportWarning>> entry : objectWarnings.entrySet()) {
+            Long objectId = entry.getKey();
+            List<ExportWarning> objectRefs = entry.getValue();
+            ExportWarning firstRef = objectRefs.get(0);
+
+            // Collect all references using the new API
+            List<String> allReferences = new ArrayList<>();
+            for (ExportWarning warning : objectRefs) {
+                allReferences.addAll(warning.getReferenceDisplayStrings());
+            }
+
+            String referencesText = String.join("\n", allReferences);
+
+            // Export count = actual number of times this object appears in XML
+            int actualExportCount = allReferences.size();
+
+            tableModel.addRow(new Object[] {
+                    objectId,
+                    firstRef.className,
+                    actualExportCount,
+                    referencesText
+            });
+        }
+
+        // Create table
+        JTable table = new JTable(tableModel);
+        table.setRowHeight(80);
+        table.getColumnModel().getColumn(0).setPreferredWidth(100); // Object ID
+        table.getColumnModel().getColumn(1).setPreferredWidth(300); // Class
+        table.getColumnModel().getColumn(2).setPreferredWidth(120); // Reference Count
+        table.getColumnModel().getColumn(3).setPreferredWidth(600); // References
+
+        // Multi-line renderer for "References" column
+        table.getColumnModel().getColumn(3).setCellRenderer(new TableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value,
+                    boolean isSelected, boolean hasFocus, int row, int column) {
+                JTextArea textArea = new JTextArea(value != null ? value.toString() : "");
+                textArea.setLineWrap(true);
+                textArea.setWrapStyleWord(true);
+                textArea.setOpaque(true);
+
+                if (isSelected) {
+                    textArea.setBackground(table.getSelectionBackground());
+                    textArea.setForeground(table.getSelectionForeground());
+                } else {
+                    textArea.setBackground(table.getBackground());
+                    textArea.setForeground(table.getForeground());
+                }
+
+                textArea.setFont(table.getFont());
+                return textArea;
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        objectsFrame.add(scrollPane, BorderLayout.CENTER);
+
+        // Add info panel at top
+        JPanel infoPanel = new JPanel(new BorderLayout());
+        infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+
+        JLabel titleLabel = new JLabel(String.format("Objects referenced multiple times from: %s → %s",
+                sourceClass, sourceField));
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        infoPanel.add(titleLabel, BorderLayout.NORTH);
+
+        JLabel countLabel = new JLabel(String.format("Total duplicate objects: %d", objectWarnings.size()));
+        countLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        countLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
+        infoPanel.add(countLabel, BorderLayout.CENTER);
+
+        objectsFrame.add(infoPanel, BorderLayout.NORTH);
+
+        // Add close button at bottom
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton closeButton = new JButton("Close");
+        closeButton.addActionListener(e -> objectsFrame.dispose());
+        buttonPanel.add(closeButton);
+        objectsFrame.add(buttonPanel, BorderLayout.SOUTH);
+
+        objectsFrame.setSize(1400, 600);
+        objectsFrame.setLocationRelativeTo(this);
+        objectsFrame.setVisible(true);
     }
 
     /**

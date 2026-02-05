@@ -4,12 +4,18 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaFieldReference;
+import migration4o.models.ui.MigrationModule;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.util.ClassUtil;
 import migration4o.util.SchemaUtil;
 
 import javax.swing.*;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.DefaultMutableTreeNode;
+import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
+import javax.swing.tree.ExpandVetoException;
 import java.awt.*;
 import java.util.*;
 import java.util.List;
@@ -20,17 +26,56 @@ import java.util.List;
  * through field references to help understand object reachability.
  */
 public class SchemaStructurePanel extends JPanel {
+
+    /**
+     * Custom tree node that stores both display text and full class name for
+     * coloring.
+     */
+    private static class ClassTreeNode {
+        final String displayText;
+        final String fullClassName; // null if not a class reference
+        final DOSchemaClass schemaClass; // The actual class, for lazy expansion
+        final boolean isNonEmbeddedReference; // true if this is an IDEntite with embedContents=false
+        boolean childrenLoaded = false; // Track if children have been loaded
+
+        ClassTreeNode(String displayText, String fullClassName, DOSchemaClass schemaClass,
+                boolean isNonEmbeddedReference) {
+            this.displayText = displayText;
+            this.fullClassName = fullClassName;
+            this.schemaClass = schemaClass;
+            this.isNonEmbeddedReference = isNonEmbeddedReference;
+        }
+
+        ClassTreeNode(String displayText, DOSchemaClass schemaClass, boolean isNonEmbeddedReference) {
+            this(displayText, schemaClass != null ? schemaClass.source : null, schemaClass, isNonEmbeddedReference);
+        }
+
+        ClassTreeNode(String displayText, DOSchemaClass schemaClass) {
+            this(displayText, schemaClass, false);
+        }
+
+        ClassTreeNode(String displayText) {
+            this(displayText, null, null, false);
+        }
+
+        @Override
+        public String toString() {
+            return displayText;
+        }
+    }
+
     private DOSchema schema;
     private JTree structureTree;
     private DefaultTreeModel treeModel;
-    private Set<String> visitedClasses; // Track visited classes to avoid infinite recursion
     private Set<String> unreachedClasses; // Track classes not reached during tree building
+    private Set<String> classesInModules; // Track classes that are listed in any module
 
     public SchemaStructurePanel(DOSchema schema) {
         this.schema = schema;
-        this.visitedClasses = new HashSet<>();
         this.unreachedClasses = new HashSet<>();
+        this.classesInModules = new HashSet<>();
         initializeUI();
+        loadClassesFromModules();
         buildSchemaStructure();
     }
 
@@ -43,6 +88,117 @@ public class SchemaStructurePanel extends JPanel {
         structureTree = new JTree(treeModel);
         structureTree.setFont(new Font("Monospaced", Font.PLAIN, 12));
 
+        // Set custom renderer to color classes that are in modules
+        structureTree.setCellRenderer(new DefaultTreeCellRenderer() {
+            @Override
+            public Component getTreeCellRendererComponent(JTree tree, Object value,
+                    boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+                super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
+
+                if (value instanceof DefaultMutableTreeNode) {
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) value;
+                    Object userObject = node.getUserObject();
+
+                    // Check if this node contains a class that's in a module
+                    if (userObject instanceof ClassTreeNode) {
+                        ClassTreeNode classNode = (ClassTreeNode) userObject;
+                        if (classNode.fullClassName != null && classesInModules.contains(classNode.fullClassName)) {
+                            // Don't color if this is a non-embedded reference (IDEntite with
+                            // embedContents=false)
+                            if (classNode.isNonEmbeddedReference) {
+                                // Keep default color - it's just a reference by ID, not an embedded export
+                            } else {
+                                // Check if this class already appears in the path from root to this node
+                                boolean isFirstOccurrence = isFirstOccurrenceInBranch(node, classNode.fullClassName);
+
+                                if (isFirstOccurrence) {
+                                    // Check if there are any red nodes in descendants
+                                    boolean hasRedDescendants = hasRedDescendants(node);
+                                    if (hasRedDescendants) {
+                                        setForeground(Color.RED);
+                                    } else {
+                                        setForeground(Color.BLUE);
+                                    }
+                                } else {
+                                    setForeground(Color.RED);
+                                }
+                            }
+                        } else {
+                            // Not in modules, but check if it has red descendants
+                            if (hasRedDescendants(node)) {
+                                setForeground(Color.RED);
+                            }
+                        }
+                    }
+                }
+
+                return this;
+            }
+        });
+
+        // Add tree expansion listener for lazy loading
+        structureTree.addTreeWillExpandListener(new TreeWillExpandListener() {
+            @Override
+            public void treeWillExpand(TreeExpansionEvent event) throws ExpandVetoException {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) event.getPath().getLastPathComponent();
+                Object userObject = node.getUserObject();
+
+                System.out.println("[EXPAND EVENT] Node type: " + userObject.getClass().getSimpleName());
+
+                // If this is a class node that hasn't loaded its children yet, load them now
+                if (userObject instanceof ClassTreeNode) {
+                    ClassTreeNode classNode = (ClassTreeNode) userObject;
+
+                    // Check if children are already loaded by examining the actual tree node
+                    // Children are loaded if: node has children AND they're not just the
+                    // "Loading..." placeholder
+                    boolean hasRealChildren = false;
+                    if (node.getChildCount() > 0) {
+                        DefaultMutableTreeNode firstChild = (DefaultMutableTreeNode) node.getChildAt(0);
+                        Object firstChildObj = firstChild.getUserObject();
+                        if (firstChildObj instanceof ClassTreeNode) {
+                            ClassTreeNode firstChildClassNode = (ClassTreeNode) firstChildObj;
+                            // If it's not "Loading...", then we have real children
+                            hasRealChildren = !firstChildClassNode.displayText.equals("Loading...");
+                        }
+                    }
+
+                    System.out.println("Expanding node: " + classNode.displayText +
+                            ", schemaClass=" + (classNode.schemaClass != null ? classNode.schemaClass.source : "null") +
+                            ", hasRealChildren=" + hasRealChildren);
+
+                    // Only load children if not already loaded
+                    if (!hasRealChildren && classNode.schemaClass != null) {
+                        // Check for loop: if this class already appeared in ancestors, veto the
+                        // expansion
+                        System.out.println(
+                                "  [CHECKING] Should we allow expansion of " + classNode.schemaClass.source + "?");
+                        boolean allowExpansion = shouldAllowExpansion(classNode.schemaClass, node);
+                        System.out.println("  [RESULT] shouldAllowExpansion = " + allowExpansion);
+                        if (!allowExpansion) {
+                            System.out.println("  [EXPANSION VETOED] Class " + classNode.schemaClass.source +
+                                    " already in ancestor chain - preventing loop");
+                            throw new ExpandVetoException(event);
+                        }
+
+                        // Remove placeholder if any
+                        node.removeAllChildren();
+                        // Load the class fields
+                        expandClassFields(node, classNode.schemaClass);
+                        treeModel.nodeStructureChanged(node);
+                        System.out.println("  -> Loaded " + node.getChildCount() + " children");
+                    } else {
+                        System.out.println("  -> Children already loaded, skipping");
+                    }
+                }
+            }
+
+            @Override
+            public void treeWillCollapse(TreeExpansionEvent event) throws ExpandVetoException {
+                // Nothing to do on collapse
+            }
+        });
+
         // Add to scroll pane
         JScrollPane scrollPane = new JScrollPane(structureTree);
         add(scrollPane, BorderLayout.CENTER);
@@ -53,6 +209,94 @@ public class SchemaStructurePanel extends JPanel {
         infoLabel.setFont(new Font("Arial", Font.PLAIN, 12));
         infoPanel.add(infoLabel);
         add(infoPanel, BorderLayout.NORTH);
+    }
+
+    /**
+     * Loads all class names from all modules to track which classes are exported.
+     */
+    private void loadClassesFromModules() {
+        classesInModules.clear();
+
+        try {
+            List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+            for (MigrationModule module : modules) {
+                // Get all class names from this module and its children
+                List<String> classNames = module.getAllClassNames();
+                classesInModules.addAll(classNames);
+            }
+            System.out.println("Loaded " + classesInModules.size() + " classes from modules for highlighting");
+        } catch (Exception e) {
+            System.err.println("Error loading classes from modules: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Checks if this is the first class in modules encountered in the branch from
+     * root to this node.
+     * 
+     * @param node      The current node
+     * @param className The full class name to check (must be in modules)
+     * @return true if no other module class appears in ancestors, false if any
+     *         module class appeared earlier
+     */
+    private boolean isFirstOccurrenceInBranch(DefaultMutableTreeNode node, String className) {
+        // Walk up the tree from parent to root, checking if ANY class in modules
+        // appears
+        DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
+
+        while (parent != null) {
+            Object parentUserObject = parent.getUserObject();
+            if (parentUserObject instanceof ClassTreeNode) {
+                ClassTreeNode parentClassNode = (ClassTreeNode) parentUserObject;
+                // Check if this parent is ANY class that's in modules
+                if (parentClassNode.fullClassName != null &&
+                        classesInModules.contains(parentClassNode.fullClassName)) {
+                    // Found another module class higher up in the branch
+                    return false;
+                }
+            }
+            parent = (DefaultMutableTreeNode) parent.getParent();
+        }
+
+        // No module class found in ancestors, this is the first
+        return true;
+    }
+
+    /**
+     * Recursively checks if this node or any of its descendants contains a red node
+     * (a module class that appears after another module class in the branch).
+     * 
+     * @param node The node to check
+     * @return true if any descendant is a red node
+     */
+    private boolean hasRedDescendants(DefaultMutableTreeNode node) {
+        // Check all children recursively
+        for (int i = 0; i < node.getChildCount(); i++) {
+            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
+            Object childUserObject = child.getUserObject();
+
+            if (childUserObject instanceof ClassTreeNode) {
+                ClassTreeNode childClassNode = (ClassTreeNode) childUserObject;
+
+                // Check if this child is a module class
+                if (childClassNode.fullClassName != null &&
+                        classesInModules.contains(childClassNode.fullClassName) &&
+                        !childClassNode.isNonEmbeddedReference) {
+
+                    // Check if it's a red node (not the first occurrence)
+                    if (!isFirstOccurrenceInBranch(child, childClassNode.fullClassName)) {
+                        return true;
+                    }
+                }
+            }
+
+            // Recursively check descendants
+            if (hasRedDescendants(child)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private void buildSchemaStructure() {
@@ -69,9 +313,11 @@ public class SchemaStructurePanel extends JPanel {
         int paramsCount = countParams();
 
         // Create three main branches with counts
-        DefaultMutableTreeNode entitiesNode = new DefaultMutableTreeNode("Entities (" + entitiesCount + ")");
-        DefaultMutableTreeNode paramsNode = new DefaultMutableTreeNode("Params (" + paramsCount + ")");
-        DefaultMutableTreeNode unreachedNode = new DefaultMutableTreeNode("Unreached");
+        DefaultMutableTreeNode entitiesNode = new DefaultMutableTreeNode(
+                new ClassTreeNode("Entities (" + entitiesCount + ")"));
+        DefaultMutableTreeNode paramsNode = new DefaultMutableTreeNode(
+                new ClassTreeNode("Params (" + paramsCount + ")"));
+        DefaultMutableTreeNode unreachedNode = new DefaultMutableTreeNode(new ClassTreeNode("Unreached"));
 
         root.add(entitiesNode);
         root.add(paramsNode);
@@ -124,21 +370,21 @@ public class SchemaStructurePanel extends JPanel {
             // Sort classes within package by simple name
             packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
 
-            // Add each class to the package node
+            // Add each class to the package node (Entities branch)
             for (DOSchemaClass schemaClass : packageClasses) {
                 String simpleName = ClassUtil.getSimpleName(schemaClass.source);
-                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
+                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(
+                        new ClassTreeNode(simpleName, schemaClass));
                 packageNode.add(classNode);
 
                 // Mark this class as reached
                 unreachedClasses.remove(schemaClass.source);
 
-                // Clear visited set for each top-level class to allow full exploration
-                visitedClasses.clear();
-                visitedClasses.add(schemaClass.source);
-
-                // Expand this class's fields
-                expandClassFields(classNode, schemaClass);
+                // Add a placeholder child to make the node expandable
+                // Actual children will be loaded on expansion
+                if (hasExpandableFields(schemaClass)) {
+                    classNode.add(new DefaultMutableTreeNode(new ClassTreeNode("Loading...")));
+                }
             }
         }
     }
@@ -176,21 +422,21 @@ public class SchemaStructurePanel extends JPanel {
             // Sort classes within package by simple name
             packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
 
-            // Add each class to the package node
+            // Add each class to the package node (Params branch)
             for (DOSchemaClass schemaClass : packageClasses) {
                 String simpleName = ClassUtil.getSimpleName(schemaClass.source);
-                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName);
+                DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(
+                        new ClassTreeNode(simpleName, schemaClass));
                 packageNode.add(classNode);
 
                 // Mark this class as reached
                 unreachedClasses.remove(schemaClass.source);
 
-                // Clear visited set for each top-level class to allow full exploration
-                visitedClasses.clear();
-                visitedClasses.add(schemaClass.source);
-
-                // Expand this class's fields
-                expandClassFields(classNode, schemaClass);
+                // Add a placeholder child to make the node expandable
+                // Actual children will be loaded on expansion
+                if (hasExpandableFields(schemaClass)) {
+                    classNode.add(new DefaultMutableTreeNode(new ClassTreeNode("Loading...")));
+                }
             }
         }
     }
@@ -274,13 +520,17 @@ public class SchemaStructurePanel extends JPanel {
 
                 String fieldLabel = "Field: " + field.source + " → "
                         + ClassUtil.getSimpleName(targetClass.source);
-                DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
+
+                // Check if this field has embedContents = false (reference only, not embedded)
+                boolean isNonEmbedded = !field.embedContents;
+
+                DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(
+                        new ClassTreeNode(fieldLabel, targetClass, isNonEmbedded));
                 classNode.add(fieldNode);
 
-                // Continue drilling into the target class if not already visited
-                if (!visitedClasses.contains(targetClass.source)) {
-                    visitedClasses.add(targetClass.source);
-                    expandClassFields(fieldNode, targetClass);
+                // Add placeholder for lazy expansion (only if not too deep in recursion)
+                if (hasExpandableFields(targetClass) && shouldAddPlaceholder(targetClass, fieldNode)) {
+                    fieldNode.add(new DefaultMutableTreeNode(new ClassTreeNode("Loading...")));
                 }
             }
         }
@@ -296,14 +546,97 @@ public class SchemaStructurePanel extends JPanel {
 
         String referencedSimpleName = ClassUtil.getSimpleName(referencedClass.source);
         String fieldLabel = "Field: " + field.source + " → " + referencedSimpleName;
-        DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(fieldLabel);
+        DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(
+                new ClassTreeNode(fieldLabel, referencedClass));
         classNode.add(fieldNode);
 
-        // Continue drilling into the referenced class if not already visited
-        if (!visitedClasses.contains(referencedClass.source)) {
-            visitedClasses.add(referencedClass.source);
-            expandClassFields(fieldNode, referencedClass);
+        // Add placeholder for lazy expansion (only if not too deep in recursion)
+        if (hasExpandableFields(referencedClass) && shouldAddPlaceholder(referencedClass, fieldNode)) {
+            fieldNode.add(new DefaultMutableTreeNode(new ClassTreeNode("Loading...")));
         }
+    }
+
+    /**
+     * Checks if we should allow expansion of a node.
+     * Returns false if the class has already appeared once in the ancestor chain.
+     */
+    private boolean shouldAllowExpansion(DOSchemaClass schemaClass, DefaultMutableTreeNode node) {
+        if (schemaClass == null) {
+            return true;
+        }
+
+        String className = schemaClass.source;
+        System.out.println("    [shouldAllowExpansion] Checking for " + className + " in ancestors");
+        DefaultMutableTreeNode ancestor = (DefaultMutableTreeNode) node.getParent();
+
+        int depth = 0;
+        while (ancestor != null) {
+            Object ancestorUserObject = ancestor.getUserObject();
+            if (ancestorUserObject instanceof ClassTreeNode) {
+                ClassTreeNode ancestorClassNode = (ClassTreeNode) ancestorUserObject;
+                System.out.println("      [Depth " + depth + "] Ancestor class: " + ancestorClassNode.fullClassName);
+                if (className.equals(ancestorClassNode.fullClassName)) {
+                    // Already appeared once in ancestors, don't allow expansion
+                    System.out.println("      [MATCH FOUND] " + className + " matches ancestor at depth " + depth);
+                    return false;
+                }
+            }
+            ancestor = (DefaultMutableTreeNode) ancestor.getParent();
+            depth++;
+        }
+
+        System.out.println("    [shouldAllowExpansion] No match found, allowing expansion");
+        return true;
+    }
+
+    /**
+     * Checks if a class should be expandable.
+     * Any class in the schema can be expanded, but only if it hasn't appeared
+     * more than once already in the ancestor path (prevents infinite loops).
+     */
+    private boolean hasExpandableFields(DOSchemaClass schemaClass) {
+        // Any class in the schema can be expanded
+        return schemaClass != null;
+    }
+
+    /**
+     * Checks if we should add an expandable placeholder for this class.
+     * Returns false if the class has already appeared once in the branch
+     * (prevents infinite loops like A→B→A→B→A...).
+     */
+    private boolean shouldAddPlaceholder(DOSchemaClass schemaClass, DefaultMutableTreeNode fieldNode) {
+        if (schemaClass == null) {
+            return false;
+        }
+
+        // Count how many times this class appears in the ancestor path
+        // Start from the parent of fieldNode (not fieldNode itself, as that's the node
+        // we're adding)
+        int occurrenceCount = 0;
+        String className = schemaClass.source;
+
+        DefaultMutableTreeNode ancestor = (DefaultMutableTreeNode) fieldNode.getParent();
+        while (ancestor != null) {
+            Object ancestorUserObject = ancestor.getUserObject();
+            if (ancestorUserObject instanceof ClassTreeNode) {
+                ClassTreeNode ancestorClassNode = (ClassTreeNode) ancestorUserObject;
+                if (className.equals(ancestorClassNode.fullClassName)) {
+                    occurrenceCount++;
+                    System.out.println(
+                            "  [LOOP CHECK] Found " + className + " in ancestor chain (count=" + occurrenceCount + ")");
+                    if (occurrenceCount >= 1) {
+                        // Already appeared once in ancestors, don't allow loop back (A→B→A is the
+                        // limit)
+                        System.out.println("  [LOOP BLOCKED] Not adding placeholder for " + className
+                                + " - already in ancestor chain");
+                        return false;
+                    }
+                }
+            }
+            ancestor = (DefaultMutableTreeNode) ancestor.getParent();
+        }
+
+        return true;
     }
 
     /**

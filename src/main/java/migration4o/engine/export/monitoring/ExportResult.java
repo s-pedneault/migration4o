@@ -16,7 +16,7 @@ public class ExportResult {
     public int objectsSucceeded;
     public int objectsFiltered; // Objects filtered out by export criteria
     public List<ExportError> errors;
-    public List<SchemaWarning> schemaWarnings;
+    public List<ExportWarning> schemaWarnings;
     public Map<String, Integer> exportedClassCounts;
     public Map<String, List<Long>> exportedObjectIds; // Actual object IDs exported per class
 
@@ -27,21 +27,21 @@ public class ExportResult {
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
-            int objectsSucceeded, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
+            int objectsSucceeded, List<ExportError> errors, List<ExportWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts) {
         this(exportName, outputPath, objectsAttempted, objectsSucceeded, 0, errors, schemaWarnings,
                 exportedClassCounts, new java.util.HashMap<>());
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
-            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
+            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<ExportWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts) {
         this(exportName, outputPath, objectsAttempted, objectsSucceeded, objectsFiltered, errors, schemaWarnings,
                 exportedClassCounts, new java.util.HashMap<>());
     }
 
     public ExportResult(String exportName, String outputPath, int objectsAttempted,
-            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<SchemaWarning> schemaWarnings,
+            int objectsSucceeded, int objectsFiltered, List<ExportError> errors, List<ExportWarning> schemaWarnings,
             Map<String, Integer> exportedClassCounts, Map<String, List<Long>> exportedObjectIds) {
         this.exportName = exportName;
         this.outputPath = outputPath;
@@ -77,33 +77,4 @@ public class ExportResult {
     /**
      * Represents a schema configuration warning.
      */
-    public static class SchemaWarning {
-        public enum WarningType {
-            DUPLICATE_EMBEDDED_REFERENCE
-        }
-
-        public WarningType type;
-        public long objectId;
-        public String className;
-        public String fieldName;
-        public String containingClass; // Class that contains the field
-        public String sourceContainingClass; // Full source class name from schema (e.g., gest.vehicule.Vehicule)
-        public String sourceFieldName; // Source field name from schema (e.g., mVectCompartiment)
-        public String message;
-        public int referenceCount;
-
-        public SchemaWarning(WarningType type, long objectId, String className, String fieldName,
-                String containingClass, String sourceContainingClass, String sourceFieldName,
-                String message, int referenceCount) {
-            this.type = type;
-            this.objectId = objectId;
-            this.className = className;
-            this.fieldName = fieldName;
-            this.containingClass = containingClass;
-            this.sourceContainingClass = sourceContainingClass;
-            this.sourceFieldName = sourceFieldName;
-            this.message = message;
-            this.referenceCount = referenceCount;
-        }
-    }
 }

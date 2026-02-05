@@ -196,6 +196,24 @@ public class XMLExportEngine {
                         if (monitor != null && monitor.isCancelled()) {
                             break;
                         }
+
+                        // // Skip objects whose actual class doesn't match the export class
+                        // // This prevents exporting subclass instances when exporting a parent class
+                        // // For example, when exporting "Rapport", skip "SousRapport" instances
+                        // try {
+                        // Object obj = container.ext().getByID(objectId);
+                        // if (obj != null) {
+                        // String actualClassName = obj.getClass().getName();
+                        // if (!actualClassName.equals(className)) {
+                        // // Object is a subclass instance, skip it (will be exported with its own
+                        // class)
+                        // continue;
+                        // }
+                        // }
+                        // } catch (Exception e) {
+                        // // If we can't check, export it anyway
+                        // }
+
                         objectExporter.exportObjectRecursively(container, objectId, 2);
                     }
                 }
@@ -221,6 +239,9 @@ public class XMLExportEngine {
             // Print summary and create result
             String fullOutputPath = dbBasePath.toString();
             statistics.printSummary(fullOutputPath, className);
+
+            // Generate duplicate warnings from tracked references
+            statistics.generateDuplicateWarnings();
 
             ExportResult result = statistics.createResult(className, fullOutputPath);
 
@@ -332,6 +353,9 @@ public class XMLExportEngine {
             // Print summary and create result
             String fullOutputPath = dbBasePath.toString();
             statistics.printSummary(fullOutputPath, module.getName());
+
+            // Generate duplicate warnings from tracked references
+            statistics.generateDuplicateWarnings();
 
             ExportResult result = statistics.createResult(module.getName(), fullOutputPath);
 
@@ -744,6 +768,10 @@ public class XMLExportEngine {
 
             // Print summary and create result
             statistics.printSummary(outputPath, moduleName);
+
+            // Generate duplicate warnings from tracked references
+            statistics.generateDuplicateWarnings();
+
             return statistics.createResult(moduleName, outputPath);
 
         } finally {

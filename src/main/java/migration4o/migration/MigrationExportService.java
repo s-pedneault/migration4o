@@ -10,6 +10,7 @@ import migration4o.schema.DOSchemaService;
 import migration4o.engine.export.ExportHistory;
 import migration4o.engine.export.XMLExportEngine;
 import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.engine.export.monitoring.ExportWarning;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.MigrationModule;
@@ -372,7 +373,7 @@ public class MigrationExportService {
 
                 // Combine results for return
                 List<ExportResult.ExportError> allErrors = new ArrayList<>();
-                List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
+                List<ExportWarning> allWarnings = new ArrayList<>();
                 Map<String, Integer> allClassCounts = new java.util.HashMap<>();
                 Map<String, java.util.Set<Long>> allObjectIdsSet = new java.util.HashMap<>();
                 int totalObjectsAttempted = 0;
@@ -552,7 +553,7 @@ public class MigrationExportService {
      */
     public ExportResult combineExportResults(List<ExportResult> results, List<String> moduleNames, String outputPath) {
         List<ExportResult.ExportError> allErrors = new ArrayList<>();
-        List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
+        List<ExportWarning> allWarnings = new ArrayList<>();
         Map<String, java.util.Set<Long>> allObjectIdsSet = new java.util.HashMap<>();
         int totalObjectsAttempted = 0;
         int totalObjectsSucceeded = 0;
