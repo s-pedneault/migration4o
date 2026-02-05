@@ -11,7 +11,7 @@ import java.util.Set;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
-import javax.swing.JDialog;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
@@ -30,10 +30,10 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ObjectResolverUtil;
 
 /**
- * Dialog to display all objects of a specific class from the database.
+ * Frame to display all objects of a specific class from the database.
  * Provides pagination and detailed field inspection.
  */
-public class ClassObjectsDialog extends JDialog {
+public class ClassObjectsDialog extends JFrame {
     private static final int PAGE_SIZE = 100;
 
     private final DOSchemaClass schemaClass;
@@ -54,7 +54,7 @@ public class ClassObjectsDialog extends JDialog {
 
     public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass,
             DOSchema schema, String databasePath) {
-        super(parent, "Objects: " + className, true);
+        super("Objects: " + className);
         this.schemaClass = schemaClass;
         this.schema = schema;
         this.databasePath = databasePath;
@@ -67,7 +67,8 @@ public class ClassObjectsDialog extends JDialog {
     private void initializeUI() {
         setLayout(new BorderLayout(10, 10));
         setSize(1000, 600);
-        setLocationRelativeTo(getParent());
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
 
         // Top panel with status label and checkboxes
         JPanel topPanel = new JPanel(new BorderLayout());

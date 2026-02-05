@@ -2304,8 +2304,8 @@
         <field source="mNbrEvacuation" destinationName="nbrEvacuation" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mNbrSauvetage" destinationName="nbrSauvetage" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mIDDossPrev" destinationName="idDossPrev" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" />
-        <field source="mIDEvacuation" destinationName="idEvacuation" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E13" embedContents="true" />
-        <field source="mIDSauvetage" destinationName="idSauvetage" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E14" embedContents="true" />
+        <field source="mIDEvacuation" destinationName="idEvacuation" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E13" />
+        <field source="mIDSauvetage" destinationName="idSauvetage" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E14" />
     </class>
     <class source="gest.intervention.IntervSourceChaleur" destinationName="IntervSourceChaleur" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.IntervCauseIncendie" field="mSourceDetail" />

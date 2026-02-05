@@ -516,6 +516,8 @@ public class MigrationCoveragePanel extends JPanel {
                 // Color based on migration status
                 if (status.is100Percent) {
                     progressColor = new Color(34, 197, 94); // Green for 100%
+                } else if (value > maximum) {
+                    progressColor = new Color(255, 50, 50); // Red for over maximum
                 } else {
                     progressColor = new Color(59, 130, 246); // Blue for partial
                 }

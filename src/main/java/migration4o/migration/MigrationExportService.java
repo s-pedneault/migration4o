@@ -374,25 +374,37 @@ public class MigrationExportService {
                 List<ExportResult.ExportError> allErrors = new ArrayList<>();
                 List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
                 Map<String, Integer> allClassCounts = new java.util.HashMap<>();
-                Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
+                Map<String, java.util.Set<Long>> allObjectIdsSet = new java.util.HashMap<>();
                 int totalObjectsAttempted = 0;
                 int totalObjectsSucceeded = 0;
 
                 for (ExportResult result : results) {
                     allErrors.addAll(result.errors);
                     allWarnings.addAll(result.schemaWarnings);
-                    allClassCounts.putAll(result.exportedClassCounts);
 
-                    // Combine object IDs - merge lists for same class
+                    // Combine object IDs using Set to prevent duplicates
                     if (result.exportedObjectIds != null) {
                         for (Map.Entry<String, List<Long>> entry : result.exportedObjectIds.entrySet()) {
-                            allObjectIds.computeIfAbsent(entry.getKey(), k -> new ArrayList<>())
+                            allObjectIdsSet.computeIfAbsent(entry.getKey(), k -> new java.util.HashSet<>())
                                     .addAll(entry.getValue());
                         }
                     }
 
+                    // Update class counts based on actual unique objects (not the count from
+                    // individual results)
+                    // This will be recalculated after the loop
+
                     totalObjectsAttempted += result.objectsAttempted;
                     totalObjectsSucceeded += result.objectsSucceeded;
+                }
+
+                // Convert Sets back to Lists and recalculate counts based on unique IDs
+                Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
+                for (Map.Entry<String, java.util.Set<Long>> entry : allObjectIdsSet.entrySet()) {
+                    List<Long> uniqueList = new ArrayList<>(entry.getValue());
+                    allObjectIds.put(entry.getKey(), uniqueList);
+                    // Update count to reflect actual unique objects
+                    allClassCounts.put(entry.getKey(), uniqueList.size());
                 }
 
                 return new ExportResult("Bulk Export", baseOutput, totalObjectsAttempted,
@@ -541,25 +553,34 @@ public class MigrationExportService {
     public ExportResult combineExportResults(List<ExportResult> results, List<String> moduleNames, String outputPath) {
         List<ExportResult.ExportError> allErrors = new ArrayList<>();
         List<ExportResult.SchemaWarning> allWarnings = new ArrayList<>();
-        Map<String, Integer> allClassCounts = new java.util.HashMap<>();
-        Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
+        Map<String, java.util.Set<Long>> allObjectIdsSet = new java.util.HashMap<>();
         int totalObjectsAttempted = 0;
         int totalObjectsSucceeded = 0;
 
         for (ExportResult result : results) {
             allErrors.addAll(result.errors);
             allWarnings.addAll(result.schemaWarnings);
-            allClassCounts.putAll(result.exportedClassCounts);
 
-            // Combine object IDs
+            // Combine object IDs using Set to prevent duplicates
             if (result.exportedObjectIds != null) {
                 for (Map.Entry<String, List<Long>> entry : result.exportedObjectIds.entrySet()) {
-                    allObjectIds.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).addAll(entry.getValue());
+                    allObjectIdsSet.computeIfAbsent(entry.getKey(), k -> new java.util.HashSet<>())
+                            .addAll(entry.getValue());
                 }
             }
 
             totalObjectsAttempted += result.objectsAttempted;
             totalObjectsSucceeded += result.objectsSucceeded;
+        }
+
+        // Convert Sets back to Lists and calculate counts based on unique IDs
+        Map<String, List<Long>> allObjectIds = new java.util.HashMap<>();
+        Map<String, Integer> allClassCounts = new java.util.HashMap<>();
+        for (Map.Entry<String, java.util.Set<Long>> entry : allObjectIdsSet.entrySet()) {
+            List<Long> uniqueList = new ArrayList<>(entry.getValue());
+            allObjectIds.put(entry.getKey(), uniqueList);
+            // Count is based on actual unique objects
+            allClassCounts.put(entry.getKey(), uniqueList.size());
         }
 
         return new ExportResult(

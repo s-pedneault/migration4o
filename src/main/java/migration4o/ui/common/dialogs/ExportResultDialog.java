@@ -752,12 +752,6 @@ public class ExportResultDialog extends JFrame {
             warningsTable.repaint();
         }
 
-        // Show success message
-        JOptionPane.showMessageDialog(this,
-                "Fixed! Set embedContents=false for field '" + sourceField + "' in class '" + sourceClass + "'.\n\n" +
-                        "The row is now highlighted in green to indicate it has been fixed.",
-                "Fix Applied",
-                JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**

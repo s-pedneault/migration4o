@@ -2,9 +2,11 @@ package migration4o.engine.export.monitoring;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.ui.common.DOExportMonitor;
@@ -21,7 +23,8 @@ public class ExportStatistics {
     private int objectsSucceeded = 0;
     private int objectsFiltered = 0; // Objects filtered out by export criteria
     private final Map<String, Integer> exportedClassCounts = new HashMap<>();
-    private final Map<String, List<Long>> exportedObjectIds = new HashMap<>(); // Track actual object IDs per class
+    private final Map<String, Set<Long>> exportedObjectIdsSet = new HashMap<>(); // Track unique object IDs per class
+                                                                                 // using Set
     private String currentClassName = "";
     private int currentClassTotal = 0;
 
@@ -69,16 +72,23 @@ public class ExportStatistics {
         if (schemaClass != null) {
             // Use source name (not destinationName) for database schema lookup
             String className = schemaClass.source;
-            int count = exportedClassCounts.getOrDefault(className, 0) + 1;
-            exportedClassCounts.put(className, count);
 
-            // Track the actual object ID
-            exportedObjectIds.computeIfAbsent(className, k -> new ArrayList<>()).add(objectId);
+            // Get or create the object ID set for this class
+            Set<Long> objectIds = exportedObjectIdsSet.computeIfAbsent(className, k -> new HashSet<>());
 
-            // Notify monitor
-            if (monitor != null) {
-                monitor.onObjectExported(className, objectId);
+            // Set.add() returns true if element was added (wasn't already present)
+            if (objectIds.add(objectId)) {
+                // Object ID is new - increment counter
+                int count = exportedClassCounts.getOrDefault(className, 0) + 1;
+                exportedClassCounts.put(className, count);
+
+                // Notify monitor
+                if (monitor != null) {
+                    monitor.onObjectExported(className, objectId);
+                }
             }
+            // If add() returned false, object ID was already in set - don't increment
+            // counter
         }
     }
 
@@ -133,7 +143,12 @@ public class ExportStatistics {
     }
 
     public Map<String, List<Long>> getExportedObjectIds() {
-        return new HashMap<>(exportedObjectIds);
+        // Convert Set<Long> to List<Long> for each class
+        Map<String, List<Long>> result = new HashMap<>();
+        for (Map.Entry<String, Set<Long>> entry : exportedObjectIdsSet.entrySet()) {
+            result.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        }
+        return result;
     }
 
     public boolean hasErrors() {
@@ -179,7 +194,7 @@ public class ExportStatistics {
         }
 
         return new ExportResult(exportName, outputPath, objectsAttempted, objectsSucceeded,
-                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts, exportedObjectIds);
+                objectsFiltered, publicErrors, publicWarnings, exportedClassCounts, getExportedObjectIds());
     }
 
     /**
