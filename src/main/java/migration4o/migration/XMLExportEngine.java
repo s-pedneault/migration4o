@@ -252,7 +252,8 @@ public class XMLExportEngine {
 
             // Generate duplicate warnings and set export info
             String fullOutputPath = dbBasePath.toString();
-            statistics.generateDuplicateWarnings();
+            statistics.schemaWarnings.clear();
+            statistics.schemaWarnings.addAll(statistics.duplicationDetector.generateDuplicateWarnings());
             statistics.setExportInfo(className, fullOutputPath);
 
             if (monitor != null) {
@@ -364,7 +365,8 @@ public class XMLExportEngine {
 
             // Generate duplicate warnings and set export info
             String fullOutputPath = dbBasePath.toString();
-            statistics.generateDuplicateWarnings();
+            statistics.schemaWarnings.clear();
+            statistics.schemaWarnings.addAll(statistics.duplicationDetector.generateDuplicateWarnings());
             statistics.setExportInfo(module.getName(), fullOutputPath);
 
             if (monitor != null) {
@@ -795,7 +797,8 @@ public class XMLExportEngine {
             System.out.println("Generated XSD schema: " + xsdPath);
 
             // Generate duplicate warnings and set export info
-            statistics.generateDuplicateWarnings();
+            statistics.schemaWarnings.clear();
+            statistics.schemaWarnings.addAll(statistics.duplicationDetector.generateDuplicateWarnings());
             statistics.setExportInfo(moduleName, outputPath);
 
             return statistics;

@@ -16,6 +16,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
 
 /**
@@ -57,6 +58,9 @@ public class DOReferenceSchemaReader {
 
             // Post-process: detect and add missing references (e.g., IDEntite collections)
             DOReferenceDetector.detectAndAddReferences(schema);
+
+            // Post-process: validate embedContents configuration
+            DOEmbeddingDetector.detectEmbeddingAnomalies(schema);
 
             // Post-process: determine optimal embedding strategy based on reference
             // patterns

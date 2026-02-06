@@ -352,7 +352,7 @@
         <reference class="gest.borne.ParamMaintBorne" field="mVectPerPointEau" />
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Periodicite" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="java.lang.String" />
-        <field source="mIDTypeMaintBorne" destinationName="idTypeMaintBorne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.borne.IDTypeMaintBorne" embedContents="true" />
+        <field source="mIDTypeMaintBorne" destinationName="idTypeMaintBorne" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDTypeMaintBorne" />
     </class>
     <class source="gest.borne.IDNivPriorite" destinationName="idNivPriorite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.NivPriorite">
         <reference class="gest.borne.AnomBorne" field="mIDNivPriorite" />
@@ -512,7 +512,7 @@
         <field source="mVectNGroupe" destinationName="vectNGroupe" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.listePerso.ListePerso$NGroupe" />
         <field source="mVectNTri" destinationName="vectNTri" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.listePerso.ListePerso$NTri" />
         <field source="mVectRequete" destinationName="vectRequete" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.gen.Requete" />
-        <field source="mIDRapportCentral" destinationName="idRapportCentral" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.centreDesRapports.IDRapportCentral" embedContents="true" />
+        <field source="mIDRapportCentral" destinationName="idRapportCentral" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.centreDesRapports.IDRapportCentral" />
         <field source="mIDRapportExpert" destinationName="idRapportExpert" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" />
     </class>
     <class source="gest.champPerso.ChampPerso" destinationName="ChampPerso" isExported="true" parentClass="gest.gen.Entite">

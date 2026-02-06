@@ -4,6 +4,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.schema.DOSchemaReferenceAnomaly;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -40,6 +41,7 @@ public class DOReferenceDetector {
 
         // For each class, collect all references to it
         Map<String, List<DOSchemaReference>> referencesMap = new HashMap<>();
+        Map<String, List<FieldContext>> fieldContexts = new HashMap<>();
 
         // Scan all classes and their fields
         for (DOSchemaClass schemaClass : schema.getClasses()) {
@@ -53,8 +55,8 @@ public class DOReferenceDetector {
                     DOSchemaClass typeClass = findClass(classMap, field.type);
                     if (typeClass != null && isEntityType(field.type)) {
                         // Direct reference to an entity class
-                        addReference(referencesMap, typeClass.source,
-                                schemaClass.source, field.source);
+                        addReference(referencesMap, fieldContexts, typeClass.source,
+                                schemaClass, field);
                     }
                 }
 
@@ -69,14 +71,14 @@ public class DOReferenceDetector {
                             if (pointsTo != null && !pointsTo.isEmpty()) {
                                 DOSchemaClass targetClass = findClass(classMap, pointsTo);
                                 if (targetClass != null) {
-                                    addReference(referencesMap, targetClass.source,
-                                            schemaClass.source, field.source);
+                                    addReference(referencesMap, fieldContexts, targetClass.source,
+                                            schemaClass, field);
                                 }
                             }
                         } else if (isEntityType(field.childrenType)) {
                             // Direct reference to entity class in collection
-                            addReference(referencesMap, childrenClass.source,
-                                    schemaClass.source, field.source);
+                            addReference(referencesMap, fieldContexts, childrenClass.source,
+                                    schemaClass, field);
                         }
                     }
                 }
@@ -98,9 +100,21 @@ public class DOReferenceDetector {
                 }
 
                 // Add new references (avoid duplicates)
-                for (DOSchemaReference newRef : newRefs) {
+                List<FieldContext> contexts = fieldContexts.get(schemaClass.source);
+                for (int i = 0; i < newRefs.size(); i++) {
+                    DOSchemaReference newRef = newRefs.get(i);
                     if (!containsReference(allRefs, newRef)) {
                         allRefs.add(newRef);
+
+                        // Register anomaly for dynamically added reference
+                        if (contexts != null && i < contexts.size()) {
+                            FieldContext ctx = contexts.get(i);
+                            String explanation = String.format(
+                                    "Reference to %s from %s.%s was automatically added (missing from schema)",
+                                    schemaClass.source, newRef.className, newRef.fieldName);
+                            schema.anomalies.add(new DOSchemaReferenceAnomaly(
+                                    ctx.schemaClass, ctx.field, newRef, explanation));
+                        }
                     }
                 }
 
@@ -186,9 +200,22 @@ public class DOReferenceDetector {
      * Add a reference to the map.
      */
     private static void addReference(Map<String, List<DOSchemaReference>> referencesMap,
-            String targetClassName, String sourceClassName, String fieldName) {
-        List<DOSchemaReference> refs = referencesMap.computeIfAbsent(targetClassName, k -> new ArrayList<>());
-        refs.add(new DOSchemaReference(sourceClassName, fieldName));
+            Map<String, List<FieldContext>> fieldContexts,
+            String targetClassName, DOSchemaClass sourceClass, DOSchemaField sourceField) {
+        referencesMap.computeIfAbsent(targetClassName, k -> new ArrayList<>())
+                .add(new DOSchemaReference(sourceClass.source, sourceField.source));
+        fieldContexts.computeIfAbsent(targetClassName, k -> new ArrayList<>())
+                .add(new FieldContext(sourceClass, sourceField));
+    }
+
+    private static class FieldContext {
+        final DOSchemaClass schemaClass;
+        final DOSchemaField field;
+
+        FieldContext(DOSchemaClass schemaClass, DOSchemaField field) {
+            this.schemaClass = schemaClass;
+            this.field = field;
+        }
     }
 
     /**

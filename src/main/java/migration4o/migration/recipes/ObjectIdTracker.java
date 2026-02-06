@@ -52,7 +52,7 @@ public class ObjectIdTracker {
 
         // Always record the reference, even if we can't get perfect info
         if (className != null && statistics != null) {
-            statistics.recordObjectReference(objectId, className, parentObjectId,
+            statistics.duplicationDetector.recordObjectReference(objectId, className, parentObjectId,
                     sourceContainingClassName, sourceFieldName);
         }
 

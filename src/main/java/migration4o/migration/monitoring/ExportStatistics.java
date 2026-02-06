@@ -25,7 +25,7 @@ public class ExportStatistics {
     public final Map<String, List<Long>> exportedObjectIds = new java.util.HashMap<>();
 
     public final DOExportMonitor monitor;
-    public final Map<Long, List<ObjectReference>> objectReferences = new java.util.HashMap<>();
+    public final ObjectDuplicationDetector duplicationDetector = new ObjectDuplicationDetector();
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public int currentClassTotal = 0;
@@ -77,24 +77,6 @@ public class ExportStatistics {
         errors.add(new ExportError(objectId, className, errorMessage, exception));
         if (monitor != null) {
             monitor.onObjectError(className, objectId, errorMessage);
-        }
-    }
-
-    public void recordObjectReference(long objectId, String className, Long parentObjectId,
-            String sourceContainingClass, String sourceFieldName) {
-        ObjectReference ref = parentObjectId != null
-                ? new ObjectReference(objectId, className, parentObjectId, sourceContainingClass, sourceFieldName)
-                : new ObjectReference(objectId, className);
-        objectReferences.computeIfAbsent(objectId, k -> new ArrayList<>()).add(ref);
-    }
-
-    public void generateDuplicateWarnings() {
-        schemaWarnings.clear();
-        for (Map.Entry<Long, List<ObjectReference>> entry : objectReferences.entrySet()) {
-            List<ObjectReference> refs = entry.getValue();
-            if (refs.size() > 1) {
-                schemaWarnings.add(new ExportWarning(entry.getKey(), refs.get(0).className, refs));
-            }
         }
     }
 

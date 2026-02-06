@@ -34,6 +34,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaAnomaly;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
@@ -68,6 +69,7 @@ public class SchemaEditorPanel extends JPanel {
     private JTable fieldsTable;
     private DefaultTableModel fieldsTableModel;
     private JLabel statusLabel;
+    private SchemaAnomaliesPanel anomaliesPanel;
     private SchemaTreeNode currentSelectedNode;
     private String currentFilter = "";
     private boolean showOnlyErrors = false;
@@ -312,8 +314,16 @@ public class SchemaEditorPanel extends JPanel {
 
         add(splitPane, BorderLayout.CENTER);
 
-        // Create status bar
-        add(createStatusBar(), BorderLayout.SOUTH);
+        // Create bottom panel with status bar and anomalies panel
+        JPanel bottomPanel = new JPanel(new BorderLayout());
+        bottomPanel.add(createStatusBar(), BorderLayout.NORTH);
+
+        anomaliesPanel = new SchemaAnomaliesPanel();
+        anomaliesPanel.setVisible(false); // Hidden until anomalies are detected
+        anomaliesPanel.setNavigationCallback(this::navigateToAnomaly);
+        bottomPanel.add(anomaliesPanel, BorderLayout.CENTER);
+
+        add(bottomPanel, BorderLayout.SOUTH);
     }
 
     private JToolBar createToolbar() {
@@ -604,6 +614,11 @@ public class SchemaEditorPanel extends JPanel {
             buildTreeByPackage();
         } else {
             buildTreeByInheritance();
+        }
+
+        // Update anomalies panel
+        if (anomaliesPanel != null && schema != null) {
+            anomaliesPanel.setAnomalies(schema.anomalies);
         }
     }
 
@@ -1939,5 +1954,46 @@ public class SchemaEditorPanel extends JPanel {
 
     private void setStatus(String status) {
         statusLabel.setText(status);
+    }
+
+    /**
+     * Navigate to an anomaly by selecting its class in the tree and optionally
+     * opening the field editor.
+     * 
+     * @param anomaly    The anomaly to navigate to
+     * @param openEditor Whether to open the field editor
+     */
+    private void navigateToAnomaly(DOSchemaAnomaly anomaly, boolean openEditor) {
+        if (anomaly == null || anomaly.schemaClass == null) {
+            return;
+        }
+
+        // Select the class in the tree
+        String className = anomaly.schemaClass.source;
+        selectClassByName(className);
+
+        // If there's a field, select it in the fields table and optionally open the
+        // editor
+        if (anomaly.schemaField != null && currentSelectedNode != null
+                && currentSelectedNode.getNodeType() == NodeType.CLASS) {
+
+            DOSchemaClass schemaClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
+            if (schemaClass.fields != null) {
+                // Find the field index
+                for (int i = 0; i < schemaClass.fields.length; i++) {
+                    if (schemaClass.fields[i].source.equals(anomaly.schemaField.source)) {
+                        // Select the field in the table
+                        fieldsTable.setRowSelectionInterval(i, i);
+                        fieldsTable.scrollRectToVisible(fieldsTable.getCellRect(i, 0, true));
+
+                        // If requested, open the field editor
+                        if (openEditor) {
+                            openFieldEditor(i);
+                        }
+                        break;
+                    }
+                }
+            }
+        }
     }
 }

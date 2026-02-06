@@ -1,7 +1,5 @@
 package migration4o.schema;
 
-import java.io.File;
-
 import migration4o.models.schema.DOSchema;
 
 /**

@@ -3,10 +3,14 @@ package migration4o.models.schema;
 
 import migration4o.util.SchemaUtil;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class DOSchema {
     private final DOSchemaClass[] classes;
     private final DOSchemaModule[] modules;
     private final DOSchemaClass[] foundationClasses;
+    public final List<DOSchemaAnomaly> anomalies = new ArrayList<>();
 
     public DOSchema(DOSchemaClass[] classes, DOSchemaModule[] modules) {
         this(classes, modules, new DOSchemaClass[0]);

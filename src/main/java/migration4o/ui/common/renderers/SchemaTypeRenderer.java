@@ -11,7 +11,8 @@ import java.awt.*;
 /**
  * Reusable table cell renderer for type columns that colors types based on
  * their category:
- * - Schema classes: blue and underlined with hand cursor (clickable appearance)
+ * - Schema classes: black and underlined with hand cursor (clickable
+ * appearance)
  * - Primitive types: green
  * - Unresolved types: red
  * 
@@ -61,8 +62,8 @@ public class SchemaTypeRenderer extends DefaultTableCellRenderer {
             }
 
             if (isSchemaClass) {
-                // Class: blue and underlined
-                setText("<html><u><font color='blue'>" + typeName + "</font></u></html>");
+                // Class: black and underlined
+                setText("<html><u>" + typeName + "</u></html>");
                 setToolTipText("Schema class: " + typeName + debugInfo);
                 setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
             } else if (TypeUtil.isPrimitiveType(typeName)) {
