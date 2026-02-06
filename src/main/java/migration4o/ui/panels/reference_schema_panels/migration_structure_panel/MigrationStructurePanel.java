@@ -27,6 +27,7 @@ import java.util.Set;
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
@@ -37,10 +38,14 @@ import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
+import javax.swing.table.TableCellRenderer;
+import javax.swing.table.TableColumn;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
+
+import org.jdesktop.swingx.JXTreeTable;
 
 import migration4o.database.DODatabaseService;
 import migration4o.migration.ExportHistory;
@@ -70,11 +75,12 @@ import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.d
  */
 public class MigrationStructurePanel extends JPanel {
     private JTree availableTree;
-    private JTree exportTree;
+    private JXTreeTable exportTreeTable;
+    private ExportTreeTableModel exportTreeTableModel;
     private DefaultTreeModel availableModel;
-    private DefaultTreeModel exportModel;
     private DefaultMutableTreeNode availableRoot;
     private DefaultMutableTreeNode exportedRoot;
+    private DefaultMutableTreeNode exportStructureRoot;
 
     // Available tree nodes
     private DefaultMutableTreeNode availableEntitiesNode;
@@ -201,17 +207,17 @@ public class MigrationStructurePanel extends JPanel {
         JScrollPane availableScrollPane = new JScrollPane(availableTree);
         availableScrollPane.setBorder(BorderFactory.createTitledBorder("Available Classes"));
 
-        // Create right tree (Export structure)
-        DefaultMutableTreeNode exportRoot = new DefaultMutableTreeNode("Migration Structure");
-        exportModel = new DefaultTreeModel(exportRoot);
-        exportTree = new JTree(exportModel);
-        exportTree.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        exportTree.setRootVisible(true);
-        exportTree.setShowsRootHandles(true);
-        // Enable multi-selection for exporting multiple modules at once
-        exportTree.getSelectionModel().setSelectionMode(TreeSelectionModel.DISCONTIGUOUS_TREE_SELECTION);
+        // Create right tree table (Export structure with pricing columns)
+        exportStructureRoot = new DefaultMutableTreeNode("Migration Structure");
+        exportTreeTableModel = new ExportTreeTableModel(exportStructureRoot);
+        exportTreeTable = new JXTreeTable(exportTreeTableModel);
+        exportTreeTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
+        exportTreeTable.setRootVisible(true);
+        exportTreeTable.setShowsRootHandles(true);
+        exportTreeTable.setSelectionMode(javax.swing.ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        exportTreeTable.setRowHeight(20);
 
-        JScrollPane exportScrollPane = new JScrollPane(exportTree);
+        JScrollPane exportScrollPane = new JScrollPane(exportTreeTable);
         exportScrollPane.setBorder(BorderFactory.createTitledBorder("Export Structure"));
 
         // Add toolbar for export tree
@@ -234,6 +240,22 @@ public class MigrationStructurePanel extends JPanel {
     private JToolBar createExportToolbar() {
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
+
+        // Price list combo box
+        JLabel priceListLabel = new JLabel("Price List:");
+        toolbar.add(priceListLabel);
+
+        String[] priceLists = { "Default" };
+        JComboBox<String> priceListCombo = new JComboBox<>(priceLists);
+        priceListCombo.setMaximumSize(new java.awt.Dimension(150, 25));
+        priceListCombo.addActionListener(e -> {
+            String selectedList = (String) priceListCombo.getSelectedItem();
+            String priceListKey = "Default".equals(selectedList) ? "" : selectedList;
+            exportTreeTableModel.setPriceListKey(priceListKey);
+        });
+        toolbar.add(priceListCombo);
+
+        toolbar.addSeparator();
 
         JButton addModuleButton = new JButton("Add Module");
         addModuleButton.addActionListener(e -> addModule());
@@ -307,12 +329,12 @@ public class MigrationStructurePanel extends JPanel {
         // modules)
         DragSource exportDragSource = new DragSource();
         exportDragSource.createDefaultDragGestureRecognizer(
-                exportTree,
+                exportTreeTable,
                 DnDConstants.ACTION_MOVE,
                 new DragGestureListener() {
                     @Override
                     public void dragGestureRecognized(DragGestureEvent dge) {
-                        TreePath path = exportTree.getSelectionPath();
+                        TreePath path = getSelectedTreePath();
                         if (path != null) {
                             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                             if (node.getUserObject() instanceof ClassNode) {
@@ -329,19 +351,20 @@ public class MigrationStructurePanel extends JPanel {
                 });
 
         // Set up drop target for export tree
-        new DropTarget(exportTree, new DropTargetAdapter() {
+        new DropTarget(exportTreeTable, new DropTargetAdapter() {
             @Override
             public void dragOver(DropTargetDragEvent dtde) {
                 Point pt = dtde.getLocation();
-                TreePath path = exportTree.getPathForLocation(pt.x, pt.y);
+                int row = exportTreeTable.rowAtPoint(pt);
+                TreePath path = row >= 0 ? exportTreeTable.getPathForRow(row) : null;
 
                 if (path != null) {
                     DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                     // Accept drop on root or module nodes
                     if (node.getUserObject() instanceof ModuleNode ||
-                            node == exportModel.getRoot()) {
+                            node == getExportRoot()) {
                         dtde.acceptDrag(dtde.getDropAction());
-                        exportTree.setSelectionPath(path);
+                        setTreeSelection(path);
                         return;
                     }
                 }
@@ -351,7 +374,8 @@ public class MigrationStructurePanel extends JPanel {
             @Override
             public void drop(DropTargetDropEvent dtde) {
                 Point pt = dtde.getLocation();
-                TreePath path = exportTree.getPathForLocation(pt.x, pt.y);
+                int row = exportTreeTable.rowAtPoint(pt);
+                TreePath path = row >= 0 ? exportTreeTable.getPathForRow(row) : null;
 
                 if (path == null) {
                     dtde.rejectDrop();
@@ -387,11 +411,11 @@ public class MigrationStructurePanel extends JPanel {
                                 }
                                 // Save expanded state
                                 List<TreePath> expandedPaths = new ArrayList<>();
-                                Enumeration<TreePath> expandedEnum = exportTree
-                                        .getExpandedDescendants(new TreePath(exportModel.getRoot()));
+                                Enumeration<?> expandedEnum = exportTreeTable
+                                        .getExpandedDescendants(new TreePath(getExportRoot().getPath()));
                                 if (expandedEnum != null) {
                                     while (expandedEnum.hasMoreElements()) {
-                                        expandedPaths.add(expandedEnum.nextElement());
+                                        expandedPaths.add((TreePath) expandedEnum.nextElement());
                                     }
                                 }
                                 // Remove from source
@@ -401,11 +425,11 @@ public class MigrationStructurePanel extends JPanel {
                                 DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
                                 targetNode.add(classTreeNode);
                                 // Reload and restore expanded state
-                                exportModel.reload();
+                                reloadExportModel();
                                 for (TreePath expandedPath : expandedPaths) {
-                                    exportTree.expandPath(expandedPath);
+                                    expandTreePath(expandedPath);
                                 }
-                                exportTree.expandPath(new TreePath(targetNode.getPath()));
+                                expandTreePath(new TreePath(targetNode.getPath()));
                                 dtde.dropComplete(true);
                                 return;
                             }
@@ -443,7 +467,7 @@ public class MigrationStructurePanel extends JPanel {
         });
 
         // Context menu for export tree
-        exportTree.addMouseListener(new MouseAdapter() {
+        exportTreeTable.addMouseListener(new MouseAdapter() {
 
             @Override
             public void mousePressed(MouseEvent e) {
@@ -532,32 +556,32 @@ public class MigrationStructurePanel extends JPanel {
             String moduleName = dialog.getModuleName();
             String moduleId = dialog.getModuleId();
 
-            DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+            DefaultMutableTreeNode root = getExportRoot();
             ModuleNode moduleNode = new ModuleNode(moduleName, moduleId);
             DefaultMutableTreeNode newModule = new DefaultMutableTreeNode(moduleNode);
 
             // Check if a module is selected - if so, add as child
-            TreePath selectedPath = exportTree.getSelectionPath();
+            TreePath selectedPath = getSelectedTreePath();
             if (selectedPath != null) {
                 DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
                 // Only add as child if selected node is a module (not a class)
                 if (selectedNode.getUserObject() instanceof ModuleNode || selectedNode == root) {
                     selectedNode.add(newModule);
-                    exportModel.reload();
-                    exportTree.expandPath(new TreePath(selectedNode.getPath()));
+                    reloadExportModel();
+                    expandTreePath(new TreePath(selectedNode.getPath()));
                     return;
                 }
             }
 
             // Default: add to root
             root.add(newModule);
-            exportModel.reload();
-            exportTree.expandPath(new TreePath(root.getPath()));
+            reloadExportModel();
+            expandTreePath(new TreePath(root.getPath()));
         }
     }
 
     private void renameSelectedNode() {
-        TreePath path = exportTree.getSelectionPath();
+        TreePath path = getSelectedTreePath();
         if (path == null) {
             return;
         }
@@ -575,13 +599,13 @@ public class MigrationStructurePanel extends JPanel {
             if (dialog.isConfirmed()) {
                 moduleNode.setName(dialog.getModuleName());
                 moduleNode.setId(dialog.getModuleId());
-                exportModel.nodeChanged(node);
+                notifyNodeChanged(node);
             }
         }
     }
 
     private void deleteSelectedNode() {
-        TreePath path = exportTree.getSelectionPath();
+        TreePath path = getSelectedTreePath();
         if (path == null) {
             return;
         }
@@ -609,7 +633,7 @@ public class MigrationStructurePanel extends JPanel {
 
             DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
             parent.remove(node);
-            exportModel.reload();
+            reloadExportModel();
         }
     }
 
@@ -633,7 +657,7 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
 
         // Ask user to select a module or create new one
-        DefaultMutableTreeNode exportRoot = (DefaultMutableTreeNode) exportModel.getRoot();
+        DefaultMutableTreeNode exportRoot = getExportRoot();
 
         if (exportRoot.getChildCount() == 0) {
             JOptionPane.showMessageDialog(this,
@@ -679,13 +703,13 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Refresh trees
-        exportModel.reload();
-        exportTree.expandPath(new TreePath(targetModule.getPath()));
+        reloadExportModel();
+        expandTreePath(new TreePath(targetModule.getPath()));
         refreshAvailableTree();
     }
 
     private void removeSelectedClassFromExport() {
-        TreePath path = exportTree.getSelectionPath();
+        TreePath path = getSelectedTreePath();
         if (path == null) {
             return;
         }
@@ -707,16 +731,16 @@ public class MigrationStructurePanel extends JPanel {
         boolean wasExpanded = false;
         if (parent != null) {
             parentPath = new TreePath(parent.getPath());
-            wasExpanded = exportTree.isExpanded(parentPath);
+            wasExpanded = isTreePathExpanded(parentPath);
         }
 
         // Use util to remove class
         MigrationStructurePanelUtil.removeClassFromExport(treeNode, exportedClasses);
 
         // Reload and restore expanded state
-        exportModel.reload();
+        reloadExportModel();
         if (wasExpanded && parentPath != null) {
-            exportTree.expandPath(parentPath);
+            expandTreePath(parentPath);
         }
 
         // Refresh available tree
@@ -728,7 +752,7 @@ public class MigrationStructurePanel extends JPanel {
      * Handles multiple class selection.
      */
     private void removeSelectedClassesFromExport() {
-        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+        TreePath[] selectedPaths = getSelectedTreePaths();
         if (selectedPaths == null || selectedPaths.length == 0) {
             return;
         }
@@ -759,9 +783,9 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Reload and restore expanded state
-        exportModel.reload();
+        reloadExportModel();
         for (TreePath parentPath : parentPaths) {
-            exportTree.expandPath(parentPath);
+            expandTreePath(parentPath);
         }
 
         // Refresh available tree
@@ -799,7 +823,7 @@ public class MigrationStructurePanel extends JPanel {
             classNode.setExportConfig(newConfig);
 
             // Update the tree display to show configuration indicator
-            exportModel.nodeChanged(treeNode);
+            notifyNodeChanged(treeNode);
 
             // Show feedback message
             StringBuilder message = new StringBuilder("Configuration saved for " + schemaClass.source);
@@ -818,7 +842,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private DefaultMutableTreeNode findClassNodeInExportTree(String className) {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+        DefaultMutableTreeNode root = getExportRoot();
         return MigrationStructurePanelUtil.findClassNodeInTree(root, className);
     }
 
@@ -861,7 +885,8 @@ public class MigrationStructurePanel extends JPanel {
      * Shows context menu for export tree with Export and Remove options
      */
     private void showExportContextMenu(MouseEvent e) {
-        TreePath path = exportTree.getPathForLocation(e.getX(), e.getY());
+        int row = exportTreeTable.rowAtPoint(e.getPoint());
+        TreePath path = row >= 0 ? exportTreeTable.getPathForRow(row) : null;
         if (path == null) {
             return;
         }
@@ -870,7 +895,7 @@ public class MigrationStructurePanel extends JPanel {
 
         // Only change selection if the right-clicked node is not already selected
         // This preserves multi-selection when right-clicking on a selected item
-        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+        TreePath[] selectedPaths = getSelectedTreePaths();
         boolean isAlreadySelected = false;
         if (selectedPaths != null) {
             for (TreePath selectedPath : selectedPaths) {
@@ -881,7 +906,7 @@ public class MigrationStructurePanel extends JPanel {
             }
         }
         if (!isAlreadySelected) {
-            exportTree.setSelectionPath(path);
+            setTreeSelection(path);
         }
 
         JPopupMenu contextMenu = new JPopupMenu();
@@ -889,7 +914,7 @@ public class MigrationStructurePanel extends JPanel {
         // Export option for modules
         if (node.getUserObject() instanceof ModuleNode) {
             // Check if multiple modules are selected
-            TreePath[] allSelectedPaths = exportTree.getSelectionPaths();
+            TreePath[] allSelectedPaths = getSelectedTreePaths();
             int moduleCount = 0;
             if (allSelectedPaths != null) {
                 for (TreePath selectedPath : allSelectedPaths) {
@@ -913,7 +938,7 @@ public class MigrationStructurePanel extends JPanel {
             ClassNode classNode = (ClassNode) node.getUserObject();
 
             // Check if multiple classes are selected
-            TreePath[] allSelectedPaths = exportTree.getSelectionPaths();
+            TreePath[] allSelectedPaths = getSelectedTreePaths();
             int classCount = 0;
             if (allSelectedPaths != null) {
                 for (TreePath selectedPath : allSelectedPaths) {
@@ -953,7 +978,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         if (contextMenu.getComponentCount() > 0) {
-            contextMenu.show(exportTree, e.getX(), e.getY());
+            contextMenu.show(exportTreeTable, e.getX(), e.getY());
         }
     }
 
@@ -1042,7 +1067,7 @@ public class MigrationStructurePanel extends JPanel {
      * Exports all currently selected modules in the export tree.
      */
     private void exportSelectedModules() {
-        TreePath[] selectedPaths = exportTree.getSelectionPaths();
+        TreePath[] selectedPaths = getSelectedTreePaths();
 
         if (selectedPaths == null || selectedPaths.length == 0) {
             JOptionPane.showMessageDialog(this,
@@ -1114,7 +1139,7 @@ public class MigrationStructurePanel extends JPanel {
      */
     private void exportAllModules() {
         // Get the root node of the export tree
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+        DefaultMutableTreeNode root = getExportRoot();
 
         // Collect only root-level module nodes (not nested ones)
         List<TreePath> rootModulePaths = new ArrayList<>();
@@ -1130,7 +1155,18 @@ public class MigrationStructurePanel extends JPanel {
 
         // Select all root module paths (nested modules will be exported as part of
         // their parents)
-        exportTree.setSelectionPaths(rootModulePaths.toArray(new TreePath[0]));
+        TreePath[] paths = rootModulePaths.toArray(new TreePath[0]);
+        if (paths.length > 0) {
+            int[] rows = new int[paths.length];
+            for (int i = 0; i < paths.length; i++) {
+                rows[i] = exportTreeTable.getRowForPath(paths[i]);
+            }
+            for (int row : rows) {
+                if (row >= 0) {
+                    exportTreeTable.addRowSelectionInterval(row, row);
+                }
+            }
+        }
 
         // Call the existing export selected modules method
         exportSelectedModules();
@@ -1140,15 +1176,15 @@ public class MigrationStructurePanel extends JPanel {
         try {
             List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure(MIGRATION_FORMAT_FILE);
 
-            DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+            DefaultMutableTreeNode root = getExportRoot();
             root.removeAllChildren();
 
             for (MigrationModule module : modules) {
                 addModuleToTree(root, module);
             }
 
-            exportModel.reload();
-            exportTree.expandRow(0);
+            reloadExportModel();
+            expandTreePath(exportTreeTable.getPathForRow(0));
 
             System.out.println("Loaded " + modules.size() + " modules from " + MIGRATION_FORMAT_FILE);
         } catch (Exception e) {
@@ -1168,16 +1204,16 @@ public class MigrationStructurePanel extends JPanel {
      * Reloads the export tree to refresh object counts when database changes
      */
     private void reloadExportTree() {
-        DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+        DefaultMutableTreeNode root = getExportRoot();
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
         DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
         MigrationStructurePanelUtil.updateNodeCounts(root, referenceSchema, databaseSchema);
-        exportModel.reload();
+        reloadExportModel();
     }
 
     private void saveMigrationStructure() {
         try {
-            DefaultMutableTreeNode root = (DefaultMutableTreeNode) exportModel.getRoot();
+            DefaultMutableTreeNode root = getExportRoot();
             MigrationStructurePanelUtil.saveMigrationStructure(root, MIGRATION_FORMAT_FILE);
 
             JOptionPane.showMessageDialog(this,
@@ -1212,5 +1248,106 @@ public class MigrationStructurePanel extends JPanel {
 
         // Use orchestrator to repeat last export
         exportOrchestrator.repeatLastExportAsync();
+    }
+
+    /**
+     * Helper method to get selected tree path from tree table.
+     */
+    private TreePath getSelectedTreePath() {
+        int selectedRow = exportTreeTable.getSelectedRow();
+        if (selectedRow >= 0) {
+            return exportTreeTable.getPathForRow(selectedRow);
+        }
+        return null;
+    }
+
+    /**
+     * Helper method to get all selected tree paths from tree table.
+     */
+    private TreePath[] getSelectedTreePaths() {
+        int[] selectedRows = exportTreeTable.getSelectedRows();
+        TreePath[] paths = new TreePath[selectedRows.length];
+        for (int i = 0; i < selectedRows.length; i++) {
+            paths[i] = exportTreeTable.getPathForRow(selectedRows[i]);
+        }
+        return paths;
+    }
+
+    /**
+     * Helper method to expand a tree path in the tree table.
+     */
+    private void expandTreePath(TreePath path) {
+        exportTreeTable.expandPath(path);
+    }
+
+    /**
+     * Helper method to check if a path is expanded in the tree table.
+     */
+    private boolean isTreePathExpanded(TreePath path) {
+        return exportTreeTable.isExpanded(path);
+    }
+
+    /**
+     * Helper method to set selection to a tree path in the tree table.
+     */
+    private void setTreeSelection(TreePath path) {
+        int row = exportTreeTable.getRowForPath(path);
+        if (row >= 0) {
+            exportTreeTable.setRowSelectionInterval(row, row);
+        }
+    }
+
+    /**
+     * Helper method to get the root node of the export structure.
+     */
+    private DefaultMutableTreeNode getExportRoot() {
+        return (DefaultMutableTreeNode) exportTreeTableModel.getRoot();
+    }
+
+    /**
+     * Helper method to reload the tree table model.
+     */
+    private void reloadExportModel() {
+        exportTreeTableModel.reloadTree();
+    }
+
+    /**
+     * Helper method to notify model that a node changed.
+     */
+    private void notifyNodeChanged(DefaultMutableTreeNode node) {
+        exportTreeTableModel.nodeChanged(new TreePath(node.getPath()));
+    }
+
+    /**
+     * Right-aligned table cell renderer for monetary values.
+     * Formats values as "0.50 $"
+     */
+    private static class RightAlignedRenderer extends javax.swing.table.DefaultTableCellRenderer {
+        public RightAlignedRenderer() {
+            setHorizontalAlignment(javax.swing.JLabel.RIGHT);
+        }
+
+        @Override
+        public java.awt.Component getTableCellRendererComponent(javax.swing.JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+            // Format monetary values if they're not already formatted
+            if (value instanceof String && !value.toString().isEmpty()) {
+                String strValue = value.toString();
+                // If it's not already formatted with $, and it looks like a number, format it
+                if (!strValue.contains("$") && strValue.matches(".*\\d.*")) {
+                    try {
+                        // Try to parse as money format - might already have $ or commas
+                        String cleanValue = strValue.replace("$", "").replace(",", "").trim();
+                        if (!cleanValue.isEmpty()) {
+                            double amount = Double.parseDouble(cleanValue);
+                            value = String.format("%.2f $", amount);
+                        }
+                    } catch (NumberFormatException e) {
+                        // Keep original value if parsing fails
+                    }
+                }
+            }
+            return super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+        }
     }
 }

@@ -2,22 +2,21 @@ package migration4o.models.ui;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
-import migration4o.schema.DOSchemaService;
+
 import migration4o.util.ClassUtil;
-import migration4o.util.ObjectResolverUtil;
 
 /**
  * Configuration for exporting a specific class within a module.
- * Includes destination file name and optional filter criteria.
+ * Includes destination file name, optional filter criteria, description, and
+ * pricing.
  * The same class can appear multiple times in a module with different
  * configurations.
  */
@@ -26,28 +25,40 @@ public class ClassExportConfig {
     private final String className;
     private final String destinationFileName; // null means use className as default
     private final List<ExportCriteria> criteria;
+    private final String description;
+    private final Map<String, Float> unitCosts; // Price list: key -> unit cost
 
     /**
      * Creates a simple config with just the class name (backward compatibility).
      */
     public ClassExportConfig(String className) {
-        this(className, null, Collections.emptyList());
+        this(className, null, Collections.emptyList(), null, Collections.emptyMap());
     }
 
     /**
      * Creates a config with custom destination file name.
      */
     public ClassExportConfig(String className, String destinationFileName) {
-        this(className, destinationFileName, Collections.emptyList());
+        this(className, destinationFileName, Collections.emptyList(), null, Collections.emptyMap());
     }
 
     /**
      * Creates a full config with class name, destination file, and filter criteria.
      */
     public ClassExportConfig(String className, String destinationFileName, List<ExportCriteria> criteria) {
+        this(className, destinationFileName, criteria, null, Collections.emptyMap());
+    }
+
+    /**
+     * Creates a complete config with all properties.
+     */
+    public ClassExportConfig(String className, String destinationFileName, List<ExportCriteria> criteria,
+            String description, Map<String, Float> unitCosts) {
         this.className = className;
         this.destinationFileName = destinationFileName;
         this.criteria = new ArrayList<>(criteria);
+        this.description = description;
+        this.unitCosts = new HashMap<>(unitCosts != null ? unitCosts : Collections.emptyMap());
     }
 
     public String getClassName() {
@@ -75,6 +86,22 @@ public class ClassExportConfig {
      */
     public String getRawDestinationFileName() {
         return destinationFileName;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public Map<String, Float> getUnitCosts() {
+        return Collections.unmodifiableMap(unitCosts);
+    }
+
+    /**
+     * Get unit cost for a specific price list key.
+     * Returns 0.0 if the key doesn't exist.
+     */
+    public float getUnitCost(String priceListKey) {
+        return unitCosts.getOrDefault(priceListKey, 0.0f);
     }
 
     public List<ExportCriteria> getCriteria() {

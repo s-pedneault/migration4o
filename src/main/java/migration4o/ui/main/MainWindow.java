@@ -79,7 +79,7 @@ public class MainWindow extends JFrame {
     private void initializeUI() {
         setTitle("Migration4o - Database Migration Tool");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(1400, 900);
+        setSize(1600, 900);
         setLocationRelativeTo(null);
 
         // Create tabbed pane

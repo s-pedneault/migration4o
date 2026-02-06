@@ -2,48 +2,48 @@
 <database>
     <modules>
         <module name="Paramètres" id="Paramètres">
+            <classRef sourceName="gest.activite.Acte"/>
+            <classRef sourceName="gest.activite.TypeActivQuart"/>
+            <classRef sourceName="gest.borne.ParamMaintBorne"/>
+            <classRef sourceName="gest.cauca.ParamCauca"/>
+            <classRef sourceName="gest.champPerso.TypeChampPerso"/>
+            <classRef sourceName="gest.config.ParamBackup"/>
+            <classRef sourceName="gest.config.ParamCalendrier"/>
             <classRef sourceName="gest.config.ParamConfig"/>
             <classRef sourceName="gest.config.ParamConfigGeneral"/>
             <classRef sourceName="gest.config.ParamConfigSSI"/>
-            <classRef sourceName="gest.borne.ParamMaintBorne"/>
-            <classRef sourceName="gest.cauca.ParamCauca"/>
-            <classRef sourceName="gest.config.ParamBackup"/>
-            <classRef sourceName="gest.config.ParamCalendrier"/>
             <classRef sourceName="gest.config.ParamSendMail"/>
             <classRef sourceName="gest.consolide.ParamConsolide"/>
             <classRef sourceName="gest.consolide.ParamSSI"/>
             <classRef sourceName="gest.dossPrev.ParamDossPrev"/>
             <classRef sourceName="gest.feuilleTemps.ParamFeuilleTemps"/>
             <classRef sourceName="gest.formation.ParamFormation"/>
+            <classRef sourceName="gest.fournisseur.Fournisseur"/>
+            <classRef sourceName="gest.gen.ParamStatPresActivite"/>
             <classRef sourceName="gest.horaire.ParamHoraire"/>
             <classRef sourceName="gest.intervention.ParamCarteAppel"/>
             <classRef sourceName="gest.intervention.ParamIntervDSI2003"/>
             <classRef sourceName="gest.intervention.ParamIntervention"/>
             <classRef sourceName="gest.intervention.ParamMemoFacturation"/>
             <classRef sourceName="gest.intervention.ParamViewer"/>
+            <classRef sourceName="gest.listePerso.ListePerso"/>
             <classRef sourceName="gest.maintEquip.ParamMaintEquip"/>
+            <classRef sourceName="gest.mobile.Mobile"/>
             <classRef sourceName="gest.planInterv.ParamPlanInterv"/>
+            <classRef sourceName="gest.preference.Preference"/>
             <classRef sourceName="gest.prevention.ParamPrevention"/>
             <classRef sourceName="gest.quart.ParamQuart"/>
             <classRef sourceName="gest.rci.ParamRci"/>
             <classRef sourceName="gest.schema.ParamSchema"/>
             <classRef sourceName="gest.secCiv.ParamSecCiv"/>
-            <classRef sourceName="gest.champPerso.TypeChampPerso"/>
-            <classRef sourceName="gest.listePerso.ListePerso"/>
-            <classRef sourceName="gest.activite.Acte"/>
-            <classRef sourceName="gest.activite.TypeActivQuart"/>
-            <classRef sourceName="gest.mobile.Mobile"/>
-            <classRef sourceName="gest.preference.Preference"/>
-            <classRef sourceName="gest.gen.ParamStatPresActivite"/>
         </module>
         <module name="Organisation" id="Organisation">
             <classRef sourceName="gest.caserne.Caserne"/>
-            <classRef sourceName="gest.grade.Grade"/>
-            <classRef sourceName="gest.fournisseur.Fournisseur"/>
             <classRef sourceName="gest.vehicule.Vehicule"/>
             <module name="Personnel" id="personnel">
                 <classRef sourceName="gest.employe.Employe"/>
                 <classRef sourceName="gest.equipe.Equipe"/>
+	            <classRef sourceName="gest.grade.Grade"/>
                 <classRef sourceName="gest.utilGroupe.Groupe"/>
                 <classRef sourceName="gest.utilGroupe.Utilisateur"/>
             </module>
