@@ -4,10 +4,10 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 
-import migration4o.engine.export.monitoring.ExportResult;
-import migration4o.engine.export.monitoring.ExportResult.ExportError;
-import migration4o.engine.export.monitoring.ExportWarning;
-import migration4o.engine.export.monitoring.ObjectReference;
+import migration4o.migration.monitoring.ExportStatistics;
+import migration4o.migration.monitoring.ExportWarning;
+import migration4o.migration.monitoring.ObjectReference;
+import migration4o.migration.monitoring.ExportStatistics.ExportError;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -26,20 +26,21 @@ import java.util.List;
  * and a breakdown of any errors encountered.
  */
 public class ExportResultDialog extends JFrame {
-    private final ExportResult result;
+    private final ExportStatistics result;
     private final Frame parentFrame;
     private final Set<Integer> editedRows = new HashSet<>();
     private JTable warningsTable;
 
-    public ExportResultDialog(Frame parent, ExportResult result) {
+    public ExportResultDialog(Frame parent, ExportStatistics result) {
         super("Export Results");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         this.result = result;
         this.parentFrame = parent;
-        System.err.println("DEBUG ExportResultDialog: errors=" + result.errors.size()
+        System.err.println("DEBUG ExportStatisticsDialog: errors=" + result.errors.size()
                 + ", warnings=" + result.schemaWarnings.size());
         if (!result.schemaWarnings.isEmpty()) {
-            System.err.println("DEBUG ExportResultDialog: First warning: " + result.schemaWarnings.get(0).getMessage());
+            System.err.println(
+                    "DEBUG ExportStatisticsDialog: First warning: " + result.schemaWarnings.get(0).getMessage());
         }
         initializeUI();
     }

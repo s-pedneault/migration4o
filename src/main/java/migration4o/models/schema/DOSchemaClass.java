@@ -56,4 +56,19 @@ public class DOSchemaClass {
         return null;
     }
 
+    /**
+     * Sets the fields array and establishes parent links.
+     * Each field will have its parentClass set to this class.
+     */
+    public void setFields(DOSchemaField[] fields) {
+        this.fields = fields;
+        if (fields != null) {
+            for (DOSchemaField field : fields) {
+                if (field != null) {
+                    field.parentClass = this;
+                }
+            }
+        }
+    }
+
 }

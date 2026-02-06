@@ -138,7 +138,7 @@ public class DOReferenceSchemaReader {
         newClass.description = description;
         newClass.title = title;
         newClass.parentClassName = parentClassName;
-        newClass.fields = fields;
+        newClass.setFields(fields);
         newClass.schemaReferences = references;
         newClass.migrate = migrate;
         newClass.pointsTo = pointsToValue;

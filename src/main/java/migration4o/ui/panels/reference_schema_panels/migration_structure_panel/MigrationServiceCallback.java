@@ -8,9 +8,10 @@ import java.util.List;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
-import migration4o.engine.export.ExportHistory;
-import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.migration.ExportHistory;
 import migration4o.migration.MigrationExportService;
+import migration4o.migration.monitoring.ExportStatistics;
+import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
@@ -28,7 +29,7 @@ public class MigrationServiceCallback {
 
     private final MigrationExportService exportService;
     private Component parentComponent;
-    private ExportResultCallback resultCallback;
+    private ExportStatisticsCallback resultCallback;
 
     public MigrationServiceCallback(Component parentComponent) {
         this.exportService = new MigrationExportService();
@@ -38,7 +39,7 @@ public class MigrationServiceCallback {
     /**
      * Sets the callback for export results.
      */
-    public void setResultCallback(ExportResultCallback callback) {
+    public void setResultCallback(ExportStatisticsCallback callback) {
         this.resultCallback = callback;
     }
 
@@ -47,7 +48,7 @@ public class MigrationServiceCallback {
      * 
      * @return validation result with error message if invalid
      */
-    public MigrationExportService.ValidationResult validateExportPrerequisites() {
+    public ValidationResult validateExportPrerequisites() {
         return exportService.validateExportPrerequisites();
     }
 
@@ -73,17 +74,19 @@ public class MigrationServiceCallback {
         progressDialog.setVisible(true);
 
         // Run export in background
-        SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
+        SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
-            protected ExportResult doInBackground() throws Exception {
-                return exportService.exportClass(schemaClass, outputPath, progressDialog, maxObjectsPerClass);
+            protected ExportStatistics doInBackground() throws Exception {
+                List<String> classNames = new ArrayList<>();
+                classNames.add(schemaClass.source);
+                return exportService.exportClasses(classNames, outputPath, progressDialog, maxObjectsPerClass);
             }
 
             @Override
             protected void done() {
                 progressDialog.dispose();
                 try {
-                    ExportResult result = get();
+                    ExportStatistics result = get();
                     handleExportCompleted(result);
                 } catch (Exception e) {
                     handleExportError(e);
@@ -118,11 +121,11 @@ public class MigrationServiceCallback {
         progressDialog.setVisible(true);
 
         // Run export in background
-        SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
+        SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
-            protected ExportResult doInBackground() throws Exception {
-                // Use bulk export with shared tracker and object limit
-                List<ExportResult> results = exportService.exportModulesWithSharedTracker(modules, outputPath,
+            protected ExportStatistics doInBackground() throws Exception {
+                // Use exportModules which handles single or multiple modules automatically
+                ExportStatistics result = exportService.exportModules(modules, outputPath,
                         progressDialog, maxObjectsPerClass);
 
                 // Extract module names
@@ -131,27 +134,21 @@ public class MigrationServiceCallback {
                     moduleNames.add(module.getName());
                 }
 
-                // Combine results for summary
-                ExportResult combinedResult = exportService.combineExportResults(results, moduleNames, outputPath);
-
-                // Save bulk export to history if any modules succeeded
-                int successCount = (int) results.stream().filter(r -> r.errors.isEmpty()).count();
-                if (successCount > 0) {
-                    exportService.saveModuleExportHistory(
-                            moduleNames,
-                            new ArrayList<>(combinedResult.exportedClassCounts.keySet()),
-                            outputPath,
-                            maxObjectsPerClass);
+                // Save to history if successful
+                if (result.errors.isEmpty()) {
+                    String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
+                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, outputPath,
+                            new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass);
                 }
 
-                return combinedResult;
+                return result;
             }
 
             @Override
             protected void done() {
                 progressDialog.dispose();
                 try {
-                    ExportResult result = get();
+                    ExportStatistics result = get();
                     handleExportCompleted(result);
                 } catch (Exception e) {
                     handleExportError(e);
@@ -183,9 +180,9 @@ public class MigrationServiceCallback {
         progressDialog.setVisible(true);
 
         // Run export in background
-        SwingWorker<ExportResult, Void> worker = new SwingWorker<>() {
+        SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
-            protected ExportResult doInBackground() throws Exception {
+            protected ExportStatistics doInBackground() throws Exception {
                 return exportService.repeatLastExport(progressDialog);
             }
 
@@ -193,7 +190,7 @@ public class MigrationServiceCallback {
             protected void done() {
                 progressDialog.dispose();
                 try {
-                    ExportResult result = get();
+                    ExportStatistics result = get();
                     handleExportCompleted(result);
                 } catch (Exception e) {
                     handleExportError(e);
@@ -223,7 +220,7 @@ public class MigrationServiceCallback {
     /**
      * Handles successful export completion.
      */
-    private void handleExportCompleted(ExportResult result) {
+    private void handleExportCompleted(ExportStatistics result) {
         // Show result dialog
         ExportResultDialog dialog = new ExportResultDialog(getParentFrame(), result);
         dialog.setVisible(true);
@@ -258,13 +255,13 @@ public class MigrationServiceCallback {
     /**
      * Callback interface for export results.
      */
-    public interface ExportResultCallback {
+    public interface ExportStatisticsCallback {
         /**
          * Called when export completes successfully.
          * 
          * @param result the export result
          */
-        void onExportCompleted(ExportResult result);
+        void onExportCompleted(ExportStatistics result);
 
         /**
          * Called when export fails with an error.

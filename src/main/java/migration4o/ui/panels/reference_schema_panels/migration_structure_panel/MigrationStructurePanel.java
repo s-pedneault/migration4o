@@ -43,9 +43,10 @@ import javax.swing.tree.TreePath;
 import javax.swing.tree.TreeSelectionModel;
 
 import migration4o.database.DODatabaseService;
-import migration4o.engine.export.ExportHistory;
-import migration4o.engine.export.monitoring.ExportResult;
+import migration4o.migration.ExportHistory;
 import migration4o.migration.MigrationExportService;
+import migration4o.migration.monitoring.ExportStatistics;
+import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
@@ -101,7 +102,7 @@ public class MigrationStructurePanel extends JPanel {
         this.exportOrchestrator = new MigrationServiceCallback(this);
 
         // Set up export result callback
-        setupExportResultCallback();
+        setupExportStatisticsCallback();
 
         initializeUI();
         loadMigrationStructure();
@@ -112,10 +113,10 @@ public class MigrationStructurePanel extends JPanel {
      * Sets up the callback for export results to update the migration coverage
      * panel.
      */
-    private void setupExportResultCallback() {
-        exportOrchestrator.setResultCallback(new MigrationServiceCallback.ExportResultCallback() {
+    private void setupExportStatisticsCallback() {
+        exportOrchestrator.setResultCallback(new MigrationServiceCallback.ExportStatisticsCallback() {
             @Override
-            public void onExportCompleted(ExportResult result) {
+            public void onExportCompleted(ExportStatistics result) {
                 // Update migration coverage with exported object counts
                 if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
                     java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
@@ -1003,7 +1004,7 @@ public class MigrationStructurePanel extends JPanel {
      */
     private void exportClass(ClassNode classNode) {
         // Validate export prerequisites
-        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
+        ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
@@ -1074,7 +1075,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Validate prerequisites
-        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
+        ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,
@@ -1199,7 +1200,7 @@ public class MigrationStructurePanel extends JPanel {
      */
     public void repeatLastExport() {
         // Validate export prerequisites
-        MigrationExportService.ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
+        ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this,

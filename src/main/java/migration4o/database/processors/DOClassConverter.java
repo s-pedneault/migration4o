@@ -84,7 +84,7 @@ public class DOClassConverter {
         newClass.description = description;
         newClass.title = title;
         newClass.parentClassName = parentClassName;
-        newClass.fields = schemaFields;
+        newClass.setFields(schemaFields);
         newClass.schemaReferences = null; // Will be resolved later if needed
         newClass.migrate = true; // All database classes are migratable
         newClass.objectIds = objectIds;

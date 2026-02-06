@@ -1,4 +1,4 @@
-package migration4o.engine.export;
+package migration4o.migration;
 
 import java.io.*;
 import java.util.*;

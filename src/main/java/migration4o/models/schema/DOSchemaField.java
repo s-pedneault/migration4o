@@ -19,6 +19,7 @@ public class DOSchemaField {
     public Map<String, String> valueMap; // Maps database values to export values
 
     public DOSchemaClass childrenSchemaClass;
+    public DOSchemaClass parentClass; // The class that contains this field
 
     public DOSchemaField() {
     }

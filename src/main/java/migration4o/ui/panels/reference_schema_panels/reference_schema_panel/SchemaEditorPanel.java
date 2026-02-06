@@ -150,7 +150,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.description = sourceClass.description;
         newClass.title = sourceClass.title;
         newClass.parentClassName = sourceClass.parentClassName;
-        newClass.fields = sourceClass.fields != null ? sourceClass.fields.clone() : new DOSchemaField[0];
+        newClass.setFields(sourceClass.fields != null ? sourceClass.fields.clone() : new DOSchemaField[0]);
         newClass.schemaReferences = sourceClass.schemaReferences;
         newClass.migrate = sourceClass.migrate;
 
@@ -270,7 +270,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.description = targetClass.description;
         newClass.title = targetClass.title;
         newClass.parentClassName = targetClass.parentClassName;
-        newClass.fields = newFields;
+        newClass.setFields(newFields);
         newClass.schemaReferences = targetClass.schemaReferences;
         newClass.migrate = targetClass.migrate;
 
@@ -1591,7 +1591,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.description = null;
         newClass.title = null;
         newClass.parentClassName = null;
-        newClass.fields = new DOSchemaField[0];
+        newClass.setFields(new DOSchemaField[0]);
         newClass.schemaReferences = null;
         newClass.migrate = true;
 
@@ -1685,7 +1685,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.description = oldClass.description;
         newClass.title = oldClass.title;
         newClass.parentClassName = oldClass.parentClassName;
-        newClass.fields = newFields;
+        newClass.setFields(newFields);
         newClass.schemaReferences = oldClass.schemaReferences;
         newClass.migrate = oldClass.migrate;
 
