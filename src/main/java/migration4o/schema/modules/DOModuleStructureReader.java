@@ -81,8 +81,9 @@ public class DOModuleStructureReader {
      * Parses a classRef element which can be:
      * - Old format: <classRef sourceName="gest.config.ParamConfig"/>
      * - New format:
-     * <classRef sourceName="..." destinationFile="..."><criteria field="..."
-     * operator="..." value="..."/></classRef>
+     * <classRef sourceName="..." destinationFile="..." description="..."><criteria
+     * field="..."
+     * operator="..." value="..."/><unitCost priceList="..." cost="..."/></classRef>
      */
     private ClassExportConfig parseClassRef(Element classRefElement) {
         String sourceName = classRefElement.getAttribute("sourceName");
@@ -93,6 +94,11 @@ public class DOModuleStructureReader {
         String destinationFile = classRefElement.getAttribute("destinationFile");
         if (destinationFile != null && destinationFile.isEmpty()) {
             destinationFile = null; // Treat empty string as null
+        }
+
+        String description = classRefElement.getAttribute("description");
+        if (description != null && description.isEmpty()) {
+            description = null; // Treat empty string as null
         }
 
         // Parse criteria if any
@@ -110,7 +116,25 @@ public class DOModuleStructureReader {
             }
         }
 
-        ClassExportConfig config = new ClassExportConfig(sourceName, destinationFile, criteria);
+        // Parse unit costs if any
+        java.util.Map<String, Float> unitCosts = new java.util.HashMap<>();
+        NodeList unitCostNodes = classRefElement.getElementsByTagName("unitCost");
+        for (int i = 0; i < unitCostNodes.getLength(); i++) {
+            Element unitCostElement = (Element) unitCostNodes.item(i);
+            String priceList = unitCostElement.getAttribute("priceList");
+            String costStr = unitCostElement.getAttribute("cost");
+            // Empty priceList is valid (represents "Default" price list)
+            if (priceList != null && costStr != null && !costStr.isEmpty()) {
+                try {
+                    float cost = Float.parseFloat(costStr);
+                    unitCosts.put(priceList, cost);
+                } catch (NumberFormatException e) {
+                    System.err.println("Warning: Invalid cost value for price list " + priceList + ": " + costStr);
+                }
+            }
+        }
+
+        ClassExportConfig config = new ClassExportConfig(sourceName, destinationFile, criteria, description, unitCosts);
         if (!criteria.isEmpty()) {
             // System.out.println(
             // "DEBUG parseClassRef: Created config for " + sourceName + " with " +

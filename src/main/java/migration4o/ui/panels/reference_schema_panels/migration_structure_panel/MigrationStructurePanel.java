@@ -147,9 +147,25 @@ public class MigrationStructurePanel extends JPanel {
      * Called when database schema changes to refresh the UI.
      */
     public void onDatabaseSchemaChanged() {
+        // Update root node name with database folder name
+        updateRootNodeName();
+
         // Refresh trees to show updated object counts
         refreshAvailableTree();
         reloadExportTree();
+    }
+
+    /**
+     * Updates the root node name to show the database folder name.
+     */
+    private void updateRootNodeName() {
+        String databasePath = migration4o.database.DODatabaseService.getInstance().getCurrentDatabasePath();
+        if (databasePath != null && !databasePath.isEmpty()) {
+            java.io.File dbFile = new java.io.File(databasePath);
+            String folderName = dbFile.getParentFile() != null ? dbFile.getParentFile().getName() : "Database";
+            exportStructureRoot.setUserObject("Database \"" + folderName + "\"");
+            reloadExportModel();
+        }
     }
 
     private void initializeUI() {
@@ -208,7 +224,7 @@ public class MigrationStructurePanel extends JPanel {
         availableScrollPane.setBorder(BorderFactory.createTitledBorder("Available Classes"));
 
         // Create right tree table (Export structure with pricing columns)
-        exportStructureRoot = new DefaultMutableTreeNode("Migration Structure");
+        exportStructureRoot = new DefaultMutableTreeNode("Database");
         exportTreeTableModel = new ExportTreeTableModel(exportStructureRoot);
         exportTreeTable = new JXTreeTable(exportTreeTableModel);
         exportTreeTable.setFont(new Font("Monospaced", Font.PLAIN, 12));
@@ -480,6 +496,23 @@ public class MigrationStructurePanel extends JPanel {
             public void mouseReleased(MouseEvent e) {
                 if (e.isPopupTrigger()) {
                     showExportContextMenu(e);
+                }
+            }
+
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    // Double-click: open configuration dialog for class
+                    int row = exportTreeTable.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        TreePath path = exportTreeTable.getPathForRow(row);
+                        if (path != null) {
+                            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+                            if (node.getUserObject() instanceof ClassNode) {
+                                configureClassExport(node);
+                            }
+                        }
+                    }
                 }
             }
         });
@@ -834,10 +867,6 @@ public class MigrationStructurePanel extends JPanel {
                 message.append("\n→ Criteria: ").append(newConfig.getCriteria().size()).append(" filter(s)");
             }
 
-            JOptionPane.showMessageDialog(this,
-                    message.toString(),
-                    "Configuration Saved",
-                    JOptionPane.INFORMATION_MESSAGE);
         }
     }
 

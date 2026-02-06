@@ -70,13 +70,23 @@ public class DOModuleStructureWriter {
             writer.write(" destinationFile=\"" + escapeXml(config.getRawDestinationFileName()) + "\"");
         }
 
-        // If there are criteria, use child elements; otherwise self-close
-        if (config.hasCriteria()) {
+        // Add description if set
+        if (config.getDescription() != null && !config.getDescription().isEmpty()) {
+            writer.write(" description=\"" + escapeXml(config.getDescription()) + "\"");
+        }
+
+        // If there are criteria or unit costs, use child elements; otherwise self-close
+        if (config.hasCriteria() || !config.getUnitCosts().isEmpty()) {
             writer.write(">\n");
 
             // Write criteria
             for (ExportCriteria criterion : config.getCriteria()) {
                 writeCriteria(writer, criterion, indentLevel + 1);
+            }
+
+            // Write unit costs
+            for (java.util.Map.Entry<String, Float> entry : config.getUnitCosts().entrySet()) {
+                writeUnitCost(writer, entry.getKey(), entry.getValue(), indentLevel + 1);
             }
 
             writer.write(indent + "</classRef>\n");
@@ -96,6 +106,14 @@ public class DOModuleStructureWriter {
             writer.write(" value=\"" + escapeXml(criterion.getValue()) + "\"");
         }
 
+        writer.write("/>\n");
+    }
+
+    private void writeUnitCost(FileWriter writer, String priceList, Float cost, int indentLevel) throws IOException {
+        String indent = "    ".repeat(indentLevel);
+
+        writer.write(indent + "<unitCost priceList=\"" + escapeXml(priceList) + "\"");
+        writer.write(" cost=\"" + cost + "\"");
         writer.write("/>\n");
     }
 

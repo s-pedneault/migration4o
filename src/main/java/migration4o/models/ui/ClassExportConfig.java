@@ -195,6 +195,40 @@ public class ClassExportConfig {
         return true; // All criteria matched
     }
 
+    /**
+     * Counts how many objects in the given array match all criteria.
+     * 
+     * @param container Database container for accessing object data
+     * @param objectIds Array of object IDs to check
+     * @return Count of objects that match all criteria
+     */
+    public int countMatchingObjects(ExtObjectContainer container, long[] objectIds) {
+        if (objectIds == null || objectIds.length == 0) {
+            return 0;
+        }
+
+        // If no criteria, all objects match
+        if (!hasCriteria()) {
+            return objectIds.length;
+        }
+
+        int matchCount = 0;
+        for (long objectId : objectIds) {
+            try {
+                Object obj = container.ext().getByID(objectId);
+                if (obj instanceof GenericObject) {
+                    if (matchesAllCriteria(container, (GenericObject) obj)) {
+                        matchCount++;
+                    }
+                }
+            } catch (Exception e) {
+                // Skip objects that can't be loaded
+            }
+        }
+
+        return matchCount;
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder(className);

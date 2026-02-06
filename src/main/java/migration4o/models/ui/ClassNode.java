@@ -1,5 +1,8 @@
 package migration4o.models.ui;
 
+import com.db4o.ext.ExtObjectContainer;
+
+import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchemaClass;
 
 /**
@@ -9,6 +12,7 @@ import migration4o.models.schema.DOSchemaClass;
 public class ClassNode {
     private DOSchemaClass schemaClass;
     private ClassExportConfig exportConfig; // Optional export configuration
+    private Integer filteredObjectCount; // Cached filtered count
 
     public ClassNode(DOSchemaClass schemaClass) {
         this.schemaClass = schemaClass;
@@ -24,6 +28,7 @@ public class ClassNode {
 
     public void setExportConfig(ClassExportConfig exportConfig) {
         this.exportConfig = exportConfig;
+        this.filteredObjectCount = null; // Reset cached count
     }
 
     public boolean hasConfiguration() {
@@ -31,9 +36,38 @@ public class ClassNode {
                 (exportConfig.hasCustomDestination() || exportConfig.hasCriteria());
     }
 
+    /**
+     * Gets the object count, applying criteria filtering if configured.
+     * 
+     * @return The count of objects that match the export criteria, or total count
+     *         if no criteria
+     */
+    public int getObjectCount() {
+        int totalCount = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
+
+        // If no criteria or no objects, return total count
+        if (exportConfig == null || !exportConfig.hasCriteria() || totalCount == 0) {
+            return totalCount;
+        }
+
+        // Use cached filtered count if available
+        if (filteredObjectCount != null) {
+            return filteredObjectCount;
+        }
+
+        // Calculate filtered count
+        ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+        if (container != null && schemaClass.uniqueObjectIds != null) {
+            filteredObjectCount = exportConfig.countMatchingObjects(container, schemaClass.uniqueObjectIds);
+            return filteredObjectCount;
+        }
+
+        return totalCount;
+    }
+
     @Override
     public String toString() {
-        int objectCount = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
+        int objectCount = getObjectCount();
 
         StringBuilder display = new StringBuilder();
 

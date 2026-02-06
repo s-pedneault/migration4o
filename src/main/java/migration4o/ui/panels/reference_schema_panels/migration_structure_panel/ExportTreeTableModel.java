@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /**
  * TreeTableModel for displaying migration structure with pricing columns.
- * Columns: Tree (Name), Description, Unit Cost, Cost, Sub-total
+ * Columns: Tree (Name), Description, Unit Cost, Cost, Sub-total, Total
  */
 public class ExportTreeTableModel extends AbstractTreeTableModel {
 
@@ -26,7 +26,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
             "Description",
             "Unit Cost",
             "Cost",
-            "Sub-total"
+            "Sub-total",
+            "Total"
     };
 
     private static final Class<?>[] COLUMN_TYPES = {
@@ -34,7 +35,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
             String.class, // Description
             String.class, // Unit Cost (formatted as money)
             String.class, // Cost (formatted as money)
-            String.class // Sub-total (formatted as money)
+            String.class, // Sub-total (formatted as money)
+            String.class // Total (formatted as money)
     };
 
     public ExportTreeTableModel(Object root) {
@@ -125,9 +127,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                     ClassExportConfig config = classNode.getExportConfig();
                     if (config != null) {
                         float unitCost = config.getUnitCost(priceListKey);
-                        int objectCount = classNode.getSchemaClass().uniqueObjectIds != null
-                                ? classNode.getSchemaClass().uniqueObjectIds.length
-                                : 0;
+                        // Use filtered object count (applies criteria if configured)
+                        int objectCount = classNode.getObjectCount();
                         if (unitCost > 0 && objectCount > 0) {
                             float cost = unitCost * objectCount;
                             return MONEY_FORMAT.format(cost);
@@ -142,13 +143,21 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 }
                 return "";
 
+            case 5: // Total (for root node only)
+                // Only show total for the root node
+                if (treeNode == root) {
+                    return MONEY_FORMAT.format(calculateGrandTotal((DefaultMutableTreeNode) root));
+                }
+                return "";
+
             default:
                 return null;
         }
     }
 
     /**
-     * Calculate the sub-total cost for a module by summing all child class costs.
+     * Calculate the sub-total cost for a module by summing all child class costs
+     * and child module subtotals recursively.
      */
     private float calculateModuleSubtotal(DefaultMutableTreeNode moduleNode) {
         float subtotal = 0.0f;
@@ -163,17 +172,26 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 ClassExportConfig config = classNode.getExportConfig();
                 if (config != null) {
                     float unitCost = config.getUnitCost(priceListKey);
-                    int objectCount = classNode.getSchemaClass().uniqueObjectIds != null
-                            ? classNode.getSchemaClass().uniqueObjectIds.length
-                            : 0;
+                    // Use filtered object count (applies criteria if configured)
+                    int objectCount = classNode.getObjectCount();
                     if (unitCost > 0 && objectCount > 0) {
                         subtotal += unitCost * objectCount;
                     }
                 }
+            } else if (userObject instanceof ModuleNode) {
+                // Recursively add child module subtotals
+                subtotal += calculateModuleSubtotal(childNode);
             }
         }
 
         return subtotal;
+    }
+
+    /**
+     * Calculate the grand total cost for the entire tree.
+     */
+    private float calculateGrandTotal(DefaultMutableTreeNode rootNode) {
+        return calculateModuleSubtotal(rootNode);
     }
 
     @Override
