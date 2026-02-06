@@ -53,10 +53,28 @@ public class DOReferenceDetector {
                 // 1. Check direct field type references (non-primitive, non-collection)
                 if (field.type != null && !field.isCollection) {
                     DOSchemaClass typeClass = findClass(classMap, field.type);
-                    if (typeClass != null && isEntityType(field.type)) {
-                        // Direct reference to an entity class
-                        addReference(referencesMap, fieldContexts, typeClass.source,
-                                schemaClass, field);
+                    if (typeClass != null) {
+                        if (typeClass.isIDEntite(schema)) {
+                            // Field type is an IDEntite pointer - add reference to BOTH the pointer class
+                            // AND the concrete class
+                            // Add reference to the IDEntite pointer class itself
+                            addReference(referencesMap, fieldContexts, typeClass.source,
+                                    schemaClass, field);
+
+                            // Add reference to the concrete class it points to
+                            String pointsTo = typeClass.pointsTo;
+                            if (pointsTo != null && !pointsTo.isEmpty()) {
+                                DOSchemaClass targetClass = findClass(classMap, pointsTo);
+                                if (targetClass != null) {
+                                    addReference(referencesMap, fieldContexts, targetClass.source,
+                                            schemaClass, field);
+                                }
+                            }
+                        } else if (isEntityType(field.type)) {
+                            // Direct reference to a concrete entity class
+                            addReference(referencesMap, fieldContexts, typeClass.source,
+                                    schemaClass, field);
+                        }
                     }
                 }
 
@@ -66,7 +84,13 @@ public class DOReferenceDetector {
 
                     if (childrenClass != null) {
                         if (childrenClass.isIDEntite(schema)) {
-                            // Indirect reference through IDEntite with pointsTo
+                            // Collection of IDEntite pointers - add reference to BOTH the pointer class AND
+                            // the concrete class
+                            // Add reference to the IDEntite pointer class itself
+                            addReference(referencesMap, fieldContexts, childrenClass.source,
+                                    schemaClass, field);
+
+                            // Add reference to the concrete class it points to
                             String pointsTo = childrenClass.pointsTo;
                             if (pointsTo != null && !pointsTo.isEmpty()) {
                                 DOSchemaClass targetClass = findClass(classMap, pointsTo);
