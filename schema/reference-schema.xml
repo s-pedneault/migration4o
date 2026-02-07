@@ -3,7 +3,7 @@
     <fields>
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
-        <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string"/>
+        <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDescription" destinationName="description" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDateCreation" destinationName="dateCreation" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -4242,7 +4242,7 @@
         <field source="mCodeRAO" destinationName="codeRAO" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mInactif" definition="mInactif" />
         <field source="mNom" definition="mNom" />
-        <field source="mNotes" definition="mNote"  />
+        <field source="mNotes" definition="mNote" />
         <field source="mQteReservoir" destinationName="qteReservoir" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" />
         <field source="mQteVidage" destinationName="qteVidage" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" />
         <field source="mVectCompartiment" destinationName="vectCompartiment" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" childrenType="gest.vehicule.Compartiment" />
@@ -4578,7 +4578,7 @@
         <field source="mDateCreation" destinationName="mDateCreation" isExported="true" skipWhen="NULL,MINUS_ONE" type="date" />
         <field source="mIDTypeMaint" destinationName="mIDTypeMaint" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDTypeMaintBorne" />
         <field source="mDetail" definition="mDetail" />
-        <field source="mVectPJ" destinatiodefinition="mVectPhotoFich" />
+        <field source="mVectPJ" definition="mVectPhotoFich" />
         <field source="mCoutMaint" destinationName="mCoutMaint" isExported="true" skipWhen="NULL,MINUS_ONE" type="double" />
         <field source="mRefComptable" destinationName="mRefComptable" isExported="true" skipWhen="NULL,MINUS_ONE" type="string" />
         <field source="mIDCaserne" definition="mIDCaserne" />
