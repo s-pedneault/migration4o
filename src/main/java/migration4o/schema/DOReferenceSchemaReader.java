@@ -42,13 +42,22 @@ public class DOReferenceSchemaReader {
                 throw new RuntimeException("Invalid schema file: root element must be 'classes'");
             }
 
+            // Parse shared field definitions first
+            DOSchema schema = new DOSchema(new DOSchemaClass[0], new DOSchemaClass[0]);
+            parseSharedFields(root, schema);
+
             // Parse all classes directly from root
-            DOSchemaClass[] allClasses = parseClassesFromRoot(root);
+            DOSchemaClass[] allClasses = parseClassesFromRoot(root, schema);
 
             // No foundation classes in new format
             DOSchemaClass[] foundationClasses = new DOSchemaClass[0];
 
-            DOSchema schema = new DOSchema(allClasses, foundationClasses);
+            // Update schema with parsed classes
+            schema = new DOSchema(allClasses, foundationClasses);
+
+            // Restore shared fields (they were lost when creating new schema)
+            DOSchema tempSchema = schema;
+            parseSharedFields(root, tempSchema);
 
             // Post-process: detect and add missing references (e.g., IDEntite collections)
             DOReferenceDetector.detectAndAddReferences(schema);
@@ -68,7 +77,36 @@ public class DOReferenceSchemaReader {
         }
     }
 
-    private DOSchemaClass[] parseClassesFromRoot(Element root) {
+    private void parseSharedFields(Element root, DOSchema schema) {
+        // Look for <fields> element at root level
+        NodeList fieldsNodes = root.getElementsByTagName("fields");
+        if (fieldsNodes.getLength() == 0) {
+            return; // No shared fields defined
+        }
+
+        Element fieldsElement = (Element) fieldsNodes.item(0);
+        // Only process if it's a direct child of root
+        if (fieldsElement.getParentNode() != root) {
+            return;
+        }
+
+        // Parse all field definitions
+        NodeList fieldNodes = fieldsElement.getElementsByTagName("field");
+        for (int i = 0; i < fieldNodes.getLength(); i++) {
+            Element fieldElement = (Element) fieldNodes.item(i);
+            // Only parse direct child fields
+            if (fieldElement.getParentNode() == fieldsElement) {
+                DOSchemaField field = parseField(fieldElement);
+                // Use source attribute as the key for shared field definitions
+                if (field.source != null && !field.source.trim().isEmpty()) {
+                    field.definitionId = field.source; // Mark as shared field definition
+                    schema.addSharedField(field.source, field);
+                }
+            }
+        }
+    }
+
+    private DOSchemaClass[] parseClassesFromRoot(Element root, DOSchema schema) {
         List<DOSchemaClass> classList = new ArrayList<>();
 
         NodeList classNodes = root.getElementsByTagName("class");
@@ -76,14 +114,14 @@ public class DOReferenceSchemaReader {
             Element classElement = (Element) classNodes.item(i);
             // Only parse direct child classes, not nested ones
             if (classElement.getParentNode() == root) {
-                classList.add(parseClass(classElement));
+                classList.add(parseClass(classElement, schema));
             }
         }
 
         return classList.toArray(new DOSchemaClass[0]);
     }
 
-    private DOSchemaClass parseClass(Element classElement) {
+    private DOSchemaClass parseClass(Element classElement, DOSchema schema) {
         // New format uses 'source' instead of 'name'
         String absoluteName = classElement.getAttribute("source");
         String destinationName = classElement.getAttribute("destinationName");
@@ -109,7 +147,10 @@ public class DOReferenceSchemaReader {
             Element fieldElement = (Element) fieldNodes.item(i);
             // Only parse direct child fields, not nested ones
             if (fieldElement.getParentNode() == classElement) {
-                fieldList.add(parseField(fieldElement));
+                DOSchemaField field = parseFieldOrReference(fieldElement, schema);
+                if (field != null) {
+                    fieldList.add(field);
+                }
             }
         }
 
@@ -141,6 +182,42 @@ public class DOReferenceSchemaReader {
         newClass.migrate = migrate;
         newClass.pointsTo = pointsToValue;
         return newClass;
+    }
+
+    /**
+     * Parse a field element which could be either a full field definition or a
+     * reference to a shared field.
+     * If it's a reference (has 'definition' attribute), resolve it from the
+     * schema's shared fields.
+     */
+    private DOSchemaField parseFieldOrReference(Element fieldElement, DOSchema schema) {
+        String definitionRef = fieldElement.getAttribute("definition");
+
+        // Check if this is a reference to a shared field
+        if (definitionRef != null && !definitionRef.trim().isEmpty()) {
+            // This is a field reference - resolve from shared fields
+            DOSchemaField sharedField = schema.getSharedField(definitionRef);
+            if (sharedField == null) {
+                System.err.println("Warning: Shared field definition not found: " + definitionRef);
+                return null;
+            }
+
+            // Create a copy of the shared field
+            DOSchemaField field = sharedField.copy();
+            field.definitionId = definitionRef; // Keep the reference ID
+
+            // CRITICAL: Use the source from THIS element, not from the shared definition
+            // This allows the actual field name to vary per class (e.g., mID vs mIDEntite)
+            String classSpecificSource = fieldElement.getAttribute("source");
+            if (classSpecificSource != null && !classSpecificSource.trim().isEmpty()) {
+                field.source = classSpecificSource;
+            }
+
+            return field;
+        }
+
+        // Not a reference - parse as regular field
+        return parseField(fieldElement);
     }
 
     private DOSchemaField parseField(Element fieldElement) {

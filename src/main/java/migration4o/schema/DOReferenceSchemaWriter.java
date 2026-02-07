@@ -28,6 +28,15 @@ public class DOReferenceSchemaWriter {
             writer.write("<?xml version='1.0' encoding='UTF-8'?>\n");
             writer.write("<classes>\n");
 
+            // Write shared field definitions first if any exist
+            if (schema.getSharedFields() != null && !schema.getSharedFields().isEmpty()) {
+                writer.write("    <fields>\n");
+                for (java.util.Map.Entry<String, DOSchemaField> entry : schema.getSharedFields().entrySet()) {
+                    writeSharedField(writer, entry.getKey(), entry.getValue(), 2);
+                }
+                writer.write("    </fields>\n");
+            }
+
             // Write classes in their original order (do NOT sort)
             if (schema.getClasses() != null) {
                 for (DOSchemaClass schemaClass : schema.getClasses()) {
@@ -36,6 +45,70 @@ public class DOReferenceSchemaWriter {
             }
 
             writer.write("</classes>\n");
+        }
+    }
+
+    /**
+     * Write a shared field definition (source attribute is the key).
+     */
+    private void writeSharedField(FileWriter writer, String definitionId, DOSchemaField field, int indentLevel)
+            throws IOException {
+        String indent = getIndent(indentLevel);
+
+        writer.write(indent + "<field");
+
+        // Write all field attributes (source is used as the definition key)
+        if (field.source != null && !field.source.isEmpty()) {
+            writeAttribute(writer, "source", field.source);
+        }
+        if (field.destinationName != null && !field.destinationName.isEmpty()) {
+            writeAttribute(writer, "destinationName", field.destinationName);
+        }
+        writeAttribute(writer, "isExported", String.valueOf(field.isExported));
+
+        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
+            writeAttribute(writer, "skipWhen", field.skipWhen);
+        }
+
+        if (field.type != null && !field.type.isEmpty()) {
+            writeAttribute(writer, "type", field.type);
+        }
+
+        if (field.isCollection) {
+            writeAttribute(writer, "collection", "true");
+        }
+
+        if (field.embedContents) {
+            writeAttribute(writer, "embedContents", "true");
+        }
+
+        if (field.childrenType != null && !field.childrenType.isEmpty()) {
+            writeAttribute(writer, "childrenType", field.childrenType);
+        }
+
+        if (field.pointsTo != null && !field.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", field.pointsTo);
+        }
+
+        if (field.title != null && !field.title.isEmpty()) {
+            writeAttribute(writer, "title", field.title);
+        }
+
+        if (field.description != null && !field.description.isEmpty()) {
+            writeAttribute(writer, "description", field.description);
+        }
+
+        // Check if we have child elements (valueMap)
+        boolean hasChildren = field.valueMap != null && !field.valueMap.isEmpty();
+
+        if (hasChildren) {
+            writer.write(">\n");
+            if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                writeValueMap(writer, field.valueMap, indentLevel + 1);
+            }
+            writer.write(indent + "</field>\n");
+        } else {
+            writer.write(" />\n");
         }
     }
 
@@ -96,6 +169,16 @@ public class DOReferenceSchemaWriter {
     private void writeField(FileWriter writer, DOSchemaField field, int indentLevel) throws IOException {
         String indent = getIndent(indentLevel);
 
+        // If this is a reference to a shared field, write source and definition
+        if (field.isSharedField()) {
+            writer.write(indent + "<field");
+            writeAttribute(writer, "source", field.source);
+            writeAttribute(writer, "definition", field.definitionId);
+            writer.write(" />\n");
+            return;
+        }
+
+        // Otherwise write the full field definition
         writer.write(indent + "<field");
 
         // If field has source, use source and destinationName attributes

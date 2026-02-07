@@ -27,6 +27,7 @@ import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -499,6 +500,9 @@ public class SchemaEditorPanel extends JPanel {
                 fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new SchemaTypeRenderer(schema));
             } else if (fieldColumns[i].name.equals("Collection")) {
                 fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new CollectionRenderer());
+            } else if (fieldColumns[i].name.equals("Source") || fieldColumns[i].name.equals("Destination")) {
+                // Highlight shared fields
+                fieldsTable.getColumnModel().getColumn(i).setCellRenderer(new SharedFieldRenderer());
             }
         }
 
@@ -1397,6 +1401,44 @@ public class SchemaEditorPanel extends JPanel {
                 }
             }
             return -1;
+        }
+    }
+
+    /**
+     * Renderer that highlights shared fields with a light blue background.
+     */
+    private class SharedFieldRenderer extends DefaultTableCellRenderer {
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value,
+                boolean isSelected, boolean hasFocus, int row, int column) {
+
+            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            // Check if this field is a shared field reference
+            if (row >= 0 && row < fieldsTableModel.getRowCount() && currentSelectedNode != null &&
+                    currentSelectedNode.getNodeType() == NodeType.CLASS) {
+                DOSchemaClass schemaClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
+                if (schemaClass.fields != null && row < schemaClass.fields.length) {
+                    DOSchemaField field = schemaClass.fields[row];
+                    if (field.isSharedField()) {
+                        if (!isSelected) {
+                            c.setBackground(new Color(200, 220, 255)); // Light blue for shared fields
+                        } else {
+                            c.setBackground(table.getSelectionBackground());
+                        }
+                        setToolTipText("Shared field definition: " + field.definitionId);
+                    } else {
+                        if (!isSelected) {
+                            c.setBackground(table.getBackground());
+                        } else {
+                            c.setBackground(table.getSelectionBackground());
+                        }
+                        setToolTipText(null);
+                    }
+                }
+            }
+
+            return c;
         }
     }
 

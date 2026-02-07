@@ -51,11 +51,13 @@ public class FieldEditorDialog extends JDialog {
     private boolean okClicked = false;
     private boolean deleted = false;
     private String classToCreate = null;
+    private String originalFieldDefinitionId = null; // Stores the shared field ID if this is a shared field
 
     public FieldEditorDialog(Frame owner, DOSchema schema, DOSchemaField field, boolean isNewField) {
         super(owner, isNewField ? "Add Field" : "Edit Field", true);
         this.schema = schema;
         this.isNewField = isNewField;
+        this.originalFieldDefinitionId = field.definitionId; // Store original shared field ID if any
 
         setLayout(new BorderLayout(10, 10));
 
@@ -250,6 +252,35 @@ public class FieldEditorDialog extends JDialog {
         gbc.gridy = 0;
         gbc.anchor = GridBagConstraints.NORTHWEST;
         gbc.insets = new Insets(5, 10, 5, 10);
+
+        // Add shared field warning banner if this is a shared field
+        DOSchemaField currentField = getCurrentFieldFromForm();
+        if (currentField != null && currentField.isSharedField()) {
+            JPanel warningPanel = new JPanel(new BorderLayout(10, 0));
+            warningPanel.setBackground(new Color(200, 220, 255));
+            warningPanel.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(new Color(100, 150, 255), 2),
+                    BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+
+            JLabel iconLabel = new JLabel("ℹ");
+            iconLabel.setFont(new Font("Dialog", Font.BOLD, 20));
+            iconLabel.setForeground(new Color(50, 100, 200));
+            warningPanel.add(iconLabel, BorderLayout.WEST);
+
+            JLabel messageLabel = new JLabel("<html><b>Shared Field Definition:</b> " + currentField.definitionId +
+                    "<br>Changes made here will affect all classes using this shared field.</html>");
+            messageLabel.setFont(new Font("Dialog", Font.PLAIN, 12));
+            warningPanel.add(messageLabel, BorderLayout.CENTER);
+
+            gbc.gridwidth = 2;
+            gbc.fill = GridBagConstraints.HORIZONTAL;
+            gbc.weightx = 1.0;
+            innerPanel.add(warningPanel, gbc);
+            gbc.gridy++;
+            gbc.gridwidth = 1;
+            gbc.fill = GridBagConstraints.NONE;
+            gbc.weightx = 0.0;
+        }
 
         // Add fields in order
         addFormRow(innerPanel, gbc, "Source:", sourceField);
@@ -609,6 +640,28 @@ public class FieldEditorDialog extends JDialog {
             }
         }
         return mappings.isEmpty() ? null : mappings;
+    }
+
+    /**
+     * Helper method to get current field state from form (used for checking if
+     * shared field).
+     */
+    private DOSchemaField getCurrentFieldFromForm() {
+        DOSchemaField field = new DOSchemaField();
+        field.source = getFieldSource();
+        field.destinationName = getFieldDestination();
+        field.type = getFieldType();
+        field.isExported = isFieldExported();
+        field.skipWhen = getFieldSkipWhen();
+        field.isCollection = isFieldCollection();
+        field.embedContents = isFieldEmbedContents();
+        field.childrenType = getFieldChildrenType();
+        field.title = getFieldTitle();
+        field.description = getFieldDescription();
+        field.pointsTo = getFieldPointsTo();
+        field.valueMap = getValueMappings();
+        field.definitionId = originalFieldDefinitionId; // Preserve the shared field ID
+        return field;
     }
 
     /**
