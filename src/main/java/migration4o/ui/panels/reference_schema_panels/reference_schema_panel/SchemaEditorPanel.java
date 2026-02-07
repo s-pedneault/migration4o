@@ -72,6 +72,7 @@ public class SchemaEditorPanel extends JPanel {
     private JLabel statusLabel;
     private SchemaAnomaliesPanel anomaliesPanel;
     private SchemaTreeNode currentSelectedNode;
+    private JTextField searchField;
     private String currentFilter = "";
     private boolean showOnlyErrors = false;
     private boolean groupByPackage = false;
@@ -171,12 +172,24 @@ public class SchemaEditorPanel extends JPanel {
         buildTree();
 
         // Find and select the new class in the tree
-        selectClassByName(className);
+        clearSearchAndSelectClass(className);
 
         markModified();
 
         setStatus("Added class: " + className + " with " +
                 (sourceClass.fields != null ? sourceClass.fields.length : 0) + " field(s)");
+    }
+
+    /**
+     * Clear the search filter and select a class by name.
+     * Used after adding classes or fields to ensure they're visible.
+     */
+    private void clearSearchAndSelectClass(String className) {
+        if (searchField != null && !searchField.getText().isEmpty()) {
+            searchField.setText("");
+            // The document listener will trigger filterTree("") automatically
+        }
+        selectClassByName(className);
     }
 
     /**
@@ -265,7 +278,8 @@ public class SchemaEditorPanel extends JPanel {
         DOSchemaField[] oldFields = targetClass.fields != null ? targetClass.fields : new DOSchemaField[0];
         DOSchemaField[] newFields = new DOSchemaField[oldFields.length + 1];
         System.arraycopy(oldFields, 0, newFields, 0, oldFields.length);
-        newFields[oldFields.length] = field;
+        // Convert to common field reference if one exists
+        newFields[oldFields.length] = SchemaUtil.convertToCommonFieldIfExists(field, schema);
 
         // Create new class with updated fields
         DOSchemaClass newClass = new DOSchemaClass();
@@ -285,7 +299,7 @@ public class SchemaEditorPanel extends JPanel {
         buildTree();
 
         // Find and select the class to show the new field
-        selectClassByName(targetClass.source);
+        clearSearchAndSelectClass(targetClass.source);
 
         markModified();
 
@@ -404,7 +418,7 @@ public class SchemaEditorPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createEmptyBorder(5, 5, 5, 5));
 
-        JTextField searchField = new JTextField();
+        searchField = new JTextField();
         searchField.putClientProperty("JTextField.placeholderText", "Filter classes...");
 
         // Add document listener to filter as user types
@@ -1617,11 +1631,13 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
 
-            // Update fields not shown in the table (title, description, pointsTo, valueMap)
+            // Update fields not shown in the table (title, description, pointsTo, valueMap,
+            // definitionId)
             field.title = dialog.getFieldTitle();
             field.description = dialog.getFieldDescription();
             field.pointsTo = dialog.getFieldPointsTo();
             field.valueMap = dialog.getValueMappings();
+            field.definitionId = dialog.getFieldDefinitionId();
 
             // Rebuild the class with the updated fields
             rebuildCurrentClassFields();
@@ -1715,12 +1731,14 @@ public class SchemaEditorPanel extends JPanel {
             String title = null;
             String description = null;
             String pointsTo = null;
+            String definitionId = null;
             java.util.Map<String, String> valueMap = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
             if (originalField != null) {
                 title = originalField.title;
                 description = originalField.description;
                 pointsTo = originalField.pointsTo;
+                definitionId = originalField.definitionId;
                 valueMap = originalField.valueMap;
             }
 
@@ -1736,6 +1754,7 @@ public class SchemaEditorPanel extends JPanel {
             field.title = title;
             field.description = description;
             field.pointsTo = pointsTo;
+            field.definitionId = definitionId;
             field.valueMap = valueMap;
             field.childrenSchemaClass = null;
             newFields[i] = field;

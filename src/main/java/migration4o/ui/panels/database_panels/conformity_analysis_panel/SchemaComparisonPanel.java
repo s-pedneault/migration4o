@@ -73,11 +73,13 @@ public class SchemaComparisonPanel extends JPanel {
     private JRadioButton showAllClassesRadio;
     private JRadioButton showMissingFromSchemaRadio;
     private JRadioButton showOnlyInSchemaRadio;
+    private JRadioButton showClassesWithMissingFieldsRadio;
 
     private enum FilterMode {
         ALL_CLASSES,
         MISSING_FROM_SCHEMA, // In database but not in reference
-        ONLY_IN_SCHEMA // In reference but not in database
+        ONLY_IN_SCHEMA, // In reference but not in database
+        CLASSES_WITH_MISSING_FIELDS // In both schemas but has fields missing from reference
     }
 
     private FilterMode currentFilterMode = FilterMode.ALL_CLASSES;
@@ -303,6 +305,16 @@ public class SchemaComparisonPanel extends JPanel {
         filterModeGroup.add(showOnlyInSchemaRadio);
         searchPanel.add(showOnlyInSchemaRadio);
 
+        showClassesWithMissingFieldsRadio = new JRadioButton("With missing fields");
+        showClassesWithMissingFieldsRadio
+                .setToolTipText("Show only classes that exist in both schemas but have fields missing from reference");
+        showClassesWithMissingFieldsRadio.addActionListener(e -> {
+            currentFilterMode = FilterMode.CLASSES_WITH_MISSING_FIELDS;
+            buildTrees();
+        });
+        filterModeGroup.add(showClassesWithMissingFieldsRadio);
+        searchPanel.add(showClassesWithMissingFieldsRadio);
+
         topSection.add(searchPanel, BorderLayout.CENTER);
 
         panel.add(topSection, BorderLayout.NORTH);
@@ -396,6 +408,17 @@ public class SchemaComparisonPanel extends JPanel {
             case ONLY_IN_SCHEMA:
                 // Show only classes in reference but not in database (compared)
                 if (!diff.isOnlyInReference()) {
+                    return false;
+                }
+                break;
+            case CLASSES_WITH_MISSING_FIELDS:
+                // Show only classes that exist in both schemas but have fields missing from
+                // reference
+                if (diff.isOnlyInCompared() || diff.isOnlyInReference()) {
+                    return false;
+                }
+                // Check if there are any fields only in compared schema
+                if (diff.getFieldsOnlyInCompared().isEmpty()) {
                     return false;
                 }
                 break;
@@ -792,6 +815,31 @@ public class SchemaComparisonPanel extends JPanel {
             buttonsPanel.setLayout(new BoxLayout(buttonsPanel, BoxLayout.Y_AXIS));
             buttonsPanel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
 
+            // Add "Add all fields" button at the top
+            JButton addAllButton = new JButton(
+                    "Add all " + missingFieldNames.size() + " fields to " + comparison.getReferenceLabel());
+            addAllButton.setAlignmentX(Component.LEFT_ALIGNMENT);
+            addAllButton.setFont(addAllButton.getFont().deriveFont(Font.BOLD));
+            addAllButton.addActionListener(e -> {
+                for (DOSchemaField field : fields) {
+                    if (missingFieldNames.contains(field.source)) {
+                        onAddField.accept(diff.getReferenceClass(), field);
+                    }
+                }
+                setStatus(missingFieldNames.size() + " fields added - remember to save schema");
+
+                // Refresh comparison
+                SchemaComparison newComparison = new SchemaComparison(
+                        comparison.getReferenceSchema(),
+                        comparison.getReferenceLabel(),
+                        comparison.getComparedSchema(),
+                        comparison.getComparedLabel());
+                updateComparison(newComparison);
+            });
+            buttonsPanel.add(addAllButton);
+            buttonsPanel.add(Box.createRigidArea(new Dimension(0, 10))); // Extra spacing after the batch button
+
+            // Add individual field buttons
             for (DOSchemaField field : fields) {
                 if (missingFieldNames.contains(field.source)) {
                     JButton addButton = new JButton(
@@ -814,7 +862,10 @@ public class SchemaComparisonPanel extends JPanel {
                 }
             }
 
-            panel.add(new JScrollPane(buttonsPanel), BorderLayout.SOUTH);
+            JScrollPane buttonsScrollPane = new JScrollPane(buttonsPanel);
+            buttonsScrollPane.setPreferredSize(new Dimension(0, 200)); // Fixed height to always show top buttons
+            buttonsScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+            panel.add(buttonsScrollPane, BorderLayout.SOUTH);
         }
 
         return panel;

@@ -506,6 +506,25 @@ public class FieldEditorDialog extends JDialog {
     private JPanel createButtonPanel() {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
+        // Link/Unlink common field buttons
+        if (!isNewField) {
+            DOSchemaField currentField = getCurrentFieldFromForm();
+            if (currentField.isSharedField()) {
+                // Field is linked - show unlink button
+                JButton unlinkButton = new JButton("Unlink from Common Field");
+                unlinkButton.setToolTipText("Import common field properties into this class");
+                unlinkButton.addActionListener(e -> unlinkFromCommonField());
+                buttonPanel.add(unlinkButton);
+            } else if (schema != null && schema.sharedFields != null &&
+                    schema.sharedFields.containsKey(sourceField.getText())) {
+                // Field is not linked but a common field exists - show link button
+                JButton linkButton = new JButton("Link to Common Field");
+                linkButton.setToolTipText("Use shared field definition");
+                linkButton.addActionListener(e -> linkToCommonField());
+                buttonPanel.add(linkButton);
+            }
+        }
+
         JButton okButton = new JButton("OK");
         okButton.addActionListener(e -> {
             okClicked = true;
@@ -539,6 +558,128 @@ public class FieldEditorDialog extends JDialog {
         buttonPanel.add(cancelButton);
 
         return buttonPanel;
+    }
+
+    private void linkToCommonField() {
+        String fieldName = sourceField.getText();
+        DOSchemaField commonField = schema.sharedFields.get(fieldName);
+
+        if (commonField == null) {
+            JOptionPane.showMessageDialog(this,
+                    "No common field definition found for '" + fieldName + "'.",
+                    "Link Failed",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Confirm with user
+        int result = JOptionPane.showConfirmDialog(this,
+                "Link this field to the common field definition '" + fieldName + "'?\n\n" +
+                        "The field will inherit all properties from the shared definition.\n" +
+                        "Any custom properties in this field will be replaced.",
+                "Confirm Link",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (result != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Copy all properties from common field
+        destField.setText(commonField.destinationName != null ? commonField.destinationName : "");
+        typeLabel.setText(commonField.type != null ? commonField.type : "");
+        pointsToLabel.setText(commonField.pointsTo != null ? commonField.pointsTo : "");
+        exportedCheckBox.setSelected(commonField.isExported);
+        embedContentsCheckBox.setSelected(commonField.embedContents);
+        collectionCheckBox.setSelected(commonField.isCollection);
+        childrenTypeLabel.setText(commonField.childrenType != null ? commonField.childrenType : "");
+        titleField.setText(commonField.title != null ? commonField.title : "");
+        descField.setText(commonField.description != null ? commonField.description : "");
+
+        // Parse and set skipWhen checkboxes
+        skipWhenNull.setSelected(false);
+        skipWhenZero.setSelected(false);
+        skipWhenMinusOne.setSelected(false);
+        skipWhenEmptyString.setSelected(false);
+        skipWhenEmptyCollection.setSelected(false);
+        skipWhenFalse.setSelected(false);
+        skipWhenDefault.setSelected(false);
+
+        if (commonField.skipWhen != null && !commonField.skipWhen.trim().isEmpty()) {
+            String[] keywords = commonField.skipWhen.split(",");
+            for (String keyword : keywords) {
+                String trimmed = keyword.trim();
+                switch (trimmed) {
+                    case "NULL":
+                        skipWhenNull.setSelected(true);
+                        break;
+                    case "ZERO":
+                        skipWhenZero.setSelected(true);
+                        break;
+                    case "MINUS_ONE":
+                        skipWhenMinusOne.setSelected(true);
+                        break;
+                    case "EMPTY_STRING":
+                        skipWhenEmptyString.setSelected(true);
+                        break;
+                    case "EMPTY_COLLECTION":
+                        skipWhenEmptyCollection.setSelected(true);
+                        break;
+                    case "FALSE":
+                        skipWhenFalse.setSelected(true);
+                        break;
+                    case "DEFAULT":
+                        skipWhenDefault.setSelected(true);
+                        break;
+                }
+            }
+        }
+
+        // Set the definition ID to mark as shared field
+        originalFieldDefinitionId = fieldName;
+
+        // Rebuild form to show shared field banner
+        rebuildForm();
+
+        JOptionPane.showMessageDialog(this,
+                "Field linked to common definition '" + fieldName + "'.\n" +
+                        "Click OK to save changes.",
+                "Link Successful",
+                JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    private void unlinkFromCommonField() {
+        String definitionId = originalFieldDefinitionId;
+
+        if (definitionId == null) {
+            return;
+        }
+
+        // Confirm with user
+        int result = JOptionPane.showConfirmDialog(this,
+                "Unlink this field from common definition '" + definitionId + "'?\n\n" +
+                        "The current properties will be imported into this class's field definition.\n" +
+                        "Future changes to the common field will no longer affect this field.",
+                "Confirm Unlink",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+
+        if (result != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        // Clear the definition ID to unlink
+        originalFieldDefinitionId = null;
+
+        // Rebuild form to hide shared field banner
+        rebuildForm();
+
+        JOptionPane.showMessageDialog(this,
+                "Field unlinked from common definition.\n" +
+                        "The field now has its own independent definition.\n" +
+                        "Click OK to save changes.",
+                "Unlink Successful",
+                JOptionPane.INFORMATION_MESSAGE);
     }
 
     public boolean isOkClicked() {
@@ -651,6 +792,16 @@ public class FieldEditorDialog extends JDialog {
      */
     public String getClassToCreate() {
         return classToCreate;
+    }
+
+    /**
+     * Get the field definition ID (for shared field references).
+     * 
+     * @return the definition ID if this field is linked to a common field, null
+     *         otherwise
+     */
+    public String getFieldDefinitionId() {
+        return originalFieldDefinitionId;
     }
 
     /**
