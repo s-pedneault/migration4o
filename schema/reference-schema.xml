@@ -376,10 +376,12 @@
     </class>
     <class source="gest.borne.IDNivPriorite" destinationName="idNivPriorite" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.NivPriorite">
         <reference class="gest.borne.AnomBorne" field="mIDNivPriorite" />
+        <reference class="gest.borne.MaintBorne" field="mPriorite" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
     <class source="gest.borne.IDTypeMaintBorne" destinationName="idMaintBorne" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.TypeMaintBorne">
         <reference class="gest.borne.BornePer" field="mIDTypeMaintBorne" />
+        <reference class="gest.borne.MaintBorne" field="mIDTypeMaint" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
     <class source="gest.borne.ModeleBorne" destinationName="ModeleBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -400,6 +402,7 @@
     </class>
     <class source="gest.borne.NivPriorite" destinationName="NiveauPriorite" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.AnomBorne" field="mIDNivPriorite" />
+        <reference class="gest.borne.MaintBorne" field="mPriorite" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mCouleur" destinationName="couleur" isExported="true" skipWhen="DEFAULT" type="java.awt.Color" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -429,6 +432,7 @@
     </class>
     <class source="gest.borne.TypeMaintBorne" destinationName="TypeMaintenanceBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.BornePer" field="mIDTypeMaintBorne" />
+        <reference class="gest.borne.MaintBorne" field="mIDTypeMaint" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -487,6 +491,7 @@
         <reference class="gest.quart.Quart" field="mIDCaserne" />
         <reference class="gest.rci.Rci" field="mIDCaserne" />
         <reference class="gest.vehicule.Vehicule" field="mIDCaserne" />
+        <reference class="gest.borne.MaintBorne" field="mIDCaserne" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipWhen="DEFAULT" type="gest.gen.Adresse" />
         <field source="mInactif" destinationName="inactif" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -516,6 +521,7 @@
         <reference class="gest.intervention.Intervention" field="mIDCaserne" />
         <reference class="gest.horaire.Horaire" field="mIDCaserne" />
         <reference class="gest.maintenance.Maintenance" field="mVectIDCaserne" />
+        <reference class="gest.borne.MaintBorne" field="mIDCaserne" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
     <class source="gest.cauca.ParamCauca" destinationName="ParamCauca" isExported="true" title="Paramètres CAUCA" parentClass="gest.gen.EntiteParam">
@@ -1204,6 +1210,9 @@
         <reference class="gest.rci.Rci" field="mIDVerificateur" />
         <reference class="gest.rci.Saisie" field="mSaisissant" />
         <reference class="gest.secCiv.RessSecCiv" field="mIDEmploye" />
+        <reference class="gest.borne.MaintBorne" field="mIDAuteur" />
+        <reference class="gest.borne.MaintBorne" field="mIDResponsable" />
+        <reference class="gest.borne.MaintBorne" field="mIDAssigneA" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
         <field source="mAdresse" destinationName="adresse" isExported="true" skipWhen="DEFAULT" type="gest.gen.Adresse" />
         <field source="mCell" destinationName="cellulaire" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -1337,6 +1346,9 @@
         <reference class="gest.horaire.ModeleHoraire" field="mVectIDProf" />
         <reference class="gest.maintenance.Maintenance" field="mVectIDEmploye" />
         <reference class="gest.utilGroupe.DroitPourUtilisateurs" field="mVectIDEmploye" />
+        <reference class="gest.borne.MaintBorne" field="mIDAuteur" />
+        <reference class="gest.borne.MaintBorne" field="mIDResponsable" />
+        <reference class="gest.borne.MaintBorne" field="mIDAssigneA" />
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
     <class source="gest.equipe.Equipe" destinationName="Equipe" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -1947,6 +1959,7 @@
         <reference class="gest.secCiv.RessSecCiv" field="mVectPJ" />
         <reference class="gest.secCiv.Sinistre" field="mVectPhotoFich" />
         <reference class="gest.vehicule.Vehicule" field="mVectPhotoFich" />
+        <reference class="gest.borne.MaintBorne" field="mVectPJ" />
         <field source="mDateCreation" destinationName="dateCreation" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportAct" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
