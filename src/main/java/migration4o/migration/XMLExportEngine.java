@@ -13,7 +13,6 @@ import com.db4o.ext.ExtObjectContainer;
 
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
-import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -467,8 +466,8 @@ public class XMLExportEngine {
 
         // Create folder for this module in both Data and Definitions
         // Use module name (not ID) to preserve proper casing
-        Path moduleDataPath = currentDataPath.resolve(FileUtil.sanitizeName(module.getName()));
-        Path moduleDefsPath = currentDefsPath.resolve(FileUtil.sanitizeName(module.getName()));
+        Path moduleDataPath = currentDataPath.resolve(module.getName());
+        Path moduleDefsPath = currentDefsPath.resolve(module.getName());
         Files.createDirectories(moduleDataPath);
         Files.createDirectories(moduleDefsPath);
 

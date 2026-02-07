@@ -8,6 +8,10 @@ import migration4o.models.schema.DOSchemaSharedNotExportedAnomaly;
 import migration4o.models.schema.DOSchemaShouldBeEmbeddedAnomaly;
 import migration4o.models.schema.DOSchemaShouldNotBeExportedAnomaly;
 import migration4o.util.ModuleUtil;
+import migration4o.util.SchemaUtil;
+
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Schema processor that validates embedContents configuration based on
@@ -20,6 +24,10 @@ import migration4o.util.ModuleUtil;
  */
 public class DOEmbeddingDetector {
 
+    // Track which shared classes we've already reported to avoid duplicate
+    // anomalies
+    private static Set<String> reportedSharedNotExported = new HashSet<>();
+
     /**
      * Validates embedContents configuration for all fields in the schema.
      * Generates specific anomaly types for configuration issues.
@@ -30,6 +38,9 @@ public class DOEmbeddingDetector {
         if (schema == null || schema.getClasses() == null) {
             return;
         }
+
+        // Clear tracking set for new detection run
+        reportedSharedNotExported.clear();
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (schemaClass.fields == null) {
@@ -120,7 +131,8 @@ public class DOEmbeddingDetector {
 
     /**
      * PROCEDURE 2: Process a type that is a descendant of Entite.
-     * Validates based on reference count and module membership.
+     * Validates based on whether it's a superclass, reference count, and module
+     * membership.
      */
     private static void processEntiteType(DOSchema schema, DOSchemaClass containingClass,
             DOSchemaField field, DOSchemaClass concreteClass) {
@@ -129,48 +141,79 @@ public class DOEmbeddingDetector {
             return;
         }
 
-        int referenceCount = concreteClass.schemaReferences.length;
-        boolean isListedInModule = ModuleUtil.isClassListedInAnyModule(schema, concreteClass);
+        // Check if this class is actually a superclass of other Entite-type classes
+        boolean isSuperclass = SchemaUtil.hasSubclasses(schema, concreteClass);
 
-        // If concrete class has MORE than one reference (shared object)
-        if (referenceCount > 1) {
-            // Generate DOSchemaSharedEmbeddedAnomaly if embedContents=true
+        if (isSuperclass) {
+            // If concrete class is a superclass, only warn about embedding
             if (field.embedContents) {
+                String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
+
                 String explanation = String.format(
-                        "Field '%s.%s' has embedContents=true but points to class '%s' " +
-                                "which has %d references (shared object). Should be embedContents=false to avoid duplication.",
-                        containingClass.source, field.source, concreteClass.source, referenceCount);
+                        "Field '%s.%s'%s has embedContents=true but points to class '%s' " +
+                                "which is a superclass of other Entite-type classes. Should be embedContents=false to avoid issues.",
+                        containingClass.source, field.source, moduleInfo, concreteClass.source);
                 schema.anomalies.add(new DOSchemaSharedEmbeddedAnomaly(containingClass, field, explanation));
             }
+        } else {
+            // Not a superclass - proceed with reference count validation
+            int referenceCount = concreteClass.schemaReferences.length;
+            boolean isListedInModule = ModuleUtil.isClassListedInAnyModule(concreteClass);
 
-            // Generate DOSchemaSharedNotExportedAnomaly if NOT listed in any module
-            if (!isListedInModule) {
-                String explanation = String.format(
-                        "Class '%s' is referenced by %d fields but is NOT listed in any module. " +
-                                "Shared objects with multiple references should be listed in a module for proper export.",
-                        concreteClass.source, referenceCount);
-                schema.anomalies.add(new DOSchemaSharedNotExportedAnomaly(containingClass, field, explanation));
-            }
-        }
+            if (referenceCount > 1) {
+                // If concrete class has MORE than one reference (shared object)
+                if (field.embedContents) {
+                    String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                    String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-        // If concrete class has exactly one reference (single-use object)
-        if (referenceCount == 1) {
-            // Generate DOSchemaShouldBeEmbeddedAnomaly if embedContents=false
-            if (!field.embedContents) {
-                String explanation = String.format(
-                        "Field '%s.%s' has embedContents=false but points to class '%s' " +
-                                "which has only 1 reference (single-use object). Should be embedContents=true for efficiency.",
-                        containingClass.source, field.source, concreteClass.source);
-                schema.anomalies.add(new DOSchemaShouldBeEmbeddedAnomaly(containingClass, field, explanation));
-            }
+                    String explanation = String.format(
+                            "Field '%s.%s'%s has embedContents=true but points to class '%s' " +
+                                    "which has %d references (shared object). Should be embedContents=false to avoid duplication.",
+                            containingClass.source, field.source, moduleInfo, concreteClass.source, referenceCount);
+                    schema.anomalies.add(new DOSchemaSharedEmbeddedAnomaly(containingClass, field, explanation));
+                }
 
-            // Generate DOSchemaShouldNotBeExportedAnomaly if IS listed in any module
-            if (isListedInModule) {
-                String explanation = String.format(
-                        "Class '%s' has only 1 reference but IS listed in a module. " +
-                                "Single-use objects should be embedded rather than exported separately.",
-                        concreteClass.source);
-                schema.anomalies.add(new DOSchemaShouldNotBeExportedAnomaly(containingClass, field, explanation));
+                // Generate DOSchemaSharedNotExportedAnomaly if NOT listed in any module
+                // Only report once per class to avoid duplicate warnings
+                if (!isListedInModule) {// } && !reportedSharedNotExported.contains(concreteClass.source)) {
+                    reportedSharedNotExported.add(concreteClass.source);
+
+                    String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                    String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
+
+                    String explanation = String.format(
+                            "Class '%s' is referenced by %d fields but is NOT listed in any module. " +
+                                    "Shared objects with multiple references should be listed in a module for proper export. "
+                                    +
+                                    "First detected on field '%s.%s'%s.",
+                            concreteClass.source, referenceCount, containingClass.source, field.source, moduleInfo);
+                    schema.anomalies.add(new DOSchemaSharedNotExportedAnomaly(containingClass, field, explanation));
+                }
+            } else if (referenceCount == 1) {
+                // If concrete class has exactly one reference (single-use object)
+                if (!field.embedContents) {
+                    String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                    String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
+
+                    String explanation = String.format(
+                            "Field '%s.%s'%s has embedContents=false but points to class '%s' " +
+                                    "which has only 1 reference (single-use object). Should be embedContents=true for efficiency.",
+                            containingClass.source, field.source, moduleInfo, concreteClass.source);
+                    schema.anomalies.add(new DOSchemaShouldBeEmbeddedAnomaly(containingClass, field, explanation));
+                }
+
+                // Generate DOSchemaShouldNotBeExportedAnomaly if IS listed in any module
+                if (isListedInModule) {
+                    String targetModule = ModuleUtil.findModuleForClass(concreteClass);
+                    String moduleInfo = targetModule != null ? " in module '" + targetModule + "'" : " in a module";
+
+                    String explanation = String.format(
+                            "Class '%s' has only 1 reference but IS listed%s. " +
+                                    "Single-use objects should be embedded rather than exported separately.",
+                            concreteClass.source, moduleInfo);
+                    schema.anomalies.add(new DOSchemaShouldNotBeExportedAnomaly(containingClass, field, explanation));
+                }
             }
         }
     }

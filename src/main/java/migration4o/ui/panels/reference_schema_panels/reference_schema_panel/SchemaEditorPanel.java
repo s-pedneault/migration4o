@@ -37,14 +37,15 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaAnomaly;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ColumnDefinition;
+import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
 import migration4o.schema.DOReferenceSchemaConstants;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.DOReferenceSchemaReader;
 import migration4o.schema.DOReferenceSchemaWriter;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.database.DODatabaseService;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
@@ -163,7 +164,7 @@ public class SchemaEditorPanel extends JPanel {
         newClasses[existingClasses.length] = newClass;
 
         // Recreate schema with new classes array
-        schema = new DOSchema(newClasses, schema.getModules(), schema.getFoundationClasses());
+        schema = new DOSchema(newClasses, schema.getFoundationClasses());
 
         // Rebuild the tree to show the new class
         buildTree();
@@ -1026,7 +1027,10 @@ public class SchemaEditorPanel extends JPanel {
 
         switch (node.getNodeType()) {
             case MODULE:
-                displayModuleProperties((DOSchemaModule) node.getSchemaElement());
+                // Modules are now in migration-format.xml, not in reference schema
+                // displayModuleProperties((DOSchemaModule) node.getSchemaElement());
+                propertyPanel.addReadOnlyTextField("Type", "Module");
+                propertyPanel.addReadOnlyTextField("Info", "Modules are now managed in migration-format.xml");
                 break;
             case CLASS:
                 displayClassProperties((DOSchemaClass) node.getSchemaElement());
@@ -1047,7 +1051,9 @@ public class SchemaEditorPanel extends JPanel {
 
         switch (currentSelectedNode.getNodeType()) {
             case MODULE:
-                applyModuleProperties((DOSchemaModule) currentSelectedNode.getSchemaElement());
+                // Modules are now in migration-format.xml, not in reference schema
+                // applyModuleProperties((DOSchemaModule)
+                // currentSelectedNode.getSchemaElement());
                 break;
             case CLASS:
                 applyClassProperties((DOSchemaClass) currentSelectedNode.getSchemaElement());
@@ -1059,16 +1065,20 @@ public class SchemaEditorPanel extends JPanel {
 
     /**
      * Apply module property changes from the property panel.
+     * DISABLED: Modules are now in migration-format.xml, not in reference schema
      */
-    private void applyModuleProperties(DOSchemaModule module) {
-        JComponent nameField = propertyPanel.getField("Name");
-        if (nameField instanceof JTextField) {
-            String newName = ((JTextField) nameField).getText();
-            if (newName != null && !newName.trim().isEmpty()) {
-                module.setName(newName.trim());
-            }
-        }
-    }
+    /*
+     * /*
+     * private void applyModuleProperties(DOSchemaModule module) {
+     * JComponent nameField = propertyPanel.getField("Name");
+     * if (nameField instanceof JTextField) {
+     * String newName = ((JTextField) nameField).getText();
+     * if (newName != null && !newName.trim().isEmpty()) {
+     * module.setName(newName.trim());
+     * }
+     * }
+     * }
+     */
 
     /**
      * Apply class property changes from the property panel.
@@ -1123,11 +1133,13 @@ public class SchemaEditorPanel extends JPanel {
         }
     }
 
-    private void displayModuleProperties(DOSchemaModule module) {
-        propertyPanel.addReadOnlyTextField("Type", "Module");
-        propertyPanel.addTextField("Name", module.getName())
-                .addActionListener(e -> markModified());
-    }
+    /*
+     * private void displayModuleProperties(DOSchemaModule module) {
+     * propertyPanel.addReadOnlyTextField("Type", "Module");
+     * propertyPanel.addTextField("Name", module.getName())
+     * .addActionListener(e -> markModified());
+     * }
+     */
 
     private void displayClassProperties(DOSchemaClass schemaClass) {
         propertyPanel.addReadOnlyTextField("Type", "Class");
@@ -1617,7 +1629,7 @@ public class SchemaEditorPanel extends JPanel {
         newClasses[existingClasses.length] = newClass;
 
         // Recreate schema with new classes array
-        schema = new DOSchema(newClasses, schema.getModules(), schema.getFoundationClasses());
+        schema = new DOSchema(newClasses, schema.getFoundationClasses());
 
         // Rebuild the tree to show the new class
         buildTree();
@@ -1930,21 +1942,22 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     private String getSchemaStats() {
-        if (schema == null || schema.getModules() == null) {
+        if (schema == null) {
             return "";
         }
 
-        int moduleCount = schema.getModules().length;
+        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        int moduleCount = modules.size();
         int classCount = 0;
         int fieldCount = 0;
 
-        for (DOSchemaModule module : schema.getModules()) {
-            if (module.getClasses() != null) {
-                classCount += module.getClasses().length;
-                for (DOSchemaClass schemaClass : module.getClasses()) {
-                    if (schemaClass.fields != null) {
-                        fieldCount += schemaClass.fields.length;
-                    }
+        for (MigrationModule module : modules) {
+            List<String> classNames = module.getAllClassNames();
+            classCount += classNames.size();
+            for (String className : classNames) {
+                DOSchemaClass schemaClass = schema.findClassByName(className);
+                if (schemaClass != null && schemaClass.fields != null) {
+                    fieldCount += schemaClass.fields.length;
                 }
             }
         }

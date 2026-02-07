@@ -1,35 +1,59 @@
 package migration4o.util;
 
-import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.MigrationModule;
+import migration4o.schema.modules.DOModuleService;
+
+import java.util.List;
 
 /**
- * Utility methods for working with schema modules.
+ * Utility methods for working with migration modules.
  */
 public class ModuleUtil {
 
     /**
-     * Checks if a class is listed in any module.
+     * Checks if a class is listed in any export module (from migration-format.xml).
      * 
-     * @param schema      The schema containing modules
      * @param schemaClass The class to check
-     * @return true if the class is listed in at least one module, false otherwise
+     * @return true if the class is listed in at least one migration module, false
+     *         otherwise
      */
-    public static boolean isClassListedInAnyModule(DOSchema schema, DOSchemaClass schemaClass) {
-        if (schema == null || schema.getModules() == null || schemaClass == null) {
+    public static boolean isClassListedInAnyModule(DOSchemaClass schemaClass) {
+        if (schemaClass == null) {
             return false;
         }
 
         String className = schemaClass.source;
-        for (var module : schema.getModules()) {
-            if (module.getClasses() != null) {
-                for (var moduleClass : module.getClasses()) {
-                    if (moduleClass.source != null && moduleClass.source.equals(className)) {
-                        return true;
-                    }
-                }
+        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+
+        for (MigrationModule module : modules) {
+            if (module.getAllClassNames().contains(className)) {
+                return true;
             }
         }
         return false;
+    }
+
+    /**
+     * Finds the export module (from migration-format.xml) that contains the
+     * specified class.
+     * 
+     * @param schemaClass The class to find
+     * @return the module name if found, or null if not in any migration module
+     */
+    public static String findModuleForClass(DOSchemaClass schemaClass) {
+        if (schemaClass == null) {
+            return null;
+        }
+
+        String className = schemaClass.source;
+        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+
+        for (MigrationModule module : modules) {
+            if (module.getAllClassNames().contains(className)) {
+                return module.getName();
+            }
+        }
+        return null;
     }
 }

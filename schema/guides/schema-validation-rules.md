@@ -26,9 +26,11 @@ All types of anomalies reported by this system extend `DOSchemaEmbeddingAnomaly`
 3. Process that concrete class with **PROCEDURE 2**
 
 ### 📋 PROCEDURE 2: Processing a type that is a descendant of `Entite`
-* If that concrete class has MORE than one (1) `reference`: 
+* If that concrete class is actually the superclass of other `Entite`-type classes found in the schema:
+    * ⚠️ generate a `DOSchemaSharedEmbeddedAnomaly` if the original field has `embedContents` to `true`
+* Else, if that concrete class has MORE than one (1) `reference`: 
     * ⚠️ generate a `DOSchemaSharedEmbeddedAnomaly` if the original field has `embedContents` to `true`
     * ⚠️ generate a `DOSchemaSharedNotExportedAnomaly` if the concrete class is NOT listed in any *module*
-* If that concrete class has exactly one (1) `reference`:
+* Else, if that concrete class has exactly one (1) `reference`:
     * ⚠️ generate a `DOSchemaShouldBeEmbeddedAnomaly` if the original field has `embedContents` to `false`
     * ⚠️ generate a `DOSchemaShouldNotBeExportedAnomaly` if the concrete class IS listed in any *module*

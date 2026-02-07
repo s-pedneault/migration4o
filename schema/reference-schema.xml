@@ -626,7 +626,7 @@
         <field source="mInactif" destinationName="inactif" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mVectEtatSections" destinationName="vectEtatSections" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.planInterv.EtatSection" />
-        <field source="mVectSection" destinationName="vectSection" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.section.IDSection" />
+        <field source="mVectSection" destinationName="vectSection" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.section.IDSection" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
     </class>
     <class source="gest.codeAppel.IDCodeAppel" destinationName="IDCodeAppel" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.codeAppel.CodeAppel">

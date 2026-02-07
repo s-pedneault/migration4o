@@ -129,4 +129,33 @@ public class SchemaUtil {
         }
         return null;
     }
+
+    /**
+     * Checks if the given class is a superclass of other Entite-type classes in the
+     * schema.
+     * 
+     * @param schema      the schema to search
+     * @param targetClass the class to check
+     * @return true if at least one other class in the schema has this class as a
+     *         parent
+     */
+    public static boolean hasSubclasses(DOSchema schema, DOSchemaClass targetClass) {
+        if (schema == null || schema.getClasses() == null || targetClass == null) {
+            return false;
+        }
+
+        String targetClassName = targetClass.source;
+
+        // Check if any class has this class as its parent
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            if (schemaClass.parentClassName != null && schemaClass.parentClassName.equals(targetClassName)) {
+                // Found a direct subclass - now verify it's an Entite type
+                if (isDescendantOf(schemaClass, "gest.gen.Entite", schema)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
 }

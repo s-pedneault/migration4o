@@ -14,7 +14,6 @@ import org.w3c.dom.NodeList;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
 import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
@@ -46,15 +45,10 @@ public class DOReferenceSchemaReader {
             // Parse all classes directly from root
             DOSchemaClass[] allClasses = parseClassesFromRoot(root);
 
-            // Create a single module containing all classes
-            DOSchemaModule[] modules = new DOSchemaModule[] {
-                    new DOSchemaModule("All Classes", allClasses)
-            };
-
             // No foundation classes in new format
             DOSchemaClass[] foundationClasses = new DOSchemaClass[0];
 
-            DOSchema schema = new DOSchema(allClasses, modules, foundationClasses);
+            DOSchema schema = new DOSchema(allClasses, foundationClasses);
 
             // Post-process: detect and add missing references (e.g., IDEntite collections)
             DOReferenceDetector.detectAndAddReferences(schema);

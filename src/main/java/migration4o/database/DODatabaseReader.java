@@ -8,7 +8,6 @@ import migration4o.database.processors.DOClassesConverter;
 import migration4o.database.processors.DOObjectDeduplicator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaModule;
 import migration4o.util.DatabaseUtil;
 
 /**
@@ -83,15 +82,6 @@ public class DODatabaseReader {
                     context,
                     monitor);
 
-            // Create modules - single module containing all classes
-            if (monitor != null) {
-                monitor.onCreatingModules(1);
-            }
-
-            DOSchemaModule[] modules = new DOSchemaModule[] {
-                    new DOSchemaModule("Database Classes", schemaClasses)
-            };
-
             // Create schema
             if (monitor != null) {
                 monitor.onCreatingSchema(schemaClasses.length);
@@ -99,7 +89,6 @@ public class DODatabaseReader {
 
             DOSchema schema = new DOSchema(
                     schemaClasses,
-                    modules,
                     new DOSchemaClass[0] // No foundation classes from database
             );
 
@@ -130,7 +119,6 @@ public class DODatabaseReader {
     private DOSchema createEmptySchema() {
         return new DOSchema(
                 new DOSchemaClass[0],
-                new DOSchemaModule[0],
                 new DOSchemaClass[0]);
     }
 }
