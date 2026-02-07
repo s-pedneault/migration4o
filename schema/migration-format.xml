@@ -63,19 +63,21 @@
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="A" cost="0.5"/>
                 </classRef>
-                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
-                    <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
-                    <unitCost priceList="" cost="0.0"/>
-                </classRef>
-                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
-                    <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
-                    <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
-                    <unitCost priceList="" cost="0.05"/>
-                </classRef>
-                <classRef sourceName="gest.dossPrev.DossPrevSuppr">
-                    <unitCost priceList="" cost="0.05"/>
-                </classRef>
-                <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
+                <module name="Archives" id="Archives">
+                    <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
+                        <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
+                        <unitCost priceList="" cost="0.0"/>
+                    </classRef>
+                    <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
+                        <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
+                        <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
+                        <unitCost priceList="" cost="0.05"/>
+                    </classRef>
+                    <classRef sourceName="gest.dossPrev.DossPrevSuppr">
+                        <unitCost priceList="" cost="0.05"/>
+                    </classRef>
+                    <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
+                </module>
                 <module name="Caractéristiques" id="Caractéristiques">
                     <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
                     <classRef sourceName="gest.typeCheminee.TypeCheminee"/>
@@ -101,7 +103,7 @@
                 <classRef sourceName="gest.secCiv.Sinistre"/>
             </module>
         </module>
-        <module name="Ressources matérielles" id="Ressources matérielles">
+        <module name="Matériel" id="Matériel">
             <classRef sourceName="gest.caserne.Caserne">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
@@ -149,7 +151,7 @@
                 </module>
             </module>
         </module>
-        <module name="Ressources humaines" id="Ressources humaines">
+        <module name="Personnel" id="Personnel">
             <classRef sourceName="gest.employe.Employe">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
@@ -165,11 +167,11 @@
                 <classRef sourceName="gest.formation.Formation">
                     <unitCost priceList="" cost="1.0"/>
                 </classRef>
-                <classRef sourceName="gest.cours.CoursInterne"/>
-                <classRef sourceName="gest.cours.Programme"/>
-                <classRef sourceName="gest.formation.CoursAvantEmbauche"/>
-                <classRef sourceName="gest.formation.InfoEtudiant"/>
-                <classRef sourceName="gest.formation.TypeActivFormation"/>
+                <module name="Paramètres" id="Paramètres">
+                    <classRef sourceName="gest.formation.TypeActivFormation"/>
+                    <classRef sourceName="gest.cours.Programme"/>
+                    <classRef sourceName="gest.cours.CoursInterne"/>
+                </module>
             </module>
             <module name="Horaires" id="Horaires">
                 <classRef sourceName="gest.horaire.Horaire"/>

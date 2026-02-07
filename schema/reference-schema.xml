@@ -708,6 +708,7 @@
         <reference class="gest.typePrev.TypePrev" field="mVectTypeChampPerso" />
         <reference class="gest.champPerso.ChampPerso" field="mIDTypeChampPerso" />
         <reference class="gest.formElec.ParamFigureSaisie" field="mIDTypeChampPerso" />
+        <reference class="gest.secCiv.Verif" field="mVectTypeChampPerso" />
         <field source="mID" definition="mID" />
         <field source="mDernIDChoix" destinationName="dernIDChoix" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mDesc" definition="mDescription" />
@@ -1001,11 +1002,16 @@
     </class>
     <class source="gest.docum.EtatDoc" destinationName="EtatDoc" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.docum.Docum" field="mEtatDoc" />
+        <reference class="gest.secCiv.MesurePrev" field="mEtatDoc" />
+        <reference class="gest.secCiv.Mission" field="mEtatDoc" />
+        <reference class="gest.secCiv.PPI" field="mEtatDoc" />
+        <reference class="gest.secCiv.Risque" field="mEtatDoc" />
         <field source="mEtat" destinationName="etat" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mNote" definition="mNote" />
     </class>
     <class source="gest.docum.IDDossierDocum" destinationName="IDDossierDocum" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.docum.DossierDocum">
         <reference class="gest.docum.Docum" field="mIDDossierParent" />
+        <reference class="gest.docum.DossierDocum" field="mIDDossierParent" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.dossPrev.Chauffage" destinationName="Chauffage" isExported="true" parentClass="gest.gen.Entite">
@@ -1031,6 +1037,7 @@
         <reference class="gest.planInterv.PlanAdresseContact" field="mIDDossPrev" />
         <reference class="gest.planInterv.PlanContact" field="mIDDossPrev" />
         <reference class="gest.prevention.Prevention" field="mIDDossPrev" />
+        <reference class="gest.secCiv.PPI" field="mVectIDDossPrev" />
         <field source="mID" definition="mID" />
         <field source="INDEX_toString" destinationName="index_toString" isExported="false" skipWhen="DEFAULT" type="string" />
         <field source="NbrEtage" destinationName="nbrEtage" isExported="true" skipWhen="ZERO,DEFAULT" type="int" />
@@ -1177,6 +1184,7 @@
         <reference class="gest.planInterv.PlanContact" field="mIDDossPrev" />
         <reference class="gest.intervention.Intervention" field="mIDDossPrev" />
         <reference class="gest.gen.VoieCircul" field="mVectTempIDDossPrevAssoc" />
+        <reference class="gest.secCiv.PPI" field="mVectIDDossPrev" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.dossPrev.IDPersonneRess" destinationName="IDPersonneRess" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.dossPrev.PersonneRess">
@@ -1674,6 +1682,7 @@
         <reference class="gest.rci.RciAnalyse" field="mIDFichCroquisOrigine" />
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisLieu" />
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
+        <reference class="gest.secCiv.Mission" field="mIDFichier" />
         <field source="mID" definition="mID" />
         <field source="mData" destinationName="data" isExported="true" skipWhen="DEFAULT" type="byte[]" childrenType="byte" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -1708,6 +1717,7 @@
         <reference class="gest.intervention.ParamViewer" field="mIDLogoRAO" />
         <reference class="gest.intervention.Intervention" field="mIDFichAS805" />
         <reference class="gest.config.ParamConfig" field="mIDLogo" />
+        <reference class="gest.secCiv.Mission" field="mIDFichier" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.formElec.FormElec" destinationName="FormElec" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -2084,6 +2094,8 @@
         <reference class="gest.secCiv.Sinistre" field="mVectPhotoFich" />
         <reference class="gest.vehicule.Vehicule" field="mVectPhotoFich" />
         <reference class="gest.borne.MaintBorne" field="mVectPJ" />
+        <reference class="gest.secCiv.MesurePrev" field="mVectPhotoFich" />
+        <reference class="gest.secCiv.Risque" field="mVectPhotoFich" />
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportAct" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNom" definition="mNom" />
@@ -2202,6 +2214,7 @@
         <reference class="gest.rci.RciLieu" field="mIDGraphCroquisLieu" />
         <reference class="gest.rci.RciLieu" field="mIDGraphCroquisPoint" />
         <reference class="gest.vehicule.Vehicule" field="mIDGraph" />
+        <reference class="gest.secCiv.Mission" field="mIDGraph" />
         <field source="mID" definition="mID" />
         <field source="mExpirationDocument" destinationName="expirationDocument" isExported="true" skipWhen="DEFAULT" type="gest.gen.ExpirationDocument" />
         <field source="mMatriculeDossPrevAssoc" destinationName="matriculeDossPrevAssoc" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -2243,6 +2256,7 @@
         <reference class="gest.rci.RciLieu" field="mIDGraphCroquisPoint" />
         <reference class="gest.intervention.RapportOfficier" field="mIDCroquis" />
         <reference class="gest.graph.GraphLib" field="mVectIDGraph" />
+        <reference class="gest.secCiv.Mission" field="mIDGraph" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.graph.IDGraphLib" destinationName="IDGraphLib" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.graph.GraphLib">
@@ -4080,6 +4094,7 @@
     <class source="gest.secCiv.IDNivAlerte" destinationName="IDNivAlerte" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.NivAlerte">
         <reference class="gest.secCiv.Sinistre" field="mIDNivAlerte" />
         <reference class="gest.secCiv.LogSinistre" field="mIDNivAlerte" />
+        <reference class="gest.secCiv.Objectif" field="mVectIDNivAlerte" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.secCiv.IDPPI" destinationName="IDPPI" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.PPI">
@@ -4093,6 +4108,10 @@
         <reference class="gest.secCiv.Sinistre" field="mIDAuteur" />
         <reference class="gest.secCiv.Sinistre" field="mIDResponsable" />
         <reference class="gest.secCiv.LogSinistre" field="mIDRessSecCiv" />
+        <reference class="gest.secCiv.MesurePrev" field="mIDResponsable" />
+        <reference class="gest.secCiv.Mission" field="mIDResponsable" />
+        <reference class="gest.secCiv.PPI" field="mIDResponsable" />
+        <reference class="gest.secCiv.Risque" field="mIDResponsable" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.secCiv.IDSinistre" destinationName="IDSinistre" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.Sinistre">
@@ -4120,6 +4139,7 @@
     <class source="gest.secCiv.NivAlerte" destinationName="NivAlerte" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.secCiv.LogSinistre" field="mIDNivAlerte" />
         <reference class="gest.secCiv.Sinistre" field="mIDNivAlerte" />
+        <reference class="gest.secCiv.Objectif" field="mVectIDNivAlerte" />
         <field source="mID" definition="mID" />
         <field source="mColor" destinationName="color" isExported="true" skipWhen="DEFAULT" type="java.awt.Color" />
         <field source="mDesc" definition="mDescription" />
@@ -4147,6 +4167,10 @@
         <reference class="gest.secCiv.ParamSecCiv" field="mIDRessSecCiv" />
         <reference class="gest.secCiv.Sinistre" field="mIDAuteur" />
         <reference class="gest.secCiv.Sinistre" field="mIDResponsable" />
+        <reference class="gest.secCiv.MesurePrev" field="mIDResponsable" />
+        <reference class="gest.secCiv.Mission" field="mIDResponsable" />
+        <reference class="gest.secCiv.PPI" field="mIDResponsable" />
+        <reference class="gest.secCiv.Risque" field="mIDResponsable" />
         <field source="mID" definition="mID" />
         <field source="DernVerif" destinationName="dernVerif" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mAdresse" definition="mAdresse" />
@@ -4443,6 +4467,7 @@
         <reference class="gest.secCiv.NivAlerte" field="mColor" />
         <reference class="gest.equipe.Equipe" field="mCouleurActiv" />
         <reference class="gest.borne.NivPriorite" field="mCouleur" />
+        <reference class="gest.secCiv.Mission" field="mColor" />
         <field source="cs" destinationName="cs" isExported="true" skipWhen="DEFAULT" type="java.awt.color.ColorSpace" embedContents="true" />
         <field source="falpha" destinationName="falpha" isExported="true" skipWhen="DEFAULT" type="float" />
         <field source="frgbvalue" destinationName="frgbvalue" isExported="true" skipWhen="DEFAULT" type="float" />
@@ -4786,6 +4811,14 @@
         <field source="mIDAssigneA" destinationName="mIDAssigneA" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.employe.IDEmploye" />
         <field source="mVectEtape" destinationName="mVectEtape" isExported="true" skipWhen="NULL,MINUS_ONE" type="java.util.Vector" collection="true" childrenType="java.lang.Object" />
     </class>
+    <class source="gest.docum.DossierDocum" destinationName="DossierDocum" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.docum.Docum" field="mIDDossierParent" />
+        <reference class="gest.docum.DossierDocum" field="mIDDossierParent" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mIDDossierParent" destinationName="idDossierParent" isExported="true" skipWhen="DEFAULT" type="gest.docum.IDDossierDocum" />
+        <field source="mNom" definition="mNom" />
+    </class>
     <class source="gest.equipement.EquipConsom" destinationName="EquipConsom" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipConsom" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDEquipConsom" />
@@ -4844,5 +4877,111 @@
         <field source="mVectIDEmplAttrib" destinationName="vectIDEmplAttrib" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
         <field source="mNote" definition="mNote" />
         <field source="mIDTypeActiviteProf" destinationName="idTypeActiviteProf" isExported="true" skipWhen="DEFAULT" type="gest.activite.IDTypeActivite" />
+    </class>
+    <class source="gest.secCiv.IDLogSinistre" destinationName="IDLogSinistre" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.LogSinistre">
+        <field source="mID" definition="mID" />
+    </class>
+    <class source="gest.secCiv.IDMissionRubrique" destinationName="IDMissionRubrique" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.MissionRubrique">
+        <reference class="gest.secCiv.Mission" field="mIDRubrique" />
+        <field source="mID" definition="mID" />
+    </class>
+    <class source="gest.secCiv.IDRisque" destinationName="IDRisque" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.Risque">
+        <reference class="gest.secCiv.MesurePrev" field="mIDRisque" />
+        <field source="mID" definition="mID" />
+    </class>
+    <class source="gest.secCiv.MesurePrev" destinationName="MesurePrev" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mNom" definition="mNom" />
+        <field source="mIDRisque" destinationName="idRisque" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRisque" />
+        <field source="mDetail" definition="mDetail" />
+        <field source="mEtatDoc" destinationName="etatDoc" isExported="true" skipWhen="DEFAULT" type="gest.docum.EtatDoc" />
+        <field source="mVectPhotoFich" definition="mVectPhotoFich" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv" />
+        <field source="mVectDroitAccesRessSecCiv" destinationName="vectDroitAccesRessSecCiv" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
+    </class>
+    <class source="gest.secCiv.Mission" destinationName="Mission" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.secCiv.LogSinistre" field="mIDMission" />
+        <reference class="gest.secCiv.RessSecCiv" field="mVectIDMission" />
+        <reference class="gest.secCiv.Sinistre" field="mVectIDMission" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mNom" definition="mNom" />
+        <field source="mDefinition" destinationName="definition" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mVectPJ" definition="mVectPhotoFich" />
+        <field source="mVectObjectif" destinationName="vectObjectif" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="gest.secCiv.Objectif" />
+        <field source="mIDRubrique" destinationName="idRubrique" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDMissionRubrique" />
+        <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="DEFAULT" type="gest.graph.IDGraph" />
+        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="DEFAULT" type="gest.fichier.IDFichier" />
+        <field source="mColor" destinationName="color" isExported="true" skipWhen="DEFAULT" type="java.awt.Color" />
+        <field source="mEtatDoc" destinationName="etatDoc" isExported="true" skipWhen="DEFAULT" type="gest.docum.EtatDoc" />
+        <field source="mVectOutilExterne" destinationName="vectOutilExterne" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.secCiv.OutilExterne" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv" />
+        <field source="mVectDroitAccesRessSecCiv" destinationName="vectDroitAccesRessSecCiv" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
+        <field source="mHashResponsabilite" destinationName="hashResponsabilite" isExported="true" skipWhen="DEFAULT" type="java.util.Hashtable" />
+    </class>
+    <class source="gest.secCiv.MissionRubrique" destinationName="MissionRubrique" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.secCiv.Mission" field="mIDRubrique" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mNom" definition="mNom" />
+    </class>
+    <class source="gest.secCiv.Objectif" destinationName="Objectif" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.secCiv.Mission" field="mVectObjectif" />
+        <field source="mID" definition="mID" />
+        <field source="mNom" definition="mNom" />
+        <field source="mDescription" definition="mDescription" />
+        <field source="mVectVerif" destinationName="vectVerif" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.secCiv.Verif" />
+        <field source="mVectIDNivAlerte" destinationName="vectIDNivAlerte" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="gest.secCiv.IDNivAlerte" />
+        <field source="mPresence" destinationName="presence" isExported="true" skipWhen="DEFAULT" type="int" />
+    </class>
+    <class source="gest.secCiv.OutilExterne" destinationName="OutilExterne" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.secCiv.ParamSecCiv" field="mVectOutilExterne" />
+        <reference class="gest.secCiv.Mission" field="mVectOutilExterne" />
+        <reference class="gest.secCiv.PPI" field="mVectOutilExterne" />
+        <field source="mID" definition="mID" />
+        <field source="mTypeOutil" destinationName="typeOutil" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mNom" definition="mNom" />
+        <field source="mCommande" destinationName="commande" isExported="true" skipWhen="DEFAULT" type="string" />
+    </class>
+    <class source="gest.secCiv.PPI" destinationName="PPI" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.secCiv.LogSinistre" field="mIDPPI" />
+        <reference class="gest.secCiv.Sinistre" field="mVectIDPPI" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mNom" definition="mNom" />
+        <field source="mDefinition" destinationName="definition" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mVectPJ" definition="mVectPhotoFich" />
+        <field source="mVectNMission" destinationName="vectNMission" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="gest.secCiv.PPI$NMission" />
+        <field source="mEtatDoc" destinationName="etatDoc" isExported="true" skipWhen="DEFAULT" type="gest.docum.EtatDoc" />
+        <field source="mVectOutilExterne" destinationName="vectOutilExterne" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.secCiv.OutilExterne" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv" />
+        <field source="mVectIDDossPrev" destinationName="vectIDDossPrev" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.dossPrev.IDDossPrev" />
+        <field source="mVectDroitAccesRessSecCiv" destinationName="vectDroitAccesRessSecCiv" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
+    </class>
+    <class source="gest.secCiv.PPI$NMission" destinationName="PPI$NMission" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.secCiv.PPI" field="mVectNMission" />
+        <field source="iIDMission" destinationName="iIDMission" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="iVisible" destinationName="iVisible" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="iTexte" destinationName="iTexte" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="iVectObjectif" destinationName="iVectObjectif" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
+    </class>
+    <class source="gest.secCiv.Risque" destinationName="Risque" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.secCiv.MesurePrev" field="mIDRisque" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+        <field source="mNom" definition="mNom" />
+        <field source="mDetail" definition="mDetail" />
+        <field source="mVectPhotoFich" definition="mVectPhotoFich" />
+        <field source="mEtatDoc" destinationName="etatDoc" isExported="true" skipWhen="DEFAULT" type="gest.docum.EtatDoc" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv" />
+        <field source="mVectDroitAccesRessSecCiv" destinationName="vectDroitAccesRessSecCiv" isExported="true" skipWhen="DEFAULT" type="gen.util.VectRechID" collection="true" childrenType="java.lang.Object" />
+    </class>
+    <class source="gest.secCiv.Verif" destinationName="Verification" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.secCiv.Objectif" field="mVectVerif" />
+        <field source="mID" definition="mID" />
+        <field source="mNom" definition="mNom" />
+        <field source="mDesc" destinationName="desc" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mVectTypeChampPerso" destinationName="vectTypeChampPerso" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.champPerso.TypeChampPerso" />
     </class>
 </classes>

@@ -115,9 +115,11 @@ public class ReferencedClassTracker {
 
     /**
      * Resets the tracker for a new export operation.
+     * NOTE: Does NOT clear moduleClasses - those are registered once at the start
+     * of the entire export and should persist across all class exports.
      */
     public void reset() {
-        moduleClasses.clear();
+        // Do NOT clear moduleClasses - they're registered once for the whole export!
         referencedClasses.clear();
         exportedReferencedClasses.clear();
     }
