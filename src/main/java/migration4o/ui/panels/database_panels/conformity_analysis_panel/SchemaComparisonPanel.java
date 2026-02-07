@@ -19,18 +19,23 @@ import java.util.function.BiConsumer;
 import javax.swing.BorderFactory;
 import javax.swing.Box;
 import javax.swing.BoxLayout;
+import javax.swing.ButtonGroup;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
 import javax.swing.JTextArea;
+import javax.swing.JTextField;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
 import javax.swing.Timer;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
@@ -61,6 +66,21 @@ public class SchemaComparisonPanel extends JPanel {
     private JCheckBox showCollectionTypeDifferencesCheckbox;
     private JCheckBox groupByPackageCheckbox;
     private JLabel statusLabel;
+    private JTextField searchField;
+    private String currentFilter = "";
+
+    // Filter mode radio buttons
+    private JRadioButton showAllClassesRadio;
+    private JRadioButton showMissingFromSchemaRadio;
+    private JRadioButton showOnlyInSchemaRadio;
+
+    private enum FilterMode {
+        ALL_CLASSES,
+        MISSING_FROM_SCHEMA, // In database but not in reference
+        ONLY_IN_SCHEMA // In reference but not in database
+    }
+
+    private FilterMode currentFilterMode = FilterMode.ALL_CLASSES;
 
     public SchemaComparisonPanel(SchemaComparison comparison,
             BiConsumer<String, DOSchemaClass> onAddClass,
@@ -202,9 +222,90 @@ public class SchemaComparisonPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
 
+        // Top section: title and search
+        JPanel topSection = new JPanel(new BorderLayout(10, 5));
+
         JLabel titleLabel = new JLabel("Schema Comparison - Synchronized View");
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
-        panel.add(titleLabel, BorderLayout.NORTH);
+        topSection.add(titleLabel, BorderLayout.NORTH);
+
+        // Search panel
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        searchPanel.add(new JLabel("Filter:"));
+        searchField = new JTextField(30);
+        searchField.setToolTipText("Filter classes and fields by name (case-insensitive)");
+        searchField.getDocument().addDocumentListener(new DocumentListener() {
+            private Timer filterTimer;
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                scheduleFilter();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                scheduleFilter();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                scheduleFilter();
+            }
+
+            private void scheduleFilter() {
+                if (filterTimer != null) {
+                    filterTimer.stop();
+                }
+                filterTimer = new Timer(300, evt -> {
+                    currentFilter = searchField.getText().trim().toLowerCase();
+                    buildTrees();
+                });
+                filterTimer.setRepeats(false);
+                filterTimer.start();
+            }
+        });
+        searchPanel.add(searchField);
+
+        JButton clearButton = new JButton("Clear");
+        clearButton.addActionListener(e -> searchField.setText(""));
+        searchPanel.add(clearButton);
+
+        // Add radio buttons for filter mode
+        searchPanel.add(Box.createHorizontalStrut(20));
+        searchPanel.add(new JLabel("Show:"));
+
+        ButtonGroup filterModeGroup = new ButtonGroup();
+
+        showAllClassesRadio = new JRadioButton("All classes", true);
+        showAllClassesRadio.setToolTipText("Show all classes from both schemas");
+        showAllClassesRadio.addActionListener(e -> {
+            currentFilterMode = FilterMode.ALL_CLASSES;
+            buildTrees();
+        });
+        filterModeGroup.add(showAllClassesRadio);
+        searchPanel.add(showAllClassesRadio);
+
+        showMissingFromSchemaRadio = new JRadioButton("Missing from schema");
+        showMissingFromSchemaRadio.setToolTipText("Show only classes in database but not in reference schema");
+        showMissingFromSchemaRadio.addActionListener(e -> {
+            currentFilterMode = FilterMode.MISSING_FROM_SCHEMA;
+            buildTrees();
+        });
+        filterModeGroup.add(showMissingFromSchemaRadio);
+        searchPanel.add(showMissingFromSchemaRadio);
+
+        showOnlyInSchemaRadio = new JRadioButton("Only in schema");
+        showOnlyInSchemaRadio.setToolTipText("Show only classes in reference schema but not in database");
+        showOnlyInSchemaRadio.addActionListener(e -> {
+            currentFilterMode = FilterMode.ONLY_IN_SCHEMA;
+            buildTrees();
+        });
+        filterModeGroup.add(showOnlyInSchemaRadio);
+        searchPanel.add(showOnlyInSchemaRadio);
+
+        topSection.add(searchPanel, BorderLayout.CENTER);
+
+        panel.add(topSection, BorderLayout.NORTH);
 
         summaryArea = new JTextArea(3, 40);
         summaryArea.setEditable(false);
@@ -256,10 +357,99 @@ public class SchemaComparisonPanel extends JPanel {
 
     private void buildTrees() {
         boolean groupByPackage = groupByPackageCheckbox.isSelected();
-        syncTreePanel.buildTrees(comparison.getDifferences(),
+
+        // Filter differences based on filter mode and search text
+        List<ClassDifference> filteredDifferences = new ArrayList<>();
+
+        // Apply filters (both radio button and text search)
+        boolean needsFiltering = (currentFilterMode != FilterMode.ALL_CLASSES) || !currentFilter.isEmpty();
+
+        if (needsFiltering) {
+            for (ClassDifference diff : comparison.getDifferences()) {
+                if (matchesFilter(diff)) {
+                    filteredDifferences.add(diff);
+                }
+            }
+        } else {
+            filteredDifferences = comparison.getDifferences();
+        }
+
+        syncTreePanel.buildTrees(filteredDifferences,
                 comparison.getReferenceLabel(),
                 comparison.getComparedLabel(),
                 groupByPackage);
+    }
+
+    /**
+     * Check if a class difference matches the current filter.
+     * Checks class name and field names.
+     */
+    private boolean matchesFilter(ClassDifference diff) {
+        // First apply filter mode
+        switch (currentFilterMode) {
+            case MISSING_FROM_SCHEMA:
+                // Show only classes in database (compared) but not in reference
+                if (!diff.isOnlyInCompared()) {
+                    return false;
+                }
+                break;
+            case ONLY_IN_SCHEMA:
+                // Show only classes in reference but not in database (compared)
+                if (!diff.isOnlyInReference()) {
+                    return false;
+                }
+                break;
+            case ALL_CLASSES:
+            default:
+                // Show all classes, continue to text filter
+                break;
+        }
+
+        // Then apply text search filter
+        if (currentFilter.isEmpty()) {
+            return true;
+        }
+
+        // Check class name (both full and simple name)
+        String className = diff.getClassName();
+        if (className != null && className.toLowerCase().contains(currentFilter)) {
+            return true;
+        }
+
+        String simpleName = className != null && className.contains(".")
+                ? className.substring(className.lastIndexOf('.') + 1)
+                : className;
+        if (simpleName != null && simpleName.toLowerCase().contains(currentFilter)) {
+            return true;
+        }
+
+        // Check field names in reference class
+        DOSchemaClass refClass = diff.getReferenceClass();
+        if (refClass != null && refClass.fields != null) {
+            for (DOSchemaField field : refClass.fields) {
+                if (field.source != null && field.source.toLowerCase().contains(currentFilter)) {
+                    return true;
+                }
+                if (field.destinationName != null && field.destinationName.toLowerCase().contains(currentFilter)) {
+                    return true;
+                }
+            }
+        }
+
+        // Check field names in compared class
+        DOSchemaClass cmpClass = diff.getComparedClass();
+        if (cmpClass != null && cmpClass.fields != null) {
+            for (DOSchemaField field : cmpClass.fields) {
+                if (field.source != null && field.source.toLowerCase().contains(currentFilter)) {
+                    return true;
+                }
+                if (field.destinationName != null && field.destinationName.toLowerCase().contains(currentFilter)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     private void showDetails(DefaultMutableTreeNode node, boolean isLeftTree) {

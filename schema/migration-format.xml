@@ -2,212 +2,222 @@
 <database>
     <modules>
         <module name="Organisation" id="Organisation">
-			<module name="Configuration" id="Configuration">
-				<module name="Paramètres" id="Paramètres">
-					<classRef sourceName="gest.consolide.ParamSSI">
-						<unitCost priceList="" cost="1000.0"/>
-					</classRef>
-					<classRef sourceName="gest.borne.ParamMaintBorne"/>
-					<classRef sourceName="gest.cauca.ParamCauca"/>
-					<classRef sourceName="gest.config.ParamBackup"/>
-					<classRef sourceName="gest.config.ParamCalendrier"/>
-					<classRef sourceName="gest.config.ParamConfigGeneral"/>
-					<classRef sourceName="gest.config.ParamConfigSSI"/>
-					<classRef sourceName="gest.config.ParamSendMail"/>
-					<classRef sourceName="gest.consolide.ParamConsolide"/>
-					<classRef sourceName="gest.dossPrev.ParamDossPrev"/>
-					<classRef sourceName="gest.feuilleTemps.ParamFeuilleTemps"/>
-					<classRef sourceName="gest.formation.ParamFormation"/>
-					<classRef sourceName="gest.gen.ParamStatPresActivite"/>
-					<classRef sourceName="gest.horaire.ParamHoraire"/>
-					<classRef sourceName="gest.intervention.ParamCarteAppel"/>
-					<classRef sourceName="gest.intervention.ParamIntervDSI2003"/>
-					<classRef sourceName="gest.intervention.ParamIntervention"/>
-					<classRef sourceName="gest.intervention.ParamMemoFacturation"/>
-					<classRef sourceName="gest.intervention.ParamViewer"/>
-					<classRef sourceName="gest.maintEquip.ParamMaintEquip"/>
-					<classRef sourceName="gest.planInterv.ParamPlanInterv"/>
-					<classRef sourceName="gest.prevention.ParamPrevention"/>
-					<classRef sourceName="gest.quart.ParamQuart"/>
-					<classRef sourceName="gest.rci.ParamRci"/>
-					<classRef sourceName="gest.schema.ParamSchema"/>
-					<classRef sourceName="gest.secCiv.ParamSecCiv"/>
-				</module>
-				<module name="Listes" id="listes">
-					<classRef sourceName="gest.activite.Acte"/>
-					<classRef sourceName="gest.activite.TypeActivQuart"/>
-					<classRef sourceName="gest.champPerso.TypeChampPerso"/>
-					<classRef sourceName="gest.fournisseur.Fournisseur"/>
-					<classRef sourceName="gest.listePerso.ListePerso"/>
-					<classRef sourceName="gest.mobile.Mobile"/>
-					<classRef sourceName="gest.preference.Preference"/>
-				</module>
-			</module>
-			<module name="Rapports" id="Rapports">
-				<classRef sourceName="gest.centreDesRapports.RapportCentral">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-			</module>
-			<module name="Documents" id="Documents">
-				<classRef sourceName="gest.fichier.Fichier">
-					<unitCost priceList="" cost="0.05"/>
-				</classRef>
-				<classRef sourceName="gest.rapport.Rapport"/>
-				<classRef sourceName="gest.rapport.RapportPerso"/>
-			</module>
+            <module name="Configuration" id="Configuration">
+                <module name="Paramètres" id="Paramètres">
+                    <classRef sourceName="gest.consolide.ParamSSI">
+                        <unitCost priceList="" cost="1000.0"/>
+                    </classRef>
+                    <classRef sourceName="gest.borne.ParamMaintBorne"/>
+                    <classRef sourceName="gest.cauca.ParamCauca"/>
+                    <classRef sourceName="gest.config.ParamBackup"/>
+                    <classRef sourceName="gest.config.ParamCalendrier"/>
+                    <classRef sourceName="gest.config.ParamConfigGeneral"/>
+                    <classRef sourceName="gest.config.ParamConfigSSI"/>
+                    <classRef sourceName="gest.config.ParamSendMail"/>
+                    <classRef sourceName="gest.consolide.ParamConsolide"/>
+                    <classRef sourceName="gest.dossPrev.ParamDossPrev"/>
+                    <classRef sourceName="gest.feuilleTemps.ParamFeuilleTemps"/>
+                    <classRef sourceName="gest.formation.ParamFormation"/>
+                    <classRef sourceName="gest.gen.ParamStatPresActivite"/>
+                    <classRef sourceName="gest.horaire.ParamHoraire"/>
+                    <classRef sourceName="gest.intervention.ParamCarteAppel"/>
+                    <classRef sourceName="gest.intervention.ParamIntervDSI2003"/>
+                    <classRef sourceName="gest.intervention.ParamIntervention"/>
+                    <classRef sourceName="gest.intervention.ParamMemoFacturation"/>
+                    <classRef sourceName="gest.intervention.ParamViewer"/>
+                    <classRef sourceName="gest.maintEquip.ParamMaintEquip"/>
+                    <classRef sourceName="gest.planInterv.ParamPlanInterv"/>
+                    <classRef sourceName="gest.prevention.ParamPrevention"/>
+                    <classRef sourceName="gest.quart.ParamQuart"/>
+                    <classRef sourceName="gest.rci.ParamRci"/>
+                    <classRef sourceName="gest.schema.ParamSchema"/>
+                    <classRef sourceName="gest.secCiv.ParamSecCiv"/>
+                </module>
+                <module name="Listes" id="listes">
+                    <classRef sourceName="gest.activite.Acte"/>
+                    <classRef sourceName="gest.activite.TypeActivQuart"/>
+                    <classRef sourceName="gest.champPerso.TypeChampPerso"/>
+                    <classRef sourceName="gest.fournisseur.Fournisseur"/>
+                    <classRef sourceName="gest.listePerso.ListePerso"/>
+                    <classRef sourceName="gest.mobile.Mobile"/>
+                    <classRef sourceName="gest.preference.Preference"/>
+                </module>
+            </module>
+            <module name="Rapports" id="Rapports">
+                <classRef sourceName="gest.centreDesRapports.RapportCentral">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+            </module>
+            <module name="Documents" id="Documents">
+                <classRef sourceName="gest.fichier.Fichier">
+                    <unitCost priceList="" cost="0.05"/>
+                </classRef>
+                <classRef sourceName="gest.rapport.Rapport"/>
+                <classRef sourceName="gest.rapport.RapportPerso"/>
+            </module>
         </module>
         <module name="Territoire" id="Territoire">
-			<module name="Dossier adresse" id="Dossier adresse">
-				<classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-actif">
-					<criteria field="mIDDossPrevOld" operator="==" value="-1"/>
-					<unitCost priceList="" cost="1.0"/>
-					<unitCost priceList="A" cost="0.5"/>
-				</classRef>
-				<classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
-					<criteria field="mIDDossPrevOld" operator="==" value="-5"/>
-					<unitCost priceList="" cost="0.0"/>
-				</classRef>
-				<classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
-					<criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
-					<criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
-					<unitCost priceList="" cost="0.05"/>
-				</classRef>
-				<classRef sourceName="gest.dossPrev.DossPrevSuppr">
-					<unitCost priceList="" cost="0.05"/>
-				</classRef>
-				<classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
-				<module name="Caractéristiques" id="Caractéristiques">
-					<classRef sourceName="gest.typeBatiment.TypeBatiment"/>
-					<classRef sourceName="gest.typeCheminee.TypeCheminee"/>
-					<classRef sourceName="gest.typeChauffage.TypeChauffage"/>
-					<classRef sourceName="gest.typeToit.TypeToit"/>
-					<classRef sourceName="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere"/>
-					<classRef sourceName="gest.plancher.Plancher"/>
-					<classRef sourceName="gest.parement.Parement"/>
-				</module>
-			</module>
-			<module name="Plan d&apos;intervention" id="Plan d&apos;intervention">
-				<classRef sourceName="gest.planInterv.PlanInterv">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
-				<classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
-			</module>
-			<module name="Sécurité civile" id="Sécurité civile">
-				<classRef sourceName="gest.docum.Docum"/>
-				<classRef sourceName="gest.secCiv.LogSinistre"/>
-				<classRef sourceName="gest.secCiv.NivAlerte"/>
-				<classRef sourceName="gest.secCiv.RessSecCiv"/>
-				<classRef sourceName="gest.secCiv.Sinistre"/>
-			</module>
+            <module name="Dossier adresse" id="Dossier adresse">
+                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-actif">
+                    <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
+                    <unitCost priceList="" cost="1.0"/>
+                    <unitCost priceList="A" cost="0.5"/>
+                </classRef>
+                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
+                    <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
+                    <unitCost priceList="" cost="0.0"/>
+                </classRef>
+                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
+                    <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
+                    <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
+                    <unitCost priceList="" cost="0.05"/>
+                </classRef>
+                <classRef sourceName="gest.dossPrev.DossPrevSuppr">
+                    <unitCost priceList="" cost="0.05"/>
+                </classRef>
+                <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
+                <module name="Caractéristiques" id="Caractéristiques">
+                    <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
+                    <classRef sourceName="gest.typeCheminee.TypeCheminee"/>
+                    <classRef sourceName="gest.typeChauffage.TypeChauffage"/>
+                    <classRef sourceName="gest.typeToit.TypeToit"/>
+                    <classRef sourceName="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere"/>
+                    <classRef sourceName="gest.plancher.Plancher"/>
+                    <classRef sourceName="gest.parement.Parement"/>
+                </module>
+            </module>
+            <module name="Plan d&apos;intervention" id="Plan d&apos;intervention">
+                <classRef sourceName="gest.planInterv.PlanInterv">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
+                <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
+            </module>
+            <module name="Sécurité civile" id="Sécurité civile">
+                <classRef sourceName="gest.docum.Docum"/>
+                <classRef sourceName="gest.secCiv.LogSinistre"/>
+                <classRef sourceName="gest.secCiv.NivAlerte"/>
+                <classRef sourceName="gest.secCiv.RessSecCiv"/>
+                <classRef sourceName="gest.secCiv.Sinistre"/>
+            </module>
         </module>
         <module name="Ressources matérielles" id="Ressources matérielles">
-			<classRef sourceName="gest.caserne.Caserne">
-				<unitCost priceList="" cost="1.0"/>
-			</classRef>
-			<classRef sourceName="gest.vehicule.Vehicule">
-				<unitCost priceList="" cost="1.0"/>
-			</classRef>
-			<module name="Équipements" id="Équipements">
-				<classRef sourceName="gest.equipement.EquipExist">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.equipement.TypeEquipement"/>
-				<classRef sourceName="gest.maintEquip.MaintEquip">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.maintEquip.MaintEquipHisto"/>
-				<classRef sourceName="gest.maintEquip.EtatEquipement"/>
-				<classRef sourceName="gest.maintenance.Maintenance"/>
-				<classRef sourceName="gest.maintenance.TypeMaint"/>
-				<classRef sourceName="gest.maintEquip.TypeActivMaintEquip"/>
-				<classRef sourceName="gest.equipement.QteRequise"/>
-				<classRef sourceName="gest.equipement.SituationEquipement"/>
-			</module>
-			<module name="Bornes et points d'eau" id="Bornes">
-				<classRef sourceName="gest.borne.Borne">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.borne.AnomBorne"/>
-				<classRef sourceName="gest.borne.ModeleBorne"/>
-				<classRef sourceName="gest.borne.NivPriorite"/>
-				<classRef sourceName="gest.borne.Raccord"/>
-				<classRef sourceName="gest.borne.TypeMaintBorne"/>
-				<classRef sourceName="gest.borne.TypeValve"/>
-				<classRef sourceName="gest.borne.UsageBorne"/>
-				<classRef sourceName="gest.borne.TypeActivMaintBorne"/>
-			</module>
+            <classRef sourceName="gest.caserne.Caserne">
+                <unitCost priceList="" cost="1.0"/>
+            </classRef>
+            <classRef sourceName="gest.vehicule.Vehicule">
+                <unitCost priceList="" cost="1.0"/>
+            </classRef>
+            <module name="Équipements" id="Équipements">
+                <classRef sourceName="gest.equipement.EquipExist">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.equipement.TypeEquipement"/>
+                <classRef sourceName="gest.maintEquip.MaintEquip">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.maintEquip.MaintEquipHisto"/>
+                <classRef sourceName="gest.maintEquip.EtatEquipement"/>
+                <classRef sourceName="gest.maintenance.Maintenance"/>
+                <classRef sourceName="gest.maintenance.TypeMaint"/>
+                <classRef sourceName="gest.maintEquip.TypeActivMaintEquip"/>
+                <classRef sourceName="gest.equipement.QteRequise"/>
+                <classRef sourceName="gest.equipement.SituationEquipement"/>
+            </module>
+            <module name="Bornes et points d&apos;eau" id="Bornes">
+                <classRef sourceName="gest.borne.MaintBorne">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.borne.BorneIncendie">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.borne.BorneSeche">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.borne.PointEau">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <module name="Paramètres" id="Paramètres">
+                    <classRef sourceName="gest.borne.AnomBorne"/>
+                    <classRef sourceName="gest.borne.NivPriorite"/>
+                    <classRef sourceName="gest.borne.TypeActivMaintBorne"/>
+                    <classRef sourceName="gest.borne.UsageBorne"/>
+                    <classRef sourceName="gest.borne.TypeValve"/>
+                    <classRef sourceName="gest.borne.TypeMaintBorne"/>
+                    <classRef sourceName="gest.borne.Raccord"/>
+                    <classRef sourceName="gest.borne.ModeleBorne"/>
+                </module>
+            </module>
         </module>
         <module name="Ressources humaines" id="Ressources humaines">
-			<classRef sourceName="gest.employe.Employe">
-				<unitCost priceList="" cost="1.0"/>
-			</classRef>
-			<classRef sourceName="gest.equipe.Equipe">
-				<unitCost priceList="" cost="1.0"/>
-			</classRef>
-			<classRef sourceName="gest.grade.Grade"/>
-			<classRef sourceName="gest.utilGroupe.Groupe"/>
-			<classRef sourceName="gest.utilGroupe.Utilisateur">
-				<unitCost priceList="" cost="1.0"/>
-			</classRef>
-			<module name="Formation" id="Formation">
-				<classRef sourceName="gest.formation.Formation">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.cours.CoursInterne"/>
-				<classRef sourceName="gest.cours.Programme"/>
-				<classRef sourceName="gest.formation.CoursAvantEmbauche"/>
-				<classRef sourceName="gest.formation.InfoEtudiant"/>
-				<classRef sourceName="gest.formation.TypeActivFormation"/>
-			</module>
-			<module name="Horaires" id="Horaires">
-				<classRef sourceName="gest.horaire.Horaire"/>
-				<classRef sourceName="gest.horaire.HorQuart"/>
-				<classRef sourceName="gest.horaire.ModeleHorQuart"/>
-				<classRef sourceName="gest.horaire.ModeleHoraire"/>
-				<classRef sourceName="gest.horaire.InfoEmployeQuart"/>
-				<classRef sourceName="gest.horaire.ListeEmployesParCaserne"/>
-				<classRef sourceName="gest.horaire.TypeActivHoraire"/>
-			</module>
+            <classRef sourceName="gest.employe.Employe">
+                <unitCost priceList="" cost="1.0"/>
+            </classRef>
+            <classRef sourceName="gest.equipe.Equipe">
+                <unitCost priceList="" cost="1.0"/>
+            </classRef>
+            <classRef sourceName="gest.grade.Grade"/>
+            <classRef sourceName="gest.utilGroupe.Groupe"/>
+            <classRef sourceName="gest.utilGroupe.Utilisateur">
+                <unitCost priceList="" cost="1.0"/>
+            </classRef>
+            <module name="Formation" id="Formation">
+                <classRef sourceName="gest.formation.Formation">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.cours.CoursInterne"/>
+                <classRef sourceName="gest.cours.Programme"/>
+                <classRef sourceName="gest.formation.CoursAvantEmbauche"/>
+                <classRef sourceName="gest.formation.InfoEtudiant"/>
+                <classRef sourceName="gest.formation.TypeActivFormation"/>
+            </module>
+            <module name="Horaires" id="Horaires">
+                <classRef sourceName="gest.horaire.Horaire"/>
+                <classRef sourceName="gest.horaire.HorQuart"/>
+                <classRef sourceName="gest.horaire.ModeleHorQuart"/>
+                <classRef sourceName="gest.horaire.ModeleHoraire"/>
+                <classRef sourceName="gest.horaire.InfoEmployeQuart"/>
+                <classRef sourceName="gest.horaire.ListeEmployesParCaserne"/>
+                <classRef sourceName="gest.horaire.TypeActivHoraire"/>
+            </module>
         </module>
-    
         <module name="Activités" id="Activités">
-			<module name="Prévention" id="Prévention">
-				<classRef sourceName="gest.prevention.Prevention">
-					<unitCost priceList="" cost="0.5"/>
-				</classRef>
-				<classRef sourceName="gest.classif.Classif"/>
-				<classRef sourceName="gest.codeRef.CodeRef"/>
-				<classRef sourceName="gest.typePrev.TypePrev"/>
-				<classRef sourceName="gest.prevention.RapportAvis"/>
-				<classRef sourceName="gest.raisonReport.RaisonReport"/>
-				<classRef sourceName="gest.typeAnom.TypeAnom">
-					<unitCost priceList="" cost="0.25"/>
-				</classRef>
-				<classRef sourceName="gest.prevention.TypeActivPrevention">
-					<unitCost priceList="" cost="0.5"/>
-				</classRef>
-			</module>
-			<module name="Intervention" id="Intervention">
-				<classRef sourceName="gest.intervention.Intervention">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.codeAppel.CodeAppel"/>
-				<classRef sourceName="gest.intervention.FournSAAQ"/>
-				<classRef sourceName="gest.intervention.MemoFactDetail"/>
-				<classRef sourceName="gest.intervention.TypeActivIntervention"/>
-			</module>
-			<module name="RCCI" id="RCCI">
-				<classRef sourceName="gest.rci.Rci">
-					<unitCost priceList="" cost="1.0"/>
-				</classRef>
-				<classRef sourceName="gest.rci.TypeActivRci"/>
-			</module>
- 			<module name="Autre travail" id="Autre travail">
-				<classRef sourceName="gest.quart.Quart">
-					<unitCost priceList="" cost="0.25"/>
-				</classRef>
-			</module>
-       </module>
+            <module name="Prévention" id="Prévention">
+                <classRef sourceName="gest.prevention.Prevention">
+                    <unitCost priceList="" cost="0.5"/>
+                </classRef>
+                <classRef sourceName="gest.classif.Classif"/>
+                <classRef sourceName="gest.codeRef.CodeRef"/>
+                <classRef sourceName="gest.typePrev.TypePrev"/>
+                <classRef sourceName="gest.prevention.RapportAvis"/>
+                <classRef sourceName="gest.raisonReport.RaisonReport"/>
+                <classRef sourceName="gest.typeAnom.TypeAnom">
+                    <unitCost priceList="" cost="0.25"/>
+                </classRef>
+                <classRef sourceName="gest.prevention.TypeActivPrevention">
+                    <unitCost priceList="" cost="0.5"/>
+                </classRef>
+            </module>
+            <module name="Intervention" id="Intervention">
+                <classRef sourceName="gest.intervention.Intervention">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.codeAppel.CodeAppel"/>
+                <classRef sourceName="gest.intervention.FournSAAQ"/>
+                <classRef sourceName="gest.intervention.MemoFactDetail"/>
+                <classRef sourceName="gest.intervention.TypeActivIntervention"/>
+            </module>
+            <module name="RCCI" id="RCCI">
+                <classRef sourceName="gest.rci.Rci">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.rci.TypeActivRci"/>
+            </module>
+            <module name="Autre travail" id="Autre travail">
+                <classRef sourceName="gest.quart.Quart">
+                    <unitCost priceList="" cost="0.25"/>
+                </classRef>
+            </module>
+        </module>
     </modules>
 </database>

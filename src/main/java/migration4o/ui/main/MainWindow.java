@@ -183,7 +183,8 @@ public class MainWindow extends JFrame {
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open DB4O Database");
-        fileChooser.setFileFilter(new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak)", "dat", "bak"));
+        fileChooser.setFileFilter(
+                new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak, *.nozip)", "dat", "bak", "nozip"));
         fileChooser.setCurrentDirectory(new File("local"));
 
         int result = fileChooser.showOpenDialog(this);
