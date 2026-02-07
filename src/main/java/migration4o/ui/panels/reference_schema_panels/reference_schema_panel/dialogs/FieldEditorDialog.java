@@ -405,7 +405,8 @@ public class FieldEditorDialog extends JDialog {
                 DOSchemaClass typeClass = findClassByName(typeName);
                 if (typeClass != null) {
                     shouldEnable = typeClass.isIDEntite(schema) ||
-                            typeClass.isEntite(schema);
+                            typeClass.isEntite(schema) ||
+                            !typeClass.isPrimitive();
                 }
             }
         }
@@ -431,28 +432,6 @@ public class FieldEditorDialog extends JDialog {
             }
         }
         return null;
-    }
-
-    private boolean isDescendantOf(DOSchemaClass schemaClass, String parentClassName) {
-        if (schemaClass == null || parentClassName == null) {
-            return false;
-        }
-
-        String currentParent = schemaClass.parentClassName;
-        while (currentParent != null && !currentParent.isEmpty() && !currentParent.equals("Undetermined")) {
-            if (currentParent.equals(parentClassName)) {
-                return true;
-            }
-
-            // Find parent class and continue up the hierarchy
-            DOSchemaClass parentClass = findClassByName(currentParent);
-            if (parentClass == null) {
-                break;
-            }
-            currentParent = parentClass.parentClassName;
-        }
-
-        return false;
     }
 
     private void updateChildrenTypeStatus() {

@@ -43,21 +43,14 @@ public class DOReferenceSchemaReader {
             }
 
             // Parse shared field definitions first
-            DOSchema schema = new DOSchema(new DOSchemaClass[0], new DOSchemaClass[0]);
+            DOSchema schema = new DOSchema();
             parseSharedFields(root, schema);
 
             // Parse all classes directly from root
             DOSchemaClass[] allClasses = parseClassesFromRoot(root, schema);
 
-            // No foundation classes in new format
-            DOSchemaClass[] foundationClasses = new DOSchemaClass[0];
-
-            // Update schema with parsed classes
-            schema = new DOSchema(allClasses, foundationClasses);
-
-            // Restore shared fields (they were lost when creating new schema)
-            DOSchema tempSchema = schema;
-            parseSharedFields(root, tempSchema);
+            // Set classes array
+            schema.classes = allClasses;
 
             // Post-process: detect and add missing references (e.g., IDEntite collections)
             DOReferenceDetector.detectAndAddReferences(schema);
@@ -100,7 +93,7 @@ public class DOReferenceSchemaReader {
                 // Use source attribute as the key for shared field definitions
                 if (field.source != null && !field.source.trim().isEmpty()) {
                     field.definitionId = field.source; // Mark as shared field definition
-                    schema.addSharedField(field.source, field);
+                    schema.sharedFields.put(field.source, field);
                 }
             }
         }
@@ -196,7 +189,7 @@ public class DOReferenceSchemaReader {
         // Check if this is a reference to a shared field
         if (definitionRef != null && !definitionRef.trim().isEmpty()) {
             // This is a field reference - resolve from shared fields
-            DOSchemaField sharedField = schema.getSharedField(definitionRef);
+            DOSchemaField sharedField = schema.sharedFields.get(definitionRef);
             if (sharedField == null) {
                 System.err.println("Warning: Shared field definition not found: " + definitionRef);
                 return null;

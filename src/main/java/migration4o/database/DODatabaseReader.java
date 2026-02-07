@@ -87,10 +87,8 @@ public class DODatabaseReader {
                 monitor.onCreatingSchema(schemaClasses.length);
             }
 
-            DOSchema schema = new DOSchema(
-                    schemaClasses,
-                    new DOSchemaClass[0] // No foundation classes from database
-            );
+            DOSchema schema = new DOSchema();
+            schema.classes = schemaClasses;
 
             // Deduplicate object IDs across inheritance hierarchies
             schema = DOObjectDeduplicator.deduplicateObjectIdsInInheritanceHierarchies(schema, monitor);
@@ -117,8 +115,6 @@ public class DODatabaseReader {
      * Creates an empty schema when database is null or empty.
      */
     private DOSchema createEmptySchema() {
-        return new DOSchema(
-                new DOSchemaClass[0],
-                new DOSchemaClass[0]);
+        return new DOSchema();
     }
 }

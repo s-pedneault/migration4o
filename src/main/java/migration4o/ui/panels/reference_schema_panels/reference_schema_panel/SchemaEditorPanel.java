@@ -34,6 +34,7 @@ import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
+import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaAnomaly;
 import migration4o.models.schema.DOSchemaClass;
@@ -42,17 +43,15 @@ import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
-import migration4o.schema.DOReferenceSchemaConstants;
-import migration4o.schema.DOSchemaService;
-import migration4o.schema.DOReferenceSchemaReader;
 import migration4o.schema.DOReferenceSchemaWriter;
+import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
-import migration4o.database.DODatabaseService;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
+import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
 
 /**
@@ -154,18 +153,19 @@ public class SchemaEditorPanel extends JPanel {
         newClass.description = sourceClass.description;
         newClass.title = sourceClass.title;
         newClass.parentClassName = sourceClass.parentClassName;
-        newClass.setFields(sourceClass.fields != null ? sourceClass.fields.clone() : new DOSchemaField[0]);
+
+        // Convert fields to use common field references where applicable
+        DOSchemaField[] fields = sourceClass.fields != null ? sourceClass.fields.clone() : new DOSchemaField[0];
+        for (int i = 0; i < fields.length; i++) {
+            fields[i] = SchemaUtil.convertToCommonFieldIfExists(fields[i], schema);
+        }
+        newClass.setFields(fields);
+
         newClass.schemaReferences = sourceClass.schemaReferences;
         newClass.migrate = sourceClass.migrate;
 
-        // Create new schema with the added class
-        DOSchemaClass[] existingClasses = schema.getClasses();
-        DOSchemaClass[] newClasses = new DOSchemaClass[existingClasses.length + 1];
-        System.arraycopy(existingClasses, 0, newClasses, 0, existingClasses.length);
-        newClasses[existingClasses.length] = newClass;
-
-        // Recreate schema with new classes array
-        schema = new DOSchema(newClasses, schema.getFoundationClasses());
+        // Add the class to the schema (alphabetically)
+        SchemaUtil.addClass(schema, newClass);
 
         // Rebuild the tree to show the new class
         buildTree();
@@ -1664,14 +1664,8 @@ public class SchemaEditorPanel extends JPanel {
         newClass.schemaReferences = null;
         newClass.migrate = true;
 
-        // Create new schema with the added class
-        DOSchemaClass[] existingClasses = schema.getClasses();
-        DOSchemaClass[] newClasses = new DOSchemaClass[existingClasses.length + 1];
-        System.arraycopy(existingClasses, 0, newClasses, 0, existingClasses.length);
-        newClasses[existingClasses.length] = newClass;
-
-        // Recreate schema with new classes array
-        schema = new DOSchema(newClasses, schema.getFoundationClasses());
+        // Add the class to the schema (alphabetically)
+        SchemaUtil.addClass(schema, newClass);
 
         // Rebuild the tree to show the new class
         buildTree();

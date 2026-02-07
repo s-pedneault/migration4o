@@ -48,8 +48,8 @@ public class DOClassConverter {
         String absoluteName = storedClass.getName();
         String simpleName = DatabaseUtil.getSimpleClassName(absoluteName);
         int objectCount = storedClass.instanceCount();
-        String description = buildDescription(storedClass, objectCount);
-        String title = simpleName;
+        // String description = buildDescription(storedClass, objectCount);
+        // String title = simpleName;
 
         // Get parent class name
         String parentClassName = null;
@@ -81,8 +81,8 @@ public class DOClassConverter {
         DOSchemaClass newClass = new DOSchemaClass();
         newClass.source = absoluteName;
         newClass.destinationName = simpleName;
-        newClass.description = description;
-        newClass.title = title;
+        // newClass.description = description;
+        // newClass.title = title;
         newClass.parentClassName = parentClassName;
         newClass.setFields(schemaFields);
         newClass.schemaReferences = null; // Will be resolved later if needed

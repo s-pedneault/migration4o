@@ -9,6 +9,7 @@ import com.db4o.ext.StoredField;
 import migration4o.database.DODatabaseContext;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.CollectionTypeUtil;
+import migration4o.util.DatabaseUtil;
 
 /**
  * Converter for transforming DB4O StoredField objects to DOSchemaField objects.
@@ -46,7 +47,7 @@ public class DOFieldConverter {
             DODatabaseContext context) {
 
         String source = storedField.getName();
-        String destination = source; // Use same name for destination
+        String destination = DatabaseUtil.normalizeFieldName(source);
         String typeName = storedField.getStoredType().getName();
         boolean isArray = storedField.isArray();
 
@@ -65,7 +66,7 @@ public class DOFieldConverter {
         field.destinationName = destination;
         field.type = type;
         field.isExported = true; // Assume all database fields are exported
-        field.skipWhen = "NULL,MINUS_ONE"; // Default behavior
+        field.skipWhen = "DEFAULT"; // Default behavior
         field.isCollection = isCollection;
         field.embedContents = false; // Default - don't embed
         field.childrenType = childrenType;

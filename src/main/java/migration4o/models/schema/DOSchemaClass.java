@@ -3,6 +3,7 @@ package migration4o.models.schema;
 
 import migration4o.util.ClassUtil;
 import migration4o.util.SchemaUtil;
+import migration4o.util.TypeUtil;
 
 public class DOSchemaClass {
     public String source;
@@ -43,6 +44,10 @@ public class DOSchemaClass {
 
     public boolean isParam(DOSchema schema) {
         return isDescendantOf("gest.gen.EntiteParam", schema);
+    }
+
+    public boolean isPrimitive() {
+        return TypeUtil.isPrimitiveType(source);
     }
 
     public DOSchemaField findField(String fieldName) {

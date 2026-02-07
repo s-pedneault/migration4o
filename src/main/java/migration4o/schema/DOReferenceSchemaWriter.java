@@ -29,9 +29,9 @@ public class DOReferenceSchemaWriter {
             writer.write("<classes>\n");
 
             // Write shared field definitions first if any exist
-            if (schema.getSharedFields() != null && !schema.getSharedFields().isEmpty()) {
+            if (schema.sharedFields != null && !schema.sharedFields.isEmpty()) {
                 writer.write("    <fields>\n");
-                for (java.util.Map.Entry<String, DOSchemaField> entry : schema.getSharedFields().entrySet()) {
+                for (java.util.Map.Entry<String, DOSchemaField> entry : schema.sharedFields.entrySet()) {
                     writeSharedField(writer, entry.getKey(), entry.getValue(), 2);
                 }
                 writer.write("    </fields>\n");

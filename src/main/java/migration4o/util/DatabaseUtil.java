@@ -68,6 +68,49 @@ public class DatabaseUtil {
         return null;
     }
 
+    /**
+     * Normalizes a database field name to XML-friendly camelCase format.
+     * Replicates the Python transform_destination_name() logic:
+     * - Removes leading 'm' prefix if followed by uppercase letter
+     * - Converts 'ID' prefix at start to lowercase 'id'
+     * - Lowercases the first letter
+     * 
+     * Examples:
+     * - mNom → nom
+     * - mDateCreation → dateCreation
+     * - mID → id
+     * - mIDSSI → idssi
+     * - IDDossPrev → idDossPrev
+     * - Name → name
+     * 
+     * @param sourceName The original field name from the database
+     * @return The normalized field name
+     */
+    public static String normalizeFieldName(String sourceName) {
+        if (sourceName == null || sourceName.isEmpty()) {
+            return sourceName;
+        }
+
+        String name = sourceName;
+
+        // Remove leading 'm' if it's lowercase and followed by uppercase letter
+        if (name.startsWith("m") && name.length() > 1 && Character.isUpperCase(name.charAt(1))) {
+            name = name.substring(1);
+        }
+
+        // Handle ID prefix (e.g., "IDSomething" -> "idSomething")
+        if (name.startsWith("ID") && name.length() > 2) {
+            name = "id" + name.substring(2);
+        }
+
+        // Lowercase first letter
+        if (name.length() > 0) {
+            name = Character.toLowerCase(name.charAt(0)) + name.substring(1);
+        }
+
+        return name;
+    }
+
     // /**
     // * Converts a StoredField to a DODatabaseField with schema enhancement.
     // */

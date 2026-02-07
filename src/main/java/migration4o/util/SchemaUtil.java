@@ -45,6 +45,80 @@ public class SchemaUtil {
     }
 
     /**
+     * Converts a field to use a common field definition reference if a matching
+     * common field exists in the schema.
+     * 
+     * @param field  the field to potentially convert
+     * @param schema the schema containing common field definitions
+     * @return a new field using the common definition if found, or the original
+     *         field
+     */
+    public static DOSchemaField convertToCommonFieldIfExists(DOSchemaField field, DOSchema schema) {
+        if (field == null || schema == null || schema.sharedFields == null || schema.sharedFields.isEmpty()) {
+            return field;
+        }
+
+        // Check if a common field definition exists for this field's source name
+        DOSchemaField commonField = schema.sharedFields.get(field.source);
+        if (commonField != null) {
+            // Create a reference to the common field
+            DOSchemaField refField = new DOSchemaField();
+            refField.source = field.source;
+            refField.definitionId = field.source; // Mark as reference
+            // Copy properties from common field
+            refField.destinationName = commonField.destinationName;
+            refField.type = commonField.type;
+            refField.isExported = commonField.isExported;
+            refField.skipWhen = commonField.skipWhen;
+            refField.isCollection = commonField.isCollection;
+            refField.embedContents = commonField.embedContents;
+            refField.childrenType = commonField.childrenType;
+            refField.title = commonField.title;
+            refField.description = commonField.description;
+            refField.pointsTo = commonField.pointsTo;
+            return refField;
+        }
+
+        return field;
+    }
+
+    /**
+     * Adds a class to a schema, inserting it alphabetically by source name.
+     * 
+     * @param schema   the schema to add the class to
+     * @param newClass the class to add
+     */
+    public static void addClass(DOSchema schema, DOSchemaClass newClass) {
+        if (schema == null || newClass == null) {
+            return;
+        }
+
+        DOSchemaClass[] existing = schema.classes;
+        DOSchemaClass[] newArray = new DOSchemaClass[existing.length + 1];
+
+        // Find insertion point (alphabetically by source)
+        int insertIndex = 0;
+        for (int i = 0; i < existing.length; i++) {
+            if (existing[i].source.compareTo(newClass.source) < 0) {
+                insertIndex = i + 1;
+            }
+        }
+
+        // Copy elements before insertion point
+        System.arraycopy(existing, 0, newArray, 0, insertIndex);
+
+        // Insert new class
+        newArray[insertIndex] = newClass;
+
+        // Copy elements after insertion point
+        if (insertIndex < existing.length) {
+            System.arraycopy(existing, insertIndex, newArray, insertIndex + 1, existing.length - insertIndex);
+        }
+
+        schema.classes = newArray;
+    }
+
+    /**
      * Finds a class in the schemas by its absolute name.
      * Searches the schemas in reverse order, and returns the first class found.
      * 
