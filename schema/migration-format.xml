@@ -58,7 +58,7 @@
         </module>
         <module name="Territoire" id="Territoire">
             <module name="Dossier adresse" id="Dossier adresse">
-                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-actif">
+                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse">
                     <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="A" cost="0.5"/>
