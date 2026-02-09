@@ -29,6 +29,14 @@ public class IDEntityHandler {
         }
 
         GenericObject genericObj = (GenericObject) idEntiteObject;
+
+        // Activate the object to ensure field values are loaded
+        try {
+            container.activate(idEntiteObject, 2);
+        } catch (Exception e) {
+            // Activation failed, try to proceed anyway
+        }
+
         StoredClass storedClass = container.ext().storedClass(genericObj);
         if (storedClass == null) {
             return null;

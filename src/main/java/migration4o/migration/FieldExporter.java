@@ -270,6 +270,9 @@ public class FieldExporter {
                     if (mID != null) {
                         xmlWriter.writeElement(fieldName, mID.toString(), indentLevel);
                         return;
+                    } else {
+                        // mID is null - skip this field to avoid empty tags
+                        return;
                     }
                 }
             }
@@ -306,13 +309,36 @@ public class FieldExporter {
 
         String className = ClassUtil.getClassName(fieldValue);
 
-        // Check if this field is marked for embedding (applies to all object types)
-        boolean isEmbedded = schemaField != null && schemaField.embedContents;
+        // Check if this field is marked for embedding
+        // Default behavior: embed regular objects (true), but respect explicit
+        // embedContents=false for IDEntite references
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
         String sourceFieldName = schemaField != null ? schemaField.source : null;
 
         // Check if this is an IDEntite reference (reference object pattern)
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, operation.referenceSchema);
+
+        // Determine if object should be embedded:
+        // - IDEntite objects: only embed if explicitly set to embedContents=true
+        // (default is false for references)
+        // - Regular objects: always embed unless explicitly set to embedContents=false
+        // (default is true for value objects)
+        boolean isEmbedded;
+        if (schemaField != null) {
+            if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
+                // IDEntite: default to non-embedded (reference by ID), but allow explicit
+                // embedContents=true
+                isEmbedded = schemaField.embedContents;
+            } else {
+                // Regular objects: default to embedded (inline content), unless explicitly
+                // embedContents=false
+                // This prevents value objects like Adresse, Qte, etc. from being deduplicated
+                isEmbedded = true; // Always embed non-IDEntite objects
+            }
+        } else {
+            // No schema field - default to embedded for safety
+            isEmbedded = true;
+        }
         if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
             // Track the referenced entity class if this is a non-embedded reference
             if (operation.referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {
