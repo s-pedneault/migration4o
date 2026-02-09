@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DOSchema {
+public class DOSchema implements DOReferenceSchema, DODatabaseSchema {
     public DOSchemaClass[] classes;
     public final List<DOSchemaAnomaly> anomalies = new ArrayList<>();
     public final Map<String, DOSchemaField> sharedFields = new LinkedHashMap<>();
