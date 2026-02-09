@@ -13,7 +13,7 @@
         <field source="mDetail" destinationName="detail" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPrefixe" destinationName="prefixe" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mIDCaserne" destinationName="idCaserne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.caserne.IDCaserne" />
-        <field source="mVectPhotoFich" destinationName="listePieceJointe" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.gen.PhotoFich" />
+        <field source="mVectPhotoFich" destinationName="listePieceJointe" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.PhotoFich" />
         <field source="mDateActivite" destinationName="dateActivite" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateCompletee" destinationName="dateCompletee" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateIdent" destinationName="dateIdent" isExported="true" skipWhen="DEFAULT" type="date" />
