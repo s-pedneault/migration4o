@@ -7,8 +7,11 @@ import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 
-import migration4o.models.schema.DOSchemaClass;
+import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.schema.DOSchemaService;
 
 /**
  * Builds XSD (XML Schema) definitions for exported XML files.
@@ -21,14 +24,9 @@ public class XSDBuilder {
     private final Set<String> topLevelObjects = new LinkedHashSet<>();
     private final Set<String> referencedTypes = new LinkedHashSet<>(); // Types used in fields
     private final Map<String, DOSchemaField> fieldsWithValueMappings = new LinkedHashMap<>(); // Fields that need
-                                                                                              // enumeration types
-    private final migration4o.models.schema.DOSchema referenceSchema;
-    private final migration4o.models.schema.DOSchema databaseSchema;
+    // enumeration types
 
-    public XSDBuilder(migration4o.models.schema.DOSchema referenceSchema,
-            migration4o.models.schema.DOSchema databaseSchema) {
-        this.referenceSchema = referenceSchema;
-        this.databaseSchema = databaseSchema;
+    public XSDBuilder() {
     }
 
     public void startExportRoot() {
@@ -36,9 +34,14 @@ public class XSDBuilder {
     }
 
     public void addTopLevelObject(String destName, DOSchemaClass schemaClass) {
-        topLevelObjects.add(destName);
         if (schemaClass != null) {
-            classMap.put(schemaClass.source, schemaClass);
+            // Always use reference schema for export definitions
+            DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+            DOSchemaClass refClass = referenceSchema.findClassByName(schemaClass.source);
+            if (refClass != null) {
+                topLevelObjects.add(refClass.destinationName); // Use reference schema's destination name
+                classMap.put(refClass.source, refClass);
+            }
         }
     }
 
@@ -47,20 +50,46 @@ public class XSDBuilder {
             return;
         String absName = schemaClass.source;
         if (!classMap.containsKey(absName)) {
-            classMap.put(absName, schemaClass);
+            // Always use reference schema for export definitions
+            DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+            DOSchemaClass refClass = referenceSchema.findClassByName(absName);
+            if (refClass != null) {
+                classMap.put(absName, refClass);
+            }
         }
     }
 
     public void addField(DOSchemaClass parentClass, DOSchemaField field) {
         if (field == null || parentClass == null)
             return;
-        fieldsByClass.computeIfAbsent(parentClass.source, k -> new LinkedHashMap<>())
-                .put(field.destinationName, field);
 
-        // Track fields with value mappings for enumeration type generation
-        if (field.valueMap != null && !field.valueMap.isEmpty()) {
-            String uniqueKey = parentClass.destinationName + "_" + field.destinationName;
-            fieldsWithValueMappings.put(uniqueKey, field);
+        // Always use reference schema for export definitions
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DOSchemaClass refClass = referenceSchema.findClassByName(parentClass.source);
+        if (refClass == null) {
+            return; // Skip if not in reference schema
+        }
+
+        // Look up the field in reference schema to get correct export properties
+        DOSchemaField refField = null;
+        if (refClass.fields != null) {
+            for (DOSchemaField f : refClass.fields) {
+                if (f.source.equals(field.source)) {
+                    refField = f;
+                    break;
+                }
+            }
+        }
+
+        if (refField != null && refField.isExported) {
+            fieldsByClass.computeIfAbsent(refClass.source, k -> new LinkedHashMap<>())
+                    .put(refField.destinationName, refField);
+
+            // Track fields with value mappings for enumeration type generation
+            if (refField.valueMap != null && !refField.valueMap.isEmpty()) {
+                String uniqueKey = refClass.destinationName + "_" + refField.destinationName;
+                fieldsWithValueMappings.put(uniqueKey, refField);
+            }
         }
     }
 
@@ -103,9 +132,49 @@ public class XSDBuilder {
             for (DOSchemaClass schemaClass : classMap.values()) {
                 String destName = schemaClass.destinationName;
                 boolean isTopLevel = topLevelObjects.contains(destName);
-                boolean isReferenced = referencedTypes.contains(getSimpleClassName(schemaClass.source) + "Type");
+                boolean isReferenced = referencedTypes.contains(destName);
                 writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isReferenced);
             }
+
+            // Also write type definitions for referenced classes not in classMap
+            DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+            for (String referencedTypeName : referencedTypes) {
+                // Skip if already written (was in classMap)
+                boolean alreadyWritten = false;
+                for (DOSchemaClass schemaClass : classMap.values()) {
+                    if (schemaClass.destinationName.equals(referencedTypeName)) {
+                        alreadyWritten = true;
+                        break;
+                    }
+                }
+                if (alreadyWritten) {
+                    continue;
+                }
+
+                // Find the class in the schema and add its fields to fieldsByClass
+                for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
+                    if (schemaClass.destinationName.equals(referencedTypeName)) {
+                        // Add the class to classMap and populate its fields
+                        classMap.put(schemaClass.source, schemaClass);
+
+                        // Populate fields from schema definition
+                        if (schemaClass.fields != null) {
+                            Map<String, DOSchemaField> fields = new LinkedHashMap<>();
+                            for (DOSchemaField field : schemaClass.fields) {
+                                if (field.isExported) {
+                                    fields.put(field.destinationName, field);
+                                }
+                            }
+                            fieldsByClass.put(schemaClass.source, fields);
+                        }
+
+                        // Now write the type definition with proper fields
+                        writeClassTypeDefinition(xsdWriter, schemaClass, false, true);
+                        break;
+                    }
+                }
+            }
+
             // Generate enumeration types for fields with value mappings
             if (!fieldsWithValueMappings.isEmpty()) {
                 xsdWriter.write("\n  <!-- Enumeration types for fields with value mappings -->\n");
@@ -124,10 +193,10 @@ public class XSDBuilder {
         }
 
         String className = schemaClass.source;
-        String destClassName = schemaClass.destinationName;
+        String destClassName = schemaClass.destinationName; // Already from reference schema
         Map<String, DOSchemaField> fields = fieldsByClass.getOrDefault(className, new LinkedHashMap<>());
 
-        xsdWriter.write("  <!-- Class: " + className + " (exported as " + destClassName + ") -->\n");
+        xsdWriter.write("  <!-- " + destClassName + " -->\n");
 
         // Write as element (used in top-level <objects>) if needed
         if (writeElement) {
@@ -144,7 +213,7 @@ public class XSDBuilder {
 
         // Write as type (reusable for field references) if needed
         if (writeType) {
-            xsdWriter.write("  <xs:complexType name=\"" + getSimpleClassName(className) + "Type\">\n");
+            xsdWriter.write("  <xs:complexType name=\"" + destClassName + "\">\n");
             xsdWriter.write("    <xs:sequence>\n");
             for (DOSchemaField field : fields.values()) {
                 writeFieldElement(xsdWriter, field, "      ");
@@ -176,7 +245,7 @@ public class XSDBuilder {
                 xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + xsdType
                         + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             } else {
-                String refClassName = getSimpleClassName(childrenType) + "Type";
+                String refClassName = getDestinationName(childrenType);
                 referencedTypes.add(refClassName); // Track that this type is referenced
                 xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + refClassName
                         + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
@@ -197,7 +266,9 @@ public class XSDBuilder {
                     + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
         } else {
             // Check if this is a non-embedded IDEntite reference
-            DOSchemaClass fieldClass = migration4o.util.SchemaUtil.findClassByName(fieldType, referenceSchema);
+            DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+            DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+            DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values
                 // But if they have value mappings, use enumeration type
@@ -210,7 +281,7 @@ public class XSDBuilder {
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" "
                         + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
-                String refClassName = getSimpleClassName(fieldType) + "Type";
+                String refClassName = getDestinationName(fieldType);
                 referencedTypes.add(refClassName); // Track that this type is referenced
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
                         + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
@@ -259,6 +330,26 @@ public class XSDBuilder {
         }
         int lastDot = fullClassName.lastIndexOf('.');
         return lastDot >= 0 ? fullClassName.substring(lastDot + 1) : fullClassName;
+    }
+
+    /**
+     * Gets the XSD type name for a class, using its destinationName from the
+     * schema.
+     */
+    private String getDestinationName(String sourceClassName) {
+        if (sourceClassName == null) {
+            return "Unknown";
+        }
+
+        // Look up in the reference schema - it has all class definitions
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DOSchemaClass schemaClass = referenceSchema.findClassByName(sourceClassName);
+        if (schemaClass != null) {
+            return schemaClass.destinationName;
+        }
+
+        // Fallback to simple class name if not found
+        return getSimpleClassName(sourceClassName);
     }
 
     private void writeEnumerationType(FileWriter xsdWriter, String typeKey, DOSchemaField field) throws IOException {

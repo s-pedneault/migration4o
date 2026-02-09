@@ -95,6 +95,22 @@ public class MigrationExportService {
             results.add(exporter.exportModuleStructured(module, baseOutputPath, monitor, tracker));
         }
         exporter.exportReferencedClasses(baseOutputPath, monitor, tracker);
+
+        // Write comprehensive XSD after all exports are complete
+        try {
+            if (monitor != null) {
+                monitor.onStatusMessage("Generating comprehensive XSD schema...");
+            }
+            exporter.writeComprehensiveXSD(baseOutputPath);
+            if (monitor != null) {
+                monitor.onStatusMessage("Comprehensive XSD schema generated: migration-schema.xsd");
+            }
+        } catch (Exception e) {
+            if (monitor != null) {
+                monitor.onStatusMessage("Warning: Failed to generate comprehensive XSD: " + e.getMessage());
+            }
+        }
+
         exporter.resetSharedTracking();
 
         return ExportUtil.combineResults(results, baseOutputPath);

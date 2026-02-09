@@ -36,6 +36,7 @@ public class XMLExportEngine {
     private final ExtObjectContainer container;
     private Integer maxObjectsPerClass = null; // null = all objects
     private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
+    private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for comprehensive schema generation
 
     /**
      * Creates export engine using the shared in-memory database from
@@ -70,20 +71,44 @@ public class XMLExportEngine {
     }
 
     /**
-     * Initializes shared object tracking for multi-module exports.
+     * Initializes shared object tracking and XSD builder for multi-module exports.
      * Call this before exporting multiple modules to ensure objects are only
-     * counted once.
+     * counted once and a single comprehensive XSD is generated.
      */
     public void initializeSharedTracking() {
         this.sharedExportedObjectIds = new HashSet<>();
+        this.sharedXSDBuilder = new XSDBuilder();
+        this.sharedXSDBuilder.startExportRoot();
     }
 
     /**
-     * Resets shared object tracking.
+     * Resets shared object tracking and XSD builder.
      * Call this to clear tracking state between different export sessions.
      */
     public void resetSharedTracking() {
         this.sharedExportedObjectIds = null;
+        this.sharedXSDBuilder = null;
+    }
+
+    /**
+     * Writes the comprehensive XSD schema file.
+     * Should be called after all exports are complete when using shared tracking.
+     * 
+     * @param baseOutputPath The base output directory
+     * @throws IOException if writing fails
+     */
+    public void writeComprehensiveXSD(String baseOutputPath) throws IOException {
+        if (sharedXSDBuilder == null) {
+            throw new IllegalStateException(
+                    "Shared XSD builder not initialized. Call initializeSharedTracking() first.");
+        }
+
+        Path dbBasePath = getBaseOutputPath(baseOutputPath);
+        Path defsPath = dbBasePath.resolve("Definitions");
+        Files.createDirectories(defsPath);
+
+        Path xsdPath = defsPath.resolve("migration-schema.xsd");
+        sharedXSDBuilder.writeXSD(xsdPath.toString());
     }
 
     /**
@@ -144,7 +169,7 @@ public class XMLExportEngine {
 
         // Initialize components
         ExportStatistics statistics = new ExportStatistics(monitor);
-        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
+        XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
         FileWriter fileWriter = null;
@@ -538,8 +563,11 @@ public class XMLExportEngine {
             ReferencedClassTracker referencedClassTracker, migration4o.models.ui.ClassExportConfig config)
             throws Exception {
 
-        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
-        xsdBuilder.startExportRoot();
+        // Use shared XSD builder if available, otherwise create a new one
+        XSDBuilder xsdBuilder = sharedXSDBuilder != null ? sharedXSDBuilder : new XSDBuilder();
+        if (sharedXSDBuilder == null) {
+            xsdBuilder.startExportRoot();
+        }
 
         FileWriter fileWriter = null;
 
@@ -574,8 +602,16 @@ public class XMLExportEngine {
             }
 
             // Write XML header and metadata
-            xmlWriter.writeXMLHeader();
-            xmlWriter.writeExportHeader(schemaClass.source);
+            if (sharedXSDBuilder != null) {
+                // Using shared XSD - add schema reference
+                String schemaLocation = "../Definitions/migration-schema.xsd";
+                xmlWriter.writeXMLHeaderWithSchema(schemaLocation);
+                xmlWriter.writeExportHeaderWithSchema(schemaClass.source, schemaLocation);
+            } else {
+                // Individual XSD - no schema reference needed
+                xmlWriter.writeXMLHeader();
+                xmlWriter.writeExportHeader(schemaClass.source);
+            }
 
             // Export all objects of this class
             xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
@@ -621,15 +657,18 @@ public class XMLExportEngine {
             // Write XML footer
             xmlWriter.writeExportFooter();
 
-            if (monitor != null) {
-                monitor.onXSDGenerationStart(xsdPath.toString());
-            }
+            // Only generate individual XSD if not using shared builder
+            if (sharedXSDBuilder == null) {
+                if (monitor != null) {
+                    monitor.onXSDGenerationStart(xsdPath.toString());
+                }
 
-            // Generate XSD schema
-            xsdBuilder.writeXSD(xsdPath.toString());
+                // Generate XSD schema
+                xsdBuilder.writeXSD(xsdPath.toString());
 
-            if (monitor != null) {
-                monitor.onXSDGenerationComplete(xsdPath.toString());
+                if (monitor != null) {
+                    monitor.onXSDGenerationComplete(xsdPath.toString());
+                }
             }
 
             if (monitor != null) {
@@ -737,7 +776,7 @@ public class XMLExportEngine {
 
         // Initialize components
         ExportStatistics statistics = new ExportStatistics();
-        XSDBuilder xsdBuilder = new XSDBuilder(schema, databaseSchema);
+        XSDBuilder xsdBuilder = new XSDBuilder();
         xsdBuilder.startExportRoot();
 
         FileWriter fileWriter = null;

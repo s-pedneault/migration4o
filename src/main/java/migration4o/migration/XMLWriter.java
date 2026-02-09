@@ -19,8 +19,29 @@ public class XMLWriter {
         writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     }
 
+    public void writeXMLHeaderWithSchema(String schemaLocation) throws IOException {
+        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        if (schemaLocation != null && !schemaLocation.isEmpty()) {
+            // Schema location is relative from the Data folder to Definitions folder
+            writer.write("<?xml-stylesheet type=\"text/xsl\" href=\"" + schemaLocation + "\"?>\n");
+        }
+    }
+
     public void writeExportHeader(String className) throws IOException {
         writer.write("<export>\n");
+        writer.write("  <metadata>\n");
+        writer.write("    <exportClass>" + xmlEscape(className) + "</exportClass>\n");
+        writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
+        writer.write("  </metadata>\n");
+        writer.write("  <objects>\n");
+    }
+
+    public void writeExportHeaderWithSchema(String className, String schemaLocation) throws IOException {
+        String schemaRef = schemaLocation != null
+                ? " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\""
+                        + schemaLocation + "\""
+                : "";
+        writer.write("<export" + schemaRef + ">\n");
         writer.write("  <metadata>\n");
         writer.write("    <exportClass>" + xmlEscape(className) + "</exportClass>\n");
         writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
