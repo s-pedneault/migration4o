@@ -1,4 +1,7 @@
-package migration4o.models.schema;
+package migration4o.models.schema.analysis;
+
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 
 /**
  * Anomaly indicating that a class with only one reference is listed in a

@@ -4,7 +4,8 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
-import migration4o.models.schema.DOSchemaReferenceAnomaly;
+import migration4o.models.schema.analysis.DOSchemaMissingFieldClass;
+import migration4o.models.schema.analysis.DOSchemaReferenceAnomaly;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -75,6 +76,13 @@ public class DOReferenceDetector {
                             addReference(referencesMap, fieldContexts, typeClass.source,
                                     schemaClass, field);
                         }
+                    } else if (isEntityType(field.type)) {
+                        // Field type is an entity type but class not found in schema
+                        String explanation = String.format(
+                                "Field '%s' has type '%s' which is not defined in the schema",
+                                field.source, field.type);
+                        schema.anomalies.add(new DOSchemaMissingFieldClass(
+                                schemaClass, field, field.type, explanation));
                     }
                 }
 
@@ -104,6 +112,13 @@ public class DOReferenceDetector {
                             addReference(referencesMap, fieldContexts, childrenClass.source,
                                     schemaClass, field);
                         }
+                    } else if (isEntityType(field.childrenType)) {
+                        // Collection childrenType is an entity type but class not found in schema
+                        String explanation = String.format(
+                                "Field '%s' has childrenType '%s' which is not defined in the schema",
+                                field.source, field.childrenType);
+                        schema.anomalies.add(new DOSchemaMissingFieldClass(
+                                schemaClass, field, field.childrenType, explanation));
                     }
                 }
             }
@@ -159,12 +174,13 @@ public class DOReferenceDetector {
 
         String lower = typeName.toLowerCase();
 
-        // Filter out primitive types
+        // Filter out primitive types (including common variants)
         if (lower.equals("string") || lower.equals("int") || lower.equals("integer") ||
                 lower.equals("long") || lower.equals("double") || lower.equals("float") ||
                 lower.equals("boolean") || lower.equals("bool") || lower.equals("date") ||
                 lower.equals("datetime") || lower.equals("byte") || lower.equals("short") ||
-                lower.equals("char") || lower.equals("character")) {
+                lower.equals("char") || lower.equals("character") || lower.equals("byte[]") ||
+                lower.equals("object") || lower.equals("void")) {
             return false;
         }
 

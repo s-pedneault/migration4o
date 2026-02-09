@@ -36,9 +36,9 @@ import javax.swing.tree.TreePath;
 
 import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaAnomaly;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.analysis.DOSchemaAnomaly;
 import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.SchemaTreeNode;

@@ -1,4 +1,7 @@
-package migration4o.models.schema;
+package migration4o.models.schema.analysis;
+
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 
 /**
  * Base class for schema anomalies detected during schema loading and

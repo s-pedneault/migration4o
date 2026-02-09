@@ -1,4 +1,7 @@
-package migration4o.models.schema;
+package migration4o.models.schema.analysis;
+
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 
 /**
  * Anomaly indicating that a field pointing to a shared object (multiple

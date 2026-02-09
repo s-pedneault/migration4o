@@ -1,6 +1,7 @@
 
 package migration4o.models.schema;
 
+import migration4o.models.schema.analysis.DOSchemaAnomaly;
 import migration4o.util.SchemaUtil;
 
 import java.util.ArrayList;

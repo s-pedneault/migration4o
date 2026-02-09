@@ -18,13 +18,14 @@ import javax.swing.ListSelectionModel;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 
-import migration4o.models.schema.DOSchemaAnomaly;
-import migration4o.models.schema.DOSchemaEmbeddingAnomaly;
-import migration4o.models.schema.DOSchemaReferenceAnomaly;
-import migration4o.models.schema.DOSchemaSharedEmbeddedAnomaly;
-import migration4o.models.schema.DOSchemaSharedNotExportedAnomaly;
-import migration4o.models.schema.DOSchemaShouldBeEmbeddedAnomaly;
-import migration4o.models.schema.DOSchemaShouldNotBeExportedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaAnomaly;
+import migration4o.models.schema.analysis.DOSchemaEmbeddingAnomaly;
+import migration4o.models.schema.analysis.DOSchemaMissingFieldClass;
+import migration4o.models.schema.analysis.DOSchemaReferenceAnomaly;
+import migration4o.models.schema.analysis.DOSchemaSharedEmbeddedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaSharedNotExportedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaShouldBeEmbeddedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaShouldNotBeExportedAnomaly;
 
 /**
  * Collapsible panel that displays schema anomalies detected during schema
@@ -99,6 +100,8 @@ public class SchemaAnomaliesPanel extends JPanel {
                     String type = (String) value;
                     if (type != null && type.contains("Reference")) {
                         c.setForeground(new Color(0, 100, 200)); // Blue for reference anomalies
+                    } else if (type != null && type.contains("Missing Field Class")) {
+                        c.setForeground(new Color(200, 0, 0)); // Red for missing class anomalies
                     } else if (type != null && type.contains("Embedding")) {
                         c.setForeground(new Color(200, 100, 0)); // Orange for embedding anomalies
                     } else {
@@ -171,6 +174,8 @@ public class SchemaAnomaliesPanel extends JPanel {
     private String getAnomalyType(DOSchemaAnomaly anomaly) {
         if (anomaly instanceof DOSchemaReferenceAnomaly) {
             return "Missing Reference";
+        } else if (anomaly instanceof DOSchemaMissingFieldClass) {
+            return "Missing Field Class";
         } else if (anomaly instanceof DOSchemaSharedEmbeddedAnomaly) {
             return "Shared Embedded";
         } else if (anomaly instanceof DOSchemaSharedNotExportedAnomaly) {

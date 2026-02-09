@@ -3,10 +3,10 @@ package migration4o.schema.processors;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.schema.DOSchemaSharedEmbeddedAnomaly;
-import migration4o.models.schema.DOSchemaSharedNotExportedAnomaly;
-import migration4o.models.schema.DOSchemaShouldBeEmbeddedAnomaly;
-import migration4o.models.schema.DOSchemaShouldNotBeExportedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaSharedEmbeddedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaSharedNotExportedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaShouldBeEmbeddedAnomaly;
+import migration4o.models.schema.analysis.DOSchemaShouldNotBeExportedAnomaly;
 import migration4o.util.ModuleUtil;
 import migration4o.util.SchemaUtil;
 
