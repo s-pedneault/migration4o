@@ -138,7 +138,9 @@ public class XSDBuilder {
                 String destName = schemaClass.destinationName;
                 boolean isTopLevel = topLevelObjects.contains(destName);
                 boolean isReferenced = referencedTypes.contains(destName);
-                writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isReferenced);
+                // Always write type definition for classes that might be referenced
+                // Write element definition only for top-level objects
+                writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isTopLevel || isReferenced);
                 writtenTypes.add(destName);
             }
 
@@ -208,29 +210,38 @@ public class XSDBuilder {
 
         xsdWriter.write("  <!-- " + destClassName + " -->\n");
 
-        // Write as element (used in top-level <objects>) if needed
-        if (writeElement) {
-            xsdWriter.write("  <xs:element name=\"" + destClassName + "\">\n");
-            xsdWriter.write("    <xs:complexType>\n");
-            xsdWriter.write("      <xs:sequence>\n");
-            for (DOSchemaField field : fields.values()) {
-                writeFieldElement(xsdWriter, field, "        ");
-            }
-            xsdWriter.write("      </xs:sequence>\n");
-            xsdWriter.write("    </xs:complexType>\n");
-            xsdWriter.write("  </xs:element>\n\n");
-        }
-
-        // Write as type (reusable for field references) if needed
-        if (writeType) {
+        // Write the complexType definition if needed (or if we need both element and
+        // type)
+        if (writeType || (writeElement && writeType)) {
             xsdWriter.write("  <xs:complexType name=\"" + destClassName + "\">\n");
             xsdWriter.write("    <xs:sequence>\n");
             for (DOSchemaField field : fields.values()) {
                 writeFieldElement(xsdWriter, field, "      ");
             }
             xsdWriter.write("    </xs:sequence>\n");
-            xsdWriter.write("  </xs:complexType>\n\n");
+            xsdWriter.write("  </xs:complexType>\n");
         }
+
+        // Write element definition
+        if (writeElement) {
+            if (writeType) {
+                // If we also wrote the type, just reference it
+                xsdWriter.write("  <xs:element name=\"" + destClassName + "\" type=\"" + destClassName + "\"/>\n");
+            } else {
+                // Write element with inline anonymous complexType
+                xsdWriter.write("  <xs:element name=\"" + destClassName + "\">\n");
+                xsdWriter.write("    <xs:complexType>\n");
+                xsdWriter.write("      <xs:sequence>\n");
+                for (DOSchemaField field : fields.values()) {
+                    writeFieldElement(xsdWriter, field, "        ");
+                }
+                xsdWriter.write("      </xs:sequence>\n");
+                xsdWriter.write("    </xs:complexType>\n");
+                xsdWriter.write("  </xs:element>\n");
+            }
+        }
+
+        xsdWriter.write("\n");
     }
 
     private void writeFieldElement(FileWriter xsdWriter, DOSchemaField field, String indent) throws IOException {

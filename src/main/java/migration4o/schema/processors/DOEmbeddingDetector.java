@@ -192,7 +192,9 @@ public class DOEmbeddingDetector {
                 }
             } else if (referenceCount == 1) {
                 // If concrete class has exactly one reference (single-use object)
-                if (!field.embedContents) {
+                // BUT: If the class is listed in a module, it's intended to be exported
+                // as a top-level entity, so don't warn about embedding
+                if (!isListedInModule && !field.embedContents) {
                     String containingModule = ModuleUtil.findModuleForClass(containingClass);
                     String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
@@ -201,18 +203,6 @@ public class DOEmbeddingDetector {
                                     "which has only 1 reference (single-use object). Should be embedContents=true for efficiency.",
                             containingClass.source, field.source, moduleInfo, concreteClass.source);
                     schema.anomalies.add(new DOSchemaShouldBeEmbeddedAnomaly(containingClass, field, explanation));
-                }
-
-                // Generate DOSchemaShouldNotBeExportedAnomaly if IS listed in any module
-                if (isListedInModule) {
-                    String targetModule = ModuleUtil.findModuleForClass(concreteClass);
-                    String moduleInfo = targetModule != null ? " in module '" + targetModule + "'" : " in a module";
-
-                    String explanation = String.format(
-                            "Class '%s' has only 1 reference but IS listed%s. " +
-                                    "Single-use objects should be embedded rather than exported separately.",
-                            concreteClass.source, moduleInfo);
-                    schema.anomalies.add(new DOSchemaShouldNotBeExportedAnomaly(containingClass, field, explanation));
                 }
             }
         }
