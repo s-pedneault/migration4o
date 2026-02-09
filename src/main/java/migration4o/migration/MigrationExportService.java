@@ -1,6 +1,7 @@
 package migration4o.migration;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -108,6 +109,43 @@ public class MigrationExportService {
         } catch (Exception e) {
             if (monitor != null) {
                 monitor.onStatusMessage("Warning: Failed to generate comprehensive XSD: " + e.getMessage());
+            }
+            e.printStackTrace(); // Log the full stack trace
+        }
+
+        // Validate exported XML files against the comprehensive XSD
+        try {
+            java.util.Set<String> xmlFiles = exporter.getExportedXMLFiles();
+            if (xmlFiles != null && !xmlFiles.isEmpty()) {
+                if (monitor != null) {
+                    monitor.onStatusMessage("Validating " + xmlFiles.size() + " XML files against schema...");
+                }
+
+                Path dbBasePath = exporter.getBaseOutputPath(baseOutputPath);
+                Path xsdPath = dbBasePath.resolve("Definitions").resolve("migration-schema.xsd");
+
+                migration4o.util.XMLValidator.ValidationResult validationResult = migration4o.util.XMLValidator
+                        .validateMultiple(
+                                new java.util.ArrayList<>(xmlFiles),
+                                xsdPath.toString());
+
+                if (monitor != null) {
+                    if (validationResult.allValid()) {
+                        monitor.onStatusMessage(
+                                "✓ All " + validationResult.getTotalCount() + " XML files validated successfully");
+                    } else {
+                        monitor.onStatusMessage("⚠ Validation: " + validationResult.successCount + " passed, " +
+                                validationResult.failedFiles.size() + " failed");
+                        for (String failedFile : validationResult.failedFiles) {
+                            String fileName = new java.io.File(failedFile).getName();
+                            monitor.onStatusMessage("  ✗ " + fileName);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            if (monitor != null) {
+                monitor.onStatusMessage("Warning: XML validation failed: " + e.getMessage());
             }
         }
 

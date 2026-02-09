@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -129,48 +130,57 @@ public class XSDBuilder {
             // Write type declarations based on usage:
             // - Element declaration if class appears as top-level object
             // - Type declaration if class is referenced as a field type
-            for (DOSchemaClass schemaClass : classMap.values()) {
+            // Create a snapshot to avoid ConcurrentModificationException
+            List<DOSchemaClass> classesToWrite = new java.util.ArrayList<>(classMap.values());
+            Set<String> writtenTypes = new LinkedHashSet<>();
+
+            for (DOSchemaClass schemaClass : classesToWrite) {
                 String destName = schemaClass.destinationName;
                 boolean isTopLevel = topLevelObjects.contains(destName);
                 boolean isReferenced = referencedTypes.contains(destName);
                 writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isReferenced);
+                writtenTypes.add(destName);
             }
 
             // Also write type definitions for referenced classes not in classMap
+            // Keep processing newly discovered referenced types until all are written
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-            for (String referencedTypeName : referencedTypes) {
-                // Skip if already written (was in classMap)
-                boolean alreadyWritten = false;
-                for (DOSchemaClass schemaClass : classMap.values()) {
-                    if (schemaClass.destinationName.equals(referencedTypeName)) {
-                        alreadyWritten = true;
-                        break;
+            boolean foundNewTypes = true;
+            while (foundNewTypes) {
+                foundNewTypes = false;
+                // Take a snapshot of current referenced types
+                Set<String> currentReferencedTypes = new LinkedHashSet<>(referencedTypes);
+
+                for (String referencedTypeName : currentReferencedTypes) {
+                    // Skip if already written
+                    if (writtenTypes.contains(referencedTypeName)) {
+                        continue;
                     }
-                }
-                if (alreadyWritten) {
-                    continue;
-                }
 
-                // Find the class in the schema and add its fields to fieldsByClass
-                for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
-                    if (schemaClass.destinationName.equals(referencedTypeName)) {
-                        // Add the class to classMap and populate its fields
-                        classMap.put(schemaClass.source, schemaClass);
+                    // Find the class in the schema and add its fields to fieldsByClass
+                    for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
+                        if (schemaClass.destinationName.equals(referencedTypeName)) {
+                            // Add the class to classMap and populate its fields
+                            classMap.put(schemaClass.source, schemaClass);
 
-                        // Populate fields from schema definition
-                        if (schemaClass.fields != null) {
-                            Map<String, DOSchemaField> fields = new LinkedHashMap<>();
-                            for (DOSchemaField field : schemaClass.fields) {
-                                if (field.isExported) {
-                                    fields.put(field.destinationName, field);
+                            // Populate fields from schema definition
+                            if (schemaClass.fields != null) {
+                                Map<String, DOSchemaField> fields = new LinkedHashMap<>();
+                                for (DOSchemaField field : schemaClass.fields) {
+                                    if (field.isExported) {
+                                        fields.put(field.destinationName, field);
+                                    }
                                 }
+                                fieldsByClass.put(schemaClass.source, fields);
                             }
-                            fieldsByClass.put(schemaClass.source, fields);
-                        }
 
-                        // Now write the type definition with proper fields
-                        writeClassTypeDefinition(xsdWriter, schemaClass, false, true);
-                        break;
+                            // Now write the type definition with proper fields
+                            // This may discover more referenced types
+                            writeClassTypeDefinition(xsdWriter, schemaClass, false, true);
+                            writtenTypes.add(referencedTypeName);
+                            foundNewTypes = true;
+                            break;
+                        }
                     }
                 }
             }
@@ -236,20 +246,34 @@ public class XSDBuilder {
             if (childrenType == null || childrenType.isEmpty()) {
                 childrenType = fieldType;
             }
+
+            // Determine the XSD type for collection items
+            String itemType;
+            if (isPrimitiveType(childrenType)) {
+                itemType = getXSDType(childrenType);
+            } else {
+                // Check if childrenType is an IDEntite with embedContents=false
+                DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+                DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+                DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
+
+                if (childClass != null && childClass.isIDEntite(databaseSchema) && !field.embedContents) {
+                    // Non-embedded IDEntite collections use xs:long items
+                    itemType = "xs:long";
+                } else {
+                    // Complex type - need to reference it
+                    String refClassName = getDestinationName(childrenType);
+                    referencedTypes.add(refClassName);
+                    itemType = refClassName;
+                }
+            }
+
             // Collection fields have a complex type with size attribute and child elements
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\">\n");
             xsdWriter.write(indent + "  <xs:complexType>\n");
             xsdWriter.write(indent + "    <xs:sequence>\n");
-            if (isPrimitiveType(childrenType)) {
-                String xsdType = getXSDType(childrenType);
-                xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + xsdType
-                        + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            } else {
-                String refClassName = getDestinationName(childrenType);
-                referencedTypes.add(refClassName); // Track that this type is referenced
-                xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + refClassName
-                        + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-            }
+            xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + itemType
+                    + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             xsdWriter.write(indent + "    </xs:sequence>\n");
             xsdWriter.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
             xsdWriter.write(indent + "  </xs:complexType>\n");
@@ -303,7 +327,11 @@ public class XSDBuilder {
                 typeName.equals("java.lang.Float") ||
                 typeName.equals("float") ||
                 typeName.equals("java.util.Date") ||
-                typeName.equals("date");
+                typeName.equals("date") ||
+                typeName.equals("java.lang.Object") ||
+                typeName.equals("Object") ||
+                typeName.equals("object") ||
+                typeName.equals("byte[]");
     }
 
     private String getXSDType(String javaType) {
@@ -321,6 +349,10 @@ public class XSDBuilder {
             return "xs:float";
         if (javaType.equals("java.util.Date") || javaType.equals("date"))
             return "xs:dateTime";
+        if (javaType.equals("java.lang.Object") || javaType.equals("Object") || javaType.equals("object"))
+            return "xs:anyType";
+        if (javaType.equals("byte[]"))
+            return "xs:base64Binary";
         return "xs:string";
     }
 

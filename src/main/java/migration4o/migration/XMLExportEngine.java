@@ -37,6 +37,7 @@ public class XMLExportEngine {
     private Integer maxObjectsPerClass = null; // null = all objects
     private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
     private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for comprehensive schema generation
+    private Set<String> exportedXMLFiles = null; // Track XML files for validation
 
     /**
      * Creates export engine using the shared in-memory database from
@@ -79,6 +80,7 @@ public class XMLExportEngine {
         this.sharedExportedObjectIds = new HashSet<>();
         this.sharedXSDBuilder = new XSDBuilder();
         this.sharedXSDBuilder.startExportRoot();
+        this.exportedXMLFiles = new HashSet<>();
     }
 
     /**
@@ -88,6 +90,17 @@ public class XMLExportEngine {
     public void resetSharedTracking() {
         this.sharedExportedObjectIds = null;
         this.sharedXSDBuilder = null;
+        this.exportedXMLFiles = null;
+    }
+
+    /**
+     * Gets the list of exported XML files.
+     * Only available when using shared tracking.
+     * 
+     * @return Set of XML file paths, or null if not using shared tracking
+     */
+    public Set<String> getExportedXMLFiles() {
+        return exportedXMLFiles;
     }
 
     /**
@@ -134,7 +147,7 @@ public class XMLExportEngine {
      * Gets the base output directory for the current database.
      * Returns: output/<database-folder>/
      */
-    private Path getBaseOutputPath(String baseOutputDir) {
+    public Path getBaseOutputPath(String baseOutputDir) {
         String dbFolder = getDatabaseFolderName();
         return Paths.get(baseOutputDir).resolve(dbFolder);
     }
@@ -190,6 +203,11 @@ public class XMLExportEngine {
             String xsdFileName = schemaClass.destinationName + ".xsd";
             Path xmlPath = dataPath.resolve(fileName);
             Path xsdPath = defsPath.resolve(xsdFileName);
+
+            // Track XML file for validation if using shared tracking
+            if (exportedXMLFiles != null) {
+                exportedXMLFiles.add(xmlPath.toString());
+            }
 
             // Create XML writer
             fileWriter = new FileWriter(xmlPath.toFile());
@@ -532,6 +550,11 @@ public class XMLExportEngine {
             Path xmlPath = moduleDataPath.resolve(fileName);
             Path xsdPath = moduleDefsPath.resolve(xsdFileName);
 
+            // Track XML file for validation if using shared tracking
+            if (exportedXMLFiles != null) {
+                exportedXMLFiles.add(xmlPath.toString());
+            }
+
             // Export this class with criteria filtering
             exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor,
                     referencedClassTracker, config);
@@ -603,10 +626,38 @@ public class XMLExportEngine {
 
             // Write XML header and metadata
             if (sharedXSDBuilder != null) {
-                // Using shared XSD - add schema reference
-                String schemaLocation = "../Definitions/migration-schema.xsd";
-                xmlWriter.writeXMLHeaderWithSchema(schemaLocation);
-                xmlWriter.writeExportHeaderWithSchema(schemaClass.source, schemaLocation);
+                // Using shared XSD - calculate relative path from XML file to Definitions
+                // folder
+                Path xmlDir = xmlPath.getParent();
+                Path baseDir = xmlPath.getRoot() != null
+                        ? xmlPath.getParent().getParent().getParent()
+                        : Paths.get(operation.baseOutputPath).resolve(getDatabaseFolderName());
+
+                // Find the Data folder and calculate depth
+                String xmlPathStr = xmlPath.toString();
+                String dataMarker = "/Data/";
+                int dataIndex = xmlPathStr.indexOf(dataMarker);
+                String relativeSchemaPath = "../Definitions/migration-schema.xsd";
+
+                if (dataIndex >= 0) {
+                    // Count subdirectories after /Data/
+                    String afterData = xmlPathStr.substring(dataIndex + dataMarker.length());
+                    int slashCount = 0;
+                    for (char c : afterData.toCharArray()) {
+                        if (c == '/')
+                            slashCount++;
+                    }
+                    // Build relative path: go up (slashCount) levels, then into Definitions
+                    StringBuilder pathBuilder = new StringBuilder();
+                    for (int i = 0; i <= slashCount; i++) {
+                        pathBuilder.append("../");
+                    }
+                    pathBuilder.append("Definitions/migration-schema.xsd");
+                    relativeSchemaPath = pathBuilder.toString();
+                }
+
+                xmlWriter.writeXMLHeader();
+                xmlWriter.writeExportHeaderWithSchema(schemaClass.source, relativeSchemaPath);
             } else {
                 // Individual XSD - no schema reference needed
                 xmlWriter.writeXMLHeader();

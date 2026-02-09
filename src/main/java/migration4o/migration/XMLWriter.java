@@ -37,11 +37,12 @@ public class XMLWriter {
     }
 
     public void writeExportHeaderWithSchema(String className, String schemaLocation) throws IOException {
-        String schemaRef = schemaLocation != null
-                ? " xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xsi:noNamespaceSchemaLocation=\""
-                        + schemaLocation + "\""
-                : "";
-        writer.write("<export" + schemaRef + ">\n");
+        writer.write("<export");
+        if (schemaLocation != null && !schemaLocation.isEmpty()) {
+            writer.write(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
+            writer.write(" xsi:noNamespaceSchemaLocation=\"" + schemaLocation + "\"");
+        }
+        writer.write(">\n");
         writer.write("  <metadata>\n");
         writer.write("    <exportClass>" + xmlEscape(className) + "</exportClass>\n");
         writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
