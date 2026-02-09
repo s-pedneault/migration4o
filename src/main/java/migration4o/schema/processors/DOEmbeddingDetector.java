@@ -3,6 +3,7 @@ package migration4o.schema.processors;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.analysis.DOSchemaDataLossAnomaly;
 import migration4o.models.schema.analysis.DOSchemaSharedEmbeddedAnomaly;
 import migration4o.models.schema.analysis.DOSchemaSharedNotExportedAnomaly;
 import migration4o.models.schema.analysis.DOSchemaShouldBeEmbeddedAnomaly;
@@ -28,6 +29,9 @@ public class DOEmbeddingDetector {
     // anomalies
     private static Set<String> reportedSharedNotExported = new HashSet<>();
 
+    // Track which common field definitions we've already warned about for data loss
+    private static Set<String> reportedCommonFieldDataLoss = new HashSet<>();
+
     /**
      * Validates embedContents configuration for all fields in the schema.
      * Generates specific anomaly types for configuration issues.
@@ -39,8 +43,9 @@ public class DOEmbeddingDetector {
             return;
         }
 
-        // Clear tracking set for new detection run
+        // Clear tracking sets for new detection run
         reportedSharedNotExported.clear();
+        reportedCommonFieldDataLoss.clear();
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (schemaClass.fields == null) {
@@ -80,6 +85,43 @@ public class DOEmbeddingDetector {
     private static void processFieldType(DOSchema schema, DOSchemaClass containingClass,
             DOSchemaField field, DOSchemaClass typeClass) {
 
+        // CRITICAL DATA LOSS CHECK: If embedContents=false but type is not an IDEntite,
+        // the field will not be exported at all (data loss!)
+        if (!field.embedContents && !typeClass.isIDEntite(schema)) {
+            // Check if this is a common field reference
+            if (field.isSharedField()) {
+                // Only report once per common field definition
+                if (reportedCommonFieldDataLoss.contains(field.definitionId)) {
+                    return; // Already reported for this common field
+                }
+                reportedCommonFieldDataLoss.add(field.definitionId);
+
+                // Generate warning for the common field definition
+                String explanation = String.format(
+                        "CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') has embedContents=false " +
+                                "but type '%s' is NOT an IDEntite. All uses of this common field will NOT be exported "
+                                +
+                                "(neither as ID nor as embedded object), resulting in complete data loss! " +
+                                "Fix: Set embedContents=true on the common field definition.",
+                        field.source, field.definitionId, field.type);
+                schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.type, explanation));
+            } else {
+                // Regular field (not a common field reference)
+                String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
+
+                String explanation = String.format(
+                        "CRITICAL DATA LOSS: Field '%s.%s'%s has embedContents=false " +
+                                "but type '%s' is NOT an IDEntite. This field will NOT be exported " +
+                                "(neither as ID nor as embedded object), resulting in complete data loss for this field! "
+                                +
+                                "Fix: Set embedContents=true to export the field as an embedded object.",
+                        containingClass.source, field.source, moduleInfo, field.type);
+                schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.type, explanation));
+            }
+            return; // Don't process further since this is a critical issue
+        }
+
         // If type is a descendant of IDEntite, use PROCEDURE 1
         if (typeClass.isIDEntite(schema)) {
             processIDEntiteType(schema, containingClass, field, typeClass);
@@ -95,6 +137,47 @@ public class DOEmbeddingDetector {
      */
     private static void processCollectionType(DOSchema schema, DOSchemaClass containingClass,
             DOSchemaField field, DOSchemaClass childrenClass) {
+
+        // CRITICAL DATA LOSS CHECK: If embedContents=false but childrenType is not an
+        // IDEntite,
+        // the collection will not be exported at all (data loss!)
+        if (!field.embedContents && !childrenClass.isIDEntite(schema)) {
+            // Check if this is a common field reference
+            if (field.isSharedField()) {
+                // Only report once per common field definition
+                if (reportedCommonFieldDataLoss.contains(field.definitionId)) {
+                    return; // Already reported for this common field
+                }
+                reportedCommonFieldDataLoss.add(field.definitionId);
+
+                // Generate warning for the common field definition
+                String explanation = String.format(
+                        "CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') is a collection with embedContents=false "
+                                +
+                                "but childrenType '%s' is NOT an IDEntite. All uses of this common field will NOT be exported "
+                                +
+                                "(neither as IDs nor as embedded objects), resulting in complete data loss! " +
+                                "Fix: Set embedContents=true on the common field definition.",
+                        field.source, field.definitionId, field.childrenType);
+                schema.anomalies
+                        .add(new DOSchemaDataLossAnomaly(containingClass, field, field.childrenType, explanation));
+            } else {
+                // Regular field (not a common field reference)
+                String containingModule = ModuleUtil.findModuleForClass(containingClass);
+                String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
+
+                String explanation = String.format(
+                        "CRITICAL DATA LOSS: Field '%s.%s'%s is a collection with embedContents=false " +
+                                "but childrenType '%s' is NOT an IDEntite. This collection will NOT be exported " +
+                                "(neither as IDs nor as embedded objects), resulting in complete data loss for this field! "
+                                +
+                                "Fix: Set embedContents=true to export the collection items as embedded objects.",
+                        containingClass.source, field.source, moduleInfo, field.childrenType);
+                schema.anomalies
+                        .add(new DOSchemaDataLossAnomaly(containingClass, field, field.childrenType, explanation));
+            }
+            return; // Don't process further since this is a critical issue
+        }
 
         // If childrenType is a descendant of IDEntite, use PROCEDURE 1
         if (childrenClass.isIDEntite(schema)) {

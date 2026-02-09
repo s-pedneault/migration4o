@@ -29,7 +29,30 @@ public class CollectionExtractor {
      * @return Collection of items, or null if extraction fails
      */
     public static Collection<?> extractItems(ExtObjectContainer container, Object collectionObj) {
+        // Handle byte arrays separately - they're arrays but not collections
+        if (collectionObj != null && collectionObj.getClass().isArray()) {
+            if (collectionObj instanceof byte[]) {
+                // Byte arrays should not be treated as collections of objects
+                // They should be handled as primitive data (e.g., base64 encoded)
+                System.err.println("WARNING: Attempting to extract collection items from byte array. " +
+                        "This field may be incorrectly marked as collection=true in the schema.");
+                return null;
+            }
+        }
+
+        // If it's already a Java Collection (e.g., Vector), just return it
+        if (collectionObj instanceof Collection) {
+            return (Collection<?>) collectionObj;
+        }
+
         if (!(collectionObj instanceof GenericObject)) {
+            // Warn about unhandled collection type - this could indicate a data extraction
+            // issue
+            if (collectionObj != null) {
+                String typeName = collectionObj.getClass().getName();
+                System.err.println("WARNING: Collection field is not a GenericObject or Collection, type=" +
+                        typeName + ". Unable to extract items.");
+            }
             return null;
         }
 

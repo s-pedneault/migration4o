@@ -339,6 +339,7 @@ public class FieldExporter {
             // No schema field - default to embedded for safety
             isEmbedded = true;
         }
+
         if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
             // Track the referenced entity class if this is a non-embedded reference
             if (operation.referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {

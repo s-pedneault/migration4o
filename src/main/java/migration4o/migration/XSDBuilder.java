@@ -337,6 +337,10 @@ public class XSDBuilder {
                 typeName.equals("double") ||
                 typeName.equals("java.lang.Float") ||
                 typeName.equals("float") ||
+                typeName.equals("java.lang.Byte") ||
+                typeName.equals("byte") ||
+                typeName.equals("java.lang.Short") ||
+                typeName.equals("short") ||
                 typeName.equals("java.util.Date") ||
                 typeName.equals("date") ||
                 typeName.equals("java.lang.Object") ||
@@ -358,6 +362,10 @@ public class XSDBuilder {
             return "xs:double";
         if (javaType.equals("java.lang.Float") || javaType.equals("float"))
             return "xs:float";
+        if (javaType.equals("java.lang.Byte") || javaType.equals("byte"))
+            return "xs:byte";
+        if (javaType.equals("java.lang.Short") || javaType.equals("short"))
+            return "xs:short";
         if (javaType.equals("java.util.Date") || javaType.equals("date"))
             return "xs:dateTime";
         if (javaType.equals("java.lang.Object") || javaType.equals("Object") || javaType.equals("object"))
