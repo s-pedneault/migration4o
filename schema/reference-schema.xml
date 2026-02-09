@@ -384,6 +384,7 @@
         <reference class="gest.borne.CalcDebit" field="mIDBorneTemoin" />
         <reference class="gest.borne.MaintBorne" field="mIDBorne" />
         <reference class="gest.borne.BorneIncendie" field="mIDBorneTemoin" />
+        <reference class="gest.planInterv.AlimDisp" field="mIDBorne" />
         <field source="mAccessibleHiver" destinationName="accessibleHiver" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mDateFinGarantie" destinationName="dateFinGarantie" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateInstallation" destinationName="dateInstallation" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -481,6 +482,7 @@
         <reference class="gest.borne.CalcDebit" field="mIDBorneTemoin" />
         <reference class="gest.borne.MaintBorne" field="mIDBorne" />
         <reference class="gest.borne.BorneIncendie" field="mIDBorneTemoin" />
+        <reference class="gest.planInterv.AlimDisp" field="mIDBorne" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.borne.IDBouchon" destinationName="IDBouchon" isExported="true" parentClass="gest.gen.IDEntite">
@@ -502,6 +504,9 @@
     </class>
     <class source="gest.borne.IDRaccord" destinationName="IDRaccord" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.Raccord">
         <reference class="gest.borne.BorneSeche" field="mIDRaccord" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccord" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccordCageEscalier" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccordPlafondSolive" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.borne.IDTypeMaintBorne" destinationName="idMaintBorne" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.borne.TypeMaintBorne">
@@ -562,6 +567,9 @@
     </class>
     <class source="gest.borne.Raccord" destinationName="Raccord" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.BorneSeche" field="mIDRaccord" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccord" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccordCageEscalier" />
+        <reference class="gest.planInterv.ColonneMontante" field="mIDRaccordPlafondSolive" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
         <field source="mIDSSI" definition="mIDSSI" />
@@ -786,6 +794,7 @@
         <reference class="gest.intervention.Intervention" field="mIDCodeAppel" />
         <reference class="gest.intervention.Intervention" field="mIDCodeAppelInitial" />
         <reference class="gest.intervention.ParamIntervention$NCompteurParCodeAppel" field="mVectIDCodeAppel2" />
+        <reference class="gest.planInterv.RepartDirective" field="mVectIDCodeAppel" />
         <field source="mID" definition="mID" />
         <field source="mCodePR" destinationName="codePR" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mCodeRAO" destinationName="codeRAO" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -800,6 +809,7 @@
         <reference class="gest.intervention.Intervention" field="mIDCodeAppel" />
         <reference class="gest.intervention.Intervention" field="mIDCodeAppelInitial" />
         <reference class="gest.intervention.ParamIntervention$NCompteurParCodeAppel" field="mVectIDCodeAppel2" />
+        <reference class="gest.planInterv.RepartDirective" field="mVectIDCodeAppel" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.codeRef.CodeRef" destinationName="ReferenceCode" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -1387,6 +1397,7 @@
         <reference class="gest.borne.MaintBorne" field="mIDAuteur" />
         <reference class="gest.borne.MaintBorne" field="mIDResponsable" />
         <reference class="gest.borne.MaintBorne" field="mIDAssigneA" />
+        <reference class="gest.equipement.PeriodiciteEquip" field="mIDResponsable" />
         <field source="mID" definition="mID" />
         <field source="mAdresse" definition="mAdresse" />
         <field source="mCell" destinationName="cellulaire" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -1528,6 +1539,7 @@
         <reference class="gest.borne.MaintBorne" field="mIDAuteur" />
         <reference class="gest.borne.MaintBorne" field="mIDResponsable" />
         <reference class="gest.borne.MaintBorne" field="mIDAssigneA" />
+        <reference class="gest.equipement.PeriodiciteEquip" field="mIDResponsable" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.equipe.Equipe" destinationName="Equipe" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -1660,10 +1672,16 @@
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.equipement.PeriodiciteEquip" destinationName="PeriodiciteEquip" isExported="true" parentClass="gest.gen.Periodicite">
-		<field source="mIDTypeMaint" destinationName="idTypeMaintenance" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintenance.IDTypeMaint"/>
-		<field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.employe.IDEmploye"/>
-		<field source="mCalcProchPerSurDernMaint" destinationName="calcProchPerSurDernMaint" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mDateDernMaint" destinationName="dateDernMaint" isExported="true" skipWhen="DEFAULT" type="date"/>
+        <reference class="gest.caserne.Caserne" field="mVectPer" />
+        <reference class="gest.employe.Employe" field="mVectPer" />
+        <reference class="gest.equipement.EquipExist" field="mVectPer" />
+        <reference class="gest.equipement.TypeEquipement" field="mVectPer" />
+        <reference class="gest.maintenance.Maintenance" field="mVectPer" />
+        <reference class="gest.vehicule.Vehicule" field="mVectPer" />
+        <field source="mIDTypeMaint" destinationName="idTypeMaintenance" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintenance.IDTypeMaint" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.employe.IDEmploye" />
+        <field source="mCalcProchPerSurDernMaint" destinationName="calcProchPerSurDernMaint" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mDateDernMaint" destinationName="dateDernMaint" isExported="true" skipWhen="DEFAULT" type="date" />
     </class>
     <class source="gest.feuilleTemps.ParamFeuilleTemps" destinationName="ParamFeuilleTemps" isExported="true" title="Paramètres de la feuille de temps" parentClass="gest.gen.EntiteParam">
         <field source="mActiver" destinationName="activer" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -2160,6 +2178,8 @@
         <reference class="gest.secCiv.Risque" field="mVectPhotoFich" />
         <reference class="gest.secCiv.Mission" field="mVectPJ" />
         <reference class="gest.secCiv.PPI" field="mVectPJ" />
+        <reference class="gest.planInterv.Gicleur" field="mVectPJ" />
+        <reference class="gest.planInterv.Exposition" field="mVectPhotoFich" />
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportAct" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNom" definition="mNom" />
@@ -2215,6 +2235,11 @@
         <reference class="gest.borne.BorneSeche" field="mTuyauDiam" />
         <reference class="gest.borne.BorneSeche" field="mTuyauHautAspir" />
         <reference class="gest.borne.BorneSeche" field="mTuyauLong" />
+        <reference class="gest.planInterv.AlimDisp" field="mDebit" />
+        <reference class="gest.planInterv.AlimDisp" field="mDebitRemplissage" />
+        <reference class="gest.planInterv.AlimDisp" field="mDistance" />
+        <reference class="gest.planInterv.AlimDisp" field="mVitesseMoyenne" />
+        <reference class="gest.planInterv.Exposition" field="mEspacement" />
         <field source="mMes" destinationName="mes" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mTypeQte" destinationName="typeQte" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="double" />
@@ -3246,6 +3271,7 @@
     <class source="gest.maintenance.IDTypeMaint" destinationName="IDTypeMaint" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintenance.TypeMaint">
         <reference class="gest.maintEquip.EtatEquipement" field="mIDTypeMaintSurNouvMaint" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDTypeMaint" />
+        <reference class="gest.equipement.PeriodiciteEquip" field="mIDTypeMaint" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.maintenance.Maintenance" destinationName="Maintenance" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -3269,6 +3295,7 @@
     <class source="gest.maintenance.TypeMaint" destinationName="TypeMaint" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.maintEquip.EtatEquipement" field="mIDTypeMaintSurNouvMaint" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDTypeMaint" />
+        <reference class="gest.equipement.PeriodiciteEquip" field="mIDTypeMaint" />
         <field source="mID" definition="mID" />
         <field source="mEmpecherEquipementDansAutreMaintEquip" destinationName="empecherEquipementDansAutreMaintEquip" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mEmpecherEquipementSiPeriodiqueDu" destinationName="empecherEquipementSiPeriodiqueDu" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -3319,6 +3346,7 @@
         <reference class="gest.planInterv.PlanContact" field="mVectPlageHoraire" />
         <reference class="gest.planInterv.PlanHreExploit" field="mVectPlageHoraire" />
         <reference class="gest.schema.ForceFrappe" field="mVectPlageHoraire" />
+        <reference class="gest.planInterv.RepartDirective" field="mVectPlageHoraire" />
         <field source="mAnnee" destinationName="annee" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mHeure" destinationName="heure" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mJourMois" destinationName="jourMois" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -3423,10 +3451,12 @@
         <field source="mVectBatDebitNecessaire" destinationName="listeBatDebitNecessaire" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.planInterv.BatDebitNecessaire" />
     </class>
     <class source="gest.planInterv.AlimEauPrive" destinationName="AlimentationEauPrive" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.planInterv.PlanAlimEau" field="mVectAlimEauPrive" />
         <field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDetail" destinationName="detail" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.AlimPompe" destinationName="AlimentationPompe" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.planInterv.PlanAlimEau" field="mVectAlimPompe" />
         <field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mEmplacement" destinationName="emplacement" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mReseauPrive" destinationName="reseauPrive" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -3434,6 +3464,8 @@
         <field source="mDemarrageAuto" destinationName="demarrageAutomatique" isExported="true" skipWhen="DEFAULT" type="boolean" />
     </class>
     <class source="gest.planInterv.AlimDisp" destinationName="AlimentationDisponible" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.planInterv.PlanAlimEau" field="mVectAlimPrinc" />
+        <reference class="gest.planInterv.PlanAlimEau" field="mVectAlimSecours" />
         <field source="mDetail" destinationName="detail" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mIDBorne" destinationName="idBorne" isExported="true" skipWhen="DEFAULT" type="gest.borne.IDBorne" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipWhen="DEFAULT" type="gest.vehicule.IDVehicule" />
@@ -3479,6 +3511,7 @@
         <field source="mVidePrecision" destinationName="videPrecision" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.ConstVide" destinationName="ConstVide" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.planInterv.PlanConst" field="mVectConstVide" />
         <field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDetail" destinationName="detail" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
@@ -3558,6 +3591,7 @@
         <field source="mVectProtSpec" destinationName="listeProtSpec" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.planInterv.ProtSpec" />
     </class>
     <class source="gest.planInterv.Gicleur" destinationName="Gicleur" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.planInterv.PlanProtection" field="mVectGicleur" />
         <field source="mVectPJ" definition="mVectPhotoFich" />
         <field source="mIDRaccord" destinationName="idRaccord" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPlanCouvSystVanne" destinationName="planCouvSystVanne" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -3570,34 +3604,37 @@
         <field source="mZoneProt" destinationName="zoneProtegee" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.ColonneMontante" destinationName="ColonneMontante" isExported="true" parentClass="gest.gen.Entite">
-		<field source="mIDRaccord" destinationName="idRaccord" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord"/>
-		<field source="mIDRaccordCageEscalier" destinationName="idRaccordCageEscalier" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord"/>
-		<field source="mIDRaccordPlafondSolive" destinationName="idRaccordPlafondSolive" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord"/>
-		<field source="mCageEscalier" destinationName="cageEscalier" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mConnectIdentiqueSSI" destinationName="connectIdentiqueSSI" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mPlafondSolive" destinationName="plafondSolive" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mPorteeTotale" destinationName="porteeTotale" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mCombineGicleur" destinationName="combineGicleur" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mEmpl" destinationName="empl" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mEmplAutre" destinationName="emplAutre" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mZoneProt" destinationName="zoneProt" isExported="true" skipWhen="DEFAULT" type="string"/>
+        <reference class="gest.planInterv.PlanProtection" field="mVectColonneMontante" />
+        <field source="mIDRaccord" destinationName="idRaccord" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord" />
+        <field source="mIDRaccordCageEscalier" destinationName="idRaccordCageEscalier" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord" />
+        <field source="mIDRaccordPlafondSolive" destinationName="idRaccordPlafondSolive" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.borne.IDRaccord" />
+        <field source="mCageEscalier" destinationName="cageEscalier" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mConnectIdentiqueSSI" destinationName="connectIdentiqueSSI" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mPlafondSolive" destinationName="plafondSolive" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mPorteeTotale" destinationName="porteeTotale" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mCombineGicleur" destinationName="combineGicleur" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mEmpl" destinationName="empl" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mEmplAutre" destinationName="emplAutre" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mZoneProt" destinationName="zoneProt" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.ProtSpec" destinationName="ProtectionSpeciale" isExported="true" parentClass="gest.gen.Entite">
-		<field source="mPorteeTotale" destinationName="porteeTotale" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mEmpl" destinationName="emplacement" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mZoneProt" destinationName="zoneProtegee" isExported="true" skipWhen="DEFAULT" type="string"/>
+        <reference class="gest.planInterv.PlanProtection" field="mVectProtSpec" />
+        <field source="mPorteeTotale" destinationName="porteeTotale" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mEmpl" destinationName="emplacement" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mType" destinationName="type" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mZoneProt" destinationName="zoneProtegee" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.Exposition" destinationName="Exposition" isExported="true" parentClass="gest.gen.Entite">
-		<field source="mVectPhotoFich" definition="mVectPhotoFich" />
-		<field source="mChargeThermique" destinationName="chargeThermique" isExported="true" skipWhen="DEFAULT" type="int"/>
-		<field source="mDanger" destinationName="danger" isExported="true" skipWhen="DEFAULT" type="int"/>
-		<field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string"/>
-		<field source="mPriorite" destinationName="priorite" isExported="true" skipWhen="DEFAULT" type="int"/>
-		<field source="mGicleur" destinationName="gicleur" isExported="true" skipWhen="DEFAULT" type="boolean"/>
-		<field source="mEspacement" destinationName="espacement" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true"/>
-		<field source="mConst" destinationName="construction" isExported="true" skipWhen="DEFAULT" type="string"/>
+        <reference class="gest.planInterv.PlanExposition" field="mVectExposition" />
+        <field source="mVectPhotoFich" definition="mVectPhotoFich" />
+        <field source="mChargeThermique" destinationName="chargeThermique" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mDanger" destinationName="danger" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mPriorite" destinationName="priorite" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mGicleur" destinationName="gicleur" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mEspacement" destinationName="espacement" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" />
+        <field source="mConst" destinationName="construction" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.planInterv.PlanRepartiteur" destinationName="PlanRepartiteur" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.planInterv.PlanInterv" field="mPlanRepartiteur" />
@@ -3605,13 +3642,14 @@
         <field source="mVectRepartDirective" destinationName="listeRepartDirective" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.planInterv.RepartDirective" />
     </class>
     <class source="gest.planInterv.RepartDirective" destinationName="RepartDirective" isExported="true" parentClass="gest.gen.Entite">
-		<field source="mVectDirective" destinationName="listeDirective" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" isCollection="true" childrenType="gest.intervention.Directive" embedContents="true"/>
-		<field source="mVectPlageHoraire" destinationName="listePlageHoraire" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" isCollection="true" childrenType="gest.horaire.PlageHoraire" embedContents="true"/>
-		<field source="mVectIDCodeAppel" destinationName="listeIDCodeAppel" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" isCollection="true" childrenType="gest.codeAppel.IDCodeAppel" embedContents="false"/>
+        <reference class="gest.planInterv.PlanRepartiteur" field="mVectRepartDirective" />
+        <field source="mVectDirective" destinationName="listeDirective" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" embedContents="true" childrenType="gest.intervention.Directive" />
+        <field source="mVectPlageHoraire" destinationName="listePlageHoraire" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" embedContents="true" childrenType="gest.horaire.PlageHoraire" />
+        <field source="mVectIDCodeAppel" destinationName="listeIDCodeAppel" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" childrenType="gest.codeAppel.IDCodeAppel" />
     </class>
     <class source="gest.planInterv.DroitAccesRessSecCiv" destinationName="DroitAccesResssourceSecuriteCivile" isExported="true" parentClass="gest.gen.Entite">
-		<field source="mIDRessSecCiv" destinationName="idRessourceSecuriteCivile" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv"/>
-		<field source="mDroitAcces" destinationName="droitAcces" isExported="true" skipWhen="DEFAULT" type="gest.utilGroupe.DroitAcces"/>
+        <field source="mIDRessSecCiv" destinationName="idRessourceSecuriteCivile" isExported="true" skipWhen="DEFAULT" type="gest.secCiv.IDRessSecCiv" />
+        <field source="mDroitAcces" destinationName="droitAcces" isExported="true" skipWhen="DEFAULT" type="gest.utilGroupe.DroitAcces" />
     </class>
     <class source="gest.planInterv.PlanRisque" destinationName="PlanRisque" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.planInterv.PlanInterv" field="mPlanRisque" />
@@ -4278,6 +4316,7 @@
         <reference class="gest.secCiv.Mission" field="mIDResponsable" />
         <reference class="gest.secCiv.PPI" field="mIDResponsable" />
         <reference class="gest.secCiv.Risque" field="mIDResponsable" />
+        <reference class="gest.planInterv.DroitAccesRessSecCiv" field="mIDRessSecCiv" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.secCiv.IDSinistre" destinationName="IDSinistre" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.secCiv.Sinistre">
@@ -4351,6 +4390,7 @@
         <reference class="gest.secCiv.Mission" field="mIDResponsable" />
         <reference class="gest.secCiv.PPI" field="mIDResponsable" />
         <reference class="gest.secCiv.Risque" field="mIDResponsable" />
+        <reference class="gest.planInterv.DroitAccesRessSecCiv" field="mIDRessSecCiv" />
         <field source="mID" definition="mID" />
         <field source="DernVerif" destinationName="dernVerif" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mAdresse" definition="mAdresse" />
@@ -4540,6 +4580,7 @@
         <reference class="gest.utilGroupe.Groupe" field="mDroit" />
         <reference class="gest.utilGroupe.Utilisateur" field="mDroit" />
         <reference class="gest.consolide.DetailEnvoi" field="mDroitAcces" />
+        <reference class="gest.planInterv.DroitAccesRessSecCiv" field="mDroitAcces" />
         <field source="mFiltreDossPrev" destinationName="filtreDossPrev" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.gen.Requete" />
         <field source="mSetDroits" destinationName="setDroits" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.HashSet" collection="true" embedContents="true" childrenType="string" />
     </class>
@@ -4615,6 +4656,7 @@
         <reference class="gest.intervention.IntervIntervEmploye" field="mIDVehicule" />
         <reference class="gest.horaire.InfoEmployeQuart" field="mIDVehicule" />
         <reference class="gest.maintenance.Maintenance" field="mVectIDVehicule" />
+        <reference class="gest.planInterv.AlimDisp" field="mIDVehicule" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.vehicule.Vehicule" destinationName="Vehicule" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -4626,6 +4668,7 @@
         <reference class="gest.intervention.IntervIntervEquipe" field="mIDVehicule" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDVehiculeMaint" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDVehicule" />
+        <reference class="gest.planInterv.AlimDisp" field="mIDVehicule" />
         <field source="mID" definition="mID" />
         <field source="mCodeRAO" destinationName="codeRAO" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mInactif" definition="mInactif" />
