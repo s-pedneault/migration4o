@@ -1,17 +1,18 @@
 package migration4o.migration;
 
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.util.Date;
 
 /**
  * Handles low-level XML writing operations including formatting and escaping.
+ * Can write to any Writer (FileWriter, StringWriter, etc.) for flexibility.
  */
 public class XMLWriter {
-    private final FileWriter writer;
+    private final Writer writer;
     private static final String INDENT = "  ";
 
-    public XMLWriter(FileWriter writer) {
+    public XMLWriter(Writer writer) {
         this.writer = writer;
     }
 
@@ -108,17 +109,53 @@ public class XMLWriter {
     }
 
     /**
-     * Escapes special XML characters in text content.
+     * Escapes special XML characters in text content and removes invalid XML
+     * characters.
+     * XML 1.0 only allows:
+     * - #x9 (tab), #xA (line feed), #xD (carriage return)
+     * - #x20-#xD7FF, #xE000-#xFFFD, #x10000-#x10FFFF
      */
     public static String xmlEscape(String text) {
         if (text == null) {
             return "";
         }
+
+        // First, sanitize invalid XML characters
+        text = sanitizeXMLCharacters(text);
+
+        // Then, escape XML entities
         return text.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+    }
+
+    /**
+     * Removes characters that are invalid in XML 1.0.
+     * Control characters (except tab, newline, carriage return) are replaced with
+     * space.
+     */
+    private static String sanitizeXMLCharacters(String text) {
+        if (text == null || text.isEmpty()) {
+            return text;
+        }
+
+        StringBuilder sb = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+
+            // Valid XML 1.0 characters
+            if (c == 0x9 || c == 0xA || c == 0xD ||
+                    (c >= 0x20 && c <= 0xD7FF) ||
+                    (c >= 0xE000 && c <= 0xFFFD)) {
+                sb.append(c);
+            } else {
+                // Replace invalid characters with space
+                sb.append(' ');
+            }
+        }
+        return sb.toString();
     }
 
 }

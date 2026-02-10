@@ -129,6 +129,17 @@ public class MigrationExportService {
                                 new java.util.ArrayList<>(xmlFiles),
                                 xsdPath.toString());
 
+                // Print final summary
+                System.out.println();
+                if (validationResult.allValid()) {
+                    System.out.println(
+                            "=== OVERALL VALIDATION: PASS (" + validationResult.getTotalCount() + " files) ===");
+                } else {
+                    System.out.println("=== OVERALL VALIDATION: FAIL (" + validationResult.successCount + " passed, " +
+                            validationResult.failedFiles.size() + " failed) ===");
+                }
+                System.out.println();
+
                 if (monitor != null) {
                     if (validationResult.allValid()) {
                         monitor.onStatusMessage(

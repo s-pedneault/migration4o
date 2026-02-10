@@ -55,15 +55,17 @@ public class FieldExporter {
      *                             field context
      * @param parentObjectId       DB4O object ID of the object being exported -
      *                             used for duplicate detection and tracking
+     * @return the number of fields actually written to XML
      * @throws IOException if XML writing fails
      */
-    public void exportAllFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
+    public int exportAllFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
             int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId)
             throws IOException {
+        int fieldsWritten = 0;
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
             if (storedClass == null) {
-                return;
+                return 0;
             }
 
             StoredField[] fields = storedClass.getStoredFields();
@@ -93,6 +95,7 @@ public class FieldExporter {
                         }
                         xmlWriter.writeIndent(indentLevel);
                         xmlWriter.write("<" + fieldName + "/>\n");
+                        fieldsWritten++;
                         continue;
                     }
 
@@ -105,15 +108,19 @@ public class FieldExporter {
                     if (schemaField != null && schemaField.isCollection) {
                         exportSchemaCollectionField(container, fieldValue, schemaField, indentLevel,
                                 destinationClassName, sourceClassName, parentObjectId);
+                        fieldsWritten++;
                     } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) {
                         exportCollectionField(container, (Collection<?>) fieldValue, schemaField, indentLevel,
                                 destinationClassName, sourceClassName, parentObjectId);
+                        fieldsWritten++;
                     } else if (fieldValue.getClass().isArray()) {
                         exportArrayField(container, fieldValue, schemaField, indentLevel,
                                 destinationClassName, sourceClassName, parentObjectId);
+                        fieldsWritten++;
                     } else {
                         exportRegularField(container, fieldValue, schemaField, indentLevel,
                                 destinationClassName, sourceClassName, parentObjectId);
+                        fieldsWritten++;
                     }
                 } catch (Exception e) {
                     // Error exporting field - silently skip
@@ -122,6 +129,7 @@ public class FieldExporter {
         } catch (Exception e) {
             // Error accessing fields
         }
+        return fieldsWritten;
     }
 
     /**
@@ -277,6 +285,7 @@ public class FieldExporter {
                 }
             }
 
+            // Write element and export recursively
             xmlWriter.writeStartElement(fieldName, indentLevel);
             exportFieldValue(container, fieldValue, schemaField, indentLevel + 1,
                     parentClassName, parentSourceClassName, parentObjectId);

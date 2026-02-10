@@ -18,7 +18,7 @@ public class GenericObjectExporter {
 
     /**
      * Exports a GenericObject's fields if it is a GenericObject.
-     * Returns true if the object was a GenericObject and was exported.
+     * Returns the number of fields written if the object was exported.
      * 
      * @param container     DB4O container
      * @param obj           The object to potentially export as GenericObject
@@ -26,10 +26,11 @@ public class GenericObjectExporter {
      * @param objectId      Object ID
      * @param fieldExporter Field exporter to delegate field export
      * @param indentLevel   Current indentation level
-     * @return true if object was a GenericObject and was exported, false otherwise
+     * @return number of fields written if object was a GenericObject, -1 if not a
+     *         GenericObject
      * @throws IOException if export fails
      */
-    public static boolean exportIfGenericObject(
+    public static int exportIfGenericObject(
             ExtObjectContainer container,
             Object obj,
             DOSchemaClass schemaClass,
@@ -38,7 +39,7 @@ public class GenericObjectExporter {
             int indentLevel) throws IOException {
 
         if (!(obj instanceof GenericObject)) {
-            return false;
+            return -1;
         }
 
         GenericObject genericObj = (GenericObject) obj;
@@ -47,10 +48,10 @@ public class GenericObjectExporter {
         if (storedClass != null) {
             String currentClassName = schemaClass.destinationName;
             String currentSourceClassName = schemaClass.source; // Full source class name
-            fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
+            return fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
                     currentClassName, currentSourceClassName, objectId);
         }
 
-        return true;
+        return 0;
     }
 }

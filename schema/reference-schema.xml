@@ -105,7 +105,7 @@
         <field source="mGroupe" destinationName="groupe" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
-    <class source="gest.DSI2003.DSI2003Perso" destinationName="DSI2003Perso" isExported="false" parentClass="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.DSI2003Perso" destinationName="DSI2003Perso" isExported="true" parentClass="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.ParamIntervention" field="mVectCausesProbables" />
         <field source="mIDSousCodeMSP" destinationName="idSousCodeMSP" isExported="true" skipWhen="DEFAULT" type="gest.DSI2003.IDDSI2003" />
     </class>
@@ -4408,8 +4408,8 @@
         <field source="mID" definition="mID" />
         <field source="mIDDocum" destinationName="idDocument" isExported="true" skipWhen="DEFAULT" type="gest.docum.IDDocum" />
         <field source="mVectNode" destinationName="listePositionArborescenceDocument" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.secCiv.NodeDocum" />
-        <field source="mNomRepertDocum" destinationName="color" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mTypeNode" destinationName="color" isExported="true" skipWhen="DEFAULT" type="int">
+        <field source="mNomRepertDocum" destinationName="nomRepertDocum" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mTypeNode" destinationName="typeNode" isExported="true" skipWhen="DEFAULT" type="string">
             <valueMap>
                 <mapping from="1" to="DOCUMENT" />
                 <mapping from="2" to="REPERTOIRE" />

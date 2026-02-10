@@ -128,6 +128,7 @@ public class ObjectExporter {
             // Get schema class and element name
             DOSchemaClass schemaClass = SchemaElementMapper.getSchemaClass(className, operation.referenceSchema);
             String elementName = SchemaElementMapper.getElementName(className, operation.referenceSchema);
+
             xmlWriter.writeStartElement(elementName, indentLevel);
 
             // XSD: record this class structure

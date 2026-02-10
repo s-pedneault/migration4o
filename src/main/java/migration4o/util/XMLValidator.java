@@ -10,14 +10,10 @@ import javax.xml.validation.Schema;
 import javax.xml.validation.SchemaFactory;
 import javax.xml.validation.Validator;
 
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 /**
  * Validates XML files against XSD schemas.
  */
 public class XMLValidator {
-    private static final Logger logger = LogManager.getLogger(XMLValidator.class);
 
     /**
      * Validates an XML file against an XSD schema.
@@ -27,6 +23,9 @@ public class XMLValidator {
      * @return true if validation succeeds, false if validation fails
      */
     public static boolean validate(String xmlPath, String xsdPath) {
+        File xmlFile = new File(xmlPath);
+        String fileName = xmlFile.getName();
+
         try {
             SchemaFactory factory = SchemaFactory.newInstance(XMLConstants.W3C_XML_SCHEMA_NS_URI);
             Schema schema = factory.newSchema(new File(xsdPath));
@@ -56,15 +55,14 @@ public class XMLValidator {
             });
 
             validator.validate(new StreamSource(new File(xmlPath)));
-            logger.info("Validation successful: {}", xmlPath);
+            System.out.println("XML VALIDATION OF \"" + fileName + "\": PASS");
             return true;
         } catch (Exception e) {
-            logger.error("Validation failed for {}:\n{}", xmlPath, e.getMessage());
+            System.out.println("XML VALIDATION OF \"" + fileName + "\": FAIL");
+            System.out.println("  " + e.getMessage());
             if (e instanceof org.xml.sax.SAXParseException) {
                 org.xml.sax.SAXParseException spe = (org.xml.sax.SAXParseException) e;
-                logger.error("  Location: line {}, column {}", spe.getLineNumber(), spe.getColumnNumber());
-                logger.error("  Public ID: {}", spe.getPublicId());
-                logger.error("  System ID: {}", spe.getSystemId());
+                System.out.println("  Location: line " + spe.getLineNumber() + ", column " + spe.getColumnNumber());
             }
             return false;
         }

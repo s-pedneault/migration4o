@@ -140,8 +140,12 @@ public class XSDBuilder {
                 boolean isReferenced = referencedTypes.contains(destName);
                 // Always write type definition for classes that might be referenced
                 // Write element definition only for top-level objects
-                writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, isTopLevel || isReferenced);
-                writtenTypes.add(destName);
+                boolean shouldWrite = isTopLevel || isReferenced;
+                writeClassTypeDefinition(xsdWriter, schemaClass, isTopLevel, shouldWrite);
+                // Only mark as written if we actually wrote something
+                if (shouldWrite) {
+                    writtenTypes.add(destName);
+                }
             }
 
             // Also write type definitions for referenced classes not in classMap
@@ -160,8 +164,20 @@ public class XSDBuilder {
                     }
 
                     // Find the class in the schema and add its fields to fieldsByClass
+                    boolean found = false;
+                    int classesSearched = 0;
                     for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
+                        classesSearched++;
                         if (schemaClass.destinationName.equals(referencedTypeName)) {
+                            // Only export classes that have migrate=true (isExported in XML)
+                            if (!schemaClass.migrate) {
+                                System.err.println("WARNING: Referenced type '" + referencedTypeName
+                                        + "' (source: " + schemaClass.source + ") has isExported=false");
+                                writtenTypes.add(referencedTypeName); // Mark as handled to avoid infinite loop
+                                found = true;
+                                break;
+                            }
+
                             // Add the class to classMap and populate its fields
                             classMap.put(schemaClass.source, schemaClass);
 
@@ -181,19 +197,33 @@ public class XSDBuilder {
                             writeClassTypeDefinition(xsdWriter, schemaClass, false, true);
                             writtenTypes.add(referencedTypeName);
                             foundNewTypes = true;
+                            found = true;
                             break;
                         }
+                    }
+
+                    if (!found) {
+                        System.err.println("ERROR: Referenced type '" + referencedTypeName
+                                + "' not found in reference schema. XSD validation will fail.");
                     }
                 }
             }
 
-            // Generate enumeration types for fields with value mappings
-            if (!fieldsWithValueMappings.isEmpty()) {
-                xsdWriter.write("\n  <!-- Enumeration types for fields with value mappings -->\n");
-                for (Map.Entry<String, DOSchemaField> entry : fieldsWithValueMappings.entrySet()) {
-                    writeEnumerationType(xsdWriter, entry.getKey(), entry.getValue());
+            // Check for any referenced types that were never found and written
+            Set<String> missingTypes = new LinkedHashSet<>(referencedTypes);
+            missingTypes.removeAll(writtenTypes);
+            if (!missingTypes.isEmpty()) {
+                System.err.println("\nWARNING: The following types are referenced but not defined in XSD:");
+                for (String missingType : missingTypes) {
+                    System.err.println("  - " + missingType);
                 }
+                System.err.println("These types should be added to reference-schema.xml with isExported=\"true\"");
+                System.err.println(
+                        "or the fields referencing them should have embedContents=\"false\" if they are ID references.\n");
             }
+
+            // ValueMaps are runtime transformations - no need for enumeration types in XSD
+
             xsdWriter.write("</xs:schema>\n");
         }
     }
@@ -268,7 +298,11 @@ public class XSDBuilder {
                 DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
                 DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
 
-                if (childClass != null && childClass.isIDEntite(databaseSchema) && !field.embedContents) {
+                if (childClass == null) {
+                    System.err.println("WARNING: Collection field '" + fieldName
+                            + "' references childrenType='" + childrenType + "' which is not found in schema");
+                    itemType = "xs:anyType"; // Fallback
+                } else if (childClass.isIDEntite(databaseSchema) && !field.embedContents) {
                     // Non-embedded IDEntite collections use xs:long items
                     itemType = "xs:long";
                 } else {
@@ -290,13 +324,8 @@ public class XSDBuilder {
             xsdWriter.write(indent + "  </xs:complexType>\n");
             xsdWriter.write(indent + "</xs:element>\n");
         } else if (isPrimitiveType(fieldType)) {
-            // Check if this field has value mappings (enumeration)
-            String xsdType;
-            if (field.valueMap != null && !field.valueMap.isEmpty()) {
-                xsdType = fieldName + "Type"; // Use custom enumeration type
-            } else {
-                xsdType = getXSDType(fieldType);
-            }
+            // ValueMaps are runtime transformations, not type constraints
+            String xsdType = getXSDType(fieldType);
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
                     + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
         } else {
@@ -306,14 +335,8 @@ public class XSDBuilder {
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values
-                // But if they have value mappings, use enumeration type
-                String xsdType;
-                if (field.valueMap != null && !field.valueMap.isEmpty()) {
-                    xsdType = fieldName + "Type"; // Use custom enumeration type
-                } else {
-                    xsdType = "xs:long";
-                }
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" "
+                // ValueMaps are runtime transformations, not type constraints
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
                         + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 String refClassName = getDestinationName(fieldType);
