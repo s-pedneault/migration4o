@@ -20,22 +20,24 @@ public class XMLWriter {
         writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
     }
 
-    public void writeXMLHeaderWithSchema(String schemaLocation) throws IOException {
-        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-        if (schemaLocation != null && !schemaLocation.isEmpty()) {
-            // Schema location is relative from the Data folder to Definitions folder
-            writer.write("<?xml-stylesheet type=\"text/xsl\" href=\"" + schemaLocation + "\"?>\n");
-        }
-    }
+    // public void writeXMLHeaderWithSchema(String schemaLocation) throws
+    // IOException {
+    // writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    // if (schemaLocation != null && !schemaLocation.isEmpty()) {
+    // // Schema location is relative from the Data folder to Definitions folder
+    // writer.write("<?xml-stylesheet type=\"text/xsl\" href=\"" + schemaLocation +
+    // "\"?>\n");
+    // }
+    // }
 
-    public void writeExportHeader(String className) throws IOException {
-        writer.write("<export>\n");
-        writer.write("  <metadata>\n");
-        writer.write("    <exportClass>" + xmlEscape(className) + "</exportClass>\n");
-        writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
-        writer.write("  </metadata>\n");
-        writer.write("  <objects>\n");
-    }
+    // public void writeExportHeader(String className) throws IOException {
+    // writer.write("<export>\n");
+    // writer.write(" <metadata>\n");
+    // writer.write(" <exportClass>" + xmlEscape(className) + "</exportClass>\n");
+    // writer.write(" <exportDate>" + new Date() + "</exportDate>\n");
+    // writer.write(" </metadata>\n");
+    // writer.write(" <objects>\n");
+    // }
 
     public void writeExportHeaderWithSchema(String className, String schemaLocation) throws IOException {
         writer.write("<export");
@@ -44,11 +46,11 @@ public class XMLWriter {
             writer.write(" xsi:noNamespaceSchemaLocation=\"" + schemaLocation + "\"");
         }
         writer.write(">\n");
-        writer.write("  <metadata>\n");
-        writer.write("    <exportClass>" + xmlEscape(className) + "</exportClass>\n");
-        writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
-        writer.write("  </metadata>\n");
-        writer.write("  <objects>\n");
+        writer.write(" <metadata>\n");
+        writer.write(" <exportClass>" + xmlEscape(className) + "</exportClass>\n");
+        writer.write(" <exportDate>" + new Date() + "</exportDate>\n");
+        writer.write(" </metadata>\n");
+        writer.write(" <objects>\n");
     }
 
     public void writeModuleHeader(String moduleName, int classCount) throws IOException {
@@ -85,6 +87,11 @@ public class XMLWriter {
     public void writeEndElement(String elementName, int indentLevel) throws IOException {
         writeIndent(indentLevel);
         writer.write("</" + elementName + ">\n");
+    }
+
+    public void writeEmptyElement(String elementName, int indentLevel) throws IOException {
+        writeIndent(indentLevel);
+        writer.write("<" + elementName + "/>\n");
     }
 
     public void writeElement(String elementName, String content, int indentLevel) throws IOException {

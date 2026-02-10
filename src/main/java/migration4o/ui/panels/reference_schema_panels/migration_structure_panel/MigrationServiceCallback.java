@@ -54,54 +54,6 @@ public class MigrationServiceCallback {
     // ==================== PUBLIC EXPORT METHODS ====================
 
     /**
-     * Exports a single class to XML in the background.
-     * 
-     * @param classNode          the class node to export
-     * @param maxObjectsPerClass maximum objects per class (null for unlimited)
-     * @param outputPath         the output directory path
-     */
-    public void exportClassAsync(ClassNode classNode, Integer maxObjectsPerClass, String outputPath) {
-        // Reset reached values before starting export
-        resetReachedValuesInCoveragePanel();
-
-        DOSchemaClass schemaClass = classNode.getSchemaClass();
-        String simpleName = schemaClass.getSourceName();
-
-        // Get migration report monitor from main window
-        DOExportMonitor monitor = getExportMonitor();
-        if (monitor == null) {
-            handleExportError(new IllegalStateException(
-                    "Migration report panel not available. Please ensure a database is loaded."));
-            return;
-        }
-
-        // Switch to Migration report tab
-        showMigrationReportTab();
-
-        // Run export in background
-        SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
-            @Override
-            protected ExportStatistics doInBackground() throws Exception {
-                List<String> classNames = new ArrayList<>();
-                classNames.add(schemaClass.source);
-                return exportService.exportClasses(classNames, outputPath, monitor, maxObjectsPerClass);
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    ExportStatistics result = get();
-                    handleExportCompleted(result);
-                } catch (Exception e) {
-                    handleExportError(e);
-                }
-            }
-        };
-
-        worker.execute();
-    }
-
-    /**
      * Exports multiple modules to XML in the background.
      * 
      * @param modulesToExport    the list of modules to export

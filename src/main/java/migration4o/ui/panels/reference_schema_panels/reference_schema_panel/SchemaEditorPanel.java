@@ -1133,11 +1133,18 @@ public class SchemaEditorPanel extends JPanel {
             }
         }
 
-        // Apply Title (if present)
+        // Apply Title
         JComponent titleField = propertyPanel.getField("Title");
         if (titleField instanceof JTextField) {
             String newTitle = ((JTextField) titleField).getText();
             schemaClass.title = newTitle != null ? newTitle.trim() : "";
+        }
+
+        // Apply Description
+        JComponent descriptionField = propertyPanel.getField("Description");
+        if (descriptionField instanceof JTextField) {
+            String newDescription = ((JTextField) descriptionField).getText();
+            schemaClass.description = newDescription != null ? newDescription.trim() : "";
         }
 
         // Update the tree node display in case the name changed
@@ -1184,10 +1191,15 @@ public class SchemaEditorPanel extends JPanel {
         propertyPanel.addCustomField("Parent Class", parentClassCombo);
         parentClassCombo.addActionListener(e -> markModified());
 
-        if (schemaClass.title != null && !schemaClass.title.isEmpty()) {
-            propertyPanel.addTextField("Title", schemaClass.title)
-                    .addActionListener(e -> markModified());
-        }
+        // Always show Title field (editable)
+        String title = schemaClass.title != null ? schemaClass.title : "";
+        propertyPanel.addTextField("Title", title)
+                .addActionListener(e -> markModified());
+
+        // Always show Description field (editable)
+        String description = schemaClass.description != null ? schemaClass.description : "";
+        propertyPanel.addTextField("Description", description)
+                .addActionListener(e -> markModified());
 
         int fieldCount = schemaClass.fields != null ? schemaClass.fields.length : 0;
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));

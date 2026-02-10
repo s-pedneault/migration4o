@@ -38,18 +38,14 @@ import javax.swing.JSplitPane;
 import javax.swing.JToolBar;
 import javax.swing.JTree;
 import javax.swing.SwingUtilities;
-import javax.swing.table.TableCellRenderer;
-import javax.swing.table.TableColumn;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreePath;
-import javax.swing.tree.TreeSelectionModel;
 
 import org.jdesktop.swingx.JXTreeTable;
 
 import migration4o.database.DODatabaseService;
 import migration4o.migration.ExportHistory;
-import migration4o.migration.MigrationExportService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
@@ -984,12 +980,6 @@ public class MigrationStructurePanel extends JPanel {
 
             contextMenu.addSeparator();
 
-            JMenuItem exportClassItem = new JMenuItem("Export Class to XML...");
-            exportClassItem.addActionListener(evt -> exportClass(classNode));
-            contextMenu.add(exportClassItem);
-
-            contextMenu.addSeparator();
-
             String removeMenuText = classCount > 1
                     ? "Remove " + classCount + " Classes from Export"
                     : "Remove from Export";
@@ -1051,45 +1041,6 @@ public class MigrationStructurePanel extends JPanel {
                 databaseSchema,
                 databasePath);
         dialog.setVisible(true);
-    }
-
-    /**
-     * Exports a single class to XML
-     */
-    private void exportClass(ClassNode classNode) {
-        // Validate export prerequisites
-        ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
-
-        if (!validation.isValid()) {
-            JOptionPane.showMessageDialog(this,
-                    validation.getErrorMessage(),
-                    validation.getErrorTitle(),
-                    JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
-        // Get previous export limit from history (for default value)
-        Integer defaultLimit = 50; // default
-        ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
-        if (lastExport != null && lastExport.maxObjectsPerClass != null) {
-            defaultLimit = lastExport.maxObjectsPerClass;
-        }
-
-        // Show confirmation dialog with object limit options
-        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(
-                (Frame) SwingUtilities.getWindowAncestor(this), 1, defaultLimit);
-        confirmDialog.setTitle("Confirm Export");
-        confirmDialog.showDialog();
-
-        if (!confirmDialog.isConfirmed()) {
-            return;
-        }
-
-        Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
-        String outputPath = "output";
-
-        // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportClassAsync(classNode, maxObjectsPerClass, outputPath);
     }
 
     /**

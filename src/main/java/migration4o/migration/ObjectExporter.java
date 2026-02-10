@@ -129,19 +129,29 @@ public class ObjectExporter {
             DOSchemaClass schemaClass = SchemaElementMapper.getSchemaClass(className, operation.referenceSchema);
             String elementName = SchemaElementMapper.getElementName(className, operation.referenceSchema);
 
-            xmlWriter.writeStartElement(elementName, indentLevel);
-
             // XSD: record this class structure
             if (schemaClass != null) {
                 xsdBuilder.addClass(schemaClass);
             }
 
-            // Export GenericObject fields
-            GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter,
-                    indentLevel);
+            // First, determine if there are any fields to export (dry run)
+            int fieldsToExport = GenericObjectExporter.countFieldsToExport(container, obj, schemaClass, objectId,
+                    fieldExporter, operation.referenceSchema);
 
-            // Write object closing tag
-            xmlWriter.writeEndElement(elementName, indentLevel);
+            // Only write object tags if there are fields to export
+            if (fieldsToExport > 0) {
+                xmlWriter.writeStartElement(elementName, indentLevel);
+
+                // Now actually export the fields
+                GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId,
+                        fieldExporter, indentLevel);
+
+                xmlWriter.writeEndElement(elementName, indentLevel);
+            }
+            // If no fields, skip XML output but still count as successfully processed
+
+            // Record statistics for both empty and non-empty objects
+            // Empty objects were reached and processed, just had no exportable fields
             if (operation.statistics != null) {
                 operation.statistics.incrementSucceeded();
                 operation.statistics.recordClassExport(schemaClass, objectId);

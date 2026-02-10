@@ -38,34 +38,6 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportClasses(List<String> classNames, String outputPath,
-            DOExportMonitor monitor, Integer maxObjectsPerClass) throws Exception {
-        DOSchema referenceSchema = schemaService.getReferenceSchema();
-        DOSchema databaseSchema = databaseService.getDatabaseSchema();
-        String databasePath = databaseService.getCurrentDatabasePath();
-
-        XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
-        exporter.setMaxObjectsPerClass(maxObjectsPerClass);
-
-        if (classNames.size() == 1) {
-            String className = classNames.get(0);
-            ClassExportConfig config = ExportUtil.findClassConfig(className);
-            ExportStatistics result = exporter.exportClass(className, outputPath, monitor, config);
-            if (result.errors.isEmpty()) {
-                ExportHistory.saveExport(ExportHistory.ExportType.CLASS, className,
-                        outputPath, null, null, maxObjectsPerClass);
-            }
-            return result;
-        }
-
-        List<ExportStatistics> results = new ArrayList<>();
-        for (String className : classNames) {
-            ClassExportConfig config = ExportUtil.findClassConfig(className);
-            results.add(exporter.exportClass(className, outputPath, monitor, config));
-        }
-        return ExportUtil.combineResults(results, outputPath);
-    }
-
     public ExportStatistics exportModules(List<MigrationModule> modules, String baseOutputPath,
             DOExportMonitor monitor, Integer maxObjectsPerClass) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
@@ -122,7 +94,7 @@ public class MigrationExportService {
                 }
 
                 Path dbBasePath = exporter.getBaseOutputPath(baseOutputPath);
-                Path xsdPath = dbBasePath.resolve("Definitions").resolve("migration-schema.xsd");
+                Path xsdPath = dbBasePath.resolve("schema.xsd");
 
                 migration4o.util.XMLValidator.ValidationResult validationResult = migration4o.util.XMLValidator
                         .validateMultiple(
@@ -178,9 +150,8 @@ public class MigrationExportService {
                 : (outputFile.getParent() != null ? outputFile.getParent() : "output");
 
         if (params.type == ExportHistory.ExportType.CLASS) {
-            List<String> classNames = new ArrayList<>();
-            classNames.add(params.targetName);
-            return exportClasses(classNames, baseOutput, monitor, params.maxObjectsPerClass);
+            throw new UnsupportedOperationException(
+                    "Single-class export is no longer supported. Please export via modules instead.");
         }
 
         List<MigrationModule> modules = new ArrayList<>();

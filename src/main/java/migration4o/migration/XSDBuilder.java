@@ -2,6 +2,8 @@ package migration4o.migration;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -24,8 +26,7 @@ public class XSDBuilder {
     private final Map<String, Map<String, DOSchemaField>> fieldsByClass = new LinkedHashMap<>();
     private final Set<String> topLevelObjects = new LinkedHashSet<>();
     private final Set<String> referencedTypes = new LinkedHashSet<>(); // Types used in fields
-    private final Map<String, DOSchemaField> fieldsWithValueMappings = new LinkedHashMap<>(); // Fields that need
-    // enumeration types
+    // Value mappings are written inline with fields, not as separate types
 
     public XSDBuilder() {
     }
@@ -86,28 +87,34 @@ public class XSDBuilder {
             fieldsByClass.computeIfAbsent(refClass.source, k -> new LinkedHashMap<>())
                     .put(refField.destinationName, refField);
 
-            // Track fields with value mappings for enumeration type generation
-            if (refField.valueMap != null && !refField.valueMap.isEmpty()) {
-                String uniqueKey = refClass.destinationName + "_" + refField.destinationName;
-                fieldsWithValueMappings.put(uniqueKey, refField);
-            }
+            // Value mappings will be written inline with fields
         }
     }
 
     public void writeXSD(String xsdPath) throws IOException {
         try (FileWriter xsdWriter = new FileWriter(xsdPath)) {
             xsdWriter.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            xsdWriter.write("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n\n");
+            xsdWriter.write(
+                    "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n\n");
+
+            // Global annotations
+            xsdWriter.write("  <xs:annotation>\n");
+            xsdWriter.write("    <xs:appinfo>Migration4o - par Gestion Technologies</xs:appinfo>\n");
+            xsdWriter.write("  </xs:annotation>\n\n");
 
             // Root export element
             xsdWriter.write("  <xs:element name=\"export\">\n");
             xsdWriter.write("    <xs:complexType>\n");
             xsdWriter.write("      <xs:sequence>\n");
-            xsdWriter.write("        <xs:element name=\"metadata\" type=\"MetadataType\"/>\n");
+            xsdWriter.write("        <xs:element name=\"metadata\" type=\"Metadata\"/>\n");
             xsdWriter.write("        <xs:element name=\"objects\">\n");
             xsdWriter.write("          <xs:complexType>\n");
             xsdWriter.write("            <xs:sequence>\n");
-            for (String obj : topLevelObjects) {
+            // Sort top-level objects alphabetically (use a copy to avoid modifying the
+            // original)
+            List<String> sortedTopLevelObjects = new ArrayList<>(topLevelObjects);
+            Collections.sort(sortedTopLevelObjects);
+            for (String obj : sortedTopLevelObjects) {
                 xsdWriter.write("              <xs:element ref=\"" + obj
                         + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             }
@@ -119,11 +126,14 @@ public class XSDBuilder {
             xsdWriter.write("  </xs:element>\n\n");
 
             // Metadata type
-            xsdWriter.write("  <xs:complexType name=\"MetadataType\">\n");
+            xsdWriter.write("  <xs:complexType name=\"Metadata\">\n");
             xsdWriter.write("    <xs:sequence>\n");
-            xsdWriter.write("      <xs:element name=\"moduleName\" type=\"xs:string\"/>\n");
-            xsdWriter.write("      <xs:element name=\"classCount\" type=\"xs:int\"/>\n");
-            xsdWriter.write("      <xs:element name=\"exportDate\" type=\"xs:string\"/>\n");
+            xsdWriter.write("      <xs:element name=\"generator\" type=\"xs:string\"/>\n");
+            xsdWriter.write("      <xs:element name=\"provider\" type=\"xs:string\"/>\n");
+            xsdWriter.write("      <xs:element name=\"exportDate\" type=\"xs:date\"/>\n");
+            xsdWriter.write("      <xs:element name=\"module\" type=\"xs:string\"/>\n");
+            xsdWriter.write("      <xs:element name=\"type\" type=\"xs:string\"/>\n");
+            xsdWriter.write("      <xs:element name=\"objects\" type=\"xs:int\"/>\n");
             xsdWriter.write("    </xs:sequence>\n");
             xsdWriter.write("  </xs:complexType>\n\n");
 
@@ -131,7 +141,9 @@ public class XSDBuilder {
             // - Element declaration if class appears as top-level object
             // - Type declaration if class is referenced as a field type
             // Create a snapshot to avoid ConcurrentModificationException
-            List<DOSchemaClass> classesToWrite = new java.util.ArrayList<>(classMap.values());
+            List<DOSchemaClass> classesToWrite = new ArrayList<>(classMap.values());
+            // Sort classes alphabetically by destination name
+            classesToWrite.sort((c1, c2) -> c1.destinationName.compareTo(c2.destinationName));
             Set<String> writtenTypes = new LinkedHashSet<>();
 
             for (DOSchemaClass schemaClass : classesToWrite) {
@@ -222,8 +234,6 @@ public class XSDBuilder {
                         "or the fields referencing them should have embedContents=\"false\" if they are ID references.\n");
             }
 
-            // ValueMaps are runtime transformations - no need for enumeration types in XSD
-
             xsdWriter.write("</xs:schema>\n");
         }
     }
@@ -239,6 +249,12 @@ public class XSDBuilder {
         Map<String, DOSchemaField> fields = fieldsByClass.getOrDefault(className, new LinkedHashMap<>());
 
         xsdWriter.write("  <!-- " + destClassName + " -->\n");
+        if (schemaClass.title != null && schemaClass.title.length() > 0) {
+            xsdWriter.write("  <!-- " + schemaClass.title + " -->\n");
+        }
+        if (schemaClass.description != null && schemaClass.description.length() > 0) {
+            xsdWriter.write("  <xs:documentation xml:lang=\"fr\">" + schemaClass.description + "</xs:documentation>\n");
+        }
 
         // Write the complexType definition if needed (or if we need both element and
         // type)
@@ -324,10 +340,22 @@ public class XSDBuilder {
             xsdWriter.write(indent + "  </xs:complexType>\n");
             xsdWriter.write(indent + "</xs:element>\n");
         } else if (isPrimitiveType(fieldType)) {
-            // ValueMaps are runtime transformations, not type constraints
-            String xsdType = getXSDType(fieldType);
-            xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
-                    + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            // If field has a valueMap, write inline restriction
+            if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+                xsdWriter.write(indent + "  <xs:simpleType>\n");
+                xsdWriter.write(indent + "    <xs:restriction base=\"xs:string\">\n");
+                for (String mappedValue : field.valueMap.values()) {
+                    xsdWriter.write(indent + "      <xs:enumeration value=\"" + escapeXml(mappedValue) + "\"/>\n");
+                }
+                xsdWriter.write(indent + "    </xs:restriction>\n");
+                xsdWriter.write(indent + "  </xs:simpleType>\n");
+                xsdWriter.write(indent + "</xs:element>\n");
+            } else {
+                String xsdType = getXSDType(fieldType);
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                        + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            }
         } else {
             // Check if this is a non-embedded IDEntite reference
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
@@ -335,14 +363,40 @@ public class XSDBuilder {
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values
-                // ValueMaps are runtime transformations, not type constraints
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
-                        + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
-            } else {
-                String refClassName = getDestinationName(fieldType);
+                // If field has a valueMap, write inline restriction
+                if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                    xsdWriter.write(
+                            indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+                    xsdWriter.write(indent + "  <xs:simpleType>\n");
+                    xsdWriter.write(indent + "    <xs:restriction base=\"xs:string\">\n");
+                    for (String mappedValue : field.valueMap.values()) {
+                        xsdWriter.write(indent + "      <xs:enumeration value=\"" + escapeXml(mappedValue) + "\"/>\n");
+                    }
+                    xsdWriter.write(indent + "    </xs:restriction>\n");
+                    xsdWriter.write(indent + "  </xs:simpleType>\n");
+                    xsdWriter.write(indent + "</xs:element>\n");
+                } else {
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
+                            + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                }
+            } else if (fieldClass != null) {
+                // Field is a schema class - use its destinationName
+                String refClassName = fieldClass.destinationName;
                 referencedTypes.add(refClassName); // Track that this type is referenced
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
                         + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            } else {
+                // Field type is not in the schema - check if it's a known primitive/Java type
+                if (isPrimitiveType(fieldType)) {
+                    String xsdType = getXSDType(fieldType);
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                } else {
+                    // Unknown type - use simple class name as fallback
+                    String refClassName = getSimpleClassName(fieldType);
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
+                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                }
             }
         }
     }
@@ -369,6 +423,8 @@ public class XSDBuilder {
                 typeName.equals("java.lang.Object") ||
                 typeName.equals("Object") ||
                 typeName.equals("object") ||
+                typeName.equals("java.lang.Class") ||
+                typeName.equals("Class") ||
                 typeName.equals("byte[]");
     }
 
@@ -393,6 +449,8 @@ public class XSDBuilder {
             return "xs:dateTime";
         if (javaType.equals("java.lang.Object") || javaType.equals("Object") || javaType.equals("object"))
             return "xs:anyType";
+        if (javaType.equals("java.lang.Class") || javaType.equals("Class"))
+            return "xs:string";
         if (javaType.equals("byte[]"))
             return "xs:base64Binary";
         return "xs:string";
@@ -424,20 +482,6 @@ public class XSDBuilder {
 
         // Fallback to simple class name if not found
         return getSimpleClassName(sourceClassName);
-    }
-
-    private void writeEnumerationType(FileWriter xsdWriter, String typeKey, DOSchemaField field) throws IOException {
-        String typeName = field.destinationName + "Type";
-        xsdWriter.write("\n  <xs:simpleType name=\"" + typeName + "\">\n");
-        xsdWriter.write("    <xs:restriction base=\"xs:string\">\n");
-
-        // Write enumeration values (the mapped "to" values)
-        for (String mappedValue : field.valueMap.values()) {
-            xsdWriter.write("      <xs:enumeration value=\"" + escapeXml(mappedValue) + "\"/>\n");
-        }
-
-        xsdWriter.write("    </xs:restriction>\n");
-        xsdWriter.write("  </xs:simpleType>\n");
     }
 
     private String escapeXml(String text) {

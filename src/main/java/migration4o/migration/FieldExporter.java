@@ -40,6 +40,95 @@ public class FieldExporter {
     }
 
     /**
+     * Counts how many fields would be exported from this GenericObject (dry run).
+     * Goes through all the same skip logic as exportAllFields but doesn't write
+     * anything.
+     * 
+     * @param container   DB4O container
+     * @param obj         The GenericObject to analyze
+     * @param parentClass Schema class definition
+     * @param schema      Reference schema for skip condition checking
+     * @return number of fields that will be exported
+     */
+    public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
+            migration4o.models.schema.DOSchema schema) {
+        int count = 0;
+        try {
+            StoredClass storedClass = container.ext().storedClass(obj);
+            if (storedClass == null) {
+                return 0;
+            }
+
+            StoredField[] fields = storedClass.getStoredFields();
+            for (StoredField field : fields) {
+                try {
+                    Object fieldValue = field.get(obj);
+                    String sourceFieldName = field.getName();
+
+                    // Get schema field
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByName(parentClass, sourceFieldName);
+
+                    // Skip fields marked as not exported
+                    if (schemaField != null && !schemaField.isExported) {
+                        continue;
+                    }
+
+                    // Skip null fields if they meet skip conditions
+                    if (fieldValue == null) {
+                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
+                            continue;
+                        }
+                        // Null field that will be exported
+                        count++;
+                        continue;
+                    }
+
+                    // Check if this would be skipped based on value and schema settings
+                    // For collections and arrays, they're always exported if not null (size
+                    // attribute)
+                    if (schemaField != null && schemaField.isCollection) {
+                        count++;
+                    } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) {
+                        count++;
+                    } else if (fieldValue.getClass().isArray()) {
+                        count++;
+                    } else {
+                        // Regular field - would it be exported?
+                        // Check Class fields that might be skipped
+                        boolean isClassField = schemaField != null &&
+                                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+
+                        if (isClassField) {
+                            // Extract className for skip check
+                            String className;
+                            if (fieldValue instanceof Class<?>) {
+                                className = ((Class<?>) fieldValue).getName();
+                            } else {
+                                String str = fieldValue.toString();
+                                className = str.startsWith("class ") ? str.substring(6) : str;
+                            }
+
+                            if (!ValueUtil.shouldSkipField(className, schemaField, schema)) {
+                                count++;
+                            }
+                        } else {
+                            // Regular object - check skip conditions
+                            if (!ValueUtil.shouldSkipField(fieldValue, schemaField, schema)) {
+                                count++;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Skip fields that cause errors
+                }
+            }
+        } catch (Exception e) {
+            // Error accessing fields
+        }
+        return count;
+    }
+
+    /**
      * Exports all fields of a GenericObject.
      * 
      * @param container            DB4O container for object activation and ID
@@ -123,7 +212,7 @@ public class FieldExporter {
                         fieldsWritten++;
                     }
                 } catch (Exception e) {
-                    // Error exporting field - silently skip
+                    // Skip fields that cause errors during export
                 }
             }
         } catch (Exception e) {
@@ -248,6 +337,36 @@ public class FieldExporter {
             int indentLevel, String parentClassName, String parentSourceClassName,
             long parentObjectId) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+
+        // Check if this is a Class-typed field based on schema (DB4O may wrap Class in
+        // GenericObject)
+        boolean isClassField = schemaField != null &&
+                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+
+        // Special handling for Class objects - always export as string
+        if (isClassField) {
+            String className;
+            if (fieldValue instanceof Class<?>) {
+                className = ((Class<?>) fieldValue).getName();
+            } else {
+                // DB4O wrapped it - extract via toString which gives "class java.lang.String"
+                String str = fieldValue.toString();
+                if (str.startsWith("class ")) {
+                    className = str.substring(6); // Remove "class " prefix
+                } else {
+                    className = str;
+                }
+            }
+
+            // Skip this field if skip conditions are met
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
+                return;
+            }
+
+            xmlWriter.writeElement(fieldName, className, indentLevel);
+            return;
+        }
+
         long refId = container.ext().getID(fieldValue);
         if (refId > 0) {
             // This is a persistent object reference
@@ -285,6 +404,21 @@ public class FieldExporter {
                 }
             }
 
+            // Before writing field wrapper tags, check if the referenced object has any
+            // fields to export
+            // (reuse className and fieldClass from above)
+
+            // Count fields that will be exported from this object
+            if (fieldValue instanceof GenericObject && fieldClass != null) {
+                int fieldsToExport = countFieldsToExport(container, (GenericObject) fieldValue,
+                        fieldClass, operation.referenceSchema);
+
+                // If no fields will be exported, skip this field wrapper entirely
+                if (fieldsToExport == 0) {
+                    return;
+                }
+            }
+
             // Write element and export recursively
             xmlWriter.writeStartElement(fieldName, indentLevel);
             exportFieldValue(container, fieldValue, schemaField, indentLevel + 1,
@@ -293,8 +427,6 @@ public class FieldExporter {
         } else {
             // Primitive or non-persistent value - write inline
             String stringValue = fieldValue.toString();
-
-            // Skip this field if skip conditions are met
             if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                 return;
             }
@@ -369,12 +501,40 @@ public class FieldExporter {
 
         // For regular objects, check if they should be embedded or referenced
         long objectId = container.ext().getID(fieldValue);
+
+        // Special handling for Class objects based on schema type
+        boolean isClassField = schemaField != null &&
+                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+
+        if (isClassField) {
+            String classNameValue;
+            if (fieldValue instanceof Class<?>) {
+                classNameValue = ((Class<?>) fieldValue).getName();
+            } else {
+                // DB4O wrapped it - extract via toString
+                String str = fieldValue.toString();
+                if (str.startsWith("class ")) {
+                    classNameValue = str.substring(6);
+                } else {
+                    classNameValue = str;
+                }
+            }
+            xmlWriter.writeElement(fieldName, classNameValue, indentLevel);
+            return;
+        }
+
         if (objectId > 0) {
             operation.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName,
                     parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
         } else {
             // Primitive value - write inline
-            xmlWriter.writeElement(fieldName, fieldValue.toString(), indentLevel);
+            String stringValue;
+            if (fieldValue instanceof Class<?>) {
+                stringValue = ((Class<?>) fieldValue).getName();
+            } else {
+                stringValue = fieldValue.toString();
+            }
+            xmlWriter.writeElement(fieldName, stringValue, indentLevel);
         }
     }
 }

@@ -110,7 +110,10 @@ public class MigrationCoveragePanel extends JPanel {
         table.getColumnModel().getColumn(5).setCellRenderer(new MigrationProgressRenderer());
         table.getColumnModel().getColumn(5).setPreferredWidth(150);
 
-        // Set preferred width for Not reached column
+        // Set right-aligned renderer for Not reached column
+        javax.swing.table.DefaultTableCellRenderer rightRenderer = new javax.swing.table.DefaultTableCellRenderer();
+        rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        table.getColumnModel().getColumn(4).setCellRenderer(rightRenderer);
         table.getColumnModel().getColumn(4).setPreferredWidth(120);
 
         // Add double-click listener to view class objects
@@ -144,10 +147,12 @@ public class MigrationCoveragePanel extends JPanel {
         // Add button panel at bottom
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         JButton reachButton = new JButton("Reach");
+        reachButton.setEnabled(false); // Disabled - tool extracted to ReachDiscoverTool
         reachButton.addActionListener(e -> performReachAnalysis());
         buttonPanel.add(reachButton);
 
         JButton exportButton = new JButton("Export");
+        exportButton.setEnabled(false); // Disabled - tool extracted to ExportAttemptTool
         exportButton.addActionListener(e -> exportObjectIds());
         buttonPanel.add(exportButton);
 

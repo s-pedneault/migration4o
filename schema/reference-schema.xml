@@ -5067,7 +5067,7 @@
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectRequete" />
         <field source="com.db4o.config.TNull" destinationName="TNull" isExported="true" skipWhen="DEFAULT" />
     </class>
-    <class source="gest.borne.MaintBorne" destinationName="MaintenanceBorne" isExported="true" title="MaintBorne" description="Inferred from database (2 objects)" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.borne.MaintBorne" destinationName="MaintenanceBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.MaintBorne" field="mProvenance" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />

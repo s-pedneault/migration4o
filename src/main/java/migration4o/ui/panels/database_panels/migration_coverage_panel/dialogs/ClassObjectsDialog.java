@@ -28,6 +28,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ObjectResolverUtil;
+import migration4o.util.ReferenceFinderUtil;
 
 /**
  * Frame to display all objects of a specific class from the database.
@@ -110,6 +111,19 @@ public class ClassObjectsDialog extends JFrame {
         objectsTable.setFont(new Font("Monospaced", Font.PLAIN, 11));
         objectsTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         objectsTable.setAutoCreateRowSorter(true);
+
+        // Add double-click listener to find references to selected object
+        objectsTable.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                if (e.getClickCount() == 2) {
+                    int row = objectsTable.rowAtPoint(e.getPoint());
+                    if (row >= 0) {
+                        handleRowDoubleClick(row);
+                    }
+                }
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(objectsTable);
         add(scrollPane, BorderLayout.CENTER);
@@ -218,10 +232,11 @@ public class ClassObjectsDialog extends JFrame {
             List<FieldInfo> fields = collectAllFields(schemaClass, schema);
 
             // Build column names
-            String[] columnNames = new String[fields.size() + 1];
-            columnNames[0] = "Object ID";
+            String[] columnNames = new String[fields.size() + 2];
+            columnNames[0] = "Class";
+            columnNames[1] = "Object ID";
             for (int i = 0; i < fields.size(); i++) {
-                columnNames[i + 1] = fields.get(i).displayName;
+                columnNames[i + 2] = fields.get(i).displayName;
             }
 
             // Clear and set columns
@@ -242,8 +257,18 @@ public class ClassObjectsDialog extends JFrame {
                         // Activate the object to ensure all fields are loaded
                         ObjectResolverUtil.activateObject(container, obj, objectId);
 
-                        Object[] rowData = new Object[fields.size() + 1];
-                        rowData[0] = objectId;
+                        Object[] rowData = new Object[fields.size() + 2];
+
+                        // Get actual class name from object
+                        String actualClassName = obj instanceof com.db4o.reflect.generic.GenericObject
+                                ? ((com.db4o.reflect.generic.GenericObject) obj).getGenericClass().getName()
+                                : obj.getClass().getName();
+                        String shortClassName = actualClassName.contains(".")
+                                ? actualClassName.substring(actualClassName.lastIndexOf('.') + 1)
+                                : actualClassName;
+
+                        rowData[0] = shortClassName;
+                        rowData[1] = objectId;
 
                         // Extract field values
                         if (obj instanceof com.db4o.reflect.generic.GenericObject) {
@@ -252,7 +277,7 @@ public class ClassObjectsDialog extends JFrame {
                             for (int fieldIdx = 0; fieldIdx < fields.size(); fieldIdx++) {
                                 FieldInfo fieldInfo = fields.get(fieldIdx);
                                 Object value = getFieldValue(container, genericObj, fieldInfo.fieldName);
-                                rowData[fieldIdx + 1] = formatValue(container, value);
+                                rowData[fieldIdx + 2] = formatValue(container, value);
                             }
                         }
 
@@ -688,6 +713,107 @@ public class ClassObjectsDialog extends JFrame {
             return str;
         }
         return value.toString();
+    }
+
+    /**
+     * Handles double-click on a table row to find references to the selected
+     * object.
+     */
+    private void handleRowDoubleClick(int row) {
+        // Get the object ID from the clicked row (now in column 1, not 0)
+        Object objectIdValue = objectsTableModel.getValueAt(row, 1);
+        if (objectIdValue == null) {
+            return;
+        }
+
+        long selectedObjectId;
+        try {
+            selectedObjectId = Long.parseLong(objectIdValue.toString());
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this,
+                    "Invalid object ID",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Create progress dialog
+        javax.swing.JDialog progressDialog = new javax.swing.JDialog(this, "Searching for References", false);
+        progressDialog.setSize(600, 400);
+        progressDialog.setLocationRelativeTo(this);
+        progressDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
+
+        javax.swing.JTextArea logArea = new javax.swing.JTextArea();
+        logArea.setEditable(false);
+        logArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        javax.swing.JScrollPane logScrollPane = new javax.swing.JScrollPane(logArea);
+        progressDialog.add(logScrollPane, BorderLayout.CENTER);
+
+        javax.swing.JButton cancelButton = new javax.swing.JButton("Close");
+        cancelButton.setEnabled(false);
+        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
+        buttonPanel.add(cancelButton);
+        progressDialog.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Run the reference search in the background
+        SwingWorker<List<ReferenceFinderUtil.ReferenceResult>, String> worker = new SwingWorker<>() {
+            @Override
+            protected List<ReferenceFinderUtil.ReferenceResult> doInBackground() throws Exception {
+                ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+                if (container == null || container.ext().isClosed()) {
+                    throw new IllegalStateException("No database is currently open.");
+                }
+
+                return ReferenceFinderUtil.findReferencesToObject(
+                        container, selectedObjectId, schemaClass, schema,
+                        message -> publish(message));
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                // Append all progress messages to the log area
+                for (String message : chunks) {
+                    logArea.append(message);
+                }
+                // Auto-scroll to bottom
+                logArea.setCaretPosition(logArea.getDocument().getLength());
+            }
+
+            @Override
+            protected void done() {
+                cancelButton.setEnabled(true);
+                cancelButton.setText("Close");
+
+                try {
+                    List<ReferenceFinderUtil.ReferenceResult> results = get();
+
+                    if (results.isEmpty()) {
+                        logArea.append("\n========================================\n");
+                        logArea.append("RESULT: No references found.\n");
+                        logArea.append("This object is not referenced by any other object in the database.\n");
+                    } else {
+                        logArea.append("\n========================================\n");
+                        logArea.append("RESULT: Found " + results.size() + " reference(s):\n");
+                        for (ReferenceFinderUtil.ReferenceResult result : results) {
+                            logArea.append("  - " + result.toString() + "\n");
+                        }
+                    }
+                    logArea.setCaretPosition(logArea.getDocument().getLength());
+                } catch (Exception ex) {
+                    logArea.append("\nERROR: " + ex.getMessage() + "\n");
+                    logArea.setCaretPosition(logArea.getDocument().getLength());
+                    ex.printStackTrace();
+                }
+            }
+        };
+
+        cancelButton.addActionListener(e -> {
+            worker.cancel(true);
+            progressDialog.dispose();
+        });
+
+        progressDialog.setVisible(true);
+        worker.execute();
     }
 
     /**
