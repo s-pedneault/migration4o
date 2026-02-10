@@ -26,6 +26,7 @@ import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
 import migration4o.database.DODatabaseService;
+import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.schema.DOSchemaService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -49,6 +50,9 @@ import migration4o.ui.panels.welcome_panel.WelcomePanel;
 public class MainWindow extends JFrame {
 
     private JTabbedPane tabbedPane;
+    private JTabbedPane schemaTabPane; // Nested tabs for Schema section
+    private JTabbedPane databaseTabPane; // Nested tabs for Database section
+    private Component databaseTabContainer; // Reference to Database top-level tab
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
@@ -66,6 +70,8 @@ public class MainWindow extends JFrame {
     private Component conformityAnalysisTab = null;
     private Component migrationCoverageTab = null;
     private Component costTab = null;
+    private migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel = null;
+    private migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel migrationResultsPanel = null;
     private DOSchema currentDatabaseSchema = null;
 
     // Services manage the actual database and schema
@@ -111,11 +117,11 @@ public class MainWindow extends JFrame {
     }
 
     private void addTabs() {
-        // Create and add welcome panel as first tab
+        // Create and add dashboard panel as first tab
         welcomePanel = new WelcomePanel();
         welcomePanel.setOnOpenDatabase(() -> openDatabaseFile());
         welcomePanel.setOnCloseDatabase(() -> closeDatabase());
-        tabbedPane.addTab("Welcome", welcomePanel);
+        tabbedPane.addTab("Dashboard", welcomePanel);
     }
 
     /**
@@ -125,20 +131,25 @@ public class MainWindow extends JFrame {
      */
     public void initialize() {
         try {
-            // Load and add reference schema tab
+            // Create Schema nested tab pane
+            schemaTabPane = new JTabbedPane();
+            schemaTabPane.setFont(new Font("Arial", Font.PLAIN, 12));
+            tabbedPane.addTab("Schema", schemaTabPane);
+
+            // Load and add reference schema tab to Schema section
             referenceSchemaPanel = new SchemaEditorPanel();
             referenceSchemaPanel.setOnCompareRequested(() -> openDatabaseFile());
             DOSchema schema = referenceSchemaPanel.getSchema();
 
-            addSchemaTab("Reference schema", referenceSchemaPanel, schema, true);
+            addSchemaTabToSchemaSection("Reference schema", referenceSchemaPanel, schema, true);
 
-            // Add schema structure tab
+            // Add schema structure tab to Schema section
             schemaStructurePanel = new SchemaStructurePanel(schema);
-            addTab("Schema structure", schemaStructurePanel);
+            schemaTabPane.addTab("Schema structure", schemaStructurePanel);
 
-            // Add migration structure tab
+            // Add migration structure tab to Schema section
             migrationStructurePanel = new MigrationStructurePanel(schema);
-            addTab("Migration structure", migrationStructurePanel);
+            schemaTabPane.addTab("Migration structure", migrationStructurePanel);
 
             // Set up repeat export callback
             setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
@@ -294,13 +305,27 @@ public class MainWindow extends JFrame {
                     // Store the database schema
                     currentDatabaseSchema = inferredSchema;
 
+                    // Create Database nested tab pane
+                    databaseTabPane = new JTabbedPane();
+                    databaseTabPane.setFont(new Font("Arial", Font.PLAIN, 12));
+                    databaseTabContainer = databaseTabPane;
+                    tabbedPane.addTab("Database", databaseTabPane);
+
+                    // Create Overview tab (placeholder for now)
+                    JTextArea overviewText = new JTextArea();
+                    overviewText.setText("Database Overview\n\nDatabase: " + selectedFile.getName() + "\nPath: "
+                            + selectedFile.getAbsolutePath());
+                    overviewText.setEditable(false);
+                    overviewText.setMargin(new java.awt.Insets(10, 10, 10, 10));
+                    databaseTabPane.addTab("Overview", new JScrollPane(overviewText));
+
                     // Create schema editor panel with inferred schema
                     SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName());
                     schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
 
-                    // Add database structure tab
+                    // Add database structure tab to Database section
                     databaseSchemaTab = schemaEditor;
-                    addSchemaTab("Database structure", schemaEditor, inferredSchema, false);
+                    addSchemaTabToDatabaseSection("Database structure", schemaEditor, inferredSchema, false);
 
                     // Automatically create comparison with reference schema
                     createComparisonWithReference(inferredSchema);
@@ -308,8 +333,14 @@ public class MainWindow extends JFrame {
                     // Create migration coverage tab
                     createMigrationCoverageTab(inferredSchema);
 
-                    // Create cost tab
+                    // Create cost tab (renamed to Processing costs)
                     createCostTab(inferredSchema);
+
+                    // Create migration report tab (before warnings & errors)
+                    createMigrationReportTab();
+
+                    // Create migration results tab (renamed to Warnings & errors)
+                    createMigrationResultsTab();
 
                     // Notify all tabs that a database has been opened
                     notifyTabsDatabaseOpened(databaseService.getCurrentDatabasePath(), inferredSchema);
@@ -317,8 +348,8 @@ public class MainWindow extends JFrame {
                     // Update welcome panel state
                     welcomePanel.setDatabaseOpen(true);
 
-                    // Switch to the database structure tab
-                    tabbedPane.setSelectedComponent(databaseSchemaTab);
+                    // Switch to the Database tab
+                    tabbedPane.setSelectedComponent(databaseTabContainer);
 
                     // Trigger pending repeat export if requested
                     if (pendingRepeatExport) {
@@ -377,9 +408,9 @@ public class MainWindow extends JFrame {
             finalReferenceTab.editorPanel.markModified();
         });
 
-        // Store and add conformity analysis tab
+        // Store and add conformity analysis tab to Database section
         conformityAnalysisTab = comparisonPanel;
-        addTab("Conformity analysis", comparisonPanel);
+        databaseTabPane.addTab("Conformity analysis", comparisonPanel);
     }
 
     /**
@@ -406,9 +437,9 @@ public class MainWindow extends JFrame {
                 databaseSchema,
                 databaseService.getCurrentDatabasePath());
 
-        // Store and add migration coverage tab
+        // Store and add migration coverage tab to Database section
         migrationCoverageTab = coveragePanel;
-        addTab("Migration coverage", coveragePanel);
+        databaseTabPane.addTab("Migration coverage", coveragePanel);
     }
 
     /**
@@ -418,9 +449,31 @@ public class MainWindow extends JFrame {
         // Create cost panel
         CostPanel costPanel = new CostPanel(databaseSchema);
 
-        // Store and add cost tab
+        // Store and add processing costs tab to Database section
         costTab = costPanel;
-        addTab("Cost", costPanel);
+        databaseTabPane.addTab("Processing costs", costPanel);
+    }
+
+    /**
+     * Creates the migration results tab.
+     */
+    private void createMigrationResultsTab() {
+        // Create migration results panel
+        migrationResultsPanel = new migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel();
+
+        // Add to Database section with new name
+        databaseTabPane.addTab("Warnings & errors", migrationResultsPanel);
+    }
+
+    /**
+     * Creates the migration report tab.
+     */
+    private void createMigrationReportTab() {
+        // Create migration report panel
+        migrationReportPanel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
+
+        // Add to Database section
+        databaseTabPane.addTab("Migration report", migrationReportPanel);
     }
 
     /**
@@ -430,21 +483,25 @@ public class MainWindow extends JFrame {
         // Close the database using the service
         databaseService.closeDatabase();
 
-        // Remove database-related tabs
+        // Remove entire Database tab container
+        if (databaseTabContainer != null) {
+            tabbedPane.remove(databaseTabContainer);
+            databaseTabContainer = null;
+            databaseTabPane = null;
+        }
+
+        // Clear database-related tab references
         if (databaseSchemaTab != null) {
-            tabbedPane.remove(databaseSchemaTab);
             schemaTabs.remove(databaseSchemaTab);
             databaseSchemaTab = null;
         }
 
         if (conformityAnalysisTab != null) {
-            tabbedPane.remove(conformityAnalysisTab);
             comparisonTabs.remove(conformityAnalysisTab);
             conformityAnalysisTab = null;
         }
 
         if (migrationCoverageTab != null) {
-            tabbedPane.remove(migrationCoverageTab);
             migrationCoverageTab = null;
         }
 
@@ -508,6 +565,48 @@ public class MainWindow extends JFrame {
     }
 
     /**
+     * Updates the migration results tab with new export statistics.
+     * Also switches to the Database tab and Warnings & errors sub-tab.
+     * 
+     * @param result The export statistics to display
+     */
+    public void showMigrationResults(ExportStatistics result) {
+        if (migrationResultsPanel != null && databaseTabContainer != null) {
+            migrationResultsPanel.updateResults(result);
+
+            // Switch to Database tab
+            tabbedPane.setSelectedComponent(databaseTabContainer);
+
+            // Switch to Warnings & errors sub-tab
+            databaseTabPane.setSelectedComponent(migrationResultsPanel);
+        }
+    }
+
+    /**
+     * Switches to the Migration report tab in the Database section.
+     * This is called when an export operation starts.
+     */
+    public void showMigrationReportTab() {
+        if (migrationReportPanel != null && databaseTabContainer != null) {
+            // Switch to Database tab
+            tabbedPane.setSelectedComponent(databaseTabContainer);
+
+            // Switch to Migration report sub-tab
+            databaseTabPane.setSelectedComponent(migrationReportPanel);
+        }
+    }
+
+    /**
+     * Gets the migration report panel as a DOExportMonitor for real-time progress
+     * updates.
+     * 
+     * @return The migration report monitor, or null if no database is loaded
+     */
+    public migration4o.ui.common.DOExportMonitor getMigrationReportMonitor() {
+        return migrationReportPanel;
+    }
+
+    /**
      * Add a tab to the tabbed pane.
      */
     public void addTab(String title, Component component) {
@@ -515,7 +614,32 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab and track it for comparison.
+     * Add a schema tab to the Schema nested section and track it for comparison.
+     */
+    public void addSchemaTabToSchemaSection(String title, SchemaEditorPanel editor, DOSchema schema,
+            boolean isReference) {
+        schemaTabPane.addTab(title, editor);
+        schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
+
+        // Set up listener to refresh comparisons when this schema is reloaded
+        editor.setOnSchemaReloaded(() -> refreshComparisonsForEditor(editor));
+    }
+
+    /**
+     * Add a schema tab to the Database nested section and track it for comparison.
+     */
+    public void addSchemaTabToDatabaseSection(String title, SchemaEditorPanel editor, DOSchema schema,
+            boolean isReference) {
+        databaseTabPane.addTab(title, editor);
+        schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
+
+        // Set up listener to refresh comparisons when this schema is reloaded
+        editor.setOnSchemaReloaded(() -> refreshComparisonsForEditor(editor));
+    }
+
+    /**
+     * Add a schema tab and track it for comparison (legacy method for backward
+     * compatibility).
      */
     public void addSchemaTab(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         tabbedPane.addTab(title, editor);

@@ -15,8 +15,7 @@ import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
-import migration4o.ui.common.ExportProgressDialog;
-import migration4o.ui.common.dialogs.ExportResultDialog;
+import migration4o.ui.common.DOExportMonitor;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
 
@@ -68,10 +67,16 @@ public class MigrationServiceCallback {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         String simpleName = schemaClass.getSourceName();
 
-        // Create and show progress dialog
-        ExportProgressDialog progressDialog = new ExportProgressDialog(getParentFrame(),
-                "Exporting Class: " + simpleName);
-        progressDialog.setVisible(true);
+        // Get migration report monitor from main window
+        DOExportMonitor monitor = getExportMonitor();
+        if (monitor == null) {
+            handleExportError(new IllegalStateException(
+                    "Migration report panel not available. Please ensure a database is loaded."));
+            return;
+        }
+
+        // Switch to Migration report tab
+        showMigrationReportTab();
 
         // Run export in background
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
@@ -79,12 +84,11 @@ public class MigrationServiceCallback {
             protected ExportStatistics doInBackground() throws Exception {
                 List<String> classNames = new ArrayList<>();
                 classNames.add(schemaClass.source);
-                return exportService.exportClasses(classNames, outputPath, progressDialog, maxObjectsPerClass);
+                return exportService.exportClasses(classNames, outputPath, monitor, maxObjectsPerClass);
             }
 
             @Override
             protected void done() {
-                progressDialog.dispose();
                 try {
                     ExportStatistics result = get();
                     handleExportCompleted(result);
@@ -115,10 +119,16 @@ public class MigrationServiceCallback {
             modules.add(info.module);
         }
 
-        // Create and show progress dialog
-        ExportProgressDialog progressDialog = new ExportProgressDialog(getParentFrame(),
-                "Exporting " + modules.size() + " Module(s)");
-        progressDialog.setVisible(true);
+        // Get migration report monitor from main window
+        DOExportMonitor monitor = getExportMonitor();
+        if (monitor == null) {
+            handleExportError(new IllegalStateException(
+                    "Migration report panel not available. Please ensure a database is loaded."));
+            return;
+        }
+
+        // Switch to Migration report tab
+        showMigrationReportTab();
 
         // Run export in background
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
@@ -126,7 +136,7 @@ public class MigrationServiceCallback {
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
                 ExportStatistics result = exportService.exportModules(modules, outputPath,
-                        progressDialog, maxObjectsPerClass);
+                        monitor, maxObjectsPerClass);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -146,7 +156,6 @@ public class MigrationServiceCallback {
 
             @Override
             protected void done() {
-                progressDialog.dispose();
                 try {
                     ExportStatistics result = get();
                     handleExportCompleted(result);
@@ -171,24 +180,26 @@ public class MigrationServiceCallback {
             return;
         }
 
-        String dialogTitle = params.type == ExportHistory.ExportType.CLASS
-                ? "Repeating Class Export"
-                : "Repeating Module Export";
+        // Get migration report monitor from main window
+        DOExportMonitor monitor = getExportMonitor();
+        if (monitor == null) {
+            handleExportError(new IllegalStateException(
+                    "Migration report panel not available. Please ensure a database is loaded."));
+            return;
+        }
 
-        // Create and show progress dialog
-        ExportProgressDialog progressDialog = new ExportProgressDialog(getParentFrame(), dialogTitle);
-        progressDialog.setVisible(true);
+        // Switch to Migration report tab
+        showMigrationReportTab();
 
         // Run export in background
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
-                return exportService.repeatLastExport(progressDialog);
+                return exportService.repeatLastExport(monitor);
             }
 
             @Override
             protected void done() {
-                progressDialog.dispose();
                 try {
                     ExportStatistics result = get();
                     handleExportCompleted(result);
@@ -221,9 +232,14 @@ public class MigrationServiceCallback {
      * Handles successful export completion.
      */
     private void handleExportCompleted(ExportStatistics result) {
-        // Show result dialog
-        ExportResultDialog dialog = new ExportResultDialog(getParentFrame(), result);
-        dialog.setVisible(true);
+        // Show results in the Migration results tab instead of a dialog
+        if (parentComponent != null) {
+            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
+            if (window instanceof migration4o.ui.main.MainWindow) {
+                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
+                mainWindow.showMigrationResults(result);
+            }
+        }
 
         // Notify external callback
         if (resultCallback != null) {
@@ -250,6 +266,35 @@ public class MigrationServiceCallback {
             return (Frame) SwingUtilities.getWindowAncestor(parentComponent);
         }
         return null;
+    }
+
+    /**
+     * Gets the export monitor from the main window's migration report panel.
+     * 
+     * @return the export monitor, or null if not available
+     */
+    private DOExportMonitor getExportMonitor() {
+        if (parentComponent != null) {
+            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
+            if (window instanceof MainWindow) {
+                MainWindow mainWindow = (MainWindow) window;
+                return mainWindow.getMigrationReportMonitor();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Switches the main window to the Migration report tab in the Database section.
+     */
+    private void showMigrationReportTab() {
+        if (parentComponent != null) {
+            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
+            if (window instanceof MainWindow) {
+                MainWindow mainWindow = (MainWindow) window;
+                mainWindow.showMigrationReportTab();
+            }
+        }
     }
 
     /**
