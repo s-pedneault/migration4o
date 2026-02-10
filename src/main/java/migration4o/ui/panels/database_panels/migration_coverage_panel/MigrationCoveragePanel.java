@@ -45,6 +45,7 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.database.DODatabaseService;
+import migration4o.database.reach.ReachResultAggregator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
@@ -79,7 +80,7 @@ public class MigrationCoveragePanel extends JPanel {
         this.databasePath = databasePath;
 
         // Create table model
-        String[] columnNames = { "Class Name", "Objects", "Unique", "Reached", "Migration" };
+        String[] columnNames = { "Class Name", "Unique", "Objects", "Reached", "Not reached", "Migration" };
         tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -88,10 +89,10 @@ public class MigrationCoveragePanel extends JPanel {
 
             @Override
             public Class<?> getColumnClass(int columnIndex) {
-                if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3 || columnIndex == 4) {
+                if (columnIndex == 1 || columnIndex == 2 || columnIndex == 3 || columnIndex == 5) {
                     return Integer.class;
                 }
-                return String.class;
+                return String.class; // Column 0 (Class Name) and Column 4 (Not reached) are String
             }
         };
 
@@ -106,8 +107,11 @@ public class MigrationCoveragePanel extends JPanel {
         table.getColumnModel().getColumn(0).setCellRenderer(new ClassNameRenderer());
 
         // Set custom renderer for the Migration column (progress bar)
-        table.getColumnModel().getColumn(4).setCellRenderer(new MigrationProgressRenderer());
-        table.getColumnModel().getColumn(4).setPreferredWidth(150);
+        table.getColumnModel().getColumn(5).setCellRenderer(new MigrationProgressRenderer());
+        table.getColumnModel().getColumn(5).setPreferredWidth(150);
+
+        // Set preferred width for Not reached column
+        table.getColumnModel().getColumn(4).setPreferredWidth(120);
 
         // Add double-click listener to view class objects
         table.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -160,19 +164,18 @@ public class MigrationCoveragePanel extends JPanel {
         final boolean isPartial;
         final boolean isNotMigrated;
 
-        MigrationStatus(DOSchemaClass refClass, int unique, int reached) {
+        MigrationStatus(DOSchemaClass refClass, int unique, int objects, int reached) {
             // Check if class is not set to migrate
             this.isNotSetToMigrate = refClass != null && !refClass.migrate;
 
             // Categories are mutually exclusive:
-            // 1. Not migrated (highest priority): class not set to migrate OR (unique > 0
-            // AND reached == 0)
-            // 2. 100% migrated: reached == unique (including 0 == 0) AND class set to
-            // migrate
-            // 3. Partially migrated: 0 < reached < unique
-            this.is100Percent = !isNotSetToMigrate && reached == unique;
-            this.isPartial = !isNotSetToMigrate && reached > 0 && reached < unique;
-            this.isNotMigrated = isNotSetToMigrate || (unique > 0 && reached == 0);
+            // 1. Not migrated: class not set to migrate OR (objects > 0 AND reached == 0)
+            // 2. 100% migrated: reached all unique AND all non-unique objects (reached >=
+            // objects)
+            // 3. Partially migrated: reached some objects but not all
+            this.is100Percent = !isNotSetToMigrate && objects > 0 && reached >= objects;
+            this.isPartial = !isNotSetToMigrate && reached > 0 && reached < objects;
+            this.isNotMigrated = isNotSetToMigrate || (objects > 0 && reached == 0);
         }
     }
 
@@ -276,10 +279,11 @@ public class MigrationCoveragePanel extends JPanel {
         // Re-add filtered rows from fullTableModel
         for (int i = 0; i < fullTableModel.getRowCount(); i++) {
             String className = (String) fullTableModel.getValueAt(i, 0);
-            int objects = (Integer) fullTableModel.getValueAt(i, 1);
-            int unique = (Integer) fullTableModel.getValueAt(i, 2);
+            int unique = (Integer) fullTableModel.getValueAt(i, 1);
+            int objects = (Integer) fullTableModel.getValueAt(i, 2);
             int reached = (Integer) fullTableModel.getValueAt(i, 3);
-            int migrated = (Integer) fullTableModel.getValueAt(i, 4);
+            String notReached = (String) fullTableModel.getValueAt(i, 4);
+            int migrated = (Integer) fullTableModel.getValueAt(i, 5);
 
             // Determine class type
             DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
@@ -302,7 +306,7 @@ public class MigrationCoveragePanel extends JPanel {
                 continue;
 
             // Calculate migration status using centralized logic
-            MigrationStatus status = new MigrationStatus(refClass, unique, reached);
+            MigrationStatus status = new MigrationStatus(refClass, unique, objects, reached);
 
             if (status.is100Percent && !filter100Percent)
                 continue;
@@ -312,14 +316,14 @@ public class MigrationCoveragePanel extends JPanel {
                 continue;
 
             // Add row
-            tableModel.addRow(new Object[] { className, objects, unique, reached, migrated });
+            tableModel.addRow(new Object[] { className, unique, objects, reached, notReached, migrated });
         }
     }
 
     private void populateTable(DOSchema referenceSchema, DOSchema databaseSchema) {
         // Create fullTableModel if it doesn't exist
         if (fullTableModel == null) {
-            String[] columnNames = { "Class Name", "Objects", "Unique", "Reached", "Migration" };
+            String[] columnNames = { "Class Name", "Unique", "Objects", "Reached", "Not reached", "Migration" };
             fullTableModel = new DefaultTableModel(columnNames, 0) {
                 @Override
                 public boolean isCellEditable(int row, int column) {
@@ -375,8 +379,40 @@ public class MigrationCoveragePanel extends JPanel {
                 reachedCount = dbClass.reachedObjectIds != null ? dbClass.reachedObjectIds.length : 0;
             }
 
+            // Calculate Not reached components for equation display
+            // We need to determine how many unique vs non-unique objects are unreached
+            int uniqueReachedCount = 0;
+            int nonUniqueReachedCount = 0;
+
+            if (dbClass != null && dbClass.reachedObjectIds != null && dbClass.uniqueObjectIds != null) {
+                // Create set of unique object IDs for fast lookup
+                Set<Long> uniqueSet = new HashSet<>();
+                for (long id : dbClass.uniqueObjectIds) {
+                    uniqueSet.add(id);
+                }
+
+                // Count reached unique vs non-unique
+                for (long reachedId : dbClass.reachedObjectIds) {
+                    if (uniqueSet.contains(reachedId)) {
+                        uniqueReachedCount++;
+                    } else {
+                        nonUniqueReachedCount++;
+                    }
+                }
+            }
+
+            // Calculate unreached counts
+            int uniqueUnreached = uniqueCount - uniqueReachedCount;
+            int nonUniqueCount = objectCount - uniqueCount;
+            int nonUniqueUnreached = nonUniqueCount - nonUniqueReachedCount;
+            int totalUnreached = uniqueUnreached + nonUniqueUnreached;
+
+            // Format as equation: "51 + 24 = 75"
+            String notReachedEquation = uniqueUnreached + " + " + nonUniqueUnreached + " = " + totalUnreached;
+
             // Migration column now shows reached count (what we actually use for progress)
-            fullTableModel.addRow(new Object[] { className, objectCount, uniqueCount, reachedCount, reachedCount });
+            fullTableModel.addRow(new Object[] { className, uniqueCount, objectCount, reachedCount, notReachedEquation,
+                    reachedCount });
 
             // Debug specific class
             if (className.equals("gest.dossPrev.PersonneRess")) {
@@ -445,17 +481,25 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
-     * Custom cell renderer for Migration column showing progress bar
-     * Max = Unique objects count, Value = Reached objects count
-     * Background = gray, Progress = blue for partial, green for 100%
-     * Special cases:
+     * Custom cell renderer for Migration column showing dual-segment progress bar
+     * Max = Total objects count
+     * Segment 1 (blue/green): Unique objects reached
+     * Segment 2 (darker blue/green): Non-unique objects reached
+     * Background = gray
+     * Colors:
+     * - Blue for partial unique coverage, green when all unique reached
+     * - Darker blue for partial non-unique coverage, darker green when all
+     * non-unique reached
      * - Light grey if not flagged to migrate
      */
     private class MigrationProgressRenderer extends JPanel implements javax.swing.table.TableCellRenderer {
-        private int value;
-        private int maximum;
+        private int totalObjects; // Total objects (max of progress bar)
+        private int uniqueObjects; // Total unique objects
+        private int uniqueReached; // Unique objects reached
+        private int nonUniqueReached; // Non-unique objects reached
         private Color backgroundColor;
-        private Color progressColor;
+        private Color uniqueProgressColor;
+        private Color nonUniqueProgressColor;
 
         public MigrationProgressRenderer() {
             setOpaque(true);
@@ -466,29 +510,38 @@ public class MigrationCoveragePanel extends JPanel {
                 boolean isSelected, boolean hasFocus, int row, int column) {
 
             if (val instanceof Integer) {
-                // This column (4) shows migration status but we need reached/unique for
-                // progress
-
-                // Get the Reached count from column 3
-                this.value = 0;
-                Object reachedValue = table.getValueAt(row, 3);
-                if (reachedValue instanceof Integer) {
-                    this.value = (Integer) reachedValue;
-                }
-
-                // Get the Unique count from column 2
-                this.maximum = 0;
-                Object uniqueValue = table.getValueAt(row, 2);
-                if (uniqueValue instanceof Integer) {
-                    this.maximum = (Integer) uniqueValue;
-                }
-
                 // Get class name from column 0
                 String className = "";
                 Object classNameValue = table.getValueAt(row, 0);
                 if (classNameValue instanceof String) {
                     className = (String) classNameValue;
                 }
+
+                // Get values from table columns
+                // Column 1: Unique
+                // Column 2: Objects (total)
+                // Column 3: Reached (total reached)
+                this.uniqueObjects = 0;
+                Object uniqueValue = table.getValueAt(row, 1);
+                if (uniqueValue instanceof Integer) {
+                    this.uniqueObjects = (Integer) uniqueValue;
+                }
+
+                this.totalObjects = 0;
+                Object totalValue = table.getValueAt(row, 2);
+                if (totalValue instanceof Integer) {
+                    this.totalObjects = (Integer) totalValue;
+                }
+
+                int totalReached = 0;
+                Object reachedValue = table.getValueAt(row, 3);
+                if (reachedValue instanceof Integer) {
+                    totalReached = (Integer) reachedValue;
+                }
+
+                // Calculate unique vs non-unique reached
+                // We need to get the actual class to determine this properly
+                calculateReachedCounts(className, totalReached);
 
                 // Determine colors based on class properties
                 determineColors(className);
@@ -497,29 +550,85 @@ public class MigrationCoveragePanel extends JPanel {
             return this;
         }
 
+        /**
+         * Calculate how many unique vs non-unique objects were reached.
+         * Logic: If we reached an object that's in uniqueObjectIds, count it as unique.
+         * If we reached an object NOT in uniqueObjectIds but in objectIds, it's
+         * non-unique (ancestor).
+         */
+        private void calculateReachedCounts(String className, int totalReached) {
+            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
+
+            if (dbClass == null || dbClass.reachedObjectIds == null) {
+                this.uniqueReached = 0;
+                this.nonUniqueReached = 0;
+                return;
+            }
+
+            // Create sets for fast lookup
+            Set<Long> uniqueSet = new HashSet<>();
+            if (dbClass.uniqueObjectIds != null) {
+                for (long id : dbClass.uniqueObjectIds) {
+                    uniqueSet.add(id);
+                }
+            }
+
+            Set<Long> objectSet = new HashSet<>();
+            if (dbClass.objectIds != null) {
+                for (long id : dbClass.objectIds) {
+                    objectSet.add(id);
+                }
+            }
+
+            // Count reached objects by category
+            int uniqueCount = 0;
+            int nonUniqueCount = 0;
+
+            for (long reachedId : dbClass.reachedObjectIds) {
+                if (uniqueSet.contains(reachedId)) {
+                    uniqueCount++;
+                } else if (objectSet.contains(reachedId)) {
+                    nonUniqueCount++;
+                }
+            }
+
+            this.uniqueReached = uniqueCount;
+            this.nonUniqueReached = nonUniqueCount;
+        }
+
         private void determineColors(String className) {
             // Find the class in reference and database schemas
             DOSchemaClass refClass = findClassInSchema(referenceSchema, className);
 
             // Calculate migration status using centralized logic
-            MigrationStatus status = new MigrationStatus(refClass, maximum, value);
+            int totalReached = uniqueReached + nonUniqueReached;
+            MigrationStatus status = new MigrationStatus(refClass, uniqueObjects, totalObjects, totalReached);
 
             // Use migration status to determine colors
             if (status.isNotSetToMigrate) {
                 // Light gray for classes not set to migrate
                 backgroundColor = new Color(211, 211, 211); // Light grey
-                progressColor = new Color(211, 211, 211); // Same light grey
+                uniqueProgressColor = new Color(211, 211, 211); // Same light grey
+                nonUniqueProgressColor = new Color(211, 211, 211); // Same light grey
             } else {
                 // Darker grey background
                 backgroundColor = new Color(169, 169, 169);
 
-                // Color based on migration status
-                if (status.is100Percent) {
-                    progressColor = new Color(34, 197, 94); // Green for 100%
-                } else if (value > maximum) {
-                    progressColor = new Color(255, 50, 50); // Red for over maximum
+                // Unique segment color (blue or green)
+                boolean allUniqueReached = (uniqueObjects > 0 && uniqueReached >= uniqueObjects);
+                if (allUniqueReached) {
+                    uniqueProgressColor = new Color(34, 197, 94); // Green - all unique reached
                 } else {
-                    progressColor = new Color(59, 130, 246); // Blue for partial
+                    uniqueProgressColor = new Color(59, 130, 246); // Blue - partial unique
+                }
+
+                // Non-unique segment color (darker blue or darker green)
+                int nonUniqueTotalCount = totalObjects - uniqueObjects;
+                boolean allNonUniqueReached = (nonUniqueTotalCount > 0 && nonUniqueReached >= nonUniqueTotalCount);
+                if (allNonUniqueReached) {
+                    nonUniqueProgressColor = new Color(22, 163, 74); // Darker green - all non-unique reached
+                } else {
+                    nonUniqueProgressColor = new Color(29, 78, 216); // Darker blue - partial non-unique
                 }
             }
         }
@@ -547,11 +656,21 @@ public class MigrationCoveragePanel extends JPanel {
             g.setColor(backgroundColor);
             g.fillRect(0, 0, width, height);
 
-            // Draw progress
-            if (maximum > 0) {
-                int progressWidth = (int) ((double) value / maximum * width);
-                g.setColor(progressColor);
-                g.fillRect(0, 0, progressWidth, height);
+            // Draw dual-segment progress bar
+            if (totalObjects > 0) {
+                // Segment 1: Unique objects reached
+                int uniqueWidth = (int) ((double) uniqueReached / totalObjects * width);
+                if (uniqueWidth > 0) {
+                    g.setColor(uniqueProgressColor);
+                    g.fillRect(0, 0, uniqueWidth, height);
+                }
+
+                // Segment 2: Non-unique objects reached (continues from unique segment)
+                int nonUniqueWidth = (int) ((double) nonUniqueReached / totalObjects * width);
+                if (nonUniqueWidth > 0) {
+                    g.setColor(nonUniqueProgressColor);
+                    g.fillRect(uniqueWidth, 0, nonUniqueWidth, height);
+                }
             }
 
             // Draw border
@@ -1454,6 +1573,10 @@ public class MigrationCoveragePanel extends JPanel {
      * Update the reached object counts for exported classes.
      * Called after export to populate reachedObjectIds based on what was actually
      * exported.
+     * This method adds exported objects to ALL classes in their inheritance
+     * hierarchy.
+     * For example, exporting VectRechID #1234 will mark HVector #1234 and Vector
+     * #1234 as reached too.
      * 
      * @param exportedClasses   Map of class name to number of exported objects
      * @param exportedObjectIds Map of class name to list of actual exported object
@@ -1464,18 +1587,41 @@ public class MigrationCoveragePanel extends JPanel {
             return;
         }
 
-        // Update the database schema's reachedObjectIds for each exported class
-        for (Map.Entry<String, Integer> entry : exportedClasses.entrySet()) {
+        // Get database container for class lookups
+        ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+        if (container == null) {
+            System.err.println("Cannot update exported counts: no database container available");
+            return;
+        }
+
+        // Collect all exported object IDs across all classes
+        Set<Long> allExportedIds = new HashSet<>();
+        if (exportedObjectIds != null) {
+            for (List<Long> idList : exportedObjectIds.values()) {
+                if (idList != null) {
+                    allExportedIds.addAll(idList);
+                }
+            }
+        }
+
+        // Use ReachResultAggregator to add object IDs to all classes in their
+        // inheritance hierarchy
+        ReachResultAggregator aggregator = new ReachResultAggregator(databaseSchema);
+        Map<String, Set<Long>> reachedByClass = aggregator.aggregateReachedObjects(allExportedIds, container);
+
+        // Update reachedObjectIds for each class in the database schema
+        for (Map.Entry<String, Set<Long>> entry : reachedByClass.entrySet()) {
             String className = entry.getKey();
-            List<Long> objectIdList = exportedObjectIds != null ? exportedObjectIds.get(className) : null;
+            Set<Long> objectIdSet = entry.getValue();
 
             // Find the class in database schema
             DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
-            if (dbClass != null && objectIdList != null && !objectIdList.isEmpty()) {
-                // Convert List<Long> to long[] array with actual object IDs
-                long[] reachedIds = new long[objectIdList.size()];
-                for (int i = 0; i < objectIdList.size(); i++) {
-                    reachedIds[i] = objectIdList.get(i);
+            if (dbClass != null && objectIdSet != null && !objectIdSet.isEmpty()) {
+                // Convert Set<Long> to long[] array
+                long[] reachedIds = new long[objectIdSet.size()];
+                int i = 0;
+                for (Long id : objectIdSet) {
+                    reachedIds[i++] = id;
                 }
                 dbClass.reachedObjectIds = reachedIds;
             }
