@@ -156,6 +156,10 @@ public class MigrationCoveragePanel extends JPanel {
         exportButton.addActionListener(e -> exportObjectIds());
         buttonPanel.add(exportButton);
 
+        JButton exportIdsButton = new JButton("Export IDs");
+        exportIdsButton.addActionListener(e -> exportAllObjectIds());
+        buttonPanel.add(exportIdsButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -1540,6 +1544,349 @@ public class MigrationCoveragePanel extends JPanel {
                     JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
+    }
+
+    /**
+     * Export all object IDs from the database to a tab-delimited file.
+     * One class per line: class name, then all object IDs.
+     */
+    private void exportAllObjectIds() {
+        // Show options dialog
+        JDialog optionsDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                "Export Options", true);
+        JPanel optionsPanel = new JPanel(new BorderLayout(10, 10));
+        optionsPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
+
+        JPanel checkboxPanel = new JPanel();
+        checkboxPanel.setLayout(new javax.swing.BoxLayout(checkboxPanel, javax.swing.BoxLayout.Y_AXIS));
+
+        javax.swing.JCheckBox cbAllClasses = new javax.swing.JCheckBox("Export all object IDs of all classes", true);
+        javax.swing.JCheckBox cbCollections = new javax.swing.JCheckBox(
+                "Export children IDs of all collections (including Vectors)", true);
+        javax.swing.JCheckBox cbFieldObjects = new javax.swing.JCheckBox("Export field objects", true);
+
+        checkboxPanel.add(cbAllClasses);
+        checkboxPanel.add(javax.swing.Box.createVerticalStrut(5));
+        checkboxPanel.add(cbCollections);
+        checkboxPanel.add(javax.swing.Box.createVerticalStrut(5));
+        checkboxPanel.add(cbFieldObjects);
+        checkboxPanel.add(javax.swing.Box.createVerticalStrut(10));
+
+        // Class filters
+        javax.swing.JCheckBox cbIncludeEntite = new javax.swing.JCheckBox("Include gest.gen.Entite", false);
+        javax.swing.JCheckBox cbIncludeIDEntite = new javax.swing.JCheckBox("Include gest.gen.IDEntite", false);
+        javax.swing.JCheckBox cbIncludeIDEntiteDescendants = new javax.swing.JCheckBox(
+                "Include descendants of IDEntite", false);
+
+        checkboxPanel.add(cbIncludeEntite);
+        checkboxPanel.add(javax.swing.Box.createVerticalStrut(5));
+        checkboxPanel.add(cbIncludeIDEntite);
+        checkboxPanel.add(javax.swing.Box.createVerticalStrut(5));
+        checkboxPanel.add(cbIncludeIDEntiteDescendants);
+
+        optionsPanel.add(checkboxPanel, BorderLayout.CENTER);
+
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        JButton okButton = new JButton("OK");
+        JButton cancelButton = new JButton("Cancel");
+
+        final boolean[] confirmed = { false };
+
+        okButton.addActionListener(e -> {
+            confirmed[0] = true;
+            optionsDialog.dispose();
+        });
+
+        cancelButton.addActionListener(e -> {
+            optionsDialog.dispose();
+        });
+
+        buttonPanel.add(okButton);
+        buttonPanel.add(cancelButton);
+        optionsPanel.add(buttonPanel, BorderLayout.SOUTH);
+
+        optionsDialog.setContentPane(optionsPanel);
+        optionsDialog.pack();
+        optionsDialog.setLocationRelativeTo(this);
+        optionsDialog.setVisible(true);
+
+        // If user cancelled, return
+        if (!confirmed[0]) {
+            return;
+        }
+
+        // Get selected options
+        final boolean exportAllClasses = cbAllClasses.isSelected();
+        final boolean exportCollections = cbCollections.isSelected();
+        final boolean exportFieldObjects = cbFieldObjects.isSelected();
+        final boolean includeEntite = cbIncludeEntite.isSelected();
+        final boolean includeIDEntite = cbIncludeIDEntite.isSelected();
+        final boolean includeIDEntiteDescendants = cbIncludeIDEntiteDescendants.isSelected();
+
+        // Create processing dialog
+        JDialog processingDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
+                "Processing", true);
+        JPanel dialogPanel = new JPanel(new BorderLayout(10, 10));
+        dialogPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel statusLabel = new JLabel("Exporting object IDs...", SwingConstants.CENTER);
+        statusLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        dialogPanel.add(statusLabel, BorderLayout.CENTER);
+
+        JProgressBar progressBar = new JProgressBar();
+        progressBar.setIndeterminate(true);
+        dialogPanel.add(progressBar, BorderLayout.SOUTH);
+
+        processingDialog.setContentPane(dialogPanel);
+        processingDialog.setSize(400, 120);
+        processingDialog.setLocationRelativeTo(this);
+        processingDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
+        // Run export in background
+        SwingWorker<String, Void> worker = new SwingWorker<>() {
+            @Override
+            protected String doInBackground() throws Exception {
+                // Get database container
+                ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+                if (container == null || container.ext().isClosed()) {
+                    throw new IllegalStateException("No database is currently open.");
+                }
+
+                // Create output directory
+                java.nio.file.Path outputDir = java.nio.file.Paths.get("output/migration/ids");
+                java.nio.file.Files.createDirectories(outputDir);
+
+                // Prepare output file
+                java.nio.file.Path outputFile = outputDir.resolve("all-object-ids.txt");
+
+                try (java.io.PrintWriter writer = new java.io.PrintWriter(
+                        java.nio.file.Files.newBufferedWriter(outputFile))) {
+
+                    // Get all stored classes from DB4O
+                    StoredClass[] storedClasses = container.storedClasses();
+
+                    // Sort classes by name for consistent output
+                    java.util.Arrays.sort(storedClasses, (a, b) -> a.getName().compareTo(b.getName()));
+
+                    // Helper to check if a class should be skipped based on filters
+                    java.util.function.Predicate<String> shouldSkipClass = className -> {
+                        // Skip DB4O internal classes
+                        if (className.startsWith("com.db4o.")) {
+                            return true;
+                        }
+                        // Check gest.gen.Entite filter
+                        if (!includeEntite && "gest.gen.Entite".equals(className)) {
+                            return true;
+                        }
+                        // Check gest.gen.IDEntite filter
+                        if (!includeIDEntite && "gest.gen.IDEntite".equals(className)) {
+                            return true;
+                        }
+                        // Check IDEntite descendants filter
+                        if (!includeIDEntiteDescendants) {
+                            DOSchemaClass schemaClass = findClassInSchemaByName(databaseSchema, className);
+                            if (schemaClass != null && schemaClass.isIDEntite(referenceSchema)) {
+                                return true;
+                            }
+                        }
+                        return false;
+                    };
+
+                    // Export all class IDs if selected
+                    if (exportAllClasses) {
+                        for (StoredClass storedClass : storedClasses) {
+                            String className = storedClass.getName();
+
+                            if (shouldSkipClass.test(className)) {
+                                continue;
+                            }
+
+                            // Get all object IDs for this class
+                            long[] objectIds = storedClass.getIDs();
+
+                            // Write class name
+                            writer.print(className);
+
+                            // Write all object IDs separated by tabs
+                            if (objectIds != null && objectIds.length > 0) {
+                                for (long id : objectIds) {
+                                    writer.print("\t");
+                                    writer.print(id);
+                                }
+                            }
+
+                            writer.println();
+                        }
+                    }
+
+                    // Export all collection contents if selected (including Vectors)
+                    if (exportCollections) {
+                        for (StoredClass storedClass : storedClasses) {
+                            String className = storedClass.getName();
+
+                            // Skip filtered classes
+                            if (shouldSkipClass.test(className)) {
+                                continue;
+                            }
+
+                            // Check if class is a Collection
+                            try {
+                                Class<?> clazz = Class.forName(className);
+                                if (java.util.Collection.class.isAssignableFrom(clazz)) {
+                                    long[] collectionIds = storedClass.getIDs();
+                                    if (collectionIds != null && collectionIds.length > 0) {
+                                        for (long collectionId : collectionIds) {
+                                            try {
+                                                Object obj = container.ext().getByID(collectionId);
+                                                if (obj != null) {
+                                                    // Activate the object to turn it into a real Collection
+                                                    container.activate(obj, 1);
+
+                                                    if (obj instanceof java.util.Collection) {
+                                                        writer.print(className + "[" + collectionId + "]");
+
+                                                        java.util.Collection<?> collection = (java.util.Collection<?>) obj;
+                                                        for (Object element : collection) {
+                                                            if (element != null) {
+                                                                try {
+                                                                    long elementId = container.getID(element);
+                                                                    if (elementId > 0) {
+                                                                        writer.print("\t");
+                                                                        writer.print(elementId);
+                                                                    }
+                                                                } catch (Exception e) {
+                                                                    // Skip elements without IDs
+                                                                }
+                                                            }
+                                                        }
+                                                        writer.println();
+                                                    }
+                                                }
+                                            } catch (Exception e) {
+                                                // Skip collections that can't be loaded
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (ClassNotFoundException e) {
+                                // Skip classes that can't be loaded
+                            }
+                        }
+                    }
+
+                    // Export field objects if selected
+                    if (exportFieldObjects) {
+                        for (StoredClass storedClass : storedClasses) {
+                            String className = storedClass.getName();
+
+                            if (shouldSkipClass.test(className)) {
+                                continue;
+                            }
+
+                            long[] objectIds = storedClass.getIDs();
+                            if (objectIds != null && objectIds.length > 0) {
+                                for (long objectId : objectIds) {
+                                    try {
+                                        Object obj = container.ext().getByID(objectId);
+                                        if (obj != null) {
+                                            writer.print(className + "[" + objectId + "]");
+
+                                            // Handle GenericObject (most DB4O objects)
+                                            if (obj instanceof GenericObject) {
+                                                GenericObject genericObj = (GenericObject) obj;
+                                                StoredField[] fields = storedClass.getStoredFields();
+                                                if (fields != null) {
+                                                    for (StoredField field : fields) {
+                                                        try {
+                                                            Object fieldValue = field.get(genericObj);
+                                                            if (fieldValue != null) {
+                                                                // Handle arrays - iterate through elements
+                                                                if (fieldValue.getClass().isArray()) {
+                                                                    try {
+                                                                        int length = java.lang.reflect.Array
+                                                                                .getLength(fieldValue);
+                                                                        for (int i = 0; i < length; i++) {
+                                                                            Object element = java.lang.reflect.Array
+                                                                                    .get(fieldValue, i);
+                                                                            if (element != null) {
+                                                                                try {
+                                                                                    long elementId = container
+                                                                                            .getID(element);
+                                                                                    if (elementId > 0) {
+                                                                                        writer.print("\t");
+                                                                                        writer.print(elementId);
+                                                                                    }
+                                                                                } catch (Exception e) {
+                                                                                    // Skip elements without IDs
+                                                                                }
+                                                                            }
+                                                                        }
+                                                                    } catch (Exception e) {
+                                                                        // Skip arrays that can't be accessed
+                                                                    }
+                                                                }
+                                                                // Handle single object references
+                                                                else {
+                                                                    try {
+                                                                        long fieldObjectId = container
+                                                                                .getID(fieldValue);
+                                                                        if (fieldObjectId > 0) {
+                                                                            writer.print("\t");
+                                                                            writer.print(fieldObjectId);
+                                                                        }
+                                                                    } catch (Exception e) {
+                                                                        // Skip fields without IDs (primitives, etc.)
+                                                                    }
+                                                                }
+                                                            }
+                                                        } catch (Exception e) {
+                                                            // Skip fields that can't be accessed
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                            writer.println();
+                                        }
+                                    } catch (Exception e) {
+                                        // Skip objects that can't be loaded
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return outputFile.toAbsolutePath().toString();
+            }
+
+            @Override
+            protected void done() {
+                // Close processing dialog
+                processingDialog.dispose();
+
+                try {
+                    // Get the result and show success message
+                    String filePath = get();
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
+                            "All object IDs exported successfully to:\n" + filePath,
+                            "Export Successful",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } catch (Exception ex) {
+                    // Show error message
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
+                            "Error exporting object IDs: " + ex.getMessage(),
+                            "Export Error",
+                            JOptionPane.ERROR_MESSAGE);
+                    ex.printStackTrace();
+                }
+            }
+        };
+
+        // Start the worker
+        worker.execute();
+
+        // Show the processing dialog (this blocks until worker calls dispose)
+        processingDialog.setVisible(true);
     }
 
     /**

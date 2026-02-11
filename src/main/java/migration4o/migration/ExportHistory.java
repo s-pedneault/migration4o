@@ -18,6 +18,7 @@ public class ExportHistory {
     private static final String PROP_CLASS_NAMES = "export.classNames";
     private static final String PROP_MODULE_NAMES = "export.moduleNames";
     private static final String PROP_MAX_OBJECTS_PER_CLASS = "export.maxObjectsPerClass";
+    private static final String PROP_EXPORT_NATIVE_IDS = "export.exportNativeIds";
 
     public enum ExportType {
         CLASS, MODULE
@@ -28,7 +29,7 @@ public class ExportHistory {
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames) {
-        saveExport(type, targetName, outputPath, classNames, null, null);
+        saveExport(type, targetName, outputPath, classNames, null, null, false);
     }
 
     /**
@@ -36,14 +37,15 @@ public class ExportHistory {
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
             List<String> classNames, List<String> moduleNames) {
-        saveExport(type, targetName, outputPath, classNames, moduleNames, null);
+        saveExport(type, targetName, outputPath, classNames, moduleNames, null, false);
     }
 
     /**
      * Saves export parameters with object limit for bulk module export.
      */
     public static void saveExport(ExportType type, String targetName, String outputPath,
-            List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass) {
+            List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass,
+            boolean exportNativeIds) {
         Properties props = new Properties();
         props.setProperty(PROP_TYPE, type.name());
         props.setProperty(PROP_TARGET, targetName);
@@ -61,6 +63,8 @@ public class ExportHistory {
         if (maxObjectsPerClass != null) {
             props.setProperty(PROP_MAX_OBJECTS_PER_CLASS, String.valueOf(maxObjectsPerClass));
         }
+
+        props.setProperty(PROP_EXPORT_NATIVE_IDS, String.valueOf(exportNativeIds));
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
             props.store(writer, "Last export operation - automatically generated");
@@ -111,8 +115,10 @@ public class ExportHistory {
                 }
             }
 
+            boolean exportNativeIds = Boolean.parseBoolean(props.getProperty(PROP_EXPORT_NATIVE_IDS, "false"));
+
             return new ExportParams(type, target, output, classNames, moduleNames,
-                    timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass);
+                    timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass, exportNativeIds);
         } catch (IOException | IllegalArgumentException e) {
             System.err.println("Warning: Could not load export history: " + e.getMessage());
             return null;
@@ -137,10 +143,11 @@ public class ExportHistory {
         public final List<String> moduleNames;
         public final long timestamp;
         public final Integer maxObjectsPerClass; // null = all objects
+        public final boolean exportNativeIds; // whether to export DB4O object IDs
 
         public ExportParams(ExportType type, String targetName, String outputPath,
                 List<String> classNames, List<String> moduleNames, long timestamp,
-                Integer maxObjectsPerClass) {
+                Integer maxObjectsPerClass, boolean exportNativeIds) {
             this.type = type;
             this.targetName = targetName;
             this.outputPath = outputPath;
@@ -148,6 +155,7 @@ public class ExportHistory {
             this.moduleNames = moduleNames;
             this.timestamp = timestamp;
             this.maxObjectsPerClass = maxObjectsPerClass;
+            this.exportNativeIds = exportNativeIds;
         }
 
         public String getDescription() {

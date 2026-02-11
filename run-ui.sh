@@ -50,7 +50,7 @@ java --add-opens java.base/java.util=ALL-UNNAMED \
      --add-opens java.desktop/java.awt.image=ALL-UNNAMED \
      --add-opens java.desktop/javax.swing=ALL-UNNAMED \
      --add-opens java.sql/java.sql=ALL-UNNAMED \
-     -cp "classes:lib/*" migration4o.ui.Migration4oUI "$@"
+     -cp "classes:lib/*:$HOME/.m2/repository/org/swinglabs/swingx/swingx-all/1.6.5-1/swingx-all-1.6.5-1.jar" migration4o.ui.Migration4oUI "$@"
 
 echo ""
 echo "UI closed."

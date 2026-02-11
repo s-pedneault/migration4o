@@ -58,10 +58,11 @@ public class MigrationServiceCallback {
      * 
      * @param modulesToExport    the list of modules to export
      * @param maxObjectsPerClass maximum objects per class (null for unlimited)
+     * @param exportNativeIds    whether to export DB4O object IDs as XML attributes
      * @param outputPath         the output directory path
      */
     public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass,
-            String outputPath) {
+            boolean exportNativeIds, String outputPath) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
@@ -88,7 +89,7 @@ public class MigrationServiceCallback {
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
                 ExportStatistics result = exportService.exportModules(modules, outputPath,
-                        monitor, maxObjectsPerClass);
+                        monitor, maxObjectsPerClass, exportNativeIds);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -100,7 +101,8 @@ public class MigrationServiceCallback {
                 if (result.errors.isEmpty()) {
                     String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
                     ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, outputPath,
-                            new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass);
+                            new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass,
+                            exportNativeIds);
                 }
 
                 return result;

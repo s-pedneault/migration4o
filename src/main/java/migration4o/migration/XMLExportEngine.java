@@ -35,6 +35,7 @@ public class XMLExportEngine {
     private final String databasePath;
     private final ExtObjectContainer container;
     private Integer maxObjectsPerClass = null; // null = all objects
+    private boolean exportNativeIds = false; // whether to include DB4O object IDs in XML
     private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
     private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for comprehensive schema generation
     private Set<String> exportedXMLFiles = null; // Track XML files for validation
@@ -69,6 +70,15 @@ public class XMLExportEngine {
      */
     public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
         this.maxObjectsPerClass = maxObjectsPerClass;
+    }
+
+    /**
+     * Sets whether to export native DB4O object IDs as XML attributes.
+     * 
+     * @param exportNativeIds true to include id attribute with DB4O object ID
+     */
+    public void setExportNativeIds(boolean exportNativeIds) {
+        this.exportNativeIds = exportNativeIds;
     }
 
     /**
@@ -424,6 +434,7 @@ public class XMLExportEngine {
             operation.baseOutputPath = xmlPath.getParent().getParent().toString();
             operation.monitor = monitor;
             operation.maxObjectsPerClass = maxObjectsPerClass;
+            operation.exportNativeIds = exportNativeIds;
             operation.statistics = statistics;
             operation.exportConfig = config;
             operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
@@ -654,6 +665,7 @@ public class XMLExportEngine {
             operation.databasePath = databasePath;
             operation.baseOutputPath = outputPath;
             operation.maxObjectsPerClass = maxObjectsPerClass;
+            operation.exportNativeIds = exportNativeIds;
             operation.statistics = statistics;
             operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
             operation.useSharedTracking = (sharedExportedObjectIds != null);

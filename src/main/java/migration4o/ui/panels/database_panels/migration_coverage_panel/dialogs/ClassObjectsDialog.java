@@ -577,7 +577,7 @@ public class ClassObjectsDialog extends JFrame {
             com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
             String className = storedClass != null ? storedClass.getName() : "Unknown";
 
-            System.out.println("DEBUG: Formatting GenericObject of type: " + className);
+            // System.out.println("DEBUG: Formatting GenericObject of type: " + className);
 
             // Simplify class name (remove package)
             String simpleClassName = className;
@@ -611,7 +611,8 @@ public class ClassObjectsDialog extends JFrame {
                     }
                     summary.append(formatSimpleValue(fieldValue));
                     foundField = true;
-                    System.out.println("DEBUG: Found priority field " + fieldName + " = " + fieldValue);
+                    // System.out.println("DEBUG: Found priority field " + fieldName + " = " +
+                    // fieldValue);
                     break; // Only show first meaningful field
                 }
             }
@@ -623,9 +624,9 @@ public class ClassObjectsDialog extends JFrame {
                     for (com.db4o.ext.StoredField field : fields) {
                         try {
                             Object fieldValue = field.get(obj);
-                            System.out.println(
-                                    "DEBUG: Checking field " + field.getName() + " = " + fieldValue + " (type: "
-                                            + (fieldValue != null ? fieldValue.getClass().getName() : "null") + ")");
+                            // System.out.println(
+                            // "DEBUG: Checking field " + field.getName() + " = " + fieldValue + " (type: "
+                            // + (fieldValue != null ? fieldValue.getClass().getName() : "null") + ")");
                             if (fieldValue != null && isPrimitiveOrString(fieldValue) && !isEmptyValue(fieldValue)) {
                                 summary.append(formatSimpleValue(fieldValue));
                                 foundField = true;
@@ -642,7 +643,7 @@ public class ClassObjectsDialog extends JFrame {
 
             summary.append(")");
             String result = summary.toString();
-            System.out.println("DEBUG: Formatted summary: " + result);
+            // System.out.println("DEBUG: Formatted summary: " + result);
             return result;
 
         } catch (Exception e) {

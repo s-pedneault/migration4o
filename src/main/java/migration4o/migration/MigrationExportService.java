@@ -39,20 +39,21 @@ public class MigrationExportService {
     }
 
     public ExportStatistics exportModules(List<MigrationModule> modules, String baseOutputPath,
-            DOExportMonitor monitor, Integer maxObjectsPerClass) throws Exception {
+            DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
 
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
+        exporter.setExportNativeIds(exportNativeIds);
 
         if (modules.size() == 1) {
             MigrationModule module = modules.get(0);
             ExportStatistics result = exporter.exportModuleStructured(module, baseOutputPath, monitor);
             if (result.errors.isEmpty()) {
                 ExportHistory.saveExport(ExportHistory.ExportType.MODULE, module.getName(),
-                        baseOutputPath, module.getClassNames());
+                        baseOutputPath, module.getClassNames(), null, maxObjectsPerClass, exportNativeIds);
             }
             return result;
         }
@@ -168,6 +169,6 @@ public class MigrationExportService {
                 throw new IllegalStateException("Could not find module '" + params.targetName + "'");
             modules.add(module);
         }
-        return exportModules(modules, baseOutput, monitor, params.maxObjectsPerClass);
+        return exportModules(modules, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds);
     }
 }

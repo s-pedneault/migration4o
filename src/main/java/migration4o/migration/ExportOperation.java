@@ -25,8 +25,9 @@ public class ExportOperation {
     public String baseOutputPath;
     public DOExportMonitor monitor;
 
-    // Export limits
+    // Export limits and options
     public Integer maxObjectsPerClass;
+    public boolean exportNativeIds = false;
 
     // Module/Class targets (use lists for consistency)
     public List<MigrationModule> modules;

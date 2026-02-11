@@ -1108,10 +1108,11 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
+        boolean exportNativeIds = confirmDialog.getExportNativeIds();
         String outputPath = "output";
 
         // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, outputPath);
+        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, outputPath);
     }
 
     /**

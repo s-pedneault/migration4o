@@ -14,9 +14,9 @@
     <description>DB4O Database Migration Assistant - A comprehensive tool for migrating DB4O databases to modern formats</description>
     
     <properties>
-        <maven.compiler.source>25</maven.compiler.source>
-        <maven.compiler.target>25</maven.compiler.target>
-        <maven.compiler.release>25</maven.compiler.release>
+        <maven.compiler.source>24</maven.compiler.source>
+        <maven.compiler.target>24</maven.compiler.target>
+        <maven.compiler.release>24</maven.compiler.release>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <main.class>migration4o.ui.main.MainWindow</main.class>
     </properties>

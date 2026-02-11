@@ -11,10 +11,12 @@ public class ExportConfirmationDialog extends JDialog {
 
     private boolean confirmed = false;
     private Integer maxObjectsPerClass = null; // null = all objects
+    private boolean exportNativeIds = false;
 
     private JRadioButton allObjectsRadio;
     private JRadioButton limitObjectsRadio;
     private JSpinner limitSpinner;
+    private JCheckBox exportNativeIdsCheckbox;
 
     /**
      * Creates a new export confirmation dialog.
@@ -98,6 +100,21 @@ public class ExportConfirmationDialog extends JDialog {
 
         mainPanel.add(optionsPanel);
 
+        mainPanel.add(Box.createVerticalStrut(10));
+
+        // Additional export options
+        JPanel additionalPanel = new JPanel();
+        additionalPanel.setLayout(new BoxLayout(additionalPanel, BoxLayout.Y_AXIS));
+        additionalPanel.setBorder(BorderFactory.createTitledBorder("Additional Options"));
+        additionalPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        exportNativeIdsCheckbox = new JCheckBox("Export native object IDs (adds DB4O id attribute to XML)");
+        exportNativeIdsCheckbox.setSelected(false); // Off by default
+        exportNativeIdsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        additionalPanel.add(exportNativeIdsCheckbox);
+
+        mainPanel.add(additionalPanel);
+
         mainPanel.add(Box.createVerticalStrut(15));
 
         // Help text
@@ -123,6 +140,9 @@ public class ExportConfirmationDialog extends JDialog {
             } else {
                 maxObjectsPerClass = null; // All objects
             }
+
+            // Get checkbox state
+            exportNativeIds = exportNativeIdsCheckbox.isSelected();
 
             dispose();
         });
@@ -166,6 +186,15 @@ public class ExportConfirmationDialog extends JDialog {
      */
     public Integer getMaxObjectsPerClass() {
         return maxObjectsPerClass;
+    }
+
+    /**
+     * Gets whether to export native DB4O object IDs.
+     * 
+     * @return true if DB4O IDs should be exported as XML attributes
+     */
+    public boolean getExportNativeIds() {
+        return exportNativeIds;
     }
 
     /**

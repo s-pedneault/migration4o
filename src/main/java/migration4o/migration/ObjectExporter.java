@@ -140,7 +140,12 @@ public class ObjectExporter {
 
             // Only write object tags if there are fields to export
             if (fieldsToExport > 0) {
-                xmlWriter.writeStartElement(elementName, indentLevel);
+                // Write start element with optional object ID attribute
+                if (operation.exportNativeIds) {
+                    xmlWriter.writeStartElementWithId(elementName, objectId, indentLevel);
+                } else {
+                    xmlWriter.writeStartElement(elementName, indentLevel);
+                }
 
                 // Now actually export the fields
                 GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId,
