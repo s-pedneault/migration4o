@@ -14,6 +14,7 @@ import migration4o.migration.recipes.FieldValueMapper;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.migration.recipes.IDReferenceDetector;
 import migration4o.migration.recipes.IDReferenceExporter;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
@@ -51,7 +52,7 @@ public class FieldExporter {
      * @return number of fields that will be exported
      */
     public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
-            migration4o.models.schema.DOSchema schema) {
+            DOSchema schema) {
         int count = 0;
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
@@ -59,14 +60,17 @@ public class FieldExporter {
                 return 0;
             }
 
-            StoredField[] fields = storedClass.getStoredFields();
+            // CRITICAL FIX: Get fields from ALL ancestor classes, not just the immediate
+            // class
+            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
             for (StoredField field : fields) {
                 try {
                     Object fieldValue = field.get(obj);
                     String sourceFieldName = field.getName();
 
-                    // Get schema field
-                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByName(parentClass, sourceFieldName);
+                    // CRITICAL: Get schema field from current class AND ancestors
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass,
+                            sourceFieldName, schema);
 
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
@@ -157,14 +161,17 @@ public class FieldExporter {
                 return 0;
             }
 
-            StoredField[] fields = storedClass.getStoredFields();
+            // CRITICAL FIX: Get fields from ALL ancestor classes, not just the immediate
+            // class
+            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
             for (StoredField field : fields) {
                 try {
                     Object fieldValue = field.get(obj);
                     String sourceFieldName = field.getName();
 
-                    // Get destination field name from schema
-                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByName(parentClass, sourceFieldName);
+                    // CRITICAL: Get destination field name from schema (search ancestors too)
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass,
+                            sourceFieldName, operation.referenceSchema);
                     String fieldName = schemaField != null ? schemaField.destinationName : sourceFieldName;
 
                     // Skip fields marked as not exported

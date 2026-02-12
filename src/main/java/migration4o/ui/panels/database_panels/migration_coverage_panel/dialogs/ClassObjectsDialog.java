@@ -28,7 +28,6 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ObjectResolverUtil;
-import migration4o.util.ReferenceFinderUtil;
 
 /**
  * Frame to display all objects of a specific class from the database.
@@ -738,83 +737,10 @@ public class ClassObjectsDialog extends JFrame {
             return;
         }
 
-        // Create progress dialog
-        javax.swing.JDialog progressDialog = new javax.swing.JDialog(this, "Searching for References", false);
-        progressDialog.setSize(600, 400);
-        progressDialog.setLocationRelativeTo(this);
-        progressDialog.setDefaultCloseOperation(javax.swing.JDialog.DO_NOTHING_ON_CLOSE);
-
-        javax.swing.JTextArea logArea = new javax.swing.JTextArea();
-        logArea.setEditable(false);
-        logArea.setFont(new Font("Monospaced", Font.PLAIN, 11));
-        javax.swing.JScrollPane logScrollPane = new javax.swing.JScrollPane(logArea);
-        progressDialog.add(logScrollPane, BorderLayout.CENTER);
-
-        javax.swing.JButton cancelButton = new javax.swing.JButton("Close");
-        cancelButton.setEnabled(false);
-        javax.swing.JPanel buttonPanel = new javax.swing.JPanel();
-        buttonPanel.add(cancelButton);
-        progressDialog.add(buttonPanel, BorderLayout.SOUTH);
-
-        // Run the reference search in the background
-        SwingWorker<List<ReferenceFinderUtil.ReferenceResult>, String> worker = new SwingWorker<>() {
-            @Override
-            protected List<ReferenceFinderUtil.ReferenceResult> doInBackground() throws Exception {
-                ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
-                if (container == null || container.ext().isClosed()) {
-                    throw new IllegalStateException("No database is currently open.");
-                }
-
-                return ReferenceFinderUtil.findReferencesToObject(
-                        container, selectedObjectId, schemaClass, schema,
-                        message -> publish(message));
-            }
-
-            @Override
-            protected void process(List<String> chunks) {
-                // Append all progress messages to the log area
-                for (String message : chunks) {
-                    logArea.append(message);
-                }
-                // Auto-scroll to bottom
-                logArea.setCaretPosition(logArea.getDocument().getLength());
-            }
-
-            @Override
-            protected void done() {
-                cancelButton.setEnabled(true);
-                cancelButton.setText("Close");
-
-                try {
-                    List<ReferenceFinderUtil.ReferenceResult> results = get();
-
-                    if (results.isEmpty()) {
-                        logArea.append("\n========================================\n");
-                        logArea.append("RESULT: No references found.\n");
-                        logArea.append("This object is not referenced by any other object in the database.\n");
-                    } else {
-                        logArea.append("\n========================================\n");
-                        logArea.append("RESULT: Found " + results.size() + " reference(s):\n");
-                        for (ReferenceFinderUtil.ReferenceResult result : results) {
-                            logArea.append("  - " + result.toString() + "\n");
-                        }
-                    }
-                    logArea.setCaretPosition(logArea.getDocument().getLength());
-                } catch (Exception ex) {
-                    logArea.append("\nERROR: " + ex.getMessage() + "\n");
-                    logArea.setCaretPosition(logArea.getDocument().getLength());
-                    ex.printStackTrace();
-                }
-            }
-        };
-
-        cancelButton.addActionListener(e -> {
-            worker.cancel(true);
-            progressDialog.dispose();
-        });
-
-        progressDialog.setVisible(true);
-        worker.execute();
+        // Open ID Tracer with automatic search for this object
+        IDTracerDialog tracerDialog = new IDTracerDialog();
+        tracerDialog.setSearchId(selectedObjectId);
+        tracerDialog.setVisible(true);
     }
 
     /**

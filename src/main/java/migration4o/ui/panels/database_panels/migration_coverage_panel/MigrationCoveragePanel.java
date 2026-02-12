@@ -49,6 +49,7 @@ import migration4o.database.reach.ReachResultAggregator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDialog;
 import migration4o.util.ObjectResolverUtil;
 
 /**
@@ -62,6 +63,8 @@ public class MigrationCoveragePanel extends JPanel {
     private DOSchema referenceSchema;
     private DOSchema databaseSchema;
     private String databasePath;
+    private javax.swing.JTextField searchField;
+    private Set<String> classNameFilter = null; // Filter to specific class names (null = no filter)
 
     // Filter state
     private boolean filterIDEntites = false; // Unchecked by default
@@ -160,6 +163,10 @@ public class MigrationCoveragePanel extends JPanel {
         exportIdsButton.addActionListener(e -> exportAllObjectIds());
         buttonPanel.add(exportIdsButton);
 
+        JButton idTracerButton = new JButton("ID Tracer");
+        idTracerButton.addActionListener(e -> openIdTracer());
+        buttonPanel.add(idTracerButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -223,12 +230,43 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     private JPanel createFilterPanel() {
-        JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        JPanel panel = new JPanel(new BorderLayout(5, 5));
         panel.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
+        // Search field at the top
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+        searchPanel.add(new JLabel("Filter classes: "));
+        searchField = new javax.swing.JTextField(30);
+        searchField.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void changedUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilters();
+            }
+
+            public void removeUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilters();
+            }
+
+            public void insertUpdate(javax.swing.event.DocumentEvent e) {
+                applyFilters();
+            }
+        });
+        searchPanel.add(searchField);
+
+        JButton clearButton = new JButton("Clear");
+        clearButton.addActionListener(e -> {
+            searchField.setText("");
+            classNameFilter = null;
+            applyFilters();
+        });
+        searchPanel.add(clearButton);
+        panel.add(searchPanel, BorderLayout.NORTH);
+
+        // Checkbox filters below
+        JPanel checkboxPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
         JLabel filterLabel = new JLabel("Show: ");
         filterLabel.setFont(new Font("Arial", Font.BOLD, 12));
-        panel.add(filterLabel);
+        checkboxPanel.add(filterLabel);
 
         // Create checkboxes
         javax.swing.JCheckBox cbIDEntites = new javax.swing.JCheckBox("IDEntites", filterIDEntites);
@@ -269,25 +307,63 @@ public class MigrationCoveragePanel extends JPanel {
             applyFilters();
         });
 
-        panel.add(cbIDEntites);
-        panel.add(cbEntites);
-        panel.add(cbParams);
-        panel.add(cbOthers);
-        panel.add(new JLabel("  |  "));
-        panel.add(cb100Percent);
-        panel.add(cbPartial);
-        panel.add(cbNotMigrated);
+        checkboxPanel.add(cbIDEntites);
+        checkboxPanel.add(cbEntites);
+        checkboxPanel.add(cbParams);
+        checkboxPanel.add(cbOthers);
+        checkboxPanel.add(new JLabel("  |  "));
+        checkboxPanel.add(cb100Percent);
+        checkboxPanel.add(cbPartial);
+        checkboxPanel.add(cbNotMigrated);
+
+        panel.add(checkboxPanel, BorderLayout.SOUTH);
 
         return panel;
+    }
+
+    /**
+     * Filter the table to show only the specified class names.
+     * Clears any text search filter.
+     */
+    public void filterByClassNames(Set<String> classNames) {
+        this.classNameFilter = classNames;
+        if (searchField != null) {
+            searchField.setText("");
+        }
+        applyFilters();
+    }
+
+    /**
+     * Clear all filters (text search and class name filter).
+     */
+    public void clearAllFilters() {
+        this.classNameFilter = null;
+        if (searchField != null) {
+            searchField.setText("");
+        }
+        applyFilters();
     }
 
     private void applyFilters() {
         // Clear current table
         tableModel.setRowCount(0);
 
+        // Get search text
+        String searchText = searchField != null ? searchField.getText().toLowerCase().trim() : "";
+
         // Re-add filtered rows from fullTableModel
         for (int i = 0; i < fullTableModel.getRowCount(); i++) {
             String className = (String) fullTableModel.getValueAt(i, 0);
+
+            // Apply text search filter
+            if (!searchText.isEmpty() && !className.toLowerCase().contains(searchText)) {
+                continue;
+            }
+
+            // Apply class name filter (if set)
+            if (classNameFilter != null && !classNameFilter.contains(className)) {
+                continue;
+            }
             int unique = (Integer) fullTableModel.getValueAt(i, 1);
             int objects = (Integer) fullTableModel.getValueAt(i, 2);
             int reached = (Integer) fullTableModel.getValueAt(i, 3);
@@ -1652,8 +1728,18 @@ public class MigrationCoveragePanel extends JPanel {
                     throw new IllegalStateException("No database is currently open.");
                 }
 
-                // Create output directory
-                java.nio.file.Path outputDir = java.nio.file.Paths.get("output/migration/ids");
+                // Determine database folder name from database path
+                String dbFolder = "default";
+                if (databasePath != null) {
+                    java.nio.file.Path dbPath = java.nio.file.Paths.get(databasePath);
+                    java.nio.file.Path parent = dbPath.getParent();
+                    if (parent != null) {
+                        dbFolder = parent.getFileName().toString();
+                    }
+                }
+
+                // Create output directory at top level of database output folder
+                java.nio.file.Path outputDir = java.nio.file.Paths.get("output").resolve(dbFolder);
                 java.nio.file.Files.createDirectories(outputDir);
 
                 // Prepare output file
@@ -2016,5 +2102,13 @@ public class MigrationCoveragePanel extends JPanel {
             }
         }
         return null;
+    }
+
+    /**
+     * Opens the ID Tracer dialog for tracing object containment relationships.
+     */
+    private void openIdTracer() {
+        IDTracerDialog dialog = new IDTracerDialog();
+        dialog.setVisible(true);
     }
 }

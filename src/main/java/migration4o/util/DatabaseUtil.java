@@ -69,6 +69,40 @@ public class DatabaseUtil {
     }
 
     /**
+     * Finds a schema field by its name, searching the schema class and all its
+     * ancestor classes.
+     * This is CRITICAL for proper field lookup - fields may be defined in parent
+     * classes.
+     * 
+     * @param schemaClass the schema class to start searching from
+     * @param fieldName   the field name to find
+     * @param schema      the schema containing all class definitions
+     * @return the schema field definition, or null if not found
+     */
+    public static DOSchemaField findSchemaFieldByNameIncludingAncestors(DOSchemaClass schemaClass, String fieldName,
+            DOSchema schema) {
+        if (schemaClass == null || fieldName == null) {
+            return null;
+        }
+
+        // Search in current class
+        DOSchemaField field = findSchemaFieldByName(schemaClass, fieldName);
+        if (field != null) {
+            return field;
+        }
+
+        // Search in parent class if it exists
+        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty() && schema != null) {
+            DOSchemaClass parentClass = SchemaUtil.findClassByName(schemaClass.parentClassName, schema);
+            if (parentClass != null) {
+                return findSchemaFieldByNameIncludingAncestors(parentClass, fieldName, schema);
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Normalizes a database field name to XML-friendly camelCase format.
      * Replicates the Python transform_destination_name() logic:
      * - Removes leading 'm' prefix if followed by uppercase letter
@@ -307,4 +341,32 @@ public class DatabaseUtil {
     // return new DODatabase(container, encoding, 0, 0, databaseSize,
     // new DODatabaseClass[0]);
     // }
+
+    /**
+     * Gets all fields from a StoredClass including fields from all ancestor
+     * classes.
+     * This is CRITICAL for proper object export - DB4O's getStoredFields() only
+     * returns
+     * fields declared in that specific class, missing inherited fields.
+     * 
+     * @param storedClass the stored class to get fields from
+     * @return array of all fields including those from ancestors
+     */
+    public static com.db4o.ext.StoredField[] getAllFieldsIncludingAncestors(StoredClass storedClass) {
+        java.util.List<com.db4o.ext.StoredField> allFields = new java.util.ArrayList<>();
+
+        // Traverse up the inheritance hierarchy
+        StoredClass currentClass = storedClass;
+        while (currentClass != null) {
+            com.db4o.ext.StoredField[] classFields = currentClass.getStoredFields();
+            if (classFields != null) {
+                for (com.db4o.ext.StoredField field : classFields) {
+                    allFields.add(field);
+                }
+            }
+            currentClass = currentClass.getParentStoredClass();
+        }
+
+        return allFields.toArray(new com.db4o.ext.StoredField[0]);
+    }
 }

@@ -4,6 +4,11 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+
 public class SchemaUtil {
     /**
      * Checks if a schema class is a descendant of a given ancestor class.
@@ -231,5 +236,51 @@ public class SchemaUtil {
         }
 
         return false;
+    }
+
+    /**
+     * Given a set of class names that represent the same object (due to
+     * inheritance),
+     * finds the leaf (most derived) class using the reference schema.
+     * 
+     * @param classNames set of class names for the same object
+     * @return the leaf class name, or the first class name if schema lookup fails
+     */
+    public static String findLeafClass(Set<String> classNames) {
+        if (classNames == null || classNames.isEmpty()) {
+            return "Unknown";
+        }
+        if (classNames.size() == 1) {
+            return classNames.iterator().next();
+        }
+
+        // Get reference schema
+        DOSchema schema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
+        if (schema == null) {
+            return classNames.iterator().next();
+        }
+
+        // Build a map of class -> parent for all classes in the set
+        Map<String, String> parentMap = new HashMap<>();
+        for (String className : classNames) {
+            DOSchemaClass schemaClass = findClassByName(className, schema);
+            if (schemaClass != null && schemaClass.parentClassName != null) {
+                parentMap.put(className, schemaClass.parentClassName);
+            }
+        }
+
+        // Find the class that is NOT a parent of any other class in the set
+        // (i.e., the leaf class)
+        Set<String> parentClasses = new HashSet<>(parentMap.values());
+        for (String className : classNames) {
+            // If this class is not a parent of any other class in our set,
+            // it must be the leaf
+            if (!parentClasses.contains(className)) {
+                return className;
+            }
+        }
+
+        // Fallback: return first class
+        return classNames.iterator().next();
     }
 }

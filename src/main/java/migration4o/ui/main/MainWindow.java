@@ -9,6 +9,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -49,6 +50,8 @@ import migration4o.ui.panels.welcome_panel.WelcomePanel;
  */
 public class MainWindow extends JFrame {
 
+    private static MainWindow instance;
+
     private JTabbedPane tabbedPane;
     private JTabbedPane schemaTabPane; // Nested tabs for Schema section
     private JTabbedPane databaseTabPane; // Nested tabs for Database section
@@ -79,7 +82,80 @@ public class MainWindow extends JFrame {
     private final DOSchemaService schemaService = DOSchemaService.getInstance();
 
     public MainWindow() {
+        instance = this;
         initializeUI();
+    }
+
+    public static MainWindow getInstance() {
+        return instance;
+    }
+
+    /**
+     * Navigate to the coverage tab and filter by the specified class names.
+     * 
+     * @param classNames the set of class names to filter by
+     */
+    public void navigateToCoverageWithFilter(Set<String> classNames) {
+        if (classNames == null || classNames.isEmpty()) {
+            return;
+        }
+
+        // Switch to Database tab
+        if (databaseTabPane != null && databaseTabContainer != null) {
+            tabbedPane.setSelectedComponent(databaseTabContainer);
+
+            // Switch to Migration Coverage sub-tab
+            if (migrationCoverageTab != null) {
+                databaseTabPane.setSelectedComponent(migrationCoverageTab);
+
+                // Apply filter
+                if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
+                    migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
+                    coveragePanel.filterByClassNames(classNames);
+                }
+            }
+        }
+    }
+
+    /**
+     * Navigate to a class in the reference schema tab.
+     * Switches to the Schema tab and selects the specified class.
+     * 
+     * @param className the fully qualified class name to navigate to
+     */
+    public void navigateToReferenceSchemaClass(String className) {
+        if (className == null || referenceSchemaPanel == null) {
+            return;
+        }
+
+        // Switch to the Schema tab
+        if (schemaTabPane != null) {
+            Component schemaTabComponent = null;
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                if (tabbedPane.getComponentAt(i) == schemaTabPane) {
+                    tabbedPane.setSelectedIndex(i);
+                    break;
+                }
+            }
+
+            // Switch to the Reference schema sub-tab
+            for (int i = 0; i < schemaTabPane.getTabCount(); i++) {
+                if (schemaTabPane.getComponentAt(i) == referenceSchemaPanel) {
+                    schemaTabPane.setSelectedIndex(i);
+                    break;
+                }
+            }
+        }
+
+        // Use reflection to call the private selectClassByName method
+        try {
+            java.lang.reflect.Method method = SchemaEditorPanel.class.getDeclaredMethod("selectClassByName",
+                    String.class);
+            method.setAccessible(true);
+            method.invoke(referenceSchemaPanel, className);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private void initializeUI() {

@@ -578,21 +578,7 @@ public class SchemaEditorPanel extends JPanel {
 
             // Debug: print loaded classes count and check for ParamConfig
             int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;
-            boolean hasParamConfig = false;
-            if (schema.getClasses() != null) {
-                for (DOSchemaClass cls : schema.getClasses()) {
-                    if ("gest.config.ParamConfig".equals(cls.source)) {
-                        hasParamConfig = true;
-                        String shortName = cls.source.contains(".")
-                                ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                                : cls.source;
-                        System.out.println("DEBUG: Found ParamConfig - source: " + cls.source +
-                                ", dest: " + shortName + ", parent: " + cls.parentClassName);
-                        break;
-                    }
-                }
-            }
-            System.out.println("DEBUG: Loaded " + classCount + " classes, hasParamConfig=" + hasParamConfig);
+            System.out.println("DEBUG: Loaded " + classCount + " classes");
 
             // Build tree
             buildTree();
