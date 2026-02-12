@@ -40,7 +40,7 @@ public class ObjectActivator {
             }
 
             String className = ClassUtil.getClassName(obj);
-            ObjectResolverUtil.activateObject(container, obj, objectId);
+            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
 
             return new ActivationResult(obj, className);
         } catch (Exception e) {

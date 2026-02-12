@@ -5,12 +5,12 @@ import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ObjectResolverUtil;
+import migration4o.util.SchemaUtil;
 
 /**
  * Handles recursive traversal of the database object graph.
@@ -72,7 +72,7 @@ public class ObjectTraverser {
                 progressCallback.onObjectProcessed(className, objectId, processed, total);
             }
 
-            ObjectResolverUtil.activateObject(container, obj, objectId);
+            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
 
             // If it's a GenericObject, explore all its fields
             if (obj instanceof GenericObject) {

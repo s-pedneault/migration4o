@@ -69,7 +69,7 @@ public class ReferenceUtil {
             long idEntiteId = container.ext().getID(idEntiteObj);
 
             // Activate the IDEntite object to read its mID
-            ObjectResolverUtil.activateObject(container, idEntiteObj, idEntiteId);
+            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteId);
             Long mID = extractMIDField(container, idEntiteObj);
 
             if (mID == null) {
@@ -121,7 +121,7 @@ public class ReferenceUtil {
                     try {
                         Object obj = container.ext().getByID(objectId);
                         if (obj != null) {
-                            ObjectResolverUtil.activateObject(container, obj, objectId);
+                            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
                             Long objMID = extractMIDField(container, obj);
 
                             if (mID.equals(objMID)) {

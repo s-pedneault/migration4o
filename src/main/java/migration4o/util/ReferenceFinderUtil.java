@@ -13,6 +13,7 @@ import com.db4o.reflect.generic.GenericObject;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.recipes.RecipeCollectionActivation;
 
 /**
  * Utility for finding references to database objects.
@@ -264,8 +265,7 @@ public class ReferenceFinderUtil {
         if (fieldValue instanceof GenericObject) {
             try {
                 // Try to extract collection items
-                Collection<?> items = CollectionUtil.extractAndActivate(
-                        container, fieldValue);
+                Collection<?> items = RecipeCollectionActivation.getItems(container, fieldValue);
                 if (items != null) {
                     for (Object item : items) {
                         if (item != null) {

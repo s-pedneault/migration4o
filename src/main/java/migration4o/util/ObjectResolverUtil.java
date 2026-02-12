@@ -80,7 +80,7 @@ public class ObjectResolverUtil {
      * Vectors and collections are activated specifically when accessed via
      * CollectionUtil.
      */
-    public static void activateObject(ExtObjectContainer container, Object obj, Long objectId) {
+    public static void activateObjectShallow(ExtObjectContainer container, Object obj, Long objectId) {
         try {
             // Shallow activation is sufficient - avoids cascading retries and exception
             // spam
@@ -124,7 +124,7 @@ public class ObjectResolverUtil {
         while (iterator.hasNext()) {
             Map.Entry<Long, Object> entry = iterator.next();
             try {
-                activateObject(container, entry.getValue(), entry.getKey());
+                activateObjectShallow(container, entry.getValue(), entry.getKey());
             } catch (Exception e) {
                 // Remove problematic objects from processing
                 iterator.remove();

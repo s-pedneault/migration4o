@@ -59,7 +59,7 @@ public class IDEntiteResolver {
 
         try {
             // Activate and extract the mID field
-            ObjectResolverUtil.activateObject(container, idEntiteObj, idEntiteId);
+            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteId);
             Long mID = extractMIDField(idEntiteObj);
 
             if (mID == null) {
@@ -86,7 +86,7 @@ public class IDEntiteResolver {
                             try {
                                 Object obj = container.ext().getByID(objectId);
                                 if (obj != null) {
-                                    ObjectResolverUtil.activateObject(container, obj, objectId);
+                                    ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
                                     Long objMID = extractMIDField(obj);
 
                                     // If mIDs match, explore this EntiteContientID object

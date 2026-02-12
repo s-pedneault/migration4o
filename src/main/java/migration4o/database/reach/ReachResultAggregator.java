@@ -9,6 +9,7 @@ import com.db4o.ext.ExtObjectContainer;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.SchemaUtil;
 
 /**
  * Aggregates reach analysis results by class.

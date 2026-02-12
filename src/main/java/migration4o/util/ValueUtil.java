@@ -1,6 +1,8 @@
 package migration4o.util;
 
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
@@ -183,5 +185,25 @@ public class ValueUtil {
         }
 
         return false;
+    }
+
+    /**
+     * Converts a Java array to a List.
+     * 
+     * @param arrayObj The array object
+     * @return List containing the array elements
+     */
+    public static List<Object> arrayToList(Object arrayObj) {
+        List<Object> list = new ArrayList<>();
+        int length = java.lang.reflect.Array.getLength(arrayObj);
+
+        for (int i = 0; i < length; i++) {
+            Object item = java.lang.reflect.Array.get(arrayObj, i);
+            if (item != null) {
+                list.add(item);
+            }
+        }
+
+        return list;
     }
 }

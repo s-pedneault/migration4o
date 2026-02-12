@@ -48,6 +48,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.database.reach.ReachResultAggregator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.recipes.RecipeCollectionActivation;
 import migration4o.util.CollectionUtil;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDialog;
@@ -116,7 +117,10 @@ public class MigrationCoveragePanel extends JPanel {
 
         // Set right-aligned renderer for Not reached column
         javax.swing.table.DefaultTableCellRenderer rightRenderer = new javax.swing.table.DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.RIGHT);
+        rightRenderer.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
+        table.getColumnModel().getColumn(1).setCellRenderer(rightRenderer);
+        table.getColumnModel().getColumn(2).setCellRenderer(rightRenderer);
+        table.getColumnModel().getColumn(3).setCellRenderer(rightRenderer);
         table.getColumnModel().getColumn(4).setCellRenderer(rightRenderer);
         table.getColumnModel().getColumn(4).setPreferredWidth(120);
 
@@ -1090,7 +1094,7 @@ public class MigrationCoveragePanel extends JPanel {
             String parentLabel = (String) parentNode.getUserObject();
             publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, parentLabel, objectNodeLabel));
 
-            ObjectResolverUtil.activateObject(container, obj, objectId);
+            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
 
             // If it's a GenericObject, explore all its fields
             if (obj instanceof GenericObject) {
@@ -1143,7 +1147,7 @@ public class MigrationCoveragePanel extends JPanel {
                     }
 
                     // Try to extract as collection (handles both Collection and GenericObject)
-                    Collection<?> extractedCollection = CollectionUtil.extractCollectionItems(container, fieldValue);
+                    Collection<?> extractedCollection = RecipeCollectionActivation.getItems(container, fieldValue);
                     if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         // Check if any item in collection is important
                         boolean hasImportantItems = false;
@@ -1328,7 +1332,7 @@ public class MigrationCoveragePanel extends JPanel {
 
         try {
             // Activate and extract the mID field
-            ObjectResolverUtil.activateObject(container, idEntiteObj, idEntiteId);
+            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteId);
             Long mID = extractMIDField(container, idEntiteObj);
 
             if (mID == null) {
@@ -1355,7 +1359,7 @@ public class MigrationCoveragePanel extends JPanel {
                             try {
                                 Object obj = container.ext().getByID(objectId);
                                 if (obj != null) {
-                                    ObjectResolverUtil.activateObject(container, obj, objectId);
+                                    ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
                                     Long objMID = extractMIDField(container, obj);
 
                                     // If mIDs match, explore this EntiteContientID object

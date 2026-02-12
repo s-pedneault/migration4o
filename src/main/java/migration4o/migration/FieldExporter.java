@@ -16,6 +16,7 @@ import migration4o.migration.recipes.IDReferenceExporter;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.recipes.RecipeCollectionActivation;
 import migration4o.util.ClassUtil;
 import migration4o.util.CollectionUtil;
 import migration4o.util.DatabaseUtil;
@@ -264,7 +265,7 @@ public class FieldExporter {
         // internal array
         // NOTE: Parent object was already activated at max depth, so collection should
         // be activated too
-        Collection<?> items = CollectionUtil.extractCollectionItems(container, collectionObj);
+        Collection<?> items = RecipeCollectionActivation.getItems(container, collectionObj);
 
         if ("listeActionCondition".equals(fieldName) && "TypeActivHoraire".equals(parentClassName)) {
             System.err.println("  extracted items: " + (items != null ? items.size() : "null"));

@@ -11,8 +11,8 @@ import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.util.CollectionUtil;
-import migration4o.util.ObjectResolverUtil;
+import migration4o.recipes.RecipeCollectionActivation;
+import migration4o.util.SchemaUtil;
 
 /**
  * Processes fields of database objects during reach analysis.
@@ -60,7 +60,7 @@ public class FieldProcessor {
                     }
 
                     // Try to extract as collection (handles both Collection and GenericObject)
-                    Collection<?> extractedCollection = CollectionUtil.extractCollectionItems(container, fieldValue);
+                    Collection<?> extractedCollection = RecipeCollectionActivation.getItems(container, fieldValue);
                     if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         processCollectionField(
                                 extractedCollection,
