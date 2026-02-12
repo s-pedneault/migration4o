@@ -1066,8 +1066,11 @@ public class MigrationStructurePanel extends JPanel {
         for (MigrationStructurePanelUtil.ModuleTreeInfo info : moduleInfos) {
             MigrationModule module = MigrationStructurePanelUtil.buildModuleFromTree(info.treeNode, info.moduleNode);
             if (!module.getClassNames().isEmpty() || !module.getChildModules().isEmpty()) {
+                // Build full hierarchical path (e.g., "Activités/Intervention")
+                String fullPath = MigrationStructurePanelUtil.buildFullModulePath(info.treeNode);
                 modulesToExport
-                        .add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.getName(), module));
+                        .add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.getName(), module,
+                                fullPath));
             }
         }
 
@@ -1099,8 +1102,15 @@ public class MigrationStructurePanel extends JPanel {
 
         // Show confirmation dialog with object limit options
         Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+
+        // Collect available skip options from the schema
+        java.util.List<migration4o.models.schema.DOSchemaField> availableSkipOptions = migration4o.util.SchemaUtil
+                .collectSkipUserOptions(referenceSchema);
+
         ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(
-                parentFrame, modulesToExport.size(), defaultLimit);
+                parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions);
         confirmDialog.showDialog();
 
         if (!confirmDialog.isConfirmed()) {
@@ -1109,10 +1119,13 @@ public class MigrationStructurePanel extends JPanel {
 
         Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
         boolean exportNativeIds = confirmDialog.getExportNativeIds();
+        java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = confirmDialog
+                .getSelectedSkipOptions();
         String outputPath = "output";
 
         // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, outputPath);
+        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions,
+                outputPath);
     }
 
     /**

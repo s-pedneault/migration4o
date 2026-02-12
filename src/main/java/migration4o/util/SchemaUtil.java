@@ -4,12 +4,28 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 public class SchemaUtil {
+
+    public static ArrayList<DOSchemaField> collectSkipUserOptions(DOSchema schema) {
+        if (schema == null || schema.getClasses() == null) {
+            return new ArrayList<>();
+        }
+        ArrayList<DOSchemaField> list = new ArrayList<>();
+        for (DOSchemaClass schemaClass : schema.getClasses()) {
+            for (DOSchemaField field : schemaClass.fields) {
+                if (field.skipUserOption != null && !field.skipUserOption.trim().isEmpty()) {
+                    list.add(field);
+                }
+            }
+        }
+        return list;
+    }
 
     /**
      * Finds a class by name in a schema array.

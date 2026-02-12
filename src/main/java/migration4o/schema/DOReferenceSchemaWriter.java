@@ -70,6 +70,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "skipWhen", field.skipWhen);
         }
 
+        if (field.skipUserOption != null && !field.skipUserOption.trim().isEmpty()) {
+            writeAttribute(writer, "skipUserOption", field.skipUserOption);
+        }
+
         if (field.type != null && !field.type.isEmpty()) {
             writeAttribute(writer, "type", field.type);
         }
@@ -98,13 +102,17 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", field.description);
         }
 
-        // Check if we have child elements (valueMap)
-        boolean hasChildren = field.valueMap != null && !field.valueMap.isEmpty();
+        // Check if we have child elements (valueMap, criterias)
+        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty())
+                || (field.criterias != null && !field.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
             if (field.valueMap != null && !field.valueMap.isEmpty()) {
                 writeValueMap(writer, field.valueMap, indentLevel + 1);
+            }
+            if (field.criterias != null && !field.criterias.isEmpty()) {
+                writeCriterias(writer, field, indentLevel + 1);
             }
             writer.write(indent + "</field>\n");
         } else {
@@ -207,6 +215,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "collection", "true");
         }
 
+        if (field.skipUserOption != null && !field.skipUserOption.isEmpty()) {
+            writeAttribute(writer, "skipUserOption", field.skipUserOption);
+        }
+
         if (field.embedContents) {
             writeAttribute(writer, "embedContents", "true");
         }
@@ -227,8 +239,9 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", field.description);
         }
 
-        // Check if we have child elements (valueMap)
-        boolean hasChildren = field.valueMap != null && !field.valueMap.isEmpty();
+        // Check if we have child elements (valueMap, criterias)
+        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty())
+                || (field.criterias != null && !field.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
@@ -238,10 +251,44 @@ public class DOReferenceSchemaWriter {
                 writeValueMap(writer, field.valueMap, indentLevel + 1);
             }
 
+            // Write criterias for virtual fields
+            if (field.criterias != null && !field.criterias.isEmpty()) {
+                writeCriterias(writer, field, indentLevel + 1);
+            }
+
             writer.write(indent + "</field>\n");
         } else {
             writer.write(" />\n");
         }
+    }
+
+    private void writeCriterias(FileWriter writer, DOSchemaField field, int indentLevel) throws IOException {
+        String indent = getIndent(indentLevel);
+        writer.write(indent + "<criterias");
+
+        String operator = (field.criteriasOperator != null && !field.criteriasOperator.trim().isEmpty())
+                ? field.criteriasOperator
+                : "AND";
+        writeAttribute(writer, "operator", operator);
+        writer.write(">\n");
+
+        for (migration4o.models.schema.DOFieldCriteria criteria : field.criterias) {
+            if (criteria == null) {
+                continue;
+            }
+
+            writer.write(indent + "    <criteria");
+            writeAttribute(writer, "match", criteria.match);
+            writeAttribute(writer, "with", criteria.with);
+
+            String criteriaOperator = (criteria.operator != null && !criteria.operator.trim().isEmpty())
+                    ? criteria.operator
+                    : "equals";
+            writeAttribute(writer, "operator", criteriaOperator);
+            writer.write(" />\n");
+        }
+
+        writer.write(indent + "</criterias>\n");
     }
 
     private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel)

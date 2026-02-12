@@ -2983,6 +2983,11 @@
         <field source="mVectSuiviIntervention" destinationName="listeSuiviIntervention" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.SuiviIntervention" />
         <field source="mVectTabsStates" destinationName="listeTabsStates" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.TabState" />
         <field source="mVieHumaine" destinationName="vieHumaine" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervVieHumaine" embedContents="true" />
+        <field source="@mVectRapportOfficier" destinationName="listeRapportOfficier" isExported="true" skipWhen="EMPTY_COLLECTION" type="gest.intervention.RapportOfficier" collection="true" embedContents="true">
+            <criterias operator="AND">
+                <criteria match="this.mID" with="mIDIntervention.mID" operator="equals" />
+            </criterias>
+        </field>
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mIDAssigneA" destinationName="idAssigneA" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
         <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />

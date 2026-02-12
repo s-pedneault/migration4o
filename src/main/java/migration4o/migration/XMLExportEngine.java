@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -19,7 +20,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
-import migration4o.util.FileUtil;
+import migration4o.util.SchemaUtil;
 
 /**
  * Orchestrates XML export operations by coordinating specialized components.
@@ -36,6 +37,7 @@ public class XMLExportEngine {
     private final ExtObjectContainer container;
     private Integer maxObjectsPerClass = null; // null = all objects
     private boolean exportNativeIds = false; // whether to include DB4O object IDs in XML
+    private List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = new ArrayList<>();
     private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
     private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for comprehensive schema generation
     private Set<String> exportedXMLFiles = null; // Track XML files for validation
@@ -79,6 +81,19 @@ public class XMLExportEngine {
      */
     public void setExportNativeIds(boolean exportNativeIds) {
         this.exportNativeIds = exportNativeIds;
+    }
+
+    /**
+     * Sets fields selected by the user to be skipped during export.
+     * 
+     * @param selectedSkipOptions schema fields to skip
+     */
+    public void setSelectedSkipOptions(List<migration4o.models.schema.DOSchemaField> selectedSkipOptions) {
+        if (selectedSkipOptions == null) {
+            this.selectedSkipOptions = new ArrayList<>();
+        } else {
+            this.selectedSkipOptions = new ArrayList<>(selectedSkipOptions);
+        }
     }
 
     /**
@@ -173,25 +188,25 @@ public class XMLExportEngine {
     }
 
     /**
-     * Exports a module with folder structure matching the module hierarchy.
-     * Each class is exported to its own XML/XSD file within the module folders.
-     * Files are written to output/<db-folder>/
-     * 
-     * Automatically tracks and exports referenced classes that are not in the
-     * module structure.
-     * Referenced classes are exported to a virtual "Referenced" module.
+     * Exports a module with folder structure, using provided hierarchical path.
+     * This is used when exporting a child module standalone to preserve the parent
+     * folder structure.
      * 
      * @param module         The module to export (including child modules)
+     * @param modulePath     The full hierarchical path for this module (e.g.,
+     *                       "Activités/Intervention")
      * @param baseOutputPath The base output directory (typically "output")
      * @param monitor        Progress monitor (can be null)
      * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath,
+    public ExportStatistics exportModuleStructured(MigrationModule module, String modulePath, String baseOutputPath,
             DOExportMonitor monitor,
             ReferencedClassTracker sharedTracker)
             throws Exception {
+        System.out.println("DEBUG exportModuleStructured: module=" + module.getName() + ", modulePath=" + modulePath);
+
         // Count total classes for progress reporting
         int totalClasses = countTotalClasses(module);
 
@@ -217,8 +232,30 @@ public class XMLExportEngine {
             // Register all modules and their classes with the tracker
             registerModuleClasses(module, referencedClassTracker);
 
-            // Export module recursively
-            exportModuleRecursive(container, module, dbBasePath, statistics, monitor, 0,
+            // Build the full path including parent modules
+            // For example, "Activités/Intervention" becomes
+            // output/54060/Activités/Intervention
+            Path fullModulePath = dbBasePath;
+            if (modulePath != null && !modulePath.isEmpty()) {
+                String[] pathParts = modulePath.split("/");
+                for (String part : pathParts) {
+                    fullModulePath = fullModulePath.resolve(part);
+                }
+            }
+
+            // Create parent directories
+            if (fullModulePath.getParent() != null) {
+                Files.createDirectories(fullModulePath.getParent());
+            }
+
+            // Export module - start from the parent path (not the module itself)
+            // The module will create its own folder within this path
+            Path moduleBasePath = fullModulePath.getParent();
+            if (moduleBasePath == null) {
+                moduleBasePath = dbBasePath;
+            }
+
+            exportModuleRecursive(container, module, moduleBasePath, statistics, monitor, 0,
                     referencedClassTracker);
 
             // Only export referenced classes if we created the tracker (not shared)
@@ -259,6 +296,31 @@ public class XMLExportEngine {
         } finally {
             // Don't close container - it's shared and managed by MainWindow
         }
+    }
+
+    /**
+     * Exports a module with folder structure matching the module hierarchy.
+     * Each class is exported to its own XML/XSD file within the module folders.
+     * Files are written to output/<db-folder>/
+     * 
+     * Automatically tracks and exports referenced classes that are not in the
+     * module structure.
+     * Referenced classes are exported to a virtual "Referenced" module.
+     * 
+     * @param module         The module to export (including child modules)
+     * @param baseOutputPath The base output directory (typically "output")
+     * @param monitor        Progress monitor (can be null)
+     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
+     * @return ExportStatistics with details about the export operation
+     * @throws Exception if export fails
+     */
+    public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath,
+            DOExportMonitor monitor,
+            ReferencedClassTracker sharedTracker)
+            throws Exception {
+        // Use module name as path (backward compatibility - single module at root
+        // level)
+        return exportModuleStructured(module, module.getName(), baseOutputPath, monitor, sharedTracker);
     }
 
     /**
@@ -440,6 +502,8 @@ public class XMLExportEngine {
             operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
             operation.useSharedTracking = (sharedExportedObjectIds != null);
             operation.referencedClassTracker = referencedClassTracker;
+            operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
+            operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
 
             // Create object exporter
             ObjectExporter objectExporter = new ObjectExporter(operation, xmlWriter, xsdBuilder);
@@ -669,6 +733,8 @@ public class XMLExportEngine {
             operation.statistics = statistics;
             operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
             operation.useSharedTracking = (sharedExportedObjectIds != null);
+            operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
+            operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
 
             // Create object exporter
             ObjectExporter objectExporter = new ObjectExporter(operation, xmlWriter, xsdBuilder);

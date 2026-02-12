@@ -39,6 +39,7 @@ import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaCom
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
+import migration4o.ui.panels.database_panels.reachability_analysis_panel.ReachabilityAnalysisPanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
 import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
@@ -71,6 +72,7 @@ public class MainWindow extends JFrame {
     // Track database-related tabs (dynamically created)
     private Component databaseSchemaTab = null;
     private Component conformityAnalysisTab = null;
+    private Component reachabilityAnalysisTab = null;
     private Component migrationCoverageTab = null;
     private Component costTab = null;
     private migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel = null;
@@ -155,6 +157,31 @@ public class MainWindow extends JFrame {
             method.invoke(referenceSchemaPanel, className);
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    /**
+     * Detach the Schema tab and navigate to a class in the reference schema.
+     * 
+     * @param className the fully qualified class name to navigate to
+     */
+    public void detachAndNavigateToReferenceSchemaClass(String className) {
+        if (className == null || referenceSchemaPanel == null) {
+            return;
+        }
+
+        // First navigate to the class
+        navigateToReferenceSchemaClass(className);
+
+        // Then detach the Schema tab if it's not already detached
+        if (schemaTabPane != null && tabbedPane != null) {
+            for (int i = 0; i < tabbedPane.getTabCount(); i++) {
+                if (tabbedPane.getComponentAt(i) == schemaTabPane) {
+                    // Found the Schema tab, detach it
+                    tearOffTab(i);
+                    break;
+                }
+            }
         }
     }
 
@@ -406,6 +433,9 @@ public class MainWindow extends JFrame {
                     // Automatically create comparison with reference schema
                     createComparisonWithReference(inferredSchema);
 
+                    // Create reachability analysis tab
+                    createReachabilityAnalysisTab(inferredSchema);
+
                     // Create migration coverage tab
                     createMigrationCoverageTab(inferredSchema);
 
@@ -487,6 +517,44 @@ public class MainWindow extends JFrame {
         // Store and add conformity analysis tab to Database section
         conformityAnalysisTab = comparisonPanel;
         databaseTabPane.addTab("Conformity analysis", comparisonPanel);
+    }
+
+    /**
+     * Creates the reachability analysis tab.
+     */
+    private void createReachabilityAnalysisTab(DOSchema databaseSchema) {
+        try {
+            System.out.println("Creating reachability analysis tab...");
+
+            // Find the reference schema
+            SchemaTabInfo referenceTab = null;
+            for (SchemaTabInfo tabInfo : schemaTabs.values()) {
+                if (tabInfo.isReference) {
+                    referenceTab = tabInfo;
+                    break;
+                }
+            }
+
+            if (referenceTab == null) {
+                System.out.println("Warning: No reference schema found for reachability analysis");
+                return;
+            }
+
+            // Create reachability analysis panel
+            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(
+                    databaseSchema,
+                    referenceTab.editorPanel.getSchema());
+
+            // Store and add reachability analysis tab to Database section
+            reachabilityAnalysisTab = reachabilityPanel;
+            databaseTabPane.addTab("Reachability", reachabilityPanel);
+
+            System.out.println("Reachability analysis tab created successfully");
+        } catch (Exception e) {
+            System.err.println("Error creating reachability analysis tab: " + e.getMessage());
+            e.printStackTrace();
+            // Don't rethrow - allow other tabs to be created
+        }
     }
 
     /**
@@ -575,6 +643,10 @@ public class MainWindow extends JFrame {
         if (conformityAnalysisTab != null) {
             comparisonTabs.remove(conformityAnalysisTab);
             conformityAnalysisTab = null;
+        }
+
+        if (reachabilityAnalysisTab != null) {
+            reachabilityAnalysisTab = null;
         }
 
         if (migrationCoverageTab != null) {
@@ -760,9 +832,20 @@ public class MainWindow extends JFrame {
 
         // Create new window
         JFrame detachedWindow = new JFrame(title + " - Migration4o");
-        detachedWindow.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        detachedWindow.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
         detachedWindow.setSize(1200, 800);
         detachedWindow.setLocationRelativeTo(this);
+
+        // Add window listener to reattach when closing
+        detachedWindow.addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                // Reattach the component to the main window
+                tabbedPane.addTab(title, component);
+                tabbedPane.setSelectedComponent(component);
+                detachedWindow.dispose();
+            }
+        });
 
         // Add component to new window
         detachedWindow.add(component, BorderLayout.CENTER);
@@ -772,9 +855,9 @@ public class MainWindow extends JFrame {
         toolbar.setFloatable(false);
         JButton reattachButton = new JButton("Reattach to Main Window");
         reattachButton.addActionListener(e -> {
-            detachedWindow.dispose();
             tabbedPane.addTab(title, component);
             tabbedPane.setSelectedComponent(component);
+            detachedWindow.dispose();
         });
         toolbar.add(reattachButton);
         detachedWindow.add(toolbar, BorderLayout.NORTH);

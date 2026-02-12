@@ -38,13 +38,6 @@ public class SchemaComparison {
         Map<String, DOSchemaClass> referenceClasses = buildClassMap(referenceSchema);
         Map<String, DOSchemaClass> comparedClasses = buildClassMap(comparedSchema);
 
-        // Debug: check ParamConfig
-        System.out.println("DEBUG Comparison: Reference has ParamConfig? "
-                + referenceClasses.containsKey("gest.config.ParamConfig"));
-        System.out.println("DEBUG Comparison: Compared has ParamConfig? "
-                + comparedClasses.containsKey("gest.config.ParamConfig"));
-        System.out.println("DEBUG Comparison: Reference class count: " + referenceClasses.size());
-        System.out.println("DEBUG Comparison: Compared class count: " + comparedClasses.size());
 
         Set<String> allClassNames = new HashSet<>();
         allClassNames.addAll(referenceClasses.keySet());

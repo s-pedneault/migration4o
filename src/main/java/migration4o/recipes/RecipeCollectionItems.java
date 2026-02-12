@@ -17,7 +17,7 @@ import migration4o.util.ValueUtil;
  * Provides a single, consistent approach for all collection processing across
  * the application.
  */
-public class RecipeCollectionActivation {
+public class RecipeCollectionItems {
 
     /**
      * Extracts and activates collection items from a DB4O persistent object.

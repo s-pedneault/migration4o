@@ -27,7 +27,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.recipes.RecipeCollectionActivation;
+import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.CollectionUtil;
 import migration4o.util.ObjectResolverUtil;
 
@@ -423,7 +423,7 @@ public class ClassObjectsDialog extends JFrame {
 
         // Handle collections (using unified CollectionUtil to handle both Collection
         // and GenericObject)
-        java.util.Collection<?> collection = RecipeCollectionActivation.getItems(container, value);
+        java.util.Collection<?> collection = RecipeCollectionItems.getItems(container, value);
         // System.err.println("DEBUG formatValue: value class = " +
         // value.getClass().getName());
         // System.err.println("DEBUG formatValue: extracted collection = " +

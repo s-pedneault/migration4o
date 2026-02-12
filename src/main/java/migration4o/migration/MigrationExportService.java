@@ -10,7 +10,6 @@ import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
-import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.DOExportMonitor;
@@ -38,8 +37,10 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(List<MigrationModule> modules, String baseOutputPath,
-            DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds) throws Exception {
+    public ExportStatistics exportModules(List<MigrationModule> modules, List<String> modulePaths,
+            String baseOutputPath,
+            DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds,
+            List<migration4o.models.schema.DOSchemaField> selectedSkipOptions) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
@@ -47,6 +48,7 @@ public class MigrationExportService {
         XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         exporter.setExportNativeIds(exportNativeIds);
+        exporter.setSelectedSkipOptions(selectedSkipOptions);
 
         // CRITICAL FIX: Always use shared tracking for module exports to avoid
         // generating
@@ -59,8 +61,10 @@ public class MigrationExportService {
         }
 
         List<ExportStatistics> results = new ArrayList<>();
-        for (MigrationModule module : modules) {
-            results.add(exporter.exportModuleStructured(module, baseOutputPath, monitor, tracker));
+        for (int i = 0; i < modules.size(); i++) {
+            MigrationModule module = modules.get(i);
+            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : module.getName();
+            results.add(exporter.exportModuleStructured(module, modulePath, baseOutputPath, monitor, tracker));
         }
         exporter.exportReferencedClasses(baseOutputPath, monitor, tracker);
 
@@ -150,19 +154,25 @@ public class MigrationExportService {
         }
 
         List<MigrationModule> modules = new ArrayList<>();
+        List<String> modulePaths = new ArrayList<>();
         if (params.moduleNames != null && !params.moduleNames.isEmpty()) {
             for (String moduleName : params.moduleNames) {
                 MigrationModule module = ExportUtil.findModuleByName(moduleName);
                 if (module == null)
                     throw new IllegalStateException("Could not find module '" + moduleName + "'");
                 modules.add(module);
+                // Build full hierarchical path for the module
+                modulePaths.add(ExportUtil.findModulePathByName(moduleName));
             }
         } else {
             MigrationModule module = ExportUtil.findModuleByName(params.targetName);
             if (module == null)
                 throw new IllegalStateException("Could not find module '" + params.targetName + "'");
             modules.add(module);
+            // Build full hierarchical path for the module
+            modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(modules, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds);
+        return exportModules(modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass,
+            params.exportNativeIds, null);
     }
 }

@@ -114,4 +114,43 @@ public class ExportUtil {
         }
         return null;
     }
+
+    /**
+     * Finds the full hierarchical path for a module by name.
+     * For example, if "Intervention" is under "Activités", returns "Activités/Intervention"
+     * 
+     * @param moduleName the name of the module to find
+     * @return the full path from root to this module, or just the module name if not found in hierarchy
+     * @throws Exception if module structure cannot be loaded
+     */
+    public static String findModulePathByName(String moduleName) throws Exception {
+        List<MigrationModule> modules = DOModuleService.getInstance()
+                .loadModuleStructure("schema/migration-format.xml");
+        String path = findModulePathRecursive(modules, moduleName, "");
+        return path != null ? path : moduleName; // Fallback to module name if not found
+    }
+
+    /**
+     * Recursively searches for a module and builds its full path.
+     * 
+     * @param modules the list of modules to search
+     * @param moduleName the name of the module to find
+     * @param parentPath the path accumulated from parent modules
+     * @return the full path if found, null otherwise
+     */
+    private static String findModulePathRecursive(List<MigrationModule> modules, String moduleName, String parentPath) {
+        for (MigrationModule module : modules) {
+            String currentPath = parentPath.isEmpty() ? module.getName() : parentPath + "/" + module.getName();
+            
+            if (module.getName().equals(moduleName)) {
+                return currentPath;
+            }
+            
+            String found = findModulePathRecursive(module.getChildModules(), moduleName, currentPath);
+            if (found != null) {
+                return found;
+            }
+        }
+        return null;
+    }
 }

@@ -11,7 +11,7 @@ import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.recipes.RecipeCollectionActivation;
+import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.SchemaUtil;
 
 /**
@@ -60,7 +60,7 @@ public class FieldProcessor {
                     }
 
                     // Try to extract as collection (handles both Collection and GenericObject)
-                    Collection<?> extractedCollection = RecipeCollectionActivation.getItems(container, fieldValue);
+                    Collection<?> extractedCollection = RecipeCollectionItems.getItems(container, fieldValue);
                     if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         processCollectionField(
                                 extractedCollection,

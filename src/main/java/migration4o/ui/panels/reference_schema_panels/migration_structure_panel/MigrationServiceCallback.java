@@ -56,20 +56,25 @@ public class MigrationServiceCallback {
     /**
      * Exports multiple modules to XML in the background.
      * 
-     * @param modulesToExport    the list of modules to export
-     * @param maxObjectsPerClass maximum objects per class (null for unlimited)
-     * @param exportNativeIds    whether to export DB4O object IDs as XML attributes
-     * @param outputPath         the output directory path
+     * @param modulesToExport     the list of modules to export
+     * @param maxObjectsPerClass  maximum objects per class (null for unlimited)
+     * @param exportNativeIds     whether to export DB4O object IDs as XML
+     *                            attributes
+     * @param selectedSkipOptions list of fields that user has chosen to skip
+     * @param outputPath          the output directory path
      */
     public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass,
-            boolean exportNativeIds, String outputPath) {
+            boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions,
+            String outputPath) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
-        // Extract modules list
+        // Extract modules and paths
         List<MigrationModule> modules = new ArrayList<>();
+        List<String> modulePaths = new ArrayList<>();
         for (ModuleExportInfo info : modulesToExport) {
             modules.add(info.module);
+            modulePaths.add(info.fullPath);
         }
 
         // Get migration report monitor from main window
@@ -88,8 +93,8 @@ public class MigrationServiceCallback {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
-                ExportStatistics result = exportService.exportModules(modules, outputPath,
-                        monitor, maxObjectsPerClass, exportNativeIds);
+                ExportStatistics result = exportService.exportModules(modules, modulePaths, outputPath,
+                        monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();

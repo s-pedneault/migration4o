@@ -175,8 +175,29 @@ public class ValueUtil {
      * @return true if the field should be skipped, false otherwise
      */
     public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema) {
+        return shouldSkipField(value, field, schema, null);
+    }
+
+    /**
+     * Determines if a field should be skipped based on its skipWhen settings
+     * and user-selected skip options.
+     * 
+     * @param value                   The field value
+     * @param field                   The schema field
+     * @param schema                  The schema for type checking
+     * @param userSelectedSkipOptions List of fields that user has chosen to skip
+     *                                (can be null)
+     * @return true if the field should be skipped, false otherwise
+     */
+    public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema,
+            List<DOSchemaField> userSelectedSkipOptions) {
         if (field == null) {
             return false;
+        }
+
+        // Check if user has selected this field to be skipped
+        if (userSelectedSkipOptions != null && userSelectedSkipOptions.contains(field)) {
+            return true;
         }
 
         // Check skipWhen conditions

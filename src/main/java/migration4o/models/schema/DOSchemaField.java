@@ -1,7 +1,9 @@
 
 package migration4o.models.schema;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public class DOSchemaField {
@@ -10,6 +12,7 @@ public class DOSchemaField {
     public String type;
     public boolean isExported;
     public String skipWhen; // Comma-separated skip conditions (NULL,ZERO,MINUS_ONE,etc.)
+    public String skipUserOption;
     public boolean isCollection;
     public boolean embedContents;
     public String childrenType;
@@ -20,6 +23,10 @@ public class DOSchemaField {
 
     // Shared field definition support
     public String definitionId; // If set, this field references a shared definition
+
+    // Virtual field support (source starts with @)
+    public List<DOFieldCriteria> criterias; // Query criterias for virtual fields
+    public String criteriasOperator; // Logical operator for multiple criterias: "AND" or "OR" (default: "AND")
 
     public DOSchemaClass childrenSchemaClass;
     public DOSchemaClass parentClass; // The class that contains this field
@@ -56,15 +63,45 @@ public class DOSchemaField {
     }
 
     /**
+     * Returns true if this is a virtual field (source starts with @).
+     * Virtual fields query the database for related objects instead of reading
+     * actual fields.
+     */
+    public boolean isVirtualField() {
+        return source != null && source.startsWith("@");
+    }
+
+    /**
+     * Gets the actual field name for a virtual field (removes the @ prefix).
+     */
+    public String getVirtualFieldName() {
+        if (isVirtualField()) {
+            return source.substring(1);
+        }
+        return source;
+    }
+
+    /**
      * Creates a deep copy of this field (used when instantiating shared fields).
      */
     public DOSchemaField copy() {
         DOSchemaField copy = new DOSchemaField();
-        copy.source = this.source;
+
+        // Deep copy criterias
+        if (this.criterias != null) {
+            copy.criterias = new ArrayList<>();
+            for (DOFieldCriteria criteria : this.criterias) {
+                copy.criterias.add(new DOFieldCriteria(criteria.match, criteria.with, criteria.operator));
+            }
+        }
+        copy.criteriasOperator = this.criteriasOperator;
+
+        // y.source = this.source;
         copy.destinationName = this.destinationName;
         copy.type = this.type;
         copy.isExported = this.isExported;
         copy.skipWhen = this.skipWhen;
+        copy.skipUserOption = this.skipUserOption;
         copy.isCollection = this.isCollection;
         copy.embedContents = this.embedContents;
         copy.childrenType = this.childrenType;

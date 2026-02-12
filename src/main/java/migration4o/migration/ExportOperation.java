@@ -1,5 +1,6 @@
 package migration4o.migration;
 
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -7,6 +8,7 @@ import java.util.Set;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
@@ -43,4 +45,7 @@ public class ExportOperation {
     public ClassExportConfig exportConfig;
     public ReferencedClassTracker referencedClassTracker;
     public ObjectExporter objectExporter; // Set after ObjectExporter construction
+
+    public ArrayList<DOSchemaField> availableSkipUserOptions;
+    public ArrayList<DOSchemaField> selectedSkipUserOptions;
 }

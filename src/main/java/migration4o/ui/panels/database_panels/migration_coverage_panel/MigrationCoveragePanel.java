@@ -48,7 +48,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.database.reach.ReachResultAggregator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.recipes.RecipeCollectionActivation;
+import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.CollectionUtil;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDialog;
@@ -1147,7 +1147,7 @@ public class MigrationCoveragePanel extends JPanel {
                     }
 
                     // Try to extract as collection (handles both Collection and GenericObject)
-                    Collection<?> extractedCollection = RecipeCollectionActivation.getItems(container, fieldValue);
+                    Collection<?> extractedCollection = RecipeCollectionItems.getItems(container, fieldValue);
                     if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         // Check if any item in collection is important
                         boolean hasImportantItems = false;

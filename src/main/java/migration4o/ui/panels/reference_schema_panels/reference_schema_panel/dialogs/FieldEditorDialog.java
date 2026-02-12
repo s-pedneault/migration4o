@@ -33,6 +33,7 @@ public class FieldEditorDialog extends JDialog {
     private final JCheckBox skipWhenEmptyCollection;
     private final JCheckBox skipWhenFalse;
     private final JCheckBox skipWhenDefault;
+    private final JTextField skipUserOptionField;
     private final JCheckBox embedContentsCheckBox;
     private final JCheckBox collectionCheckBox;
     private final JPanel childrenTypePanel;
@@ -172,6 +173,8 @@ public class FieldEditorDialog extends JDialog {
                 BorderFactory.createLineBorder(Color.GRAY),
                 BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
+        skipUserOptionField = new JTextField(field.skipUserOption != null ? field.skipUserOption : "", 30);
+
         // Children Type - show as text with Edit button and status
         childrenTypePanel = new JPanel(new BorderLayout(5, 0));
         JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
@@ -291,6 +294,7 @@ public class FieldEditorDialog extends JDialog {
         addFormRow(innerPanel, gbc, "Description:", descField);
         addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
         addFormRow(innerPanel, gbc, "Skip When:", skipWhenPanel);
+        addFormRow(innerPanel, gbc, "Skip User Option:", skipUserOptionField);
         addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
         addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
 
@@ -595,6 +599,7 @@ public class FieldEditorDialog extends JDialog {
         childrenTypeLabel.setText(commonField.childrenType != null ? commonField.childrenType : "");
         titleField.setText(commonField.title != null ? commonField.title : "");
         descField.setText(commonField.description != null ? commonField.description : "");
+        skipUserOptionField.setText(commonField.skipUserOption != null ? commonField.skipUserOption : "");
 
         // Parse and set skipWhen checkboxes
         skipWhenNull.setSelected(false);
@@ -729,6 +734,11 @@ public class FieldEditorDialog extends JDialog {
         return collectionCheckBox.isSelected();
     }
 
+    public String getFieldSkipUserOption() {
+        String value = skipUserOptionField.getText();
+        return (value != null && !value.trim().isEmpty()) ? value.trim() : null;
+    }
+
     public boolean isFieldEmbedContents() {
         return embedContentsCheckBox.isSelected();
     }
@@ -773,6 +783,7 @@ public class FieldEditorDialog extends JDialog {
         field.type = getFieldType();
         field.isExported = isFieldExported();
         field.skipWhen = getFieldSkipWhen();
+        field.skipUserOption = getFieldSkipUserOption();
         field.isCollection = isFieldCollection();
         field.embedContents = isFieldEmbedContents();
         field.childrenType = getFieldChildrenType();

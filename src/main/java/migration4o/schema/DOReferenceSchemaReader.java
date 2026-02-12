@@ -15,6 +15,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.schema.DOFieldCriteria;
 import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
 
@@ -218,8 +219,8 @@ public class DOReferenceSchemaReader {
         String destinationName = fieldElement.getAttribute("destinationName");
         String type = fieldElement.getAttribute("type");
         String isExportedAttr = fieldElement.getAttribute("isExported");
-        String skipIfEmpty = fieldElement.getAttribute("skipIfEmpty");
         String skipWhen = fieldElement.getAttribute("skipWhen");
+        String skipUserOption = fieldElement.getAttribute("skipUserOption");
         String collection = fieldElement.getAttribute("collection");
         String embedContents = fieldElement.getAttribute("embedContents");
         String childrenType = fieldElement.getAttribute("childrenType");
@@ -232,16 +233,6 @@ public class DOReferenceSchemaReader {
         boolean isCollection = "true".equalsIgnoreCase(collection);
         boolean isEmbedContents = "true".equalsIgnoreCase(embedContents);
 
-        // Convert legacy skipIfEmpty to skipWhen if skipWhen is not set
-        String effectiveSkipWhen = skipWhen;
-        if ((effectiveSkipWhen == null || effectiveSkipWhen.trim().isEmpty()) && !skipIfEmpty.isEmpty()) {
-            boolean isSkipIfEmpty = "true".equalsIgnoreCase(skipIfEmpty);
-            if (isSkipIfEmpty) {
-                // Convert legacy skipIfEmpty=true to appropriate skipWhen keywords
-                effectiveSkipWhen = "NULL,MINUS_ONE";
-            }
-        }
-
         // Children class name
         String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
 
@@ -250,7 +241,8 @@ public class DOReferenceSchemaReader {
         field.destinationName = destinationName;
         field.type = type;
         field.isExported = isExported;
-        field.skipWhen = effectiveSkipWhen != null && !effectiveSkipWhen.trim().isEmpty() ? effectiveSkipWhen : null;
+        field.skipWhen = skipWhen != null && !skipWhen.trim().isEmpty() ? skipWhen : null;
+        field.skipUserOption = skipUserOption != null && !skipUserOption.trim().isEmpty() ? skipUserOption : null;
         field.isCollection = isCollection;
         field.embedContents = isEmbedContents;
         field.childrenType = childrenClassName;
@@ -270,6 +262,30 @@ public class DOReferenceSchemaReader {
                 String toValue = mappingElement.getAttribute("to");
                 if (!fromValue.isEmpty() && !toValue.isEmpty()) {
                     field.addValueMapping(fromValue, toValue);
+                }
+            }
+        }
+
+        // Parse criterias for virtual fields
+        NodeList criteriasNodes = fieldElement.getElementsByTagName("criterias");
+        if (criteriasNodes.getLength() > 0) {
+            Element criteriasElement = (Element) criteriasNodes.item(0);
+
+            // Read the operator attribute (AND/OR) from the criterias element
+            String criteriasOperator = criteriasElement.getAttribute("operator");
+            field.criteriasOperator = criteriasOperator.isEmpty() ? "AND" : criteriasOperator;
+
+            NodeList criteriaNodes = criteriasElement.getElementsByTagName("criteria");
+            if (criteriaNodes.getLength() > 0) {
+                field.criterias = new ArrayList<>();
+                for (int i = 0; i < criteriaNodes.getLength(); i++) {
+                    Element criteriaElement = (Element) criteriaNodes.item(i);
+                    String match = criteriaElement.getAttribute("match");
+                    String with = criteriaElement.getAttribute("with");
+                    String operator = criteriaElement.getAttribute("operator");
+                    if (!match.isEmpty() && !with.isEmpty()) {
+                        field.criterias.add(new DOFieldCriteria(match, with, operator.isEmpty() ? "equals" : operator));
+                    }
                 }
             }
         }

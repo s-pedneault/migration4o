@@ -1554,6 +1554,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.type = dialog.getFieldType();
             newFieldWithData.isExported = dialog.isFieldExported();
             newFieldWithData.skipWhen = dialog.getFieldSkipWhen();
+            newFieldWithData.skipUserOption = dialog.getFieldSkipUserOption();
             newFieldWithData.isCollection = dialog.isFieldCollection();
             newFieldWithData.embedContents = dialog.isFieldEmbedContents();
             newFieldWithData.childrenType = dialog.getFieldChildrenType();
@@ -1635,6 +1636,7 @@ public class SchemaEditorPanel extends JPanel {
             field.description = dialog.getFieldDescription();
             field.pointsTo = dialog.getFieldPointsTo();
             field.valueMap = dialog.getValueMappings();
+            field.skipUserOption = dialog.getFieldSkipUserOption();
             field.definitionId = dialog.getFieldDefinitionId();
 
             // Rebuild the class with the updated fields
@@ -1729,6 +1731,7 @@ public class SchemaEditorPanel extends JPanel {
             String title = null;
             String description = null;
             String pointsTo = null;
+            String skipUserOption = null;
             String definitionId = null;
             java.util.Map<String, String> valueMap = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
@@ -1736,6 +1739,7 @@ public class SchemaEditorPanel extends JPanel {
                 title = originalField.title;
                 description = originalField.description;
                 pointsTo = originalField.pointsTo;
+                skipUserOption = originalField.skipUserOption;
                 definitionId = originalField.definitionId;
                 valueMap = originalField.valueMap;
             }
@@ -1752,6 +1756,7 @@ public class SchemaEditorPanel extends JPanel {
             field.title = title;
             field.description = description;
             field.pointsTo = pointsTo;
+            field.skipUserOption = skipUserOption;
             field.definitionId = definitionId;
             field.valueMap = valueMap;
             field.childrenSchemaClass = null;

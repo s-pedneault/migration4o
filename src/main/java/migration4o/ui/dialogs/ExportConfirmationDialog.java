@@ -2,6 +2,12 @@ package migration4o.ui.dialogs;
 
 import javax.swing.*;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import migration4o.models.schema.DOSchemaField;
 
 /**
  * Dialog for confirming export operations with options for object limits.
@@ -12,26 +18,33 @@ public class ExportConfirmationDialog extends JDialog {
     private boolean confirmed = false;
     private Integer maxObjectsPerClass = null; // null = all objects
     private boolean exportNativeIds = false;
+    private List<DOSchemaField> availableSkipOptions;
+    private List<DOSchemaField> selectedSkipOptions = new ArrayList<>();
 
     private JRadioButton allObjectsRadio;
     private JRadioButton limitObjectsRadio;
     private JSpinner limitSpinner;
     private JCheckBox exportNativeIdsCheckbox;
+    private Map<DOSchemaField, JCheckBox> skipOptionCheckboxes = new HashMap<>();
 
     /**
      * Creates a new export confirmation dialog.
      * 
-     * @param parent       Parent frame
-     * @param moduleCount  Number of modules to export
-     * @param defaultLimit Default limit value (used when "Max N objects" is
-     *                     selected)
+     * @param parent               Parent frame
+     * @param moduleCount          Number of modules to export
+     * @param defaultLimit         Default limit value (used when "Max N objects" is
+     *                             selected)
+     * @param availableSkipOptions List of fields that can be skipped by user choice
      */
-    public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit) {
+    public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit,
+            List<DOSchemaField> availableSkipOptions) {
         super(parent, "Confirm Bulk Export", true);
 
         if (defaultLimit == null || defaultLimit <= 0) {
             defaultLimit = 50; // Default to 50 if not provided
         }
+
+        this.availableSkipOptions = availableSkipOptions != null ? availableSkipOptions : new ArrayList<>();
 
         initComponents(moduleCount, defaultLimit);
         pack();
@@ -113,6 +126,32 @@ public class ExportConfirmationDialog extends JDialog {
         exportNativeIdsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
         additionalPanel.add(exportNativeIdsCheckbox);
 
+        // Add skip options if any are available
+        if (availableSkipOptions != null && !availableSkipOptions.isEmpty()) {
+            additionalPanel.add(Box.createVerticalStrut(10));
+            additionalPanel.add(new JSeparator(JSeparator.HORIZONTAL));
+            additionalPanel.add(Box.createVerticalStrut(10));
+
+            JLabel skipLabel = new JLabel("Skip fields:");
+            skipLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            skipLabel.setFont(skipLabel.getFont().deriveFont(Font.BOLD));
+            additionalPanel.add(skipLabel);
+            additionalPanel.add(Box.createVerticalStrut(5));
+
+            for (DOSchemaField field : availableSkipOptions) {
+                String label = field.destinationName;
+                if (field.source != null && !field.source.equals(field.destinationName)) {
+                    label += " (" + field.source + ")";
+                }
+                JCheckBox skipCheckbox = new JCheckBox(label);
+                skipCheckbox.setSelected(false);
+                skipCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+                skipCheckbox.addActionListener(e -> updateSelectedSkipOptions());
+                additionalPanel.add(skipCheckbox);
+                skipOptionCheckboxes.put(field, skipCheckbox);
+            }
+        }
+
         mainPanel.add(additionalPanel);
 
         mainPanel.add(Box.createVerticalStrut(15));
@@ -143,6 +182,9 @@ public class ExportConfirmationDialog extends JDialog {
 
             // Get checkbox state
             exportNativeIds = exportNativeIdsCheckbox.isSelected();
+
+            // Update selected skip options one last time
+            updateSelectedSkipOptions();
 
             dispose();
         });
@@ -195,6 +237,27 @@ public class ExportConfirmationDialog extends JDialog {
      */
     public boolean getExportNativeIds() {
         return exportNativeIds;
+    }
+
+    /**
+     * Gets the list of fields that the user has chosen to skip.
+     * 
+     * @return List of DOSchemaField objects to skip during export
+     */
+    public List<DOSchemaField> getSelectedSkipOptions() {
+        return selectedSkipOptions;
+    }
+
+    /**
+     * Updates the selected skip options list based on checkbox states.
+     */
+    private void updateSelectedSkipOptions() {
+        selectedSkipOptions.clear();
+        for (Map.Entry<DOSchemaField, JCheckBox> entry : skipOptionCheckboxes.entrySet()) {
+            if (entry.getValue().isSelected()) {
+                selectedSkipOptions.add(entry.getKey());
+            }
+        }
     }
 
     /**

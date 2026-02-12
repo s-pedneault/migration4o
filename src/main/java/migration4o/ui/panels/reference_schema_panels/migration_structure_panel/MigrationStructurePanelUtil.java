@@ -490,11 +490,43 @@ public class MigrationStructurePanelUtil {
     public static class ModuleExportInfo {
         public final String name;
         public final MigrationModule module;
+        public final String fullPath; // Full hierarchical path (e.g., "Activités/Intervention")
 
         public ModuleExportInfo(String name, MigrationModule module) {
+            this(name, module, name); // Default: fullPath = name
+        }
+
+        public ModuleExportInfo(String name, MigrationModule module, String fullPath) {
             this.name = name;
             this.module = module;
+            this.fullPath = fullPath;
         }
+    }
+
+    /**
+     * Builds the full hierarchical path for a module by walking up the tree.
+     * For example, if "Intervention" is under "Activités", returns
+     * "Activités/Intervention"
+     * 
+     * @param moduleTreeNode the tree node representing the selected module
+     * @return the full path from root to this module
+     */
+    public static String buildFullModulePath(DefaultMutableTreeNode moduleTreeNode) {
+        List<String> pathParts = new ArrayList<>();
+        DefaultMutableTreeNode currentNode = moduleTreeNode;
+
+        // Walk up the tree collecting module names
+        while (currentNode != null) {
+            Object userObject = currentNode.getUserObject();
+            if (userObject instanceof ModuleNode) {
+                ModuleNode moduleNode = (ModuleNode) userObject;
+                pathParts.add(0, moduleNode.getName()); // Add at beginning to build path from root
+            }
+            currentNode = (DefaultMutableTreeNode) currentNode.getParent();
+        }
+
+        // Join path parts with "/"
+        return String.join("/", pathParts);
     }
 
     /**
