@@ -264,7 +264,7 @@ public class ReferenceFinderUtil {
         if (fieldValue instanceof GenericObject) {
             try {
                 // Try to extract collection items
-                Collection<?> items = migration4o.migration.recipes.CollectionExtractor.extractAndActivate(
+                Collection<?> items = CollectionUtil.extractAndActivate(
                         container, fieldValue);
                 if (items != null) {
                     for (Object item : items) {

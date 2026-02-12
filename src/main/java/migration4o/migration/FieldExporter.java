@@ -9,7 +9,6 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.migration.recipes.ArrayTraverser;
-import migration4o.migration.recipes.CollectionExtractor;
 import migration4o.migration.recipes.FieldValueMapper;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.migration.recipes.IDReferenceDetector;
@@ -18,6 +17,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
+import migration4o.util.CollectionUtil;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.SchemaUtil;
 import migration4o.util.ValueUtil;
@@ -202,6 +202,15 @@ public class FieldExporter {
                     // proxies
                     // may return incorrect values before proper activation and extraction
                     if (schemaField != null && schemaField.isCollection) {
+                        // CRITICAL FIX: Activate collection fields directly to populate their contents
+                        // This matches the working pattern from ClassObjectsDialog.getFieldValue
+                        if (fieldValue instanceof Collection) {
+                            try {
+                                container.activate(fieldValue, 1);
+                            } catch (Exception e) {
+                                // Ignore activation errors
+                            }
+                        }
                         exportSchemaCollectionField(container, fieldValue, schemaField, indentLevel,
                                 destinationClassName, sourceClassName, parentObjectId);
                         fieldsWritten++;
@@ -238,10 +247,28 @@ public class FieldExporter {
             String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         String fieldName = schemaField.destinationName;
 
+        // DEBUG: Only log for specific field we're investigating
+        if ("listeActionCondition".equals(fieldName) && "TypeActivHoraire".equals(parentClassName)) {
+            System.err.println("DEBUG: exportSchemaCollectionField for TypeActivHoraire.listeActionCondition");
+            System.err.println(
+                    "  collectionObj type=" + (collectionObj != null ? collectionObj.getClass().getName() : "null"));
+            System.err.println(
+                    "  collectionObj instanceof Collection? " + (collectionObj instanceof java.util.Collection));
+            if (collectionObj instanceof java.util.Collection) {
+                System.err.println("  direct size=" + ((java.util.Collection<?>) collectionObj).size());
+            }
+        }
+
         // Try to extract items from the collection object
         // VectRechID extends HVector which extends Vector, so look for Vector's
         // internal array
-        Collection<?> items = CollectionExtractor.extractAndActivate(container, collectionObj);
+        // NOTE: Parent object was already activated at max depth, so collection should
+        // be activated too
+        Collection<?> items = CollectionUtil.extractCollectionItems(container, collectionObj);
+
+        if ("listeActionCondition".equals(fieldName) && "TypeActivHoraire".equals(parentClassName)) {
+            System.err.println("  extracted items: " + (items != null ? items.size() : "null"));
+        }
 
         // Items extracted (or null/empty)
 

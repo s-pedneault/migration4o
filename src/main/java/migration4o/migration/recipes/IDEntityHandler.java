@@ -30,9 +30,19 @@ public class IDEntityHandler {
 
         GenericObject genericObj = (GenericObject) idEntiteObject;
 
-        // Activate the object to ensure field values are loaded
+        // Activate the object to ensure field values are loaded at all inheritance
+        // levels
+        // CRITICAL: Use max depth to handle deep inheritance hierarchies (e.g.,
+        // IDEntite -> subclass -> subclass)
         try {
-            container.activate(idEntiteObject, 2);
+            container.activate(idEntiteObject, Integer.MAX_VALUE);
+        } catch (StackOverflowError e) {
+            // Stack overflow - try shallow activation as fallback
+            try {
+                container.activate(idEntiteObject, 10);
+            } catch (Exception e2) {
+                // Shallow activation also failed - try to proceed anyway
+            }
         } catch (Exception e) {
             // Activation failed, try to proceed anyway
         }

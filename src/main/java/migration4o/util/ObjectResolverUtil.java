@@ -75,20 +75,18 @@ public class ObjectResolverUtil {
     }
 
     /**
-     * Activate object with safe error handling
+     * Activate object with minimal depth.
+     * Uses shallow activation (depth 1) matching the proven UI pattern.
+     * Vectors and collections are activated specifically when accessed via
+     * CollectionUtil.
      */
     public static void activateObject(ExtObjectContainer container, Object obj, Long objectId) {
         try {
-            container.activate(obj, Integer.MAX_VALUE);
-        } catch (StackOverflowError e) {
-            // Stack overflow - use shallow activation
-            try {
-                container.activate(obj, 10);
-            } catch (Exception e2) {
-                // Shallow activation also failed - skip
-            }
+            // Shallow activation is sufficient - avoids cascading retries and exception
+            // spam
+            container.activate(obj, 1);
         } catch (Exception e) {
-            // Activation failed - skip
+            // Silently ignore - object is still usable with lazy activation
         }
     }
 

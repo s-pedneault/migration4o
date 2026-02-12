@@ -48,6 +48,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.database.reach.ReachResultAggregator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.CollectionUtil;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDialog;
 import migration4o.util.ObjectResolverUtil;
@@ -1141,12 +1142,12 @@ public class MigrationCoveragePanel extends JPanel {
                         continue; // Skip null fields
                     }
 
-                    // Handle collections
-                    if (fieldValue instanceof Collection) {
-                        Collection<?> collection = (Collection<?>) fieldValue;
+                    // Try to extract as collection (handles both Collection and GenericObject)
+                    Collection<?> extractedCollection = CollectionUtil.extractCollectionItems(container, fieldValue);
+                    if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         // Check if any item in collection is important
                         boolean hasImportantItems = false;
-                        for (Object item : collection) {
+                        for (Object item : extractedCollection) {
                             if (item != null && isImportantObject(container, item)) {
                                 hasImportantItems = true;
                                 break;
@@ -1158,7 +1159,7 @@ public class MigrationCoveragePanel extends JPanel {
                             String fieldLabel = "Field: " + field.getName();
                             publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, objectNodeLabel, fieldLabel));
 
-                            for (Object item : collection) {
+                            for (Object item : extractedCollection) {
                                 if (item != null) {
                                     processFieldReference(container, item, field.getName(), parentClassName,
                                             reachedObjectIds, publisher, fieldLabel, treeModel,
@@ -1167,7 +1168,7 @@ public class MigrationCoveragePanel extends JPanel {
                             }
                         } else {
                             // Process without showing in tree
-                            for (Object item : collection) {
+                            for (Object item : extractedCollection) {
                                 if (item != null) {
                                     processFieldReference(container, item, field.getName(), parentClassName,
                                             reachedObjectIds, publisher, objectNodeLabel, treeModel,
@@ -1176,8 +1177,8 @@ public class MigrationCoveragePanel extends JPanel {
                             }
                         }
                     }
-                    // Handle arrays
-                    else if (fieldValue.getClass().isArray()) {
+                    // Handle arrays (excluding byte arrays which are primitives)
+                    else if (fieldValue.getClass().isArray() && !(fieldValue instanceof byte[])) {
                         int length = java.lang.reflect.Array.getLength(fieldValue);
                         // Check if any item in array is important
                         boolean hasImportantItems = false;

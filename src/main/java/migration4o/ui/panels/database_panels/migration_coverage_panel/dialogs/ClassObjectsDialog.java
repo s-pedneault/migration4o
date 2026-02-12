@@ -27,6 +27,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.CollectionUtil;
 import migration4o.util.ObjectResolverUtil;
 
 /**
@@ -253,8 +254,13 @@ public class ClassObjectsDialog extends JFrame {
                 try {
                     Object obj = container.ext().getByID(objectId);
                     if (obj != null) {
-                        // Activate the object to ensure all fields are loaded
-                        ObjectResolverUtil.activateObject(container, obj, objectId);
+                        // Activate to depth 1 - enough to populate field references
+                        // Don't go deeper to avoid TCollection translator errors
+                        try {
+                            container.activate(obj, 1);
+                        } catch (Exception e) {
+                            // Ignore activation errors
+                        }
 
                         Object[] rowData = new Object[fields.size() + 2];
 
@@ -373,6 +379,14 @@ public class ClassObjectsDialog extends JFrame {
                     for (com.db4o.ext.StoredField field : fields) {
                         if (field.getName().equals(fieldName)) {
                             Object value = field.get(obj);
+                            // Activate collections to populate their contents
+                            if (value instanceof java.util.Collection) {
+                                try {
+                                    container.activate(value, 1);
+                                } catch (Exception e) {
+                                    // Ignore
+                                }
+                            }
                             return value;
                         }
                     }
@@ -406,10 +420,16 @@ public class ClassObjectsDialog extends JFrame {
             return strValue;
         }
 
-        // Handle collections
-        if (value instanceof java.util.Collection) {
-            java.util.Collection<?> collection = (java.util.Collection<?>) value;
-
+        // Handle collections (using unified CollectionUtil to handle both Collection
+        // and GenericObject)
+        java.util.Collection<?> collection = CollectionUtil.extractCollectionItems(container, value);
+        // System.err.println("DEBUG formatValue: value class = " +
+        // value.getClass().getName());
+        // System.err.println("DEBUG formatValue: extracted collection = " +
+        // collection);
+        // System.err.println("DEBUG formatValue: collection size = " + (collection !=
+        // null ? collection.size() : "null"));
+        if (collection != null) {
             // Empty collection
             if (collection.isEmpty()) {
                 return "[]";

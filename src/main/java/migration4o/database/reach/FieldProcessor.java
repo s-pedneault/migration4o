@@ -11,6 +11,7 @@ import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.CollectionUtil;
 import migration4o.util.ObjectResolverUtil;
 
 /**
@@ -58,10 +59,11 @@ public class FieldProcessor {
                         continue; // Skip null fields
                     }
 
-                    // Handle collections
-                    if (fieldValue instanceof Collection) {
+                    // Try to extract as collection (handles both Collection and GenericObject)
+                    Collection<?> extractedCollection = CollectionUtil.extractCollectionItems(container, fieldValue);
+                    if (extractedCollection != null && !extractedCollection.isEmpty()) {
                         processCollectionField(
-                                (Collection<?>) fieldValue,
+                                extractedCollection,
                                 field.getName(),
                                 parentClassName,
                                 reachedObjectIds,
@@ -70,8 +72,8 @@ public class FieldProcessor {
                                 classTotalCount,
                                 progressCallback);
                     }
-                    // Handle arrays
-                    else if (fieldValue.getClass().isArray()) {
+                    // Handle arrays (excluding byte arrays which are primitives)
+                    else if (fieldValue.getClass().isArray() && !(fieldValue instanceof byte[])) {
                         processArrayField(
                                 fieldValue,
                                 field.getName(),

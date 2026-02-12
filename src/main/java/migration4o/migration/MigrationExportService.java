@@ -48,16 +48,10 @@ public class MigrationExportService {
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         exporter.setExportNativeIds(exportNativeIds);
 
-        if (modules.size() == 1) {
-            MigrationModule module = modules.get(0);
-            ExportStatistics result = exporter.exportModuleStructured(module, baseOutputPath, monitor);
-            if (result.errors.isEmpty()) {
-                ExportHistory.saveExport(ExportHistory.ExportType.MODULE, module.getName(),
-                        baseOutputPath, module.getClassNames(), null, maxObjectsPerClass, exportNativeIds);
-            }
-            return result;
-        }
-
+        // CRITICAL FIX: Always use shared tracking for module exports to avoid
+        // generating
+        // individual XSD files per class. Generate comprehensive XSD at the end
+        // instead.
         exporter.initializeSharedTracking();
         ReferencedClassTracker tracker = new ReferencedClassTracker();
         for (MigrationModule module : modules) {
