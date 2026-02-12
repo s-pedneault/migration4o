@@ -1442,19 +1442,19 @@
         <field source="mCourielPaget" destinationName="courielTeleavertisseur" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDateEmbauche" destinationName="dateEmbauche" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateFin" definition="mDateFin" />
-        <field source="mDateNais" destinationName="dateNaissance" isExported="true" skipWhen="DEFAULT" type="date" />
+        <field source="mDateNais" destinationName="dateNaissance" isExported="true" skipWhen="DEFAULT" type="date" skipUserOption="Exclude employee birthdays?" />
         <field source="mInactif" definition="mInactif" />
         <field source="mMatricule" definition="mMatricule" />
-        <field source="mNAS" destinationName="nas" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNAS" destinationName="nas" isExported="true" skipWhen="DEFAULT" type="string" skipUserOption="Exclude employee social security numbers?" />
         <field source="mNom" definition="mNom" />
         <field source="mNote" definition="mNote" />
-        <field source="mNumAssMaladie" destinationName="numeroAssuranceMaladie" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumAssMaladie" destinationName="numeroAssuranceMaladie" isExported="true" skipWhen="DEFAULT" type="string" skipUserOption="Exclude employee health insurance card numbers?" />
         <field source="mNumEmploye" destinationName="numeroEmploye" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNumSeqTache" destinationName="numeroSequentielTache" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPaget" destinationName="teleavertisseur" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPagetCode" destinationName="teleavertisseurCode" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPermisClasse" destinationName="permisClasse" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mPermisConduire" destinationName="permisConduire" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mPermisConduire" destinationName="permisConduire" isExported="true" skipWhen="DEFAULT" type="string" skipUserOption="Exclude employee driver&apos;s license numbers?" />
         <field source="mPermisExpiration" destinationName="permisExpiration" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mPrenom" destinationName="prenom" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mTelBureau" destinationName="telephoneBureau" isExported="true" skipWhen="DEFAULT" type="string" />

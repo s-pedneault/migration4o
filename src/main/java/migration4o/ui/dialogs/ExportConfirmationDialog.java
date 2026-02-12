@@ -132,17 +132,9 @@ public class ExportConfirmationDialog extends JDialog {
             additionalPanel.add(new JSeparator(JSeparator.HORIZONTAL));
             additionalPanel.add(Box.createVerticalStrut(10));
 
-            JLabel skipLabel = new JLabel("Skip fields:");
-            skipLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            skipLabel.setFont(skipLabel.getFont().deriveFont(Font.BOLD));
-            additionalPanel.add(skipLabel);
-            additionalPanel.add(Box.createVerticalStrut(5));
-
             for (DOSchemaField field : availableSkipOptions) {
-                String label = field.destinationName;
-                if (field.source != null && !field.source.equals(field.destinationName)) {
-                    label += " (" + field.source + ")";
-                }
+                String label = field.skipUserOption;
+
                 JCheckBox skipCheckbox = new JCheckBox(label);
                 skipCheckbox.setSelected(false);
                 skipCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
