@@ -3,6 +3,7 @@ package migration4o.migration;
 import java.io.IOException;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
@@ -19,19 +20,18 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.ClassUtil;
-import migration4o.util.CollectionUtil;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.SchemaUtil;
 import migration4o.util.ValueUtil;
+import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
- * Handles field-level export operations.
- * Responsible for exporting all fields of an object, handling arrays,
- * collections, and references.
+ * Handles field-level export operations. Responsible for exporting all fields
+ * of an object, handling arrays, collections, and references.
  */
 public class FieldExporter {
     private final ExportOperation operation;
-    private final XMLWriter xmlWriter;
+    private final StructuredWriter xmlWriter;
     private final XSDBuilder xsdBuilder;
     private final ReferenceObjectExporter idEntiteResolver;
 
@@ -39,7 +39,7 @@ public class FieldExporter {
     // across all exports
     private final java.util.Map<String, java.util.List<GenericObject>> preloadedObjectsByClass = new java.util.HashMap<>();
 
-    public FieldExporter(ExportOperation operation, XMLWriter xmlWriter, XSDBuilder xsdBuilder) {
+    public FieldExporter(ExportOperation operation, StructuredWriter xmlWriter, XSDBuilder xsdBuilder) {
         this.operation = operation;
         this.xmlWriter = xmlWriter;
         this.xsdBuilder = xsdBuilder;
@@ -57,8 +57,7 @@ public class FieldExporter {
      * @param schema      Reference schema for skip condition checking
      * @return number of fields that will be exported
      */
-    public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
-            DOSchema schema) {
+    public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass, DOSchema schema) {
         int count = 0;
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
@@ -75,8 +74,7 @@ public class FieldExporter {
                     String sourceFieldName = field.getName();
 
                     // CRITICAL: Get schema field from current class AND ancestors
-                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass,
-                            sourceFieldName, schema);
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, sourceFieldName, schema);
 
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
@@ -85,8 +83,7 @@ public class FieldExporter {
 
                     // Skip null fields if they meet skip conditions
                     if (fieldValue == null) {
-                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema,
-                                operation.selectedSkipUserOptions)) {
+                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema, operation.selectedSkipUserOptions)) {
                             continue;
                         }
                         // Null field that will be exported
@@ -106,8 +103,7 @@ public class FieldExporter {
                     } else {
                         // Regular field - would it be exported?
                         // Check Class fields that might be skipped
-                        boolean isClassField = schemaField != null &&
-                                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+                        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
 
                         if (isClassField) {
                             // Extract className for skip check
@@ -119,14 +115,12 @@ public class FieldExporter {
                                 className = str.startsWith("class ") ? str.substring(6) : str;
                             }
 
-                            if (!ValueUtil.shouldSkipField(className, schemaField, schema,
-                                    operation.selectedSkipUserOptions)) {
+                            if (!ValueUtil.shouldSkipField(className, schemaField, schema, operation.selectedSkipUserOptions)) {
                                 count++;
                             }
                         } else {
                             // Regular object - check skip conditions
-                            if (!ValueUtil.shouldSkipField(fieldValue, schemaField, schema,
-                                    operation.selectedSkipUserOptions)) {
+                            if (!ValueUtil.shouldSkipField(fieldValue, schemaField, schema, operation.selectedSkipUserOptions)) {
                                 count++;
                             }
                         }
@@ -160,9 +154,7 @@ public class FieldExporter {
      * @return the number of fields actually written to XML
      * @throws IOException if XML writing fails
      */
-    public int exportAllFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
-            int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId)
-            throws IOException {
+    public int exportAllFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
         int fieldsWritten = 0;
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
@@ -179,8 +171,7 @@ public class FieldExporter {
                     String sourceFieldName = field.getName();
 
                     // CRITICAL: Get destination field name from schema (search ancestors too)
-                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass,
-                            sourceFieldName, operation.referenceSchema);
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, sourceFieldName, operation.referenceSchema);
                     String fieldName = schemaField != null ? schemaField.destinationName : sourceFieldName;
 
                     // Skip fields marked as not exported
@@ -195,12 +186,10 @@ public class FieldExporter {
 
                     if (fieldValue == null) {
                         // Skip this field if skip conditions are met
-                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema,
-                                operation.selectedSkipUserOptions)) {
+                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                             continue;
                         }
-                        xmlWriter.writeIndent(indentLevel);
-                        xmlWriter.write("<" + fieldName + "/>\n");
+                        xmlWriter.open(fieldName, null);
                         fieldsWritten++;
                         continue;
                     }
@@ -221,13 +210,11 @@ public class FieldExporter {
                                 // Ignore activation errors
                             }
                         }
-                        if (exportSchemaCollectionField(container, fieldValue, schemaField, indentLevel,
-                                destinationClassName, sourceClassName, parentObjectId)) {
+                        if (exportSchemaCollectionField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
                     } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) {
-                        if (exportCollectionField(container, (Collection<?>) fieldValue, schemaField, indentLevel,
-                                destinationClassName, sourceClassName, parentObjectId)) {
+                        if (exportCollectionField(container, (Collection<?>) fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
                     } else if (fieldValue instanceof byte[]) {
@@ -235,13 +222,11 @@ public class FieldExporter {
                         exportByteArrayField((byte[]) fieldValue, schemaField, indentLevel);
                         fieldsWritten++;
                     } else if (fieldValue.getClass().isArray()) {
-                        if (exportArrayField(container, fieldValue, schemaField, indentLevel,
-                                destinationClassName, sourceClassName, parentObjectId)) {
+                        if (exportArrayField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
                     } else {
-                        exportRegularField(container, fieldValue, schemaField, indentLevel,
-                                destinationClassName, sourceClassName, parentObjectId);
+                        exportRegularField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId);
                         fieldsWritten++;
                     }
                 } catch (Exception e) {
@@ -253,8 +238,7 @@ public class FieldExporter {
             // database
             // Virtual fields start with @ and use criteria-based queries to find related
             // objects
-            fieldsWritten += exportVirtualFields(container, obj, parentClass, indentLevel,
-                    destinationClassName, sourceClassName, parentObjectId);
+            fieldsWritten += exportVirtualFields(container, obj, parentClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
 
         } catch (Exception e) {
             // Error accessing fields
@@ -264,9 +248,8 @@ public class FieldExporter {
 
     /**
      * Unified method to export any collection-like field (Collection, array, or
-     * schema collection).
-     * Handles all the common logic: skip conditions, size attributes, ID reference
-     * detection, and item export.
+     * schema collection). Handles all the common logic: skip conditions, size
+     * attributes, ID reference detection, and item export.
      * 
      * @param container             DB4O container
      * @param items                 Iterable of items to export (extracted from
@@ -282,55 +265,46 @@ public class FieldExporter {
      * @return true if field was written, false if skipped
      * @throws IOException if XML writing fails
      */
-    private boolean exportCollectionLikeField(ExtObjectContainer container, Iterable<?> items, int size,
-            Object itemsValue, DOSchemaField schemaField, int indentLevel,
-            String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
+    private boolean exportCollectionLikeField(ExtObjectContainer container, Iterable<?> items, int size, Object itemsValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
 
         if (size == 0 || items == null) {
             // Check skip conditions
-            if (ValueUtil.shouldSkipField(itemsValue, schemaField, operation.referenceSchema,
-                    operation.selectedSkipUserOptions)) {
+            if (ValueUtil.shouldSkipField(itemsValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 return false;
             }
-            xmlWriter.writeIndent(indentLevel);
-            xmlWriter.write("<" + fieldName + " size=\"0\"/>\n");
+            xmlWriter.open(fieldName, Map.of("size", "0"));
             return true;
         } else {
-            xmlWriter.writeStartElementWithSize(fieldName, size, indentLevel);
+            xmlWriter.open(fieldName, Map.of("size", size + ""));
 
             // Check if we should export ID references instead of entities
-            IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField,
-                    operation.referenceSchema);
+            IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField, operation.referenceSchema);
 
             for (Object item : items) {
                 if (item != null) {
                     if (detection.shouldExportAsIDReferences) {
                         // Export as ID reference
-                        IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter,
-                                xsdBuilder, indentLevel + 1, operation);
+                        IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter, xsdBuilder, indentLevel + 1, operation);
                     } else {
                         // Export normally
-                        exportFieldValue(container, item, schemaField, indentLevel + 1,
-                                parentClassName, parentSourceClassName, parentObjectId);
+                        exportFieldValue(container, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
                     }
                 }
             }
-            xmlWriter.writeEndElement(fieldName, indentLevel);
+            xmlWriter.close();
             return true;
         }
     }
 
     /**
-     * Exports a collection field that is marked as collection in the schema
-     * but may be stored as a DB4O persistent object (like VectRechID).
-     * This method extracts the collection items from the DB4O object structure.
+     * Exports a collection field that is marked as collection in the schema but may
+     * be stored as a DB4O persistent object (like VectRechID). This method extracts
+     * the collection items from the DB4O object structure.
      * 
      * @return true if field was written, false if skipped
      */
-    private boolean exportSchemaCollectionField(ExtObjectContainer container, Object collectionObj,
-            DOSchemaField schemaField, int indentLevel,
-            String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
+    private boolean exportSchemaCollectionField(ExtObjectContainer container, Object collectionObj, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         // Try to extract items from the collection object
         // VectRechID extends HVector which extends Vector, so look for Vector's
         // internal array
@@ -339,30 +313,24 @@ public class FieldExporter {
         Collection<?> items = RecipeCollectionItems.getItems(container, collectionObj);
         int size = (items != null) ? items.size() : 0;
 
-        return exportCollectionLikeField(container, items, size, items, schemaField, indentLevel,
-                parentClassName, parentSourceClassName, parentObjectId);
+        return exportCollectionLikeField(container, items, size, items, schemaField, indentLevel, parentClassName, parentSourceClassName, parentObjectId);
     }
 
     /**
      * @return true if field was written, false if skipped
      */
-    private boolean exportCollectionField(ExtObjectContainer container, Collection<?> collection,
-            DOSchemaField schemaField, int indentLevel,
-            String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
+    private boolean exportCollectionField(ExtObjectContainer container, Collection<?> collection, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         // Check if empty using ValueUtil (handles null case)
         boolean isEmpty = ValueUtil.isEmpty(collection, schemaField, operation.referenceSchema);
         int size = isEmpty ? 0 : collection.size();
 
-        return exportCollectionLikeField(container, collection, size, collection, schemaField, indentLevel,
-                parentClassName, parentSourceClassName, parentObjectId);
+        return exportCollectionLikeField(container, collection, size, collection, schemaField, indentLevel, parentClassName, parentSourceClassName, parentObjectId);
     }
 
     /**
      * @return true if field was written, false if skipped
      */
-    private boolean exportArrayField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField,
-            int indentLevel, String parentClassName, String parentSourceClassName,
-            long parentObjectId) throws IOException {
+    private boolean exportArrayField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         // Check if empty using ValueUtil (handles null case)
         boolean isEmpty = ValueUtil.isEmpty(fieldValue, schemaField, operation.referenceSchema);
         int length = isEmpty ? 0 : ArrayTraverser.getLength(fieldValue);
@@ -370,8 +338,7 @@ public class FieldExporter {
         // Convert array to Iterable for unified processing
         Iterable<?> items = createArrayIterable(fieldValue, length);
 
-        return exportCollectionLikeField(container, items, length, fieldValue, schemaField, indentLevel,
-                parentClassName, parentSourceClassName, parentObjectId);
+        return exportCollectionLikeField(container, items, length, fieldValue, schemaField, indentLevel, parentClassName, parentSourceClassName, parentObjectId);
     }
 
     /**
@@ -385,34 +352,28 @@ public class FieldExporter {
         return list;
     }
 
-    private void exportByteArrayField(byte[] byteArray, DOSchemaField schemaField, int indentLevel)
-            throws IOException {
+    private void exportByteArrayField(byte[] byteArray, DOSchemaField schemaField, int indentLevel) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
 
         // Check skip conditions for empty byte arrays
         if (byteArray.length == 0) {
-            if (ValueUtil.shouldSkipField(byteArray, schemaField, operation.referenceSchema,
-                    operation.selectedSkipUserOptions)) {
+            if (ValueUtil.shouldSkipField(byteArray, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 return;
             }
-            xmlWriter.writeIndent(indentLevel);
-            xmlWriter.write("<" + fieldName + "/>\n");
+            xmlWriter.open(fieldName, null).close();
         } else {
             // Convert byte array to Base64 string
             String base64String = Base64.getEncoder().encodeToString(byteArray);
-            xmlWriter.writeElement(fieldName, base64String, indentLevel);
+            xmlWriter.open(fieldName, null).data(base64String).close();
         }
     }
 
-    private void exportRegularField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField,
-            int indentLevel, String parentClassName, String parentSourceClassName,
-            long parentObjectId) throws IOException {
+    private void exportRegularField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
 
         // Check if this is a Class-typed field based on schema (DB4O may wrap Class in
         // GenericObject)
-        boolean isClassField = schemaField != null &&
-                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
 
         // Special handling for Class objects - always export as string
         if (isClassField) {
@@ -430,12 +391,11 @@ public class FieldExporter {
             }
 
             // Skip this field if skip conditions are met
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema,
-                    operation.selectedSkipUserOptions)) {
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 return;
             }
 
-            xmlWriter.writeElement(fieldName, className, indentLevel);
+            xmlWriter.open(fieldName, null).data(className).close();
             return;
         }
 
@@ -444,8 +404,7 @@ public class FieldExporter {
             // This is a persistent object reference
 
             // Check if field should be skipped (includes IDEntite with mID == -1)
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema,
-                    operation.selectedSkipUserOptions)) {
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 return;
             }
 
@@ -456,8 +415,7 @@ public class FieldExporter {
             if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
                 // Check if this IDEntite will be skipped due to mID == -1
                 if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
-                    if (IDEntityHandler.shouldSkipMinusOne(container, fieldValue)
-                            && schemaField.skipWhen.contains("MINUS_ONE")) {
+                    if (IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
                         // This field will produce empty content, skip it entirely
                         return;
                     }
@@ -468,7 +426,7 @@ public class FieldExporter {
                 if (schemaField != null && !schemaField.embedContents) {
                     Long mID = IDEntityHandler.extractMID(container, fieldValue);
                     if (mID != null) {
-                        xmlWriter.writeElement(fieldName, mID.toString(), indentLevel);
+                        xmlWriter.open(fieldName).data(mID.toString()).close();
                         return;
                     } else {
                         // mID is null - skip this field to avoid empty tags
@@ -483,8 +441,7 @@ public class FieldExporter {
 
             // Count fields that will be exported from this object
             if (fieldValue instanceof GenericObject && fieldClass != null) {
-                int fieldsToExport = countFieldsToExport(container, (GenericObject) fieldValue,
-                        fieldClass, operation.referenceSchema);
+                int fieldsToExport = countFieldsToExport(container, (GenericObject) fieldValue, fieldClass, operation.referenceSchema);
 
                 // If no fields will be exported, skip this field wrapper entirely
                 if (fieldsToExport == 0) {
@@ -493,10 +450,9 @@ public class FieldExporter {
             }
 
             // Write element and export recursively
-            xmlWriter.writeStartElement(fieldName, indentLevel);
-            exportFieldValue(container, fieldValue, schemaField, indentLevel + 1,
-                    parentClassName, parentSourceClassName, parentObjectId);
-            xmlWriter.writeEndElement(fieldName, indentLevel);
+            xmlWriter.open(fieldName);
+            exportFieldValue(container, fieldValue, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
+            xmlWriter.close();
         } else {
             // Primitive or non-persistent value - write inline
             String stringValue;
@@ -508,30 +464,27 @@ public class FieldExporter {
                 stringValue = fieldValue.toString();
             }
 
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema,
-                    operation.selectedSkipUserOptions)) {
+            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 return;
             }
 
             // Apply value mapping if defined for this field
             stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
 
-            xmlWriter.writeElement(fieldName, stringValue, indentLevel);
+            xmlWriter.open(fieldName).data(stringValue).close();
         }
     }
 
     /**
-     * Exports virtual fields defined in schema but not present in database.
-     * Virtual fields use @ prefix in source and criteria-based queries.
-     * Example: source="@mVectRapportOfficier" with criteria match="this.mID"
-     * with="mIDIntervention"
-     * Queries database for objects where mIDIntervention equals this object's mID.
+     * Exports virtual fields defined in schema but not present in database. Virtual
+     * fields use @ prefix in source and criteria-based queries. Example:
+     * source="@mVectRapportOfficier" with criteria match="this.mID"
+     * with="mIDIntervention" Queries database for objects where mIDIntervention
+     * equals this object's mID.
      * 
      * @return number of virtual fields written
      */
-    private int exportVirtualFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass,
-            int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId)
-            throws IOException {
+    private int exportVirtualFields(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
         int fieldsWritten = 0;
 
         if (parentClass == null || parentClass.fields == null) {
@@ -560,8 +513,7 @@ public class FieldExporter {
                 int size = (queryResults != null) ? queryResults.size() : 0;
 
                 // Export results using unified collection export
-                boolean written = exportCollectionLikeField(container, queryResults, size, queryResults, schemaField,
-                        indentLevel, destinationClassName, sourceClassName, parentObjectId);
+                boolean written = exportCollectionLikeField(container, queryResults, size, queryResults, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId);
 
                 if (written) {
                     fieldsWritten++;
@@ -579,21 +531,19 @@ public class FieldExporter {
     }
 
     /**
-     * Executes a database query for a virtual field based on its criteria.
-     * Uses a preloaded cache of all objects of the target class type, loading them
-     * once per class and reusing across all exports for efficiency.
-     * Finds objects where criterion.with field matches value from criterion.match
-     * field of current object.
-     * Supports multiple criteria combined with AND/OR operators and comparison
-     * operators.
+     * Executes a database query for a virtual field based on its criteria. Uses a
+     * preloaded cache of all objects of the target class type, loading them once
+     * per class and reusing across all exports for efficiency. Finds objects where
+     * criterion.with field matches value from criterion.match field of current
+     * object. Supports multiple criteria combined with AND/OR operators and
+     * comparison operators.
      * 
      * @param container   DB4O container
      * @param obj         Current object being exported
      * @param schemaField Virtual field definition with criterias
      * @return Collection of matching objects
      */
-    private Collection<?> executeVirtualFieldQuery(ExtObjectContainer container, GenericObject obj,
-            DOSchemaField schemaField) {
+    private Collection<?> executeVirtualFieldQuery(ExtObjectContainer container, GenericObject obj, DOSchemaField schemaField) {
         java.util.List<Object> results = new java.util.ArrayList<>();
 
         // Get the target class name from the virtual field
@@ -741,10 +691,9 @@ public class FieldExporter {
      * Compares two values based on the specified operator.
      * 
      * 
-     * /**
-     * Gets a field value by navigating through a dotted path (e.g.,
-     * "mIDIntervention.mID").
-     * Supports nested object navigation for virtual field queries.
+     * /** Gets a field value by navigating through a dotted path (e.g.,
+     * "mIDIntervention.mID"). Supports nested object navigation for virtual field
+     * queries.
      * 
      * @param container DB4O container
      * @param obj       Starting object
@@ -789,9 +738,8 @@ public class FieldExporter {
     }
 
     /**
-     * Compares two values based on the specified operator.
-     * Supports: equals, notEquals, greaterThan, lessThan, greaterOrEqual,
-     * lessOrEqual
+     * Compares two values based on the specified operator. Supports: equals,
+     * notEquals, greaterThan, lessThan, greaterOrEqual, lessOrEqual
      */
     private boolean compareCriterionValues(Object matchValue, Object withValue, String operator) {
         if (matchValue == null || withValue == null) {
@@ -799,27 +747,27 @@ public class FieldExporter {
         }
 
         switch (operator.toLowerCase()) {
-            case "equals":
-                return matchValue.equals(withValue);
+        case "equals":
+            return matchValue.equals(withValue);
 
-            case "notequals":
-                return !matchValue.equals(withValue);
+        case "notequals":
+            return !matchValue.equals(withValue);
 
-            case "greaterthan":
-                return compareNumeric(matchValue, withValue) > 0;
+        case "greaterthan":
+            return compareNumeric(matchValue, withValue) > 0;
 
-            case "lessthan":
-                return compareNumeric(matchValue, withValue) < 0;
+        case "lessthan":
+            return compareNumeric(matchValue, withValue) < 0;
 
-            case "greaterorequal":
-                return compareNumeric(matchValue, withValue) >= 0;
+        case "greaterorequal":
+            return compareNumeric(matchValue, withValue) >= 0;
 
-            case "lessorequal":
-                return compareNumeric(matchValue, withValue) <= 0;
+        case "lessorequal":
+            return compareNumeric(matchValue, withValue) <= 0;
 
-            default:
-                // Unknown operator - default to equals
-                return matchValue.equals(withValue);
+        default:
+            // Unknown operator - default to equals
+            return matchValue.equals(withValue);
         }
     }
 
@@ -836,8 +784,7 @@ public class FieldExporter {
                 return Double.compare(d1, d2);
             }
 
-            if (val1 instanceof Comparable && val2 instanceof Comparable &&
-                    val1.getClass().equals(val2.getClass())) {
+            if (val1 instanceof Comparable && val2 instanceof Comparable && val1.getClass().equals(val2.getClass())) {
                 return ((Comparable<Object>) val1).compareTo(val2);
             }
 
@@ -854,9 +801,7 @@ public class FieldExporter {
     /**
      * Exports a field value (handles both primitives and object references).
      */
-    private void exportFieldValue(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField,
-            int indentLevel, String parentClassName, String parentSourceClassName,
-            long parentObjectId) throws IOException {
+    private void exportFieldValue(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
         if (fieldValue == null) {
             return;
         }
@@ -904,11 +849,7 @@ public class FieldExporter {
             }
 
             // Pass through the embedded flag and field name for tracking
-            idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField,
-                    (objectId, indent) -> operation.objectExporter.exportObjectRecursively(container, objectId, indent,
-                            isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false,
-                            parentObjectId),
-                    indentLevel);
+            idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField, (objectId, indent) -> operation.objectExporter.exportObjectRecursively(container, objectId, indent, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId), indentLevel);
             return;
         }
 
@@ -916,8 +857,7 @@ public class FieldExporter {
         long objectId = container.ext().getID(fieldValue);
 
         // Special handling for Class objects based on schema type
-        boolean isClassField = schemaField != null &&
-                (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
 
         if (isClassField) {
             String classNameValue;
@@ -932,13 +872,12 @@ public class FieldExporter {
                     classNameValue = str;
                 }
             }
-            xmlWriter.writeElement(fieldName, classNameValue, indentLevel);
+            xmlWriter.open(fieldName).data(classNameValue).close();
             return;
         }
 
         if (objectId > 0) {
-            operation.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName,
-                    parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
+            operation.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
         } else {
             // Primitive value - write inline
             String stringValue;
@@ -950,7 +889,7 @@ public class FieldExporter {
             } else {
                 stringValue = fieldValue.toString();
             }
-            xmlWriter.writeElement(fieldName, stringValue, indentLevel);
+            xmlWriter.open(fieldName).data(stringValue).close();
         }
     }
 }

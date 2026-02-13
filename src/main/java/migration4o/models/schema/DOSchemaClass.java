@@ -4,6 +4,7 @@ package migration4o.models.schema;
 import migration4o.util.ClassUtil;
 import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
+import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 
 public class DOSchemaClass {
     public String source;
@@ -62,8 +63,8 @@ public class DOSchemaClass {
     }
 
     /**
-     * Sets the fields array and establishes parent links.
-     * Each field will have its parentClass set to this class.
+     * Sets the fields array and establishes parent links. Each field will have its
+     * parentClass set to this class.
      */
     public void setFields(DOSchemaField[] fields) {
         this.fields = fields;
@@ -74,6 +75,16 @@ public class DOSchemaClass {
                 }
             }
         }
+    }
+
+    public StructuredWriterMetadata getMetadata(String module) {
+        StructuredWriterMetadata metadata = new StructuredWriterMetadata();
+        metadata.generator = "Migration4o";
+        metadata.provider = "Gestion Technologies";
+        metadata.module = module != null ? module : "";
+        metadata.type = destinationName != null ? destinationName : getSourceName();
+        metadata.objects = objectIds != null ? String.valueOf(objectIds.length) : "0";
+        return metadata;
     }
 
 }

@@ -6,9 +6,6 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
-import java.awt.GridBagConstraints;
-import java.awt.GridBagLayout;
-import java.awt.Insets;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -21,7 +18,6 @@ import javax.swing.JScrollPane;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
 
 import migration4o.database.DODatabaseMonitor;
 
@@ -234,6 +230,24 @@ public class DatabaseProgressMonitor extends DODatabaseMonitor {
         encodingPhase.setStatus(PhaseStatus.ERROR);
         encodingPhase.setDetail("✗ " + errorMessage);
         errorCount++;
+        updateStats();
+    }
+
+    @Override
+    public void onServiceDatabaseOpened(String databasePath) {
+        updateOverallStatus("Database ready");
+        encodingPhase.addDetail("✓ Service opened: " + databasePath);
+    }
+
+    @Override
+    public void onServiceDatabaseClosed(String databasePath) {
+        encodingPhase.addDetail("✓ Service closed: " + databasePath);
+    }
+
+    @Override
+    public void onServiceDatabaseCloseFailed(String databasePath, String errorMessage) {
+        encodingPhase.addDetail("✗ Close failed for " + databasePath + ": " + errorMessage);
+        warningCount++;
         updateStats();
     }
 

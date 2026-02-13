@@ -7,6 +7,30 @@ package migration4o.database;
  */
 public abstract class DODatabaseMonitor {
 
+    // ===== Database Service Lifecycle Methods =====
+
+    /**
+     * Called when DODatabaseService has successfully opened and registered
+     * an active database container.
+     */
+    public void onServiceDatabaseOpened(String databasePath) {
+        // Default: no-op
+    }
+
+    /**
+     * Called when DODatabaseService has closed the active database container.
+     */
+    public void onServiceDatabaseClosed(String databasePath) {
+        // Default: no-op
+    }
+
+    /**
+     * Called when DODatabaseService fails while closing the active database.
+     */
+    public void onServiceDatabaseCloseFailed(String databasePath, String errorMessage) {
+        // Default: no-op
+    }
+
     // ===== Database Opening Methods =====
 
     /**

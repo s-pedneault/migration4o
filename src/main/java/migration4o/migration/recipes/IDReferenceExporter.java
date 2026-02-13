@@ -9,11 +9,12 @@ import migration4o.migration.XMLWriter;
 import migration4o.migration.XSDBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
- * Recipe for exporting entity objects as ID reference wrappers.
- * Creates synthetic ID objects (e.g., IDCompartiment) with the mID field
- * set to the entity's DB object ID.
+ * Recipe for exporting entity objects as ID reference wrappers. Creates
+ * synthetic ID objects (e.g., IDCompartiment) with the mID field set to the
+ * entity's DB object ID.
  */
 public class IDReferenceExporter {
 
@@ -29,14 +30,7 @@ public class IDReferenceExporter {
      * @param operation   Export operation context (contains objectExporter)
      * @throws IOException if write fails
      */
-    public static void exportAsIDReference(
-            ExtObjectContainer container,
-            Object entity,
-            DOSchemaClass idClass,
-            XMLWriter xmlWriter,
-            XSDBuilder xsdBuilder,
-            int indentLevel,
-            ExportOperation operation) throws IOException {
+    public static void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, XSDBuilder xsdBuilder, int indentLevel, ExportOperation operation) throws IOException {
 
         // Get the DB object ID of the entity
         long entityObjectId = container.ext().getID(entity);
@@ -55,7 +49,7 @@ public class IDReferenceExporter {
             xsdBuilder.addField(idClass, field);
         }
 
-        xmlWriter.writeStartElement(simpleClassName, indentLevel);
+        xmlWriter.open(simpleClassName, null);
 
         // Find the mID field in the ID class schema
         DOSchemaField idField = null;
@@ -68,14 +62,12 @@ public class IDReferenceExporter {
 
         if (idField != null) {
             // Export the ID value
-            xmlWriter.writeElement(idField.destinationName, String.valueOf(entityObjectId), indentLevel + 1);
+            xmlWriter.open(idField.destinationName, null).data(String.valueOf(entityObjectId)).close();
         }
 
-        xmlWriter.writeEndElement(simpleClassName, indentLevel);
+        xmlWriter.close();
 
         // Ensure the actual entity object gets exported separately (not embedded)
-        operation.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null,
-                null, null,
-                false, null);
+        operation.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null, null, null, false, null);
     }
 }

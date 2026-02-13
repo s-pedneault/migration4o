@@ -1,6 +1,7 @@
 package migration4o.migration;
 
 import java.io.IOException;
+import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
 
@@ -12,19 +13,20 @@ import migration4o.migration.recipes.ObjectIdTracker;
 import migration4o.migration.recipes.SchemaElementMapper;
 import migration4o.migration.recipes.XMLErrorWriter;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
- * Orchestrates recursive object traversal and export to XML.
- * Now delegates to specialized components for schema lookups, field exports,
- * and reference resolution.
+ * Orchestrates recursive object traversal and export to XML. Now delegates to
+ * specialized components for schema lookups, field exports, and reference
+ * resolution.
  */
 public class ObjectExporter {
     private final ExportOperation operation;
     private final FieldExporter fieldExporter;
-    private final XMLWriter xmlWriter;
+    private final StructuredWriter xmlWriter;
     private final XSDBuilder xsdBuilder;
 
-    public ObjectExporter(ExportOperation operation, XMLWriter xmlWriter, XSDBuilder xsdBuilder) {
+    public ObjectExporter(ExportOperation operation, StructuredWriter xmlWriter, XSDBuilder xsdBuilder) {
         this.operation = operation;
         this.xmlWriter = xmlWriter;
         this.xsdBuilder = xsdBuilder;
@@ -44,8 +46,8 @@ public class ObjectExporter {
     }
 
     /**
-     * Resets the state for a new export operation.
-     * Only clears state if not using shared tracking.
+     * Resets the state for a new export operation. Only clears state if not using
+     * shared tracking.
      */
     public void reset() {
         if (!operation.useSharedTracking) {
@@ -57,14 +59,13 @@ public class ObjectExporter {
     }
 
     /**
-     * Recursively exports an object and all its referenced objects.
-     * This is the main entry point - assumes objects are NOT embedded by default.
-     * For root objects (those directly from a class's objectIds array), the shared
-     * deduplication set is NOT checked, allowing the same object to be exported
-     * in multiple criteria-based exports of the same class.
+     * Recursively exports an object and all its referenced objects. This is the
+     * main entry point - assumes objects are NOT embedded by default. For root
+     * objects (those directly from a class's objectIds array), the shared
+     * deduplication set is NOT checked, allowing the same object to be exported in
+     * multiple criteria-based exports of the same class.
      */
-    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel)
-            throws IOException {
+    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel) throws IOException {
         exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true, null);
     }
 
@@ -72,16 +73,11 @@ public class ObjectExporter {
      * Recursively exports an object and all its referenced objects.
      * 
      * @param isEmbedded                true if this object is embedded in a parent
-     *                                  field
-     *                                  (not a
-     *                                  top-level export)
+     *                                  field (not a top-level export)
      * @param fieldName                 the name of the field this object is
-     *                                  embedded in
-     *                                  (for
-     *                                  warning messages)
+     *                                  embedded in (for warning messages)
      * @param containingClassName       the name of the class that contains the
-     *                                  field (for
-     *                                  warning messages)
+     *                                  field (for warning messages)
      * @param sourceFieldName           the source field name from schema (e.g.,
      *                                  mVectCompartiment)
      * @param sourceContainingClassName the source class name from schema (e.g.,
@@ -91,15 +87,11 @@ public class ObjectExporter {
      * @param parentObjectId            the ID of the parent object containing the
      *                                  field that references this object
      */
-    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel,
-            boolean isEmbedded, String fieldName, String containingClassName,
-            String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId)
-            throws IOException {
+    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel, boolean isEmbedded, String fieldName, String containingClassName, String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId) throws IOException {
 
         // Check if this object should be exported (handles duplicate tracking and
         // statistics)
-        if (!ObjectIdTracker.shouldExport(container, objectId, isRootObject, operation.exportedObjectIds,
-                operation.statistics, parentObjectId, sourceContainingClassName, sourceFieldName)) {
+        if (!ObjectIdTracker.shouldExport(container, objectId, isRootObject, operation.exportedObjectIds, operation.statistics, parentObjectId, sourceContainingClassName, sourceFieldName)) {
             // Object already exported - just return (warnings will be generated at end)
             return;
         }
@@ -120,8 +112,7 @@ public class ObjectExporter {
         try {
 
             // Apply export criteria filtering (only for top-level objects)
-            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, operation.exportConfig,
-                    operation.statistics)) {
+            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, operation.exportConfig, operation.statistics)) {
                 return;
             }
 
@@ -135,23 +126,21 @@ public class ObjectExporter {
             }
 
             // First, determine if there are any fields to export (dry run)
-            int fieldsToExport = GenericObjectExporter.countFieldsToExport(container, obj, schemaClass, objectId,
-                    fieldExporter, operation.referenceSchema);
+            int fieldsToExport = GenericObjectExporter.countFieldsToExport(container, obj, schemaClass, objectId, fieldExporter, operation.referenceSchema);
 
             // Only write object tags if there are fields to export
             if (fieldsToExport > 0) {
-                // Write start element with optional object ID attribute
+                // Write start element with optional object ID at/tribute
                 if (operation.exportNativeIds) {
-                    xmlWriter.writeStartElementWithId(elementName, objectId, indentLevel);
+                    xmlWriter.open(elementName, Map.of("id", objectId + ""));
                 } else {
-                    xmlWriter.writeStartElement(elementName, indentLevel);
+                    xmlWriter.open(elementName);
                 }
 
                 // Now actually export the fields
-                GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId,
-                        fieldExporter, indentLevel);
+                GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
 
-                xmlWriter.writeEndElement(elementName, indentLevel);
+                xmlWriter.close();
             }
             // If no fields, skip XML output but still count as successfully processed
 
@@ -167,7 +156,7 @@ public class ObjectExporter {
                 operation.statistics.addError(objectId, className, errorMsg, e);
             }
             // Still write error marker in XML for debugging
-            XMLErrorWriter.writeErrorMarker(xmlWriter, objectId, e, indentLevel);
+            // XMLErrorWriter.writeErrorMarker(xmlWriter, objectId, e, indentLevel);
         }
     }
 }

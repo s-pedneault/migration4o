@@ -11,18 +11,8 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Version 2 of the database reader that directly creates DOSchema* classes
+ * Database reader that directly creates DOSchema* classes
  * instead of creating intermediary DODatabase* classes.
- * 
- * This replaces the two-step process:
- * 1. DODatabaseReader creates DODatabase* classes
- * 2. DODatabaseSchemaInferrer converts DODatabase* to DOSchema* classes
- * 
- * With a single step:
- * - DODatabaseReaderV2 directly creates DOSchema* classes
- * 
- * This is more efficient for the UI which works exclusively with DOSchema*
- * classes.
  */
 public class DODatabaseReader {
 
@@ -58,9 +48,6 @@ public class DODatabaseReader {
 
             if (monitor != null) {
                 monitor.onStartingSchemaRead(storedClasses.length);
-            } else {
-                System.out
-                        .println("DODatabaseReaderV2: Reading " + storedClasses.length + " classes directly as schema");
             }
 
             // Create database context

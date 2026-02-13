@@ -5,6 +5,8 @@ import java.util.Map;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 
+import migration4o.models.schema.DOSchema;
+
 /**
  * Context object that holds common objects needed throughout the database
  * reading and conversion process. Simplifies parameter passing between
@@ -13,14 +15,34 @@ import com.db4o.ext.StoredClass;
 public class DODatabaseContext {
 
     /**
+     * Absolute path of currently opened database.
+     */
+    public String currentDatabasePath;
+
+    /**
+     * Cached schema read from active database.
+     */
+    public DOSchema databaseSchema;
+
+    /**
+     * Shared opener instance used by DODatabaseService.
+     */
+    public DODatabaseOpener opener;
+
+    /**
+     * Optional monitor for database operations.
+     */
+    public DODatabaseMonitor monitor;
+
+    /**
      * The DB4O database container
      */
-    public final ExtObjectContainer container;
+    public ExtObjectContainer container;
 
     /**
      * Map of stored classes by their fully qualified name for quick lookup
      */
-    public final Map<String, StoredClass> storedClassMap;
+    public Map<String, StoredClass> storedClassMap;
 
     /**
      * Creates a new database context.

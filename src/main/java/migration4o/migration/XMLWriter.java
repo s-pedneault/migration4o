@@ -3,69 +3,173 @@ package migration4o.migration;
 import java.io.IOException;
 import java.io.Writer;
 import java.util.Date;
+import java.util.Map;
+
+import migration4o.util.XMLUtil;
 
 /**
  * Handles low-level XML writing operations including formatting and escaping.
  * Can write to any Writer (FileWriter, StringWriter, etc.) for flexibility.
  */
+
+@FunctionalInterface
+interface XMLContentsProvider {
+    void write(Writer writer) throws IOException;
+}
+
 public class XMLWriter {
-    private final Writer writer;
     private static final String INDENT = "  ";
+    private final Writer writer;
+    private static final String GENERATOR = "Migration4o";
+    private static final String PROVIDER = "Gestion Technologies";
 
     public XMLWriter(Writer writer) {
         this.writer = writer;
     }
 
-    public void writeXMLHeader() throws IOException {
-        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+    private void writeLine(int indent, String line) throws IOException {
+        writer.write(INDENT.repeat(indent) + line + "\n");
     }
 
-    // public void writeXMLHeaderWithSchema(String schemaLocation) throws
-    // IOException {
-    // writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    // if (schemaLocation != null && !schemaLocation.isEmpty()) {
-    // // Schema location is relative from the Data folder to Definitions folder
-    // writer.write("<?xml-stylesheet type=\"text/xsl\" href=\"" + schemaLocation +
-    // "\"?>\n");
-    // }
-    // }
+    /**
+     * Writes a self-closing tag with optional attributes and indentation, and then
+     * adds a new line. Example: <tag attr="value" />. Does not write content.
+     * 
+     * @param indent
+     * @param tag
+     * @param attributes
+     * @throws IOException
+     */
+    public void tagNoContent(int indent, String tag, Map<String, String> attributes) throws IOException {
+        indent(indent);
+        openTag(tag, attributes, true);
+        newLine();
+    }
 
-    // public void writeExportHeader(String className) throws IOException {
-    // writer.write("<export>\n");
-    // writer.write(" <metadata>\n");
-    // writer.write(" <exportClass>" + xmlEscape(className) + "</exportClass>\n");
-    // writer.write(" <exportDate>" + new Date() + "</exportDate>\n");
-    // writer.write(" </metadata>\n");
-    // writer.write(" <objects>\n");
-    // }
+    public void tagOpen(int indent, String tag, Map<String, String> attributes) throws IOException {
+        indent(indent);
+        openTag(tag, attributes, false);
+        newLine();
+    }
 
-    public void writeExportHeaderWithSchema(String className, String schemaLocation) throws IOException {
-        writer.write("<export");
-        if (schemaLocation != null && !schemaLocation.isEmpty()) {
-            writer.write(" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"");
-            writer.write(" xsi:noNamespaceSchemaLocation=\"" + schemaLocation + "\"");
+    /**
+     * Writes a tag with optional attributes and content. If contents is null,
+     * writes an empty tag. If contents is provided, it will be written inside the
+     * tag. A new line is added after the tag. Example:
+     * <tag attr="value">contents</tag>
+     * 
+     * @param indent
+     * @param tag
+     * @param attributes
+     * @param contents
+     * @throws IOException
+     */
+    public void tagInline(int indent, String tag, Map<String, String> attributes, XMLContentsProvider contents) throws IOException {
+        indent(indent);
+        openTag(tag, attributes, false);
+        if (contents != null) {
+            contents.write(writer);
+            closeTag(0, tag);
+        } else {
+            newLine();
         }
-        writer.write(">\n");
-        writer.write(" <metadata>\n");
-        writer.write(" <exportClass>" + xmlEscape(className) + "</exportClass>\n");
-        writer.write(" <exportDate>" + new Date() + "</exportDate>\n");
-        writer.write(" </metadata>\n");
-        writer.write(" <objects>\n");
     }
 
-    public void writeModuleHeader(String moduleName, int classCount) throws IOException {
-        writer.write("<export>\n");
-        writer.write("  <metadata>\n");
-        writer.write("    <moduleName>" + xmlEscape(moduleName) + "</moduleName>\n");
-        writer.write("    <classCount>" + classCount + "</classCount>\n");
-        writer.write("    <exportDate>" + new Date() + "</exportDate>\n");
-        writer.write("  </metadata>\n");
-        writer.write("  <objects>\n");
+    public void tagInline(int indent, String tag, Map<String, String> attributes, String contents) throws IOException {
+        tagInline(indent, tag, attributes, (writer) -> {
+            if (contents != null)
+                writer.write(contents);
+        });
+    }
+
+    public void tagComplex(int indent, String tag, Map<String, String> attributes, XMLContentsProvider contents) throws IOException {
+        indent(indent);
+        openTag(tag, attributes, false);
+        newLine();
+        if (contents != null) {
+            contents.write(writer);
+        }
+        closeTag(indent, tag);
+    }
+
+    // public void tag(int indent, String tag, Map<String, String> attributes,
+    // boolean autoClose, boolean newLine) throws IOException {
+    // tag(indent, tag, attributes, (XMLContentsProvider) null, autoClose, newLine);
+    // }
+
+    // public void tag(int indent, String tag, Map<String, String> attributes,
+    // String contents, boolean autoClose, boolean newLine) throws IOException {
+    // tag(indent, tag, attributes, (writer) -> {
+    // if (contents != null)
+    // writer.write(contents);
+    // }, autoClose, newLine);
+    // }
+
+    // public void tag(int indent, String tag, Map<String, String> attributes,
+    // XMLContentsProvider contents, boolean autoClose, boolean newLine) throws
+    // IOException {
+    // writer.write(INDENT.repeat(indent));
+    // openTag(tag, attributes, autoClose);
+    // if (contents != null) {
+    // contents.write(writer);
+    // closeTag(indent, tag);
+    // }
+    // newLine(newLine);
+    // }
+
+    public void indent(int indent) throws IOException {
+        writer.write(INDENT.repeat(indent));
+    }
+
+    public void newLine() throws IOException {
+        writer.write("\n");
+    }
+
+    public void newLine(boolean newLine) throws IOException {
+        if (newLine)
+            newLine();
+    }
+
+    /**
+     * Writes a start tag with optional attributes. It does NOT write indentation or
+     * new line.
+     */
+    private void openTag(String tag, Map<String, String> attributes, boolean selfClose) throws IOException {
+        writer.write("<" + tag);
+        if (attributes != null) {
+            for (Map.Entry<String, String> entry : attributes.entrySet()) {
+                writeAttribute(entry.getKey(), entry.getValue());
+            }
+        }
+        writer.write(selfClose ? " />" : ">");
+    }
+
+    public void closeTag(int indent, String tag) throws IOException {
+        writeLine(indent, "</" + tag + ">");
+    }
+
+    public void writeXMLHeader() throws IOException {
+        writeLine(0, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>");
+    }
+
+    public void writeExportHeader(String module, String type, Integer objects, String schemaLocation) throws IOException {
+
+        tagOpen(0, "export", Map.of("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance", "xsi:noNamespaceSchemaLocation", "schemaLocation"));
+
+        tagComplex(1, "metadata", null, (Writer metadata) -> {
+            tagInline(2, "generator", null, GENERATOR);
+            tagInline(2, "provider", null, PROVIDER);
+            tagInline(2, "module", null, module);
+            tagInline(2, "type", null, type);
+            tagInline(2, "objects", null, objects != null ? objects.toString() : "");
+            tagInline(2, "exportDate", null, new Date().toString());
+        });
+        tagOpen(1, "objects", null);
     }
 
     public void writeExportFooter() throws IOException {
-        writer.write("  </objects>\n");
-        writer.write("</export>\n");
+        writeLine(1, "</objects>");
+        writeLine(0, "</export>");
     }
 
     public void writeIndent(int level) throws IOException {
@@ -74,9 +178,8 @@ public class XMLWriter {
         }
     }
 
-    public void writeStartElement(String elementName, int indentLevel) throws IOException {
-        writeIndent(indentLevel);
-        writer.write("<" + elementName + ">\n");
+    public void writeStartElement(String elementName, int indentLevel, Map<String, String> args) throws IOException {
+        writeLine(indentLevel, elementName);
     }
 
     public void writeStartElementWithId(String elementName, long objectId, int indentLevel) throws IOException {
@@ -102,12 +205,12 @@ public class XMLWriter {
     public void writeElement(String elementName, String content, int indentLevel) throws IOException {
         writeIndent(indentLevel);
         writer.write("<" + elementName + ">");
-        writer.write(xmlEscape(content));
+        writer.write(XMLUtil.xmlEscape(content));
         writer.write("</" + elementName + ">\n");
     }
 
     public void writeAttribute(String name, String value) throws IOException {
-        writer.write(" " + name + "=\"" + xmlEscape(value) + "\"");
+        writer.write(" " + name + "=\"" + XMLUtil.xmlEscape(value) + "\"");
     }
 
     public void write(String text) throws IOException {
@@ -118,56 +221,6 @@ public class XMLWriter {
         if (writer != null) {
             writer.close();
         }
-    }
-
-    /**
-     * Escapes special XML characters in text content and removes invalid XML
-     * characters.
-     * XML 1.0 only allows:
-     * - #x9 (tab), #xA (line feed), #xD (carriage return)
-     * - #x20-#xD7FF, #xE000-#xFFFD, #x10000-#x10FFFF
-     */
-    public static String xmlEscape(String text) {
-        if (text == null) {
-            return "";
-        }
-
-        // First, sanitize invalid XML characters
-        text = sanitizeXMLCharacters(text);
-
-        // Then, escape XML entities
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
-    }
-
-    /**
-     * Removes characters that are invalid in XML 1.0.
-     * Control characters (except tab, newline, carriage return) are replaced with
-     * space.
-     */
-    private static String sanitizeXMLCharacters(String text) {
-        if (text == null || text.isEmpty()) {
-            return text;
-        }
-
-        StringBuilder sb = new StringBuilder(text.length());
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-
-            // Valid XML 1.0 characters
-            if (c == 0x9 || c == 0xA || c == 0xD ||
-                    (c >= 0x20 && c <= 0xD7FF) ||
-                    (c >= 0xE000 && c <= 0xFFFD)) {
-                sb.append(c);
-            } else {
-                // Replace invalid characters with space
-                sb.append(' ');
-            }
-        }
-        return sb.toString();
     }
 
 }

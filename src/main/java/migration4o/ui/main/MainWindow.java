@@ -120,8 +120,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Navigate to a class in the reference schema tab.
-     * Switches to the Schema tab and selects the specified class.
+     * Navigate to a class in the reference schema tab. Switches to the Schema tab
+     * and selects the specified class.
      * 
      * @param className the fully qualified class name to navigate to
      */
@@ -151,8 +151,7 @@ public class MainWindow extends JFrame {
 
         // Use reflection to call the private selectClassByName method
         try {
-            java.lang.reflect.Method method = SchemaEditorPanel.class.getDeclaredMethod("selectClassByName",
-                    String.class);
+            java.lang.reflect.Method method = SchemaEditorPanel.class.getDeclaredMethod("selectClassByName", String.class);
             method.setAccessible(true);
             method.invoke(referenceSchemaPanel, className);
         } catch (Exception e) {
@@ -215,8 +214,32 @@ public class MainWindow extends JFrame {
         // Add tabs (for now just placeholder, will add schema editor next)
         addTabs();
 
+        // Add global top toolbar
+        add(createMainToolbar(), BorderLayout.NORTH);
+
         // Add to frame
         add(tabbedPane, BorderLayout.CENTER);
+    }
+
+    private JToolBar createMainToolbar() {
+        JToolBar toolbar = new JToolBar();
+        toolbar.setFloatable(false);
+
+        JButton migrateButton = new JButton("Migrate");
+        migrateButton.setToolTipText("Export all modules from Migration structure");
+        migrateButton.addActionListener(e -> triggerMigrateAllModules());
+        toolbar.add(migrateButton);
+
+        return toolbar;
+    }
+
+    private void triggerMigrateAllModules() {
+        if (migrationStructurePanel == null) {
+            JOptionPane.showMessageDialog(this, "Migration structure is not initialized yet.", "Migration Unavailable", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        migrationStructurePanel.triggerExportAllModules();
     }
 
     private void addTabs() {
@@ -228,9 +251,9 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Initializes all static application tabs.
-     * This includes reference schema, schema structure, and migration structure.
-     * Called after MainWindow construction and before showing the window.
+     * Initializes all static application tabs. This includes reference schema,
+     * schema structure, and migration structure. Called after MainWindow
+     * construction and before showing the window.
      */
     public void initialize() {
         try {
@@ -259,16 +282,13 @@ public class MainWindow extends JFrame {
 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error loading default schema: " + e.getMessage(),
-                    "Schema Load Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error loading default schema: " + e.getMessage(), "Schema Load Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     /**
-     * Automatically opens a database file (used for command-line auto-open).
-     * Shows appropriate error messages if the file doesn't exist.
+     * Automatically opens a database file (used for command-line auto-open). Shows
+     * appropriate error messages if the file doesn't exist.
      * 
      * @param databasePath the absolute path to the database file
      */
@@ -278,27 +298,20 @@ public class MainWindow extends JFrame {
             System.out.println("Auto-opening database: " + databasePath);
             openDatabaseFile(databasePath);
         } else {
-            JOptionPane.showMessageDialog(this,
-                    "Database file not found: " + databasePath,
-                    "Auto-open Failed",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Database file not found: " + databasePath, "Auto-open Failed", JOptionPane.WARNING_MESSAGE);
         }
     }
 
     public void openDatabaseFile() {
         // Don't open if a database is already open
         if (currentDatabaseSchema != null) {
-            JOptionPane.showMessageDialog(this,
-                    "Please close the current database before opening a new one.",
-                    "Database Already Open",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please close the current database before opening a new one.", "Database Already Open", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open DB4O Database");
-        fileChooser.setFileFilter(
-                new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak, *.nozip)", "dat", "bak", "nozip"));
+        fileChooser.setFileFilter(new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak, *.nozip)", "dat", "bak", "nozip"));
         fileChooser.setCurrentDirectory(new File("local"));
 
         int result = fileChooser.showOpenDialog(this);
@@ -313,19 +326,13 @@ public class MainWindow extends JFrame {
     public void openDatabaseFile(String databasePath) {
         // Don't open if a database is already open
         if (currentDatabaseSchema != null) {
-            JOptionPane.showMessageDialog(this,
-                    "Please close the current database before opening a new one.",
-                    "Database Already Open",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Please close the current database before opening a new one.", "Database Already Open", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         File selectedFile = new File(databasePath);
         if (!selectedFile.exists()) {
-            JOptionPane.showMessageDialog(this,
-                    "Database file does not exist: " + databasePath,
-                    "File Not Found",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Database file does not exist: " + databasePath, "File Not Found", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -377,16 +384,11 @@ public class MainWindow extends JFrame {
                         // Check for common error patterns
                         String helpText = "";
                         if (detailedError.contains("InvalidIDException")) {
-                            helpText = "\n\nThis error typically indicates:\n" +
-                                    "• The database file is corrupted\n" +
-                                    "• The file is not a valid DB4O database\n" +
-                                    "• The database was created with an incompatible DB4O version";
+                            helpText = "\n\nThis error typically indicates:\n" + "• The database file is corrupted\n" + "• The file is not a valid DB4O database\n" + "• The database was created with an incompatible DB4O version";
                         } else if (detailedError.contains("InaccessibleObjectException")) {
-                            helpText = "\n\nThis error indicates Java module access issues.\n" +
-                                    "Try restarting the application - module access flags should now be enabled.";
+                            helpText = "\n\nThis error indicates Java module access issues.\n" + "Try restarting the application - module access flags should now be enabled.";
                         } else if (detailedError.contains("locked") || detailedError.contains("in use")) {
-                            helpText = "\n\nThe database file is locked by another process.\n" +
-                                    "Please close any other applications using this file.";
+                            helpText = "\n\nThe database file is locked by another process.\n" + "Please close any other applications using this file.";
                         }
 
                         JTextArea textArea = new JTextArea(detailedError + helpText);
@@ -398,10 +400,7 @@ public class MainWindow extends JFrame {
                         JScrollPane scrollPane = new JScrollPane(textArea);
                         scrollPane.setPreferredSize(new Dimension(600, 300));
 
-                        JOptionPane.showMessageDialog(MainWindow.this,
-                                scrollPane,
-                                "Database Error",
-                                JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(MainWindow.this, scrollPane, "Database Error", JOptionPane.ERROR_MESSAGE);
                         return;
                     }
 
@@ -416,8 +415,7 @@ public class MainWindow extends JFrame {
 
                     // Create Overview tab (placeholder for now)
                     JTextArea overviewText = new JTextArea();
-                    overviewText.setText("Database Overview\n\nDatabase: " + selectedFile.getName() + "\nPath: "
-                            + selectedFile.getAbsolutePath());
+                    overviewText.setText("Database Overview\n\nDatabase: " + selectedFile.getName() + "\nPath: " + selectedFile.getAbsolutePath());
                     overviewText.setEditable(false);
                     overviewText.setMargin(new java.awt.Insets(10, 10, 10, 10));
                     databaseTabPane.addTab("Overview", new JScrollPane(overviewText));
@@ -465,10 +463,7 @@ public class MainWindow extends JFrame {
 
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JOptionPane.showMessageDialog(MainWindow.this,
-                            "Error processing database:\n" + e.getMessage(),
-                            "Processing Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(MainWindow.this, "Error processing database:\n" + e.getMessage(), "Processing Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         };
@@ -499,15 +494,10 @@ public class MainWindow extends JFrame {
         final SchemaTabInfo finalReferenceTab = referenceTab;
 
         // Create comparison - use live schema from editor in case it was reloaded
-        SchemaComparison comparison = new SchemaComparison(
-                referenceTab.editorPanel.getSchema(), referenceTab.label,
-                databaseSchema, "Database");
+        SchemaComparison comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, databaseSchema, "Database");
 
         // Create comparison panel with callbacks to add missing elements
-        SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(
-                comparison,
-                (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass),
-                (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
+        SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
 
         // Set callback to mark editor as modified when field is edited from comparison
         comparisonPanel.setOnSchemaModified(() -> {
@@ -541,9 +531,7 @@ public class MainWindow extends JFrame {
             }
 
             // Create reachability analysis panel
-            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(
-                    databaseSchema,
-                    referenceTab.editorPanel.getSchema());
+            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(databaseSchema, referenceTab.editorPanel.getSchema());
 
             // Store and add reachability analysis tab to Database section
             reachabilityAnalysisTab = reachabilityPanel;
@@ -576,10 +564,7 @@ public class MainWindow extends JFrame {
         }
 
         // Create migration coverage panel
-        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(
-                referenceTab.editorPanel.getSchema(),
-                databaseSchema,
-                databaseService.getCurrentDatabasePath());
+        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), databaseSchema, databaseService.getCurrentDatabasePath());
 
         // Store and add migration coverage tab to Database section
         migrationCoverageTab = coveragePanel;
@@ -668,8 +653,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the current in-memory database container from the service.
-     * This allows reusing the same in-memory instance across all operations.
+     * Gets the current in-memory database container from the service. This allows
+     * reusing the same in-memory instance across all operations.
      * 
      * @return The database container, or null if no database is open
      */
@@ -678,8 +663,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Notifies all tabs that a database has been opened.
-     * Updates migration structure panel that database schema has changed.
+     * Notifies all tabs that a database has been opened. Updates migration
+     * structure panel that database schema has changed.
      */
     private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
         if (migrationStructurePanel != null) {
@@ -702,8 +687,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Reset reached values in the migration coverage panel.
-     * Should be called before starting a new export.
+     * Reset reached values in the migration coverage panel. Should be called before
+     * starting a new export.
      */
     public void resetCoverageReachedValues() {
         if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
@@ -713,8 +698,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Updates the migration results tab with new export statistics.
-     * Also switches to the Database tab and Warnings & errors sub-tab.
+     * Updates the migration results tab with new export statistics. Also switches
+     * to the Database tab and Warnings & errors sub-tab.
      * 
      * @param result The export statistics to display
      */
@@ -731,8 +716,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Switches to the Migration report tab in the Database section.
-     * This is called when an export operation starts.
+     * Switches to the Migration report tab in the Database section. This is called
+     * when an export operation starts.
      */
     public void showMigrationReportTab() {
         if (migrationReportPanel != null && databaseTabContainer != null) {
@@ -764,8 +749,7 @@ public class MainWindow extends JFrame {
     /**
      * Add a schema tab to the Schema nested section and track it for comparison.
      */
-    public void addSchemaTabToSchemaSection(String title, SchemaEditorPanel editor, DOSchema schema,
-            boolean isReference) {
+    public void addSchemaTabToSchemaSection(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         schemaTabPane.addTab(title, editor);
         schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
 
@@ -776,8 +760,7 @@ public class MainWindow extends JFrame {
     /**
      * Add a schema tab to the Database nested section and track it for comparison.
      */
-    public void addSchemaTabToDatabaseSection(String title, SchemaEditorPanel editor, DOSchema schema,
-            boolean isReference) {
+    public void addSchemaTabToDatabaseSection(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         databaseTabPane.addTab(title, editor);
         schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
 
@@ -820,10 +803,7 @@ public class MainWindow extends JFrame {
 
         // Don't allow tearing off the Welcome tab
         if (component == welcomePanel) {
-            JOptionPane.showMessageDialog(this,
-                    "The Welcome tab cannot be detached.",
-                    "Cannot Detach Tab",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "The Welcome tab cannot be detached.", "Cannot Detach Tab", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -870,27 +850,17 @@ public class MainWindow extends JFrame {
         List<SchemaTabInfo> availableSchemas = new ArrayList<>(schemaTabs.values());
 
         if (availableSchemas.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No schemas available for comparison.\nPlease open at least one schema or database.",
-                    "No Schemas", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No schemas available for comparison.\nPlease open at least one schema or database.", "No Schemas", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         if (availableSchemas.size() < 2) {
-            JOptionPane.showMessageDialog(this,
-                    "At least two schemas are required for comparison.\nPlease open another schema or database.",
-                    "Insufficient Schemas", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "At least two schemas are required for comparison.\nPlease open another schema or database.", "Insufficient Schemas", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
         // Show dialog to select schemas to compare
-        SchemaTabInfo reference = (SchemaTabInfo) JOptionPane.showInputDialog(this,
-                "Select reference schema (base):",
-                "Compare Schemas",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                availableSchemas.toArray(),
-                availableSchemas.get(0));
+        SchemaTabInfo reference = (SchemaTabInfo) JOptionPane.showInputDialog(this, "Select reference schema (base):", "Compare Schemas", JOptionPane.QUESTION_MESSAGE, null, availableSchemas.toArray(), availableSchemas.get(0));
 
         if (reference == null)
             return;
@@ -899,27 +869,16 @@ public class MainWindow extends JFrame {
         List<SchemaTabInfo> remaining = new ArrayList<>(availableSchemas);
         remaining.remove(reference);
 
-        SchemaTabInfo compared = (SchemaTabInfo) JOptionPane.showInputDialog(this,
-                "Select schema to compare with:",
-                "Compare Schemas",
-                JOptionPane.QUESTION_MESSAGE,
-                null,
-                remaining.toArray(),
-                remaining.get(0));
+        SchemaTabInfo compared = (SchemaTabInfo) JOptionPane.showInputDialog(this, "Select schema to compare with:", "Compare Schemas", JOptionPane.QUESTION_MESSAGE, null, remaining.toArray(), remaining.get(0));
 
         if (compared == null)
             return;
 
         // Perform comparison - use live schema from editors in case they were reloaded
-        SchemaComparison comparison = new SchemaComparison(
-                reference.editorPanel.getSchema(), reference.label,
-                compared.editorPanel.getSchema(), compared.label);
+        SchemaComparison comparison = new SchemaComparison(reference.editorPanel.getSchema(), reference.label, compared.editorPanel.getSchema(), compared.label);
 
         // Create comparison panel with callbacks to add missing elements
-        SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(
-                comparison,
-                (className, sourceClass) -> addClassToReference(reference.editorPanel, className, sourceClass),
-                (parentClass, field) -> addFieldToReference(reference.editorPanel, parentClass, field));
+        SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(reference.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(reference.editorPanel, parentClass, field));
 
         // Set callback to mark reference editor as modified when field is edited from
         // comparison
@@ -981,9 +940,7 @@ public class MainWindow extends JFrame {
             ComparisonTabInfo info = comparisonTabs.get(comp);
             if (info != null) {
                 // Create new comparison with updated schemas
-                SchemaComparison comparison = new SchemaComparison(
-                        info.referenceTab.editorPanel.getSchema(), info.referenceTab.label,
-                        info.comparedTab.editorPanel.getSchema(), info.comparedTab.label);
+                SchemaComparison comparison = new SchemaComparison(info.referenceTab.editorPanel.getSchema(), info.referenceTab.label, info.comparedTab.editorPanel.getSchema(), info.comparedTab.label);
 
                 // Update the panel with new comparison
                 info.panel.updateComparison(comparison);
@@ -1001,9 +958,9 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Request repeat export to be triggered after database loads.
-     * If database is already open, triggers immediately. Otherwise, sets flag to
-     * trigger after next database open.
+     * Request repeat export to be triggered after database loads. If database is
+     * already open, triggers immediately. Otherwise, sets flag to trigger after
+     * next database open.
      */
     public void triggerRepeatExport() {
         if (currentDatabaseSchema != null) {
