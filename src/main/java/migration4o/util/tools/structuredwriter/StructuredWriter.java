@@ -8,7 +8,7 @@ import java.util.Vector;
 /*
 <tag />: OPEN (<tag), CLOSE ( />\n)   CLOSE causes write of OPEN + CLOSE.
 
-<tag>content</tag><tag />: OPEN (<tag), data (> + content), CLOSE (/>\n)   CLOSE causes  of OPEN + CLOSE.
+<tag>content</tag>: OPEN (<tag), data (> + content), CLOSE (</tag>\n)   CLOSE causes  of OPEN + CLOSE.
 
 <tag>
   <child>content</child>
@@ -81,6 +81,9 @@ public class StructuredWriter {
     // Main CLOSE
     public void close() throws IOException {
         StructuredWriterBlock block = branch.lastElement();
+        boolean hasContent = block.content.length() > 0;
+        boolean hasChildren = !block.children.isEmpty();
+
         api.compile(block);
         writer.write(block.block.toString());
         System.out.println("Closed tag: " + block.block.toString());
