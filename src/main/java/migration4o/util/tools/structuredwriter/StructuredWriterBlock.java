@@ -11,6 +11,7 @@ public class StructuredWriterBlock {
     public StringBuilder content = new StringBuilder();
     public StringBuilder block = new StringBuilder();
     public Vector<StructuredWriterBlock> children = new Vector<StructuredWriterBlock>();
+    public boolean openWritten = false;
 
     public StructuredWriterBlock(String name, Map<String, String> attributes) {
         this.name = name;

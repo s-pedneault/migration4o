@@ -5,6 +5,17 @@ import java.io.Writer;
 import java.util.Map;
 import java.util.Vector;
 
+/*
+<tag />: OPEN (<tag), CLOSE ( />\n)   CLOSE causes write of OPEN + CLOSE.
+
+<tag>content</tag><tag />: OPEN (<tag), data (> + content), CLOSE (/>\n)   CLOSE causes  of OPEN + CLOSE.
+
+<tag>
+  <child>content</child>
+</tag> : OPEN (<tag), OPEN-2 (>\n), ..., CLOSE-2, CLOSE (</tag>\n)   OPEN-2 causes write of OPEN + OPEN-2
+
+*/
+
 public class StructuredWriter {
 
     final StructuredWriterAPI api;
@@ -14,68 +25,65 @@ public class StructuredWriter {
     public StructuredWriter(StructuredWriterAPI api, Writer writer) throws IOException {
         this.api = api;
         this.writer = writer;
-        init();
-    }
-
-    private void init() throws IOException {
-        writer.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-    }
-
-    public void metadata(StructuredWriterMetadata metadata) throws IOException {
-        if (metadata != null) {
-            open("metadata");
-            if (metadata.generator != null)
-                open("generator").data(metadata.generator).close();
-            if (metadata.provider != null)
-                open("provider").data(metadata.provider).close();
-            if (metadata.module != null)
-                open("module").data(metadata.module).close();
-            if (metadata.type != null)
-                open("type").data(metadata.type).close();
-            if (metadata.objects != null)
-                open("objects").data(metadata.objects).close();
-            if (metadata.date != null)
-                open("date").data(metadata.date).close();
-            close();
-        }
+        StructuredWriterUtil.initXML(this);
     }
 
     public StructuredWriter root(String name, String schemaLocation) throws IOException {
-        open(name, Map.of("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance", "xsi:noNamespaceSchemaLocation", schemaLocation));
+        StructuredWriterUtil.openRoot(this, name, schemaLocation);
         return this;
     }
 
+    // public StructuredWriter add(String name, Map<String, String> attributes)
+    // throws IOException {
+    // return open(name, attributes, false);
+    // }
+
     public StructuredWriter open(String name) throws IOException {
-        return open(name, null);
+        return open(name, null, true);
     }
 
     public StructuredWriter open(String name, Map<String, String> attributes) throws IOException {
+        return open(name, attributes, true);
+    }
+
+    public StructuredWriter open(String name, Map<String, String> attributes, boolean complex) throws IOException {
         StructuredWriterBlock block = new StructuredWriterBlock(name, attributes);
-        open(block);
+        open(block, complex);
         return this;
     }
 
-    public StructuredWriter open(StructuredWriterBlock block) throws IOException {
-        block.indent = branch.size();
-        if (branch.size() > 0) {
-            StructuredWriterBlock parent = branch.lastElement();
+    // Main OPEN
+    public StructuredWriter open(StructuredWriterBlock block, boolean complex) throws IOException {
+        StructuredWriterBlock parent = block();
+        if (parent != null) {
             parent.children.add(block);
         }
+        block.indent = branch.size();
         branch.add(block);
+        api.open(block, complex);
+        if (complex) {
+            writer.write(block.block.toString());
+            System.out.println("Opened tag: " + block.block.toString());
+            block.block.setLength(0); // Clear the block content as it's already written
+        }
         return this;
     }
 
+    // Main DATA
     public StructuredWriter data(String content) throws IOException {
         if (content == null)
             return this;
         api.data(content, block());
+        System.out.println("      - Added " + content.length() + " to block  " + block().name);
         return this;
     }
 
+    // Main CLOSE
     public void close() throws IOException {
         StructuredWriterBlock block = branch.lastElement();
         api.compile(block);
         writer.write(block.block.toString());
+        System.out.println("Closed tag: " + block.block.toString());
         branch.removeLast();
     }
 
