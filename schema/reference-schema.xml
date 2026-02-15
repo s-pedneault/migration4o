@@ -3,6 +3,7 @@
     <fields>
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
+        <field source="mIDDBConso" destinationName="idDBConso" isExported="false" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDescription" destinationName="description" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -1027,8 +1028,8 @@
         <field source="mDesc" definition="mDescription" />
         <field source="mDureeCertificationValide" destinationName="dureeCertificationValide" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" />
         <field source="mInactif" definition="mInactif" />
-        <field source="mNbrHre" destinationName="nbrHre" isExported="true" skipWhen="DEFAULT" type="double" />
-        <field source="mNbrHrePratique" destinationName="nbrHrePratique" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mNbrHre" destinationName="nombreHeures" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mNbrHrePratique" destinationName="nombreHeuresPratique" isExported="true" skipWhen="DEFAULT" type="double" />
         <field source="mNom" definition="mNom" />
         <field source="mOrganisme" destinationName="organisme" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Periodicite" embedContents="true" />
@@ -1139,7 +1140,7 @@
         <field source="mDateDernSync" destinationName="dateDernSync" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDateTransfertRAO" destinationName="dateTransfertRAO" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mDatum" destinationName="datum" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mDescUtilisation" destinationName="descUtilisation" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mDescUtilisation" destinationName="descriptionUtilisation" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDossierPapier" destinationName="dossierPapier" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mEnergie" destinationName="energie" isExported="true" skipWhen="DEFAULT" type="gest.dossPrev.Energie" embedContents="true" />
         <field source="mEtat" destinationName="etat" isExported="true" skipWhen="DEFAULT" type="int" />
@@ -1499,7 +1500,7 @@
     <class source="gest.employe.EmployeDateTaux" destinationName="EmployeDateTaux" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.employe.Employe" field="mVectEmployeDateTaux" />
         <reference class="gest.grade.Grade" field="mVectEmployeDateTaux" />
-        <field source="mDateVigueur" destinationName="dateVigueur" isExported="true" skipWhen="DEFAULT" type="date" />
+        <field source="mDateVigueur" destinationName="dateEnVigueur" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mVectEmployeTaux" destinationName="listeEmployeTaux" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.employe.EmployeTaux" />
     </class>
     <class source="gest.employe.EmployeNomin" destinationName="EmployeNomination" isExported="true" parentClass="gest.gen.Entite">
@@ -1597,8 +1598,8 @@
         <field source="mCouleurActiv" destinationName="couleurActivite" isExported="true" skipWhen="DEFAULT" type="java.awt.Color" embedContents="true" />
         <field source="mInactif" definition="mInactif" />
         <field source="mNom" definition="mNom" />
-        <field source="mVectIDEmploye" destinationName="listeIdEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.employe.IDEmploye" />
-        <field source="mVectIDEquipeOuIDEmpl" destinationName="listeIdEquipeOuIdEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.equipe.IDEquipeOuIDEmploye" />
+        <field source="mVectIDEmploye" destinationName="listeIDEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.employe.IDEmploye" />
+        <field source="mVectIDEquipeOuIDEmpl" destinationName="listeIDEquipeOuIDEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.equipe.IDEquipeOuIDEmploye" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.equipe.IDEquipe" destinationName="IDEquipe" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipe.Equipe">
@@ -1638,23 +1639,23 @@
         <field source="mManufacturier" destinationName="manufacturier" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mModele" destinationName="modele" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNote" definition="mNote" />
-        <field source="mNumInventaire" destinationName="numInventaire" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumSerie" destinationName="numSerie" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumInventaire" destinationName="numeroInventaire" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumSerie" destinationName="numeroSerie" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mSituationEquipement" destinationName="situationEquipement" isExported="true" skipWhen="DEFAULT" type="gest.equipement.SituationEquipement" embedContents="true" />
         <field source="mVectPer" destinationName="listePer" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.maintenance.PeriodiciteEquip" />
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
-        <field source="mIDCentreServ" destinationName="idCentreServ" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
+        <field source="mIDCentreServ" destinationName="idCentreService" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
         <field source="mIDFournisseur" destinationName="idFournisseur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
-        <field source="mIDHisto" destinationName="idHisto" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.maintEquip.IDMaintEquipHisto" embedContents="true" />
+        <field source="mIDHisto" destinationName="idHistorique" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.maintEquip.IDMaintEquipHisto" embedContents="true" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDTypeEquipement" />
     </class>
-    <class source="gest.equipement.IDEquipConsom" destinationName="IDEquipConsom" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipConsom">
+    <class source="gest.equipement.IDEquipConsom" destinationName="IDEquipementConsommable" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipConsom">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipConsom" />
         <reference class="gest.maintEquip.MaintEquipHisto" field="mIDEquipConsom" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.equipement.IDEquipExist" destinationName="IDEquipExist" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipExist">
+    <class source="gest.equipement.IDEquipExist" destinationName="IDEquipement" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.equipement.EquipExist">
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipExist" />
         <reference class="gest.equipement.SituationEquipement" field="mIDEquipExistAssemble" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDEquipExistAssemble" />
@@ -1678,8 +1679,8 @@
         <reference class="gest.employe.Employe" field="mVectQteRequise" />
         <reference class="gest.grade.Grade" field="mVectQteRequise" />
         <reference class="gest.vehicule.Vehicule" field="mVectQteRequise" />
-        <field source="mQteMax" destinationName="qteMax" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mQteMin" destinationName="qteMin" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mQteMax" destinationName="quantiteMaximum" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mQteMin" destinationName="quantiteMinimum" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDTypeEquipement" />
     </class>
     <class source="gest.equipement.SituationEquipement" destinationName="SituationEquipement" isExported="true" parentClass="gest.gen.Entite">
@@ -1687,12 +1688,12 @@
         <field source="mEtat" destinationName="etat" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mEtatComportement" destinationName="etatComportement" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mIDCaserne" definition="mIDCaserne" />
-        <field source="mIDCentreServ" destinationName="idCentreServ" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
+        <field source="mIDCentreServ" destinationName="idCentreService" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" />
         <field source="mIDCompartiment" destinationName="idCompartiment" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.vehicule.IDCompartiment" />
-        <field source="mIDEmplAssoc" destinationName="idEmplAssoc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
-        <field source="mIDEquipConsom" destinationName="idEquipConsom" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipConsom" embedContents="true" />
-        <field source="mIDEquipExist" destinationName="idEquipExist" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
-        <field source="mIDEquipExistAssemble" destinationName="idEquipExistAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
+        <field source="mIDEmplAssoc" destinationName="idEmplacementAssocie" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
+        <field source="mIDEquipConsom" destinationName="idEquipementConsommable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipConsom" embedContents="true" />
+        <field source="mIDEquipExist" destinationName="idEquipement" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
+        <field source="mIDEquipExistAssemble" destinationName="idEquipementAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.vehicule.IDVehicule" />
     </class>
     <class source="gest.equipement.TypeEquipement" destinationName="TypeEquipement" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -1726,40 +1727,40 @@
         <reference class="gest.vehicule.Vehicule" field="mVectPer" />
         <field source="mIDTypeMaint" destinationName="idTypeMaintenance" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintenance.IDTypeMaint" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.employe.IDEmploye" />
-        <field source="mCalcProchPerSurDernMaint" destinationName="calcProchPerSurDernMaint" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mDateDernMaint" destinationName="dateDernMaint" isExported="true" skipWhen="DEFAULT" type="date" />
+        <field source="mCalcProchPerSurDernMaint" destinationName="calculerProchainPeriodiqueSurDerniereMaintenance" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mDateDernMaint" destinationName="dateDerniereMaintenance" isExported="true" skipWhen="DEFAULT" type="date" />
     </class>
     <class source="gest.feuilleTemps.ParamFeuilleTemps" destinationName="ParamFeuilleTemps" isExported="true" title="Paramètres de la feuille de temps" parentClass="gest.gen.EntiteParam">
         <field source="mActiver" destinationName="activer" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mAffectationTravail" destinationName="affectationTravail" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mDept" destinationName="dept" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mDept" destinationName="departement" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDivision" destinationName="division" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mFormatDesjardins" destinationName="formatDesjardins" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mFormatExport" destinationName="formatExport" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mFormatPerPaie" destinationName="formatPerPaie" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mFormatPerPaie" destinationName="formatPeriodePaie" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mGroupeEmploye" destinationName="groupeEmploye" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mImputationBud" destinationName="imputationBud" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mInclureNoSemaine" destinationName="inclureNoSemaine" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mImputationBud" destinationName="imputationBudget" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mInclureNoSemaine" destinationName="inclureNumeroSemaine" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mInclureTauxHoraire" destinationName="inclureTauxHoraire" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mInfosAuthAurora" destinationName="infosAuthAurora" isExported="true" skipWhen="DEFAULT" type="gest.gen.InfosAuthAurora" embedContents="true" />
         <field source="mLieuTravail" destinationName="lieuTravail" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mMaxDeuxDecimales" destinationName="maxDeuxDecimales" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mNoEmplQuatreChiffres" destinationName="noEmplQuatreChiffres" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mNoGrandLivre" destinationName="noGrandLivre" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumCie" destinationName="numCie" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mPosteBud" destinationName="posteBud" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mMaxDeuxDecimales" destinationName="maximumDeuxDecimales" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mNoEmplQuatreChiffres" destinationName="numeroEmployeQuatreChiffres" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mNoGrandLivre" destinationName="numeroGrandLivre" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumCie" destinationName="numeroCompagnie" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mPosteBud" destinationName="posteBudgetaire" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPosteEffectif" destinationName="posteEffectif" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mProjetSpecif" destinationName="projetSpecif" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mRepert" destinationName="repert" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mSaveOnServer" destinationName="saveOnServer" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mRepert" destinationName="repertoire" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mSaveOnServer" destinationName="enregistrerSurServeur" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mService" destinationName="service" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mSousDept" destinationName="sousDept" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mSousDept" destinationName="sousDepartement" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mSousProjet" destinationName="sousProjet" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mSyndicat" destinationName="syndicat" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mTypeProjetSpecif" destinationName="typeProjetSpecif" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mTypeTrans" destinationName="typeTrans" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mTypeTrans" destinationName="typeTransaction" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mUniteRH" destinationName="uniteRH" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mUniteRegroup" destinationName="uniteRegroup" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mUniteRegroup" destinationName="uniteRegroupement" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mUrlApiAurora" destinationName="urlApiAurora" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mVectChampsFeuilleTemps" destinationName="listeChampsFeuilleTemps" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="java.lang.Object" />
         <field source="mVectCodeGain" destinationName="listeCodeGain" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="string" />
@@ -1769,15 +1770,15 @@
     <class source="gest.feuilleTemps.ParamFeuilleTemps$NChampSuppDesjardins" destinationName="ChampSupplementaireDesjardins" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.feuilleTemps.ParamFeuilleTemps" field="mVectValeursParGrade" />
         <field source="iCodeGain" destinationName="codeGain" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="iNumTravail1" destinationName="numTravail1" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="iNumTravail2" destinationName="numTravail2" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="iNumTravail1" destinationName="numeroTravail1" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="iNumTravail2" destinationName="numeroTravail2" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
     <class source="gest.feuilleTemps.TempsPaye" destinationName="TempsPaye" isExported="true" parentClass="gest.gen.EntiteContientID">
         <field source="mID" definition="mID" />
-        <field source="mCmptClone" destinationName="cmptClone" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mCmptClone" destinationName="compteClone" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mDebut" destinationName="debut" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mFin" destinationName="fin" isExported="true" skipWhen="DEFAULT" type="date" />
-        <field source="mNbrHre" destinationName="nbrHre" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mNbrHre" destinationName="nombreHeures" isExported="true" skipWhen="DEFAULT" type="double" />
         <field source="mIDInfoEmploye" destinationName="idInfoEmploye" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDInfoEmploye" embedContents="true" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -1807,9 +1808,9 @@
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
         <reference class="gest.secCiv.Mission" field="mIDFichier" />
         <field source="mID" definition="mID" />
-        <field source="mData" destinationName="data" isExported="true" skipWhen="DEFAULT" type="byte[]" />
+        <field source="mData" destinationName="donnees" isExported="true" skipWhen="DEFAULT" type="byte[]" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="DEFAULT" type="date" />
-        <field source="mDateDernModif" destinationName="dateDernModif" isExported="true" skipWhen="DEFAULT" type="date" />
+        <field source="mDateDernModif" destinationName="dateDerniereModification" isExported="true" skipWhen="DEFAULT" type="date" />
         <field source="mExpirationDocument" destinationName="expirationDocument" isExported="true" skipWhen="DEFAULT" type="gest.gen.ExpirationDocument" embedContents="true" />
         <field source="mImageCompressee" destinationName="imageCompressee" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNom" definition="mNom" />
@@ -1847,12 +1848,12 @@
         <reference class="gest.typePrev.TypePrev" field="mFormElec" />
         <reference class="gest.maintenance.TypeMaint" field="mFormElec" />
         <field source="mID" definition="mID" />
-        <field source="mDernIdent" destinationName="dernIdent" isExported="true" skipWhen="DEFAULT" type="int" />
+        <field source="mDernIdent" destinationName="dernierIdentifiant" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mVectSection" destinationName="listeSection" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.formElec.Section" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.formElec.ParamFigureBoolean" destinationName="ParamFigureBoolean" isExported="true" parentClass="gest.formElec.ParamFigureSaisie">
-        <field source="mDescProp" destinationName="descProp" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mDescProp" destinationName="descriptionPropriete" isExported="true" skipWhen="DEFAULT" type="boolean" />
     </class>
     <class source="gest.formElec.ParamFigureDate" destinationName="ParamFigureDate" isExported="true" parentClass="gest.formElec.ParamFigureSaisie">
     </class>
@@ -1861,7 +1862,7 @@
     <class source="gest.formElec.ParamFigurePanel" destinationName="ParamFigurePanel" isExported="true" parentClass="gest.formElec.ParamFigureSaisie">
         <field source="mOuvrirDansFenetre" destinationName="ouvrirDansFenetre" isExported="true" skipWhen="DEFAULT" type="boolean" />
     </class>
-    <class source="gest.formElec.ParamFigureSaisie" destinationName="ParamFigureSaisie" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.formElec.ParamFigureSaisie" destinationName="ParamFigureSaisie" isExported="true" parentClass="gest.gen.EntiteContientID" title="TODO">
         <reference class="gest.formElec.Section" field="mVectParam" />
         <field source="mID" definition="mID" />
         <field source="mAssocSectCond" destinationName="assocSectCond" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -1880,12 +1881,12 @@
     <class source="gest.formElec.ParamFigureString" destinationName="ParamFigureString" isExported="true" parentClass="gest.formElec.ParamFigureSaisie">
         <field source="mMultiLigne" destinationName="multiLigne" isExported="true" skipWhen="DEFAULT" type="boolean" />
     </class>
-    <class source="gest.formElec.Section" destinationName="Section" isExported="true" parentClass="gest.gen.Entite">
+    <class source="gest.formElec.Section" destinationName="Section" isExported="true" parentClass="gest.gen.Entite" title="TODO">
         <reference class="gest.codeAppel.CodeAppel" field="mVectSection" />
         <reference class="gest.rapport.RapportPerso" field="mVectIDSection" />
         <reference class="gest.formElec.FormElec" field="mVectSection" />
-        <field source="mConditionnalSect" destinationName="conditionnalSect" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mIdent" destinationName="ident" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
+        <field source="mConditionnalSect" destinationName="sectionConditionnelle" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mIdent" destinationName="identifiant" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mNom" definition="mNom" />
         <field source="mPermetAnom" destinationName="permetAnom" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mTousAnom" destinationName="tousAnom" isExported="true" skipWhen="DEFAULT" type="boolean" />
@@ -1896,7 +1897,7 @@
     <class source="gest.formation.CoursAvantEmbauche" destinationName="CoursAvantEmbauche" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.employe.Employe" field="mVectCoursAvantEmbauche" />
         <field source="mDateComplete" destinationName="dateComplete" isExported="true" skipWhen="DEFAULT" type="date" />
-        <field source="mDureeNbrHre" destinationName="dureeNbrHre" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mDureeNbrHre" destinationName="dureeNombreHeures" isExported="true" skipWhen="DEFAULT" type="double" />
         <field source="mIDCours" destinationName="idCours" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.cours.IDCours" />
         <field source="mIDProgramme" destinationName="idProgramme" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.cours.IDProgramme" />
     </class>
@@ -1909,12 +1910,12 @@
         <field source="mDateIdent" definition="mDateIdent" />
         <field source="mDetail" definition="mDetail" />
         <field source="mIdentJour" destinationName="identJour" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
-        <field source="mNbrHreForm" destinationName="nbrHreForm" isExported="true" skipWhen="DEFAULT" type="double" />
-        <field source="mNbrHrePratique" destinationName="nbrHrePratique" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mNbrHreForm" destinationName="nombreHeuresForm" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mNbrHrePratique" destinationName="nombreHeuresPratique" isExported="true" skipWhen="DEFAULT" type="double" />
         <field source="mNomFormExterne" destinationName="nomFormExterne" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mNumActivite" destinationName="numActivite" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mOrganisme" destinationName="organisme" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mRefComptable" destinationName="refComptable" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mRefComptable" destinationName="referenceComptable" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mTypeFormateur" destinationName="typeFormateur" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" />
@@ -2006,7 +2007,7 @@
         <reference class="gest.caserne.Caserne" field="mAdresse" />
         <reference class="gest.dossPrev.DossPrev" field="mVectAliasAdresse" />
         <reference class="gest.rci.VehImplique" field="mRetrouveParAdresse" />
-        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="false" skipWhen="DEFAULT" type="string" />
+        <field source="INDEX_toString" destinationName="INDEX_toString" isExported="false" skipWhen="DEFAULT" type="string" />
         <field source="mAfficherSuite" destinationName="afficherSuite" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mAppart" destinationName="appart" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mArrondissement" destinationName="arrondissement" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -2041,7 +2042,7 @@
     <class source="gest.gen.EntiteContientID" destinationName="EntiteContientID" isExported="true" parentClass="gest.gen.Entite">
         <field source="mDernModif" destinationName="dernModif" isExported="true" skipWhen="DEFAULT" type="long" />
         <field source="mLastFusionTime" destinationName="lastFusionTime" isExported="false" skipWhen="DEFAULT" type="long" />
-        <field source="mIDDBConso" destinationName="idDBConso" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
+        <field source="mIDDBConso" definition="mIDDBConso" />
         <field source="mIDEntiteFusionSrc" destinationName="idEntiteFusionSrc" isExported="false" skipWhen="MINUS_ONE,NULL" type="long" embedContents="true" />
     </class>
     <class source="gest.gen.EntiteContientIDResettableMobile" destinationName="EntiteContientIDResettableMobile" isExported="true" parentClass="gest.gen.EntiteContientID">
@@ -2049,7 +2050,7 @@
     </class>
     <class source="gest.gen.EntiteParam" destinationName="EntiteParam" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.gen.EntiteParam.NCompteur" field="mParamActivite" />
-        <field source="mIDDBConso" destinationName="idDBConso" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
+        <field source="mIDDBConso" definition="mIDDBConso" />
     </class>
     <class source="gest.gen.ExpirationDocument" destinationName="ExpirationDocument" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.graph.Graph" field="mExpirationDocument" />
@@ -2068,7 +2069,7 @@
         <reference class="gest.gen.EntiteParam.NCompteur" field="mVectIDGroupe" />
         <field source="mBypassValidIDSSISiTous" destinationName="bypassValidIDSSISiTous" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mContrainte" destinationName="contrainte" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mIDDBConso" destinationName="idDBConso" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" />
+        <field source="mIDDBConso" definition="mIDDBConso" />
     </class>
     <class source="gest.gen.IDEntiteDefaut" destinationName="IDEntiteDefaut" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.gen.EntiteDefaut">
         <field source="mID" definition="mID" />
@@ -2095,11 +2096,11 @@
         <reference class="gest.secCiv.RessSecCiv" field="mLieu" />
         <reference class="gest.borne.Borne" field="mLieu" />
         <reference class="gest.intervention.Intervention" field="mLieuInterv" />
-        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="false" skipWhen="DEFAULT" type="string" />
-        <field source="mArrond" destinationName="arrond" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="INDEX_toString" destinationName="INDEX_toString" isExported="false" skipWhen="DEFAULT" type="string" />
+        <field source="mArrond" destinationName="arrondissement" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mCodeGeo" destinationName="codeGeo" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mCodePost" destinationName="codePost" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mDescLieu" destinationName="descLieu" isExported="true" skipWhen="DEFAULT" type="string" format="TRIM" />
+        <field source="mDescLieu" destinationName="descriptionLieu" isExported="true" skipWhen="DEFAULT" type="string" format="TRIM" />
         <field source="mDistrict" destinationName="district" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
@@ -2947,15 +2948,15 @@
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mDateIdent" definition="mDateIdent" />
         <field source="mDemanderActualiserCarteAppel" destinationName="demanderActualiserCarteAppel" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mDescBatiment" destinationName="descBatiment" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervDescBatiment" embedContents="true" />
-        <field source="mDossPrevAValiderPourSub" destinationName="dossPrevAValiderPourSub" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mDescBatiment" destinationName="descriptionBatiment" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervDescBatiment" embedContents="true" />
+        <field source="mDossPrevAValiderPourSub" destinationName="dossierAdresseAValiderPourSub" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mEnquete" destinationName="enquete" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervEnquete" embedContents="true" />
         <field source="mEquipement" destinationName="equipement" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervEquipement" embedContents="true" />
         <field source="mGenererDSI2003" destinationName="genererDSI2003" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mIdentJour" destinationName="identJour" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
-        <field source="mIntervFeuExterieur" destinationName="intervFeuExterieur" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervFeuExterieur" embedContents="true" />
-        <field source="mIntervMemoFacturation" destinationName="intervMemoFacturation" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervMemoFacturation" embedContents="true" />
-        <field source="mIntervPerteIndirecte" destinationName="intervPerteIndirecte" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervPerteIndirecte" embedContents="true" />
+        <field source="mIntervFeuExterieur" destinationName="interventionFeuExterieur" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervFeuExterieur" embedContents="true" />
+        <field source="mIntervMemoFacturation" destinationName="interventionMemoFacturation" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervMemoFacturation" embedContents="true" />
+        <field source="mIntervPerteIndirecte" destinationName="interventionPerteIndirecte" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervPerteIndirecte" embedContents="true" />
         <field source="mIntervenant" destinationName="intervenant" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervIntervenant" embedContents="true" />
         <field source="mLieu" destinationName="lieu" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mLieuArrond" destinationName="lieuArrond" isExported="true" skipWhen="DEFAULT" type="string" />
@@ -2963,13 +2964,13 @@
         <field source="mLieuCodePost" destinationName="lieuCodePost" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mLieuInterv" destinationName="lieuInterv" isExported="true" skipWhen="DEFAULT" type="gest.gen.Lieu" embedContents="true" />
         <field source="mLieuSecteur" destinationName="lieuSecteur" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumActivite" destinationName="numActivite" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumConfirmDSI2003" destinationName="numConfirmDSI2003" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumDossierEntraide" destinationName="numDossierEntraide" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mNumDossierMemeInterv" destinationName="numDossierMemeInterv" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumActivite" destinationName="numeroActivite" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumConfirmDSI2003" destinationName="numeroConfirmationDSI2003" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumDossierEntraide" destinationName="numeroDossierEntraide" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mNumDossierMemeInterv" destinationName="numeroDossierMemeInterv" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mPhotoSaisie" destinationName="photoSaisie" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervPhotoSaisie" embedContents="true" />
         <field source="mPrevention" destinationName="prevention" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervPrevention" embedContents="true" />
-        <field source="mRemiseProp" destinationName="remiseProp" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervRemiseProp" embedContents="true" />
+        <field source="mRemiseProp" destinationName="remisePropriete" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervRemiseProp" embedContents="true" />
         <field source="mRepondant" destinationName="repondant" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervRepondant" embedContents="true" />
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mTemperature" destinationName="temperature" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervTemperature" embedContents="true" />
@@ -2981,7 +2982,7 @@
         <field source="mVectIntervAutreBatiment" destinationName="listeIntervAutreBatiment" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.IntervAutreBatiment" />
         <field source="mVectIntervVehicule" destinationName="listeIntervVehicule" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.IntervVehicule" />
         <field source="mVectSuiviIntervention" destinationName="listeSuiviIntervention" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.SuiviIntervention" />
-        <field source="mVectTabsStates" destinationName="listeTabsStates" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.TabState" />
+        <field source="mVectTabsStates" destinationName="listeEtatOnglet" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.TabState" />
         <field source="mVieHumaine" destinationName="vieHumaine" isExported="true" skipWhen="DEFAULT" type="gest.intervention.IntervVieHumaine" embedContents="true" />
         <field source="@mVectRapportOfficier" destinationName="listeRapportOfficier" isExported="true" skipWhen="EMPTY_COLLECTION" type="gest.intervention.RapportOfficier" collection="true" embedContents="true">
             <criterias operator="AND">
@@ -3000,7 +3001,7 @@
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mIDTypeActivite" definition="mIDTypeActivite" />
     </class>
-    <class source="gest.intervention.MemoFactDetail" destinationName="MemoFactDetail" isExported="true" parentClass="gest.gen.Entite">
+    <class source="gest.intervention.MemoFactDetail" destinationName="MemoFacturationDetail" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.MemoFacturation" field="mVectMemoFactDetail" />
         <field source="mCodeProduit" destinationName="codeProduit" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDesc" definition="mDescription" />
@@ -3252,7 +3253,7 @@
         <field source="mDesc" definition="mDescription" />
         <field source="mIdentJour" destinationName="identJour" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mInitEquipement" destinationName="initEquipement" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mMaintSurUnEquipExist" destinationName="maintSurUnEquipExist" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mMaintSurUnEquipExist" destinationName="maintenanceSurUnEquipement" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mNote" definition="mNote" />
         <field source="mNumActivite" destinationName="numActivite" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" />
@@ -3266,7 +3267,7 @@
         <field source="mIDCaserne" definition="mIDCaserne" />
         <field source="mIDCaserneMaint" destinationName="idCaserneMaint" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.caserne.IDCaserne" />
         <field source="mIDEmployeMaint" destinationName="idEmployeMaint" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
-        <field source="mIDEquipExistAssemble" destinationName="idEquipExistAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
+        <field source="mIDEquipExistAssemble" destinationName="idEquipementAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
         <field source="mIDMaintenance" destinationName="idMaintenance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.maintenance.IDMaintenance" embedContents="true" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
         <field source="mIDSSI" definition="mIDSSI" />
@@ -3302,8 +3303,8 @@
         <field source="mIDCompartiment" destinationName="idCompartiment" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.vehicule.IDCompartiment" />
         <field source="mIDEmplAssoc" destinationName="idEmplAssoc" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" />
         <field source="mIDEquipConsom" destinationName="idEquipConsom" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipConsom" embedContents="true" />
-        <field source="mIDEquipExist" destinationName="idEquipExist" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
-        <field source="mIDEquipExistAssemble" destinationName="idEquipExistAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
+        <field source="mIDEquipExist" destinationName="idEquipement" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.equipement.IDEquipExist" />
+        <field source="mIDEquipExistAssemble" destinationName="idEquipementAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
         <field source="mIDMaintEquip" destinationName="idMaintEquip" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintEquip.IDMaintEquip" />
         <field source="mIDMaintEquipHistoOriginal" destinationName="idMaintEquipHistoOriginal" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.maintEquip.IDMaintEquipHisto" />
         <field source="mIDSSI" definition="mIDSSI" />
@@ -3344,7 +3345,7 @@
         <field source="mTypeEquip" destinationName="typeEquip" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mVectIDCaserne" destinationName="listeIDCaserne" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.caserne.IDCaserne" />
         <field source="mVectIDEmploye" destinationName="listeIDEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.employe.IDEmploye" />
-        <field source="mVectIDEquipExist" destinationName="listeIDEquipExist" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.equipement.IDEquipExist" />
+        <field source="mVectIDEquipExist" destinationName="listeIDEquipement" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.equipement.IDEquipExist" />
         <field source="mVectIDTypeEquipement" destinationName="listeIDTypeEquipement" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.equipement.IDTypeEquipement" />
         <field source="mVectIDVehicule" destinationName="listeIDVehicule" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.vehicule.IDVehicule" />
         <field source="mVectPer" destinationName="listePer" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.maintenance.PeriodiciteEquip" />
