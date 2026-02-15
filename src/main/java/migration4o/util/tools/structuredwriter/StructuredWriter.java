@@ -6,10 +6,13 @@ import java.util.Map;
 import java.util.Vector;
 
 /*
+elementWithoutContent();
 <tag />: OPEN (<tag), CLOSE ( />\n)   CLOSE causes write of OPEN + CLOSE.
 
+elementWithContent()
 <tag>content</tag>: OPEN (<tag), data (> + content), CLOSE (</tag>\n)   CLOSE causes  of OPEN + CLOSE.
 
+elementWithStructure()
 <tag>
   <child>content</child>
 </tag> : OPEN (<tag), OPEN-2 (>\n), ..., CLOSE-2, CLOSE (</tag>\n)   OPEN-2 causes write of OPEN + OPEN-2
@@ -20,82 +23,166 @@ public class StructuredWriter {
 
     final StructuredWriterAPI api;
     final Writer writer;
-    public Vector<StructuredWriterBlock> branch = new Vector<StructuredWriterBlock>();
+    public Vector<StructuredWriterElement> branch = new Vector<StructuredWriterElement>();
 
     public StructuredWriter(StructuredWriterAPI api, Writer writer) throws IOException {
         this.api = api;
         this.writer = writer;
-        StructuredWriterUtil.initXML(this);
+        api.initialize(this);
     }
 
-    public StructuredWriter root(String name, String schemaLocation) throws IOException {
+    public StructuredWriter elementWithoutContent(String name) throws IOException {
+        return elementWithoutContent(name, null);
+    }
+
+    public StructuredWriter elementWithoutContent(String name, Map<String, String> attributes) throws IOException {
+        StructuredWriterElementWithoutContent element = new StructuredWriterElementWithoutContent(name, attributes);
+        pushElement(element);
+        api.add(element);
+        writer.write(element.prefix.toString());
+        popElement(element);
+        return this;
+    }
+
+    public StructuredWriter elementWithContent(String name, String value, boolean skipIfEmpty) throws IOException {
+        return elementWithContent(name, null, value, skipIfEmpty);
+    }
+
+    public StructuredWriter elementWithContent(String name, Map<String, String> attributes, String value, boolean skipIfEmpty) throws IOException {
+        StructuredWriterElementWithContent element = new StructuredWriterElementWithContent(name, attributes);
+        pushElement(element);
+        try {
+            if (value != null)
+                api.addContent(element, value);
+
+            if (skipIfEmpty && element.content.isEmpty())
+                return this;
+
+            writer.write(element.prefix.toString());
+            writer.write(element.content.toString());
+            writer.write(element.suffix.toString());
+            return this;
+        } finally {
+            popElement(element);
+        }
+    }
+
+    public StructuredWriter openRootStructure(String name, String schemaLocation) throws IOException {
         StructuredWriterUtil.openRoot(this, name, schemaLocation);
         return this;
     }
 
-    // public StructuredWriter add(String name, Map<String, String> attributes)
-    // throws IOException {
-    // return open(name, attributes, false);
-    // }
-
-    public StructuredWriter open(String name) throws IOException {
-        return open(name, null, true);
+    public StructuredWriter openStructure(String name) throws IOException {
+        return openStructure(name, null);
     }
 
-    public StructuredWriter open(String name, Map<String, String> attributes) throws IOException {
-        return open(name, attributes, true);
-    }
-
-    public StructuredWriter open(String name, Map<String, String> attributes, boolean complex) throws IOException {
-        StructuredWriterBlock block = new StructuredWriterBlock(name, attributes);
-        open(block, complex);
+    public StructuredWriter openStructure(String name, Map<String, String> attributes) throws IOException {
+        StructuredWriterElementWithStructure element = new StructuredWriterElementWithStructure(name, attributes);
+        pushElement(element);
+        api.openStructure(element);
+        writer.write(element.prefix.toString());
         return this;
     }
 
-    // Main OPEN
-    public StructuredWriter open(StructuredWriterBlock block, boolean complex) throws IOException {
-        StructuredWriterBlock parent = block();
+    public StructuredWriter closeStructure(String name) throws IOException {
+        // Validate we are indeed closing the expected structure
+        StructuredWriterElement element = element();
+        if (element == null || !(element instanceof StructuredWriterElementWithStructure) || !element.name.equals(name)) {
+            throw new IOException("Mismatched closing tag: expected </" + element.name + "> but got </" + name + ">");
+        }
+        api.closeStructure((StructuredWriterElementWithStructure) element);
+        writer.write(element.suffix.toString());
+        popElement(element);
+        return this;
+    }
+
+    private void pushElement(StructuredWriterElement element) {
+        StructuredWriterElement parent = element();
         if (parent != null) {
-            parent.children.add(block);
+            parent.children.add(element);
+            element.parent = parent;
         }
-        block.indent = branch.size();
-        branch.add(block);
-        api.open(block, complex);
-        if (complex) {
-            writer.write(block.block.toString());
-            System.out.println("Opened tag: " + block.block.toString());
-            block.block.setLength(0); // Clear the block content as it's already written
-        }
-        return this;
+        element.indent = branch.size();
+        branch.add(element);
     }
 
-    // Main DATA
-    public StructuredWriter data(String content) throws IOException {
-        if (content == null)
-            return this;
-        api.data(content, block());
-        System.out.println("      - Added " + content.length() + " to block  " + block().name);
-        return this;
-    }
-
-    // Main CLOSE
-    public void close() throws IOException {
-        StructuredWriterBlock block = branch.lastElement();
-        boolean hasContent = block.content.length() > 0;
-        boolean hasChildren = !block.children.isEmpty();
-
-        api.compile(block);
-        writer.write(block.block.toString());
-        System.out.println("Closed tag: " + block.block.toString());
+    private void popElement(StructuredWriterElement element) {
         branch.removeLast();
     }
+    //
+
+    // public StructuredWriter open(String name) throws IOException {
+    // return open(name, null, true);
+    // }
+
+    // public StructuredWriter open(String name, Map<String, String> attributes)
+    // throws IOException {
+    // return open(name, attributes, true);
+    // }
+
+    // public StructuredWriter open(String name, Map<String, String> attributes,
+    // boolean complex) throws IOException {
+    // StructuredWriterElement block = new StructuredWriterElement(name,
+    // attributes);
+    // open(block, complex);
+    // return this;
+    // }
+
+    // Main OPEN
+    // public StructuredWriter open(StructuredWriterElement block, boolean
+    // complex) throws IOException {
+    // StructuredWriterElement parent = block();
+    // if (parent != null) {
+    // parent.children.add(block);
+    // }
+    // block.indent = branch.size();
+    // branch.add(block);
+    // api.open(block, complex);
+    // if (complex) {
+    // writer.write(block.block.toString());
+    // System.out.println("Opened tag: " + block.block.toString());
+    // block.block.setLength(0); // Clear the block content as it's already
+    // // written
+    // }
+    // return this;
+    // }
+
+    // // Main DATA
+    // public StructuredWriter data(String content) throws IOException {
+    // if (content == null)
+    // return this;
+    // api.data(content, block());
+    // System.out.println(" - Added " + content.length() + " to block " +
+    // block().name);
+    // return this;
+    // }
+
+    // // Main CLOSE
+    // public void close() throws IOException {
+    // StructuredWriterElement block = branch.lastElement();
+    // boolean hasContent = block.content.length() > 0;
+    // boolean hasChildren = !block.children.isEmpty();
+
+    // api.compile(block);
+    // writer.write(block.block.toString());
+    // System.out.println("Closed tag: " + block.block.toString());
+    // branch.removeLast();
+    // }
 
     public int indent() {
         return branch.size() - 1;
     }
 
-    public StructuredWriterBlock block() {
-        return branch.lastElement();
+    public StructuredWriterElement element() {
+        return branch.size() > 0 ? branch.lastElement() : null;
+    }
+
+    public void metadata(StructuredWriterMetadata metadata) throws IOException {
+        StructuredWriterUtil.metadata(this, metadata);
+    }
+
+    public boolean includeCollectionSizeMetadata() {
+        return api.includeCollectionSizeMetadata();
     }
 
 }

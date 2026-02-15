@@ -4,10 +4,18 @@ import java.io.IOException;
 
 public interface StructuredWriterAPI {
 
-    void open(StructuredWriterBlock block, boolean complex) throws IOException;
+    default void initialize(StructuredWriter writer) throws IOException {
+    }
 
-    void data(String content, StructuredWriterBlock block) throws IOException;
+    default boolean includeCollectionSizeMetadata() {
+        return true;
+    }
 
-    void compile(StructuredWriterBlock block) throws IOException;
+    public void add(StructuredWriterElementWithoutContent element) throws IOException;
 
+    public void addContent(StructuredWriterElementWithContent element, String content) throws IOException;
+
+    public void openStructure(StructuredWriterElementWithStructure element) throws IOException;
+
+    public void closeStructure(StructuredWriterElementWithStructure element) throws IOException;
 }

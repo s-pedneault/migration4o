@@ -21,13 +21,13 @@ public class IDReferenceExporter {
     /**
      * Exports an entity object as an ID reference.
      * 
-     * @param container   Database container
-     * @param entity      The entity object to reference
-     * @param idClass     The ID class schema (e.g., IDCompartiment)
-     * @param xmlWriter   XML writer for output
-     * @param xsdBuilder  XSD builder for schema
+     * @param container Database container
+     * @param entity The entity object to reference
+     * @param idClass The ID class schema (e.g., IDCompartiment)
+     * @param xmlWriter XML writer for output
+     * @param xsdBuilder XSD builder for schema
      * @param indentLevel Current indentation level
-     * @param operation   Export operation context (contains objectExporter)
+     * @param operation Export operation context (contains objectExporter)
      * @throws IOException if write fails
      */
     public static void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, XSDBuilder xsdBuilder, int indentLevel, ExportOperation operation) throws IOException {
@@ -49,7 +49,7 @@ public class IDReferenceExporter {
             xsdBuilder.addField(idClass, field);
         }
 
-        xmlWriter.open(simpleClassName, null);
+        xmlWriter.openStructure(simpleClassName);
 
         // Find the mID field in the ID class schema
         DOSchemaField idField = null;
@@ -62,12 +62,13 @@ public class IDReferenceExporter {
 
         if (idField != null) {
             // Export the ID value
-            xmlWriter.open(idField.destinationName, null).data(String.valueOf(entityObjectId)).close();
+            xmlWriter.elementWithContent(idField.destinationName, String.valueOf(entityObjectId), false);
         }
 
-        xmlWriter.close();
+        xmlWriter.closeStructure(simpleClassName);
 
-        // Ensure the actual entity object gets exported separately (not embedded)
+        // Ensure the actual entity object gets exported separately (not
+        // embedded)
         operation.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null, null, null, false, null);
     }
 }

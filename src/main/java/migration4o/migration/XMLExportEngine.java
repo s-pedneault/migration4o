@@ -24,6 +24,8 @@ import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.SchemaUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
+import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
+import migration4o.util.tools.structuredwriter.StructuredWriterJSON;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 import migration4o.util.tools.structuredwriter.StructuredWriterXML;
 
@@ -39,19 +41,25 @@ public class XMLExportEngine {
     private final String databasePath;
     private final ExtObjectContainer container;
     private Integer maxObjectsPerClass = null; // null = all objects
-    private boolean exportNativeIds = false; // whether to include DB4O object IDs in XML
+    private boolean exportNativeIds = false; // whether to include DB4O object
+                                             // IDs in XML
     private List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = new ArrayList<>();
-    private Set<Long> sharedExportedObjectIds = null; // Shared across module exports to prevent duplicate counting
-    private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for comprehensive schema generation
-    private Set<String> exportedXMLFiles = null; // Track XML files for validation
+    private Set<Long> sharedExportedObjectIds = null; // Shared across module
+                                                      // exports to prevent
+                                                      // duplicate counting
+    private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for
+                                                // comprehensive schema
+                                                // generation
+    private Set<String> exportedXMLFiles = null; // Track XML files for
+                                                 // validation
 
     /**
      * Creates export engine using the shared in-memory database from
      * DODatabaseService.
      * 
-     * @param schema         The reference schema
+     * @param schema The reference schema
      * @param databaseSchema The database schema
-     * @param databasePath   The database file path (for naming output folders)
+     * @param databasePath The database file path (for naming output folders)
      */
     public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
         this.schema = schema;
@@ -69,8 +77,8 @@ public class XMLExportEngine {
     /**
      * Sets the maximum number of objects to export per class.
      * 
-     * @param maxObjectsPerClass Maximum objects to export per class, or null for
-     *                           all objects
+     * @param maxObjectsPerClass Maximum objects to export per class, or null
+     * for all objects
      */
     public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
         this.maxObjectsPerClass = maxObjectsPerClass;
@@ -99,9 +107,9 @@ public class XMLExportEngine {
     }
 
     /**
-     * Initializes shared object tracking and XSD builder for multi-module exports.
-     * Call this before exporting multiple modules to ensure objects are only
-     * counted once and a single comprehensive XSD is generated.
+     * Initializes shared object tracking and XSD builder for multi-module
+     * exports. Call this before exporting multiple modules to ensure objects
+     * are only counted once and a single comprehensive XSD is generated.
      */
     public void initializeSharedTracking() {
         this.sharedExportedObjectIds = new HashSet<>();
@@ -111,8 +119,8 @@ public class XMLExportEngine {
     }
 
     /**
-     * Resets shared object tracking and XSD builder. Call this to clear tracking
-     * state between different export sessions.
+     * Resets shared object tracking and XSD builder. Call this to clear
+     * tracking state between different export sessions.
      */
     public void resetSharedTracking() {
         this.sharedExportedObjectIds = null;
@@ -131,8 +139,8 @@ public class XMLExportEngine {
     }
 
     /**
-     * Writes the comprehensive XSD schema file. Should be called after all exports
-     * are complete when using shared tracking.
+     * Writes the comprehensive XSD schema file. Should be called after all
+     * exports are complete when using shared tracking.
      * 
      * @param baseOutputPath The base output directory
      * @throws IOException if writing fails
@@ -189,15 +197,16 @@ public class XMLExportEngine {
 
     /**
      * Exports a module with folder structure, using provided hierarchical path.
-     * This is used when exporting a child module standalone to preserve the parent
-     * folder structure.
+     * This is used when exporting a child module standalone to preserve the
+     * parent folder structure.
      * 
-     * @param module         The module to export (including child modules)
-     * @param modulePath     The full hierarchical path for this module (e.g.,
-     *                       "Activités/Intervention")
+     * @param module The module to export (including child modules)
+     * @param modulePath The full hierarchical path for this module (e.g.,
+     * "Activités/Intervention")
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
+     * @param monitor Progress monitor (can be null)
+     * @param sharedTracker Shared reference tracker for bulk exports (can be
+     * null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
@@ -243,7 +252,8 @@ public class XMLExportEngine {
                 Files.createDirectories(fullModulePath.getParent());
             }
 
-            // Export module - start from the parent path (not the module itself)
+            // Export module - start from the parent path (not the module
+            // itself)
             // The module will create its own folder within this path
             Path moduleBasePath = fullModulePath.getParent();
             if (moduleBasePath == null) {
@@ -252,10 +262,12 @@ public class XMLExportEngine {
 
             exportModuleRecursive(container, module, moduleBasePath, statistics, monitor, 0, referencedClassTracker);
 
-            // Only export referenced classes if we created the tracker (not shared)
+            // Only export referenced classes if we created the tracker (not
+            // shared)
             // For shared trackers, the caller will handle referenced classes
             if (sharedTracker == null) {
-                // After exporting requested modules, check for referenced classes
+                // After exporting requested modules, check for referenced
+                // classes
                 Set<String> referencedClasses = referencedClassTracker.getReferencedClasses();
                 if (!referencedClasses.isEmpty() && monitor != null) {
                     monitor.onStatusMessage("Discovered " + referencedClasses.size() + " referenced classes not in export request");
@@ -290,23 +302,25 @@ public class XMLExportEngine {
     }
 
     /**
-     * Exports a module with folder structure matching the module hierarchy. Each
-     * class is exported to its own XML/XSD file within the module folders. Files
-     * are written to output/<db-folder>/
+     * Exports a module with folder structure matching the module hierarchy.
+     * Each class is exported to its own XML/XSD file within the module folders.
+     * Files are written to output/<db-folder>/
      * 
      * Automatically tracks and exports referenced classes that are not in the
-     * module structure. Referenced classes are exported to a virtual "Referenced"
-     * module.
+     * module structure. Referenced classes are exported to a virtual
+     * "Referenced" module.
      * 
-     * @param module         The module to export (including child modules)
+     * @param module The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
+     * @param monitor Progress monitor (can be null)
+     * @param sharedTracker Shared reference tracker for bulk exports (can be
+     * null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
     public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
-        // Use module name as path (backward compatibility - single module at root
+        // Use module name as path (backward compatibility - single module at
+        // root
         // level)
         return exportModuleStructured(module, module.getName(), baseOutputPath, monitor, sharedTracker);
     }
@@ -315,9 +329,9 @@ public class XMLExportEngine {
      * Exports a module with folder structure (convenience method without shared
      * tracker).
      * 
-     * @param module         The module to export (including child modules)
+     * @param module The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
+     * @param monitor Progress monitor (can be null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
@@ -326,12 +340,13 @@ public class XMLExportEngine {
     }
 
     /**
-     * Exports referenced classes that were discovered during bulk export. Should be
-     * called after all modules have been exported with a shared tracker.
+     * Exports referenced classes that were discovered during bulk export.
+     * Should be called after all modules have been exported with a shared
+     * tracker.
      * 
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param tracker        The shared reference tracker from bulk export
+     * @param monitor Progress monitor (can be null)
+     * @param tracker The shared reference tracker from bulk export
      * @throws Exception if export fails
      */
     public void exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker tracker) throws Exception {
@@ -380,12 +395,14 @@ public class XMLExportEngine {
             monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
         }
 
-        // Create folder for this module (use module name to preserve proper casing)
+        // Create folder for this module (use module name to preserve proper
+        // casing)
         Path modulePath = currentBasePath.resolve(module.getName());
         Files.createDirectories(modulePath);
 
         // Export each class configuration in this module
-        // System.out.println("DEBUG exportModuleRecursive: Module '" + module.getName()
+        // System.out.println("DEBUG exportModuleRecursive: Module '" +
+        // module.getName()
         // + "' has "
         // + module.getClassConfigs().size() + " class configs");
         for (ClassExportConfig config : module.getClassConfigs()) {
@@ -394,9 +411,11 @@ public class XMLExportEngine {
             }
 
             String className = config.getClassName();
-            // System.out.println("DEBUG exportModuleRecursive: Processing class " +
+            // System.out.println("DEBUG exportModuleRecursive: Processing class
+            // " +
             // className + ", hasCriteria="
-            // + config.hasCriteria() + ", criteria count=" + config.getCriteria().size());
+            // + config.hasCriteria() + ", criteria count=" +
+            // config.getCriteria().size());
 
             // DEBUG: Log if this class has criteria
             if (config.hasCriteria()) {
@@ -405,15 +424,18 @@ public class XMLExportEngine {
 
             DOSchemaClass schemaClass = schema.findClassByName(className);
             if (schemaClass == null) {
-                continue; // Skip missing classes silently - errors tracked via monitor
+                continue; // Skip missing classes silently - errors tracked via
+                          // monitor
             }
 
             DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
             if (dbSchemaClass == null) {
-                continue; // Skip missing classes silently - errors tracked via monitor
+                continue; // Skip missing classes silently - errors tracked via
+                          // monitor
             }
 
-            // Use the destination file name from config (defaults to class name if not set)
+            // Use the destination file name from config (defaults to class name
+            // if not set)
             String fileName = config.getDestinationFileName() + ".xml";
             String xsdFileName = config.getDestinationFileName() + ".xsd";
             Path xmlPath = modulePath.resolve(fileName);
@@ -444,8 +466,8 @@ public class XMLExportEngine {
     /**
      * Exports a single class to the specified file paths.
      * 
-     * @param config Optional export configuration with criteria filtering. If null,
-     *               exports all objects.
+     * @param config Optional export configuration with criteria filtering. If
+     * null, exports all objects.
      */
     private void exportClassToFile(ExtObjectContainer container, DOSchemaClass schemaClass, DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath, ExportStatistics statistics, DOExportMonitor monitor, ReferencedClassTracker referencedClassTracker, migration4o.models.ui.ClassExportConfig config) throws Exception {
 
@@ -460,7 +482,7 @@ public class XMLExportEngine {
         try {
             // Create XML writer
             fileWriter = new FileWriter(xmlPath.toFile());
-            StructuredWriter xmlWriter = new StructuredWriter(new StructuredWriterXML(), fileWriter);
+            StructuredWriter xmlWriter = new StructuredWriter(getStructuredWriterAPI(), fileWriter);
 
             // Create export operation
             ExportOperation operation = new ExportOperation();
@@ -493,11 +515,13 @@ public class XMLExportEngine {
 
             // Write XML header and metadata
             if (sharedXSDBuilder != null) {
-                // Using shared XSD - calculate relative path from XML file to schema.xsd
+                // Using shared XSD - calculate relative path from XML file to
+                // schema.xsd
                 Path xmlDir = xmlPath.getParent();
                 Path baseDir = xmlPath.getRoot() != null ? xmlPath.getParent().getParent().getParent() : Paths.get(operation.baseOutputPath).resolve(getDatabaseFolderName());
 
-                // Calculate depth: count directories between XML file and database folder
+                // Calculate depth: count directories between XML file and
+                // database folder
                 int slashCount = 0;
                 Path current = xmlDir;
                 while (current != null && !current.equals(baseDir)) {
@@ -513,15 +537,16 @@ public class XMLExportEngine {
                 pathBuilder.append("schema.xsd");
                 String relativeSchemaPath = pathBuilder.toString();
 
-                xmlWriter.root("export", relativeSchemaPath);
+                xmlWriter.openRootStructure("export", relativeSchemaPath);
                 xmlWriter.metadata(schemaClass.getMetadata(module));
 
             } else {
-                // Individual XSD - no schema reference needed (pass null for schemaLocation)
-                xmlWriter.root("export", null);
+                // Individual XSD - no schema reference needed (pass null for
+                // schemaLocation)
+                xmlWriter.openRootStructure("export", null);
                 xmlWriter.metadata(schemaClass.getMetadata(module));
             }
-            xmlWriter.open("objects");
+            xmlWriter.openStructure("objects");
 
             // Export all objects of this class
             xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
@@ -565,8 +590,8 @@ public class XMLExportEngine {
             }
 
             // Write XML footer
-            xmlWriter.close(); // objects
-            xmlWriter.close(); // export
+            xmlWriter.closeStructure("objects");
+            xmlWriter.closeStructure("export");
 
             // Only generate individual XSD if not using shared builder
             if (sharedXSDBuilder == null) {
@@ -598,6 +623,11 @@ public class XMLExportEngine {
         }
     }
 
+    private StructuredWriterAPI getStructuredWriterAPI() {
+        return new StructuredWriterXML();
+        // return new StructuredWriterJSON();
+    }
+
     /**
      * Recursively registers all modules and their classes with the reference
      * tracker.
@@ -612,8 +642,9 @@ public class XMLExportEngine {
     }
 
     /**
-     * Exports referenced classes that were discovered during export but not in the
-     * original request. Creates a "Referenced" module to hold these classes.
+     * Exports referenced classes that were discovered during export but not in
+     * the original request. Creates a "Referenced" module to hold these
+     * classes.
      */
     private void exportReferencedClasses(ExtObjectContainer container, Set<String> referencedClasses, Path basePath, ExportStatistics statistics, DOExportMonitor monitor, ReferencedClassTracker referencedClassTracker) throws Exception {
 
@@ -657,7 +688,8 @@ public class XMLExportEngine {
             Path xmlPath = referencedPath.resolve(fileName);
             Path xsdPath = referencedPath.resolve(xsdFileName);
 
-            // Export this referenced class (without further reference tracking to avoid
+            // Export this referenced class (without further reference tracking
+            // to avoid
             // infinite loops, and without criteria filtering)
             exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, null, null);
 
@@ -687,7 +719,8 @@ public class XMLExportEngine {
         FileWriter fileWriter = null;
 
         try {
-            // Use the shared in-memory container (already opened by DODatabaseService)
+            // Use the shared in-memory container (already opened by
+            // DODatabaseService)
             // No need to open database here - saves time and memory
 
             // Create XML writer
@@ -714,10 +747,11 @@ public class XMLExportEngine {
             objectExporter.reset();
 
             // Write XML header and metadata
-            // xmlWriter.writeExportHeader(moduleName, "module", classNames.size(), null);
-            xmlWriter.root("export", null);
+            // xmlWriter.writeExportHeader(moduleName, "module",
+            // classNames.size(), null);
+            xmlWriter.openRootStructure("export", null);
             xmlWriter.metadata(getMetadata(moduleName, null, classNames.size()));
-            xmlWriter.open("objects");
+            xmlWriter.openStructure("objects");
 
             // Export all classes in the module
             for (String className : classNames) {
@@ -735,8 +769,8 @@ public class XMLExportEngine {
             }
 
             // Write XML footer
-            xmlWriter.close(); // objects
-            xmlWriter.close(); // export
+            xmlWriter.closeStructure("objects");
+            xmlWriter.closeStructure("export");
 
             // Generate XSD schema
             String xsdPath = xsdOutputPath;
@@ -754,7 +788,8 @@ public class XMLExportEngine {
             return statistics;
 
         } finally {
-            // Note: We do NOT close the container here as it's a shared resource managed by
+            // Note: We do NOT close the container here as it's a shared
+            // resource managed by
             // DODatabaseService
             if (fileWriter != null) {
                 try {

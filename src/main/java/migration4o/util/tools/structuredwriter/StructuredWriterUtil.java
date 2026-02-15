@@ -10,25 +10,25 @@ public class StructuredWriterUtil {
     }
 
     public static void openRoot(StructuredWriter writer, String name, String schemaLocation) throws IOException {
-        writer.open(name, Map.of("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance", "xsi:noNamespaceSchemaLocation", schemaLocation), true);
+        writer.openStructure(name, Map.of("xmlns:xsi", "http://www.w3.org/2001/XMLSchema-instance", "xsi:noNamespaceSchemaLocation", schemaLocation));
     }
 
     public static void metadata(StructuredWriter writer, StructuredWriterMetadata metadata) throws IOException {
         if (metadata != null) {
-            writer.open("metadata");
+            writer.openStructure("metadata");
             if (metadata.generator != null)
-                writer.open("generator").data(metadata.generator).close();
+                writer.elementWithContent("generator", metadata.generator, true);
             if (metadata.provider != null)
-                writer.open("provider").data(metadata.provider).close();
+                writer.elementWithContent("provider", metadata.provider, true);
             if (metadata.module != null)
-                writer.open("module").data(metadata.module).close();
+                writer.elementWithContent("module", metadata.module, true);
             if (metadata.type != null)
-                writer.open("type").data(metadata.type).close();
+                writer.elementWithContent("type", metadata.type, true);
             if (metadata.objects != null)
-                writer.open("objects").data(metadata.objects).close();
+                writer.elementWithContent("objects", metadata.objects, true);
             if (metadata.date != null)
-                writer.open("date").data(metadata.date).close();
-            writer.close();
+                writer.elementWithContent("date", metadata.date, true);
+            writer.closeStructure("metadata");
         }
     }
 
