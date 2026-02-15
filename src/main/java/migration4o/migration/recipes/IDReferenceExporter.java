@@ -9,6 +9,7 @@ import migration4o.migration.XMLWriter;
 import migration4o.migration.XSDBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.ValueUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
@@ -62,7 +63,8 @@ public class IDReferenceExporter {
 
         if (idField != null) {
             // Export the ID value
-            xmlWriter.elementWithContent(idField.destinationName, String.valueOf(entityObjectId), false);
+            String formattedValue = ValueUtil.formatFieldValue(String.valueOf(entityObjectId), idField);
+            xmlWriter.elementWithContent(idField.destinationName, formattedValue, false);
         }
 
         xmlWriter.closeStructure(simpleClassName);

@@ -24,6 +24,10 @@ public class FieldEditorDialog extends JDialog {
     private final JLabel typeLabel;
     private final JPanel pointsToPanel;
     private final JLabel pointsToLabel;
+    private final JPanel formatPanel;
+    private final JCheckBox formatTrim;
+    private final JCheckBox formatLowercase;
+    private final JCheckBox formatUppercase;
     private final JCheckBox exportedCheckBox;
     private final JPanel skipWhenPanel;
     private final JCheckBox skipWhenNull;
@@ -52,13 +56,17 @@ public class FieldEditorDialog extends JDialog {
     private boolean okClicked = false;
     private boolean deleted = false;
     private String classToCreate = null;
-    private String originalFieldDefinitionId = null; // Stores the shared field ID if this is a shared field
+    private String originalFieldDefinitionId = null; // Stores the shared field
+                                                     // ID if this is a shared
+                                                     // field
 
     public FieldEditorDialog(Frame owner, DOSchema schema, DOSchemaField field, boolean isNewField) {
         super(owner, isNewField ? "Add Field" : "Edit Field", true);
         this.schema = schema;
         this.isNewField = isNewField;
-        this.originalFieldDefinitionId = field.definitionId; // Store original shared field ID if any
+        this.originalFieldDefinitionId = field.definitionId; // Store original
+                                                             // shared field ID
+                                                             // if any
 
         setLayout(new BorderLayout(10, 10));
 
@@ -69,9 +77,7 @@ public class FieldEditorDialog extends JDialog {
         // Type - show as text with Edit button
         typePanel = new JPanel(new BorderLayout(5, 0));
         typeLabel = new JLabel(field.type != null ? field.type : "");
-        typeLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+        typeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         typePanel.add(typeLabel, BorderLayout.CENTER);
 
         JButton editTypeButton = new JButton("Edit");
@@ -79,7 +85,8 @@ public class FieldEditorDialog extends JDialog {
             String selected = ClassFinderDialog.showDialog(owner, schema, typeLabel.getText());
             if (selected != null) {
                 typeLabel.setText(selected);
-                updateEmbedContentsState(); // Update embed contents state when type changes
+                updateEmbedContentsState(); // Update embed contents state when
+                                            // type changes
             }
         });
         typePanel.add(editTypeButton, BorderLayout.EAST);
@@ -87,9 +94,7 @@ public class FieldEditorDialog extends JDialog {
         // Points To - show as text with Edit button
         pointsToPanel = new JPanel(new BorderLayout(5, 0));
         pointsToLabel = new JLabel(field.pointsTo != null ? field.pointsTo : "");
-        pointsToLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+        pointsToLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         pointsToPanel.add(pointsToLabel, BorderLayout.CENTER);
 
         JButton editPointsToButton = new JButton("Edit");
@@ -101,13 +106,45 @@ public class FieldEditorDialog extends JDialog {
         });
         pointsToPanel.add(editPointsToButton, BorderLayout.EAST);
 
+        // Create format checkboxes
+        formatTrim = new JCheckBox("TRIM");
+        formatLowercase = new JCheckBox("LOWERCASE");
+        formatUppercase = new JCheckBox("UPPERCASE");
+
+        // Parse existing format value and check appropriate boxes
+        if (field.format != null && !field.format.trim().isEmpty()) {
+            String[] keywords = field.format.split(",");
+            for (String keyword : keywords) {
+                String trimmed = keyword.trim();
+                switch (trimmed) {
+                case "TRIM":
+                    formatTrim.setSelected(true);
+                    break;
+                case "LOWERCASE":
+                    formatLowercase.setSelected(true);
+                    break;
+                case "UPPERCASE":
+                    formatUppercase.setSelected(true);
+                    break;
+                }
+            }
+        }
+
+        // Create panel with checkboxes in a grid layout
+        formatPanel = new JPanel(new GridLayout(0, 3, 5, 2));
+        formatPanel.add(formatTrim);
+        formatPanel.add(formatLowercase);
+        formatPanel.add(formatUppercase);
+        formatPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+
         embedContentsCheckBox = new JCheckBox();
         embedContentsCheckBox.setSelected(field.embedContents);
 
         collectionCheckBox = new JCheckBox();
         collectionCheckBox.setSelected(field.isCollection);
 
-        // Add listener to collection checkbox to update embed contents state and
+        // Add listener to collection checkbox to update embed contents state
+        // and
         // rebuild form
         collectionCheckBox.addActionListener(e -> {
             updateEmbedContentsState();
@@ -135,27 +172,27 @@ public class FieldEditorDialog extends JDialog {
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
-                    case "NULL":
-                        skipWhenNull.setSelected(true);
-                        break;
-                    case "ZERO":
-                        skipWhenZero.setSelected(true);
-                        break;
-                    case "MINUS_ONE":
-                        skipWhenMinusOne.setSelected(true);
-                        break;
-                    case "EMPTY_STRING":
-                        skipWhenEmptyString.setSelected(true);
-                        break;
-                    case "EMPTY_COLLECTION":
-                        skipWhenEmptyCollection.setSelected(true);
-                        break;
-                    case "FALSE":
-                        skipWhenFalse.setSelected(true);
-                        break;
-                    case "DEFAULT":
-                        skipWhenDefault.setSelected(true);
-                        break;
+                case "NULL":
+                    skipWhenNull.setSelected(true);
+                    break;
+                case "ZERO":
+                    skipWhenZero.setSelected(true);
+                    break;
+                case "MINUS_ONE":
+                    skipWhenMinusOne.setSelected(true);
+                    break;
+                case "EMPTY_STRING":
+                    skipWhenEmptyString.setSelected(true);
+                    break;
+                case "EMPTY_COLLECTION":
+                    skipWhenEmptyCollection.setSelected(true);
+                    break;
+                case "FALSE":
+                    skipWhenFalse.setSelected(true);
+                    break;
+                case "DEFAULT":
+                    skipWhenDefault.setSelected(true);
+                    break;
                 }
             }
         }
@@ -169,9 +206,7 @@ public class FieldEditorDialog extends JDialog {
         skipWhenPanel.add(skipWhenEmptyCollection);
         skipWhenPanel.add(skipWhenFalse);
         skipWhenPanel.add(skipWhenDefault);
-        skipWhenPanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        skipWhenPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
         skipUserOptionField = new JTextField(field.skipUserOption != null ? field.skipUserOption : "", 30);
 
@@ -180,9 +215,7 @@ public class FieldEditorDialog extends JDialog {
         JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
 
         childrenTypeLabel = new JLabel(field.childrenType != null ? field.childrenType : "");
-        childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(3, 5, 3, 5)));
+        childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         childrenTypeContentPanel.add(childrenTypeLabel, BorderLayout.CENTER);
 
         JButton editChildrenTypeButton = new JButton("Edit");
@@ -261,17 +294,14 @@ public class FieldEditorDialog extends JDialog {
         if (currentField != null && currentField.isSharedField()) {
             JPanel warningPanel = new JPanel(new BorderLayout(10, 0));
             warningPanel.setBackground(new Color(200, 220, 255));
-            warningPanel.setBorder(BorderFactory.createCompoundBorder(
-                    BorderFactory.createLineBorder(new Color(100, 150, 255), 2),
-                    BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+            warningPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(new Color(100, 150, 255), 2), BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 
             JLabel iconLabel = new JLabel("ℹ");
             iconLabel.setFont(new Font("Dialog", Font.BOLD, 20));
             iconLabel.setForeground(new Color(50, 100, 200));
             warningPanel.add(iconLabel, BorderLayout.WEST);
 
-            JLabel messageLabel = new JLabel("<html><b>Shared Field Definition:</b> " + currentField.definitionId +
-                    "<br>Changes made here will affect all classes using this shared field.</html>");
+            JLabel messageLabel = new JLabel("<html><b>Shared Field Definition:</b> " + currentField.definitionId + "<br>Changes made here will affect all classes using this shared field.</html>");
             messageLabel.setFont(new Font("Dialog", Font.PLAIN, 12));
             warningPanel.add(messageLabel, BorderLayout.CENTER);
 
@@ -295,6 +325,7 @@ public class FieldEditorDialog extends JDialog {
         addFormRow(innerPanel, gbc, "Exported:", exportedCheckBox);
         addFormRow(innerPanel, gbc, "Skip When:", skipWhenPanel);
         addFormRow(innerPanel, gbc, "Skip User Option:", skipUserOptionField);
+        addFormRow(innerPanel, gbc, "Format:", formatPanel);
         addFormRow(innerPanel, gbc, "Embed Contents:", embedContentsCheckBox);
         addFormRow(innerPanel, gbc, "Collection:", collectionCheckBox);
 
@@ -384,9 +415,7 @@ public class FieldEditorDialog extends JDialog {
         buttonPanel.add(removeButton);
         tablePanel.add(buttonPanel, BorderLayout.SOUTH);
 
-        tablePanel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Color.GRAY),
-                BorderFactory.createEmptyBorder(5, 5, 5, 5)));
+        tablePanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
         panel.add(tablePanel, gbc);
         gbc.gridy++;
@@ -408,9 +437,7 @@ public class FieldEditorDialog extends JDialog {
             if (typeName != null && !typeName.isEmpty() && schema != null) {
                 DOSchemaClass typeClass = findClassByName(typeName);
                 if (typeClass != null) {
-                    shouldEnable = typeClass.isIDEntite(schema) ||
-                            typeClass.isEntite(schema) ||
-                            !typeClass.isPrimitive();
+                    shouldEnable = typeClass.isIDEntite(schema) || typeClass.isEntite(schema) || !typeClass.isPrimitive();
                 }
             }
         }
@@ -429,8 +456,7 @@ public class FieldEditorDialog extends JDialog {
         }
 
         for (DOSchemaClass cls : schema.getClasses()) {
-            String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                    : cls.source;
+            String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
             if (cls.source.equals(className) || shortName.equals(className)) {
                 return cls;
             }
@@ -460,8 +486,7 @@ public class FieldEditorDialog extends JDialog {
         boolean isResolved = false;
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                        : cls.source;
+                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
                 if (cls.source.equals(childrenType) || shortName.equals(childrenType)) {
                     isResolved = true;
                     break;
@@ -487,12 +512,7 @@ public class FieldEditorDialog extends JDialog {
         }
 
         // Confirm with user
-        int result = JOptionPane.showConfirmDialog(this,
-                "Create a new class '" + className + "' in the schema?" +
-                        "\n\nThe class will be created when you save this field.",
-                "Create Class",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, "Create a new class '" + className + "' in the schema?" + "\n\nThe class will be created when you save this field.", "Create Class", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
         if (result != JOptionPane.YES_OPTION) {
             return;
@@ -501,10 +521,7 @@ public class FieldEditorDialog extends JDialog {
         // Mark this class for creation
         classToCreate = className;
 
-        JOptionPane.showMessageDialog(this,
-                "Class '" + className + "' will be created when you save this field.",
-                "Class Creation Scheduled",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Class '" + className + "' will be created when you save this field.", "Class Creation Scheduled", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private JPanel createButtonPanel() {
@@ -519,9 +536,9 @@ public class FieldEditorDialog extends JDialog {
                 unlinkButton.setToolTipText("Import common field properties into this class");
                 unlinkButton.addActionListener(e -> unlinkFromCommonField());
                 buttonPanel.add(unlinkButton);
-            } else if (schema != null && schema.sharedFields != null &&
-                    schema.sharedFields.containsKey(sourceField.getText())) {
-                // Field is not linked but a common field exists - show link button
+            } else if (schema != null && schema.sharedFields != null && schema.sharedFields.containsKey(sourceField.getText())) {
+                // Field is not linked but a common field exists - show link
+                // button
                 JButton linkButton = new JButton("Link to Common Field");
                 linkButton.setToolTipText("Use shared field definition");
                 linkButton.addActionListener(e -> linkToCommonField());
@@ -543,11 +560,7 @@ public class FieldEditorDialog extends JDialog {
             JButton deleteButton = new JButton("Delete");
             deleteButton.setForeground(Color.RED);
             deleteButton.addActionListener(e -> {
-                int result = JOptionPane.showConfirmDialog(this,
-                        "Are you sure you want to delete this field?",
-                        "Confirm Delete",
-                        JOptionPane.YES_NO_OPTION,
-                        JOptionPane.WARNING_MESSAGE);
+                int result = JOptionPane.showConfirmDialog(this, "Are you sure you want to delete this field?", "Confirm Delete", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
                 if (result == JOptionPane.YES_OPTION) {
                     deleted = true;
@@ -569,21 +582,12 @@ public class FieldEditorDialog extends JDialog {
         DOSchemaField commonField = schema.sharedFields.get(fieldName);
 
         if (commonField == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No common field definition found for '" + fieldName + "'.",
-                    "Link Failed",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No common field definition found for '" + fieldName + "'.", "Link Failed", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         // Confirm with user
-        int result = JOptionPane.showConfirmDialog(this,
-                "Link this field to the common field definition '" + fieldName + "'?\n\n" +
-                        "The field will inherit all properties from the shared definition.\n" +
-                        "Any custom properties in this field will be replaced.",
-                "Confirm Link",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.QUESTION_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, "Link this field to the common field definition '" + fieldName + "'?\n\n" + "The field will inherit all properties from the shared definition.\n" + "Any custom properties in this field will be replaced.", "Confirm Link", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
 
         if (result != JOptionPane.YES_OPTION) {
             return;
@@ -600,6 +604,27 @@ public class FieldEditorDialog extends JDialog {
         titleField.setText(commonField.title != null ? commonField.title : "");
         descField.setText(commonField.description != null ? commonField.description : "");
         skipUserOptionField.setText(commonField.skipUserOption != null ? commonField.skipUserOption : "");
+        formatTrim.setSelected(false);
+        formatLowercase.setSelected(false);
+        formatUppercase.setSelected(false);
+
+        if (commonField.format != null && !commonField.format.trim().isEmpty()) {
+            String[] keywords = commonField.format.split(",");
+            for (String keyword : keywords) {
+                String trimmed = keyword.trim();
+                switch (trimmed) {
+                case "TRIM":
+                    formatTrim.setSelected(true);
+                    break;
+                case "LOWERCASE":
+                    formatLowercase.setSelected(true);
+                    break;
+                case "UPPERCASE":
+                    formatUppercase.setSelected(true);
+                    break;
+                }
+            }
+        }
 
         // Parse and set skipWhen checkboxes
         skipWhenNull.setSelected(false);
@@ -615,27 +640,27 @@ public class FieldEditorDialog extends JDialog {
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
-                    case "NULL":
-                        skipWhenNull.setSelected(true);
-                        break;
-                    case "ZERO":
-                        skipWhenZero.setSelected(true);
-                        break;
-                    case "MINUS_ONE":
-                        skipWhenMinusOne.setSelected(true);
-                        break;
-                    case "EMPTY_STRING":
-                        skipWhenEmptyString.setSelected(true);
-                        break;
-                    case "EMPTY_COLLECTION":
-                        skipWhenEmptyCollection.setSelected(true);
-                        break;
-                    case "FALSE":
-                        skipWhenFalse.setSelected(true);
-                        break;
-                    case "DEFAULT":
-                        skipWhenDefault.setSelected(true);
-                        break;
+                case "NULL":
+                    skipWhenNull.setSelected(true);
+                    break;
+                case "ZERO":
+                    skipWhenZero.setSelected(true);
+                    break;
+                case "MINUS_ONE":
+                    skipWhenMinusOne.setSelected(true);
+                    break;
+                case "EMPTY_STRING":
+                    skipWhenEmptyString.setSelected(true);
+                    break;
+                case "EMPTY_COLLECTION":
+                    skipWhenEmptyCollection.setSelected(true);
+                    break;
+                case "FALSE":
+                    skipWhenFalse.setSelected(true);
+                    break;
+                case "DEFAULT":
+                    skipWhenDefault.setSelected(true);
+                    break;
                 }
             }
         }
@@ -646,11 +671,7 @@ public class FieldEditorDialog extends JDialog {
         // Rebuild form to show shared field banner
         rebuildForm();
 
-        JOptionPane.showMessageDialog(this,
-                "Field linked to common definition '" + fieldName + "'.\n" +
-                        "Click OK to save changes.",
-                "Link Successful",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Field linked to common definition '" + fieldName + "'.\n" + "Click OK to save changes.", "Link Successful", JOptionPane.INFORMATION_MESSAGE);
     }
 
     private void unlinkFromCommonField() {
@@ -661,13 +682,7 @@ public class FieldEditorDialog extends JDialog {
         }
 
         // Confirm with user
-        int result = JOptionPane.showConfirmDialog(this,
-                "Unlink this field from common definition '" + definitionId + "'?\n\n" +
-                        "The current properties will be imported into this class's field definition.\n" +
-                        "Future changes to the common field will no longer affect this field.",
-                "Confirm Unlink",
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
+        int result = JOptionPane.showConfirmDialog(this, "Unlink this field from common definition '" + definitionId + "'?\n\n" + "The current properties will be imported into this class's field definition.\n" + "Future changes to the common field will no longer affect this field.", "Confirm Unlink", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 
         if (result != JOptionPane.YES_OPTION) {
             return;
@@ -679,12 +694,7 @@ public class FieldEditorDialog extends JDialog {
         // Rebuild form to hide shared field banner
         rebuildForm();
 
-        JOptionPane.showMessageDialog(this,
-                "Field unlinked from common definition.\n" +
-                        "The field now has its own independent definition.\n" +
-                        "Click OK to save changes.",
-                "Unlink Successful",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Field unlinked from common definition.\n" + "The field now has its own independent definition.\n" + "Click OK to save changes.", "Unlink Successful", JOptionPane.INFORMATION_MESSAGE);
     }
 
     public boolean isOkClicked() {
@@ -709,6 +719,17 @@ public class FieldEditorDialog extends JDialog {
 
     public boolean isFieldExported() {
         return exportedCheckBox.isSelected();
+    }
+
+    public String getFieldFormat() {
+        java.util.List<String> keywords = new java.util.ArrayList<>();
+        if (formatTrim.isSelected())
+            keywords.add("TRIM");
+        if (formatLowercase.isSelected())
+            keywords.add("LOWERCASE");
+        if (formatUppercase.isSelected())
+            keywords.add("UPPERCASE");
+        return keywords.isEmpty() ? null : String.join(",", keywords);
     }
 
     public String getFieldSkipWhen() {
@@ -781,6 +802,7 @@ public class FieldEditorDialog extends JDialog {
         field.source = getFieldSource();
         field.destinationName = getFieldDestination();
         field.type = getFieldType();
+        field.format = getFieldFormat();
         field.isExported = isFieldExported();
         field.skipWhen = getFieldSkipWhen();
         field.skipUserOption = getFieldSkipUserOption();
@@ -791,13 +813,14 @@ public class FieldEditorDialog extends JDialog {
         field.description = getFieldDescription();
         field.pointsTo = getFieldPointsTo();
         field.valueMap = getValueMappings();
-        field.definitionId = originalFieldDefinitionId; // Preserve the shared field ID
+        field.definitionId = originalFieldDefinitionId; // Preserve the shared
+                                                        // field ID
         return field;
     }
 
     /**
-     * Get the name of the class that should be created (if Create Class button was
-     * clicked).
+     * Get the name of the class that should be created (if Create Class button
+     * was clicked).
      * 
      * @return class name to create, or null if no class should be created
      */
@@ -809,7 +832,7 @@ public class FieldEditorDialog extends JDialog {
      * Get the field definition ID (for shared field references).
      * 
      * @return the definition ID if this field is linked to a common field, null
-     *         otherwise
+     * otherwise
      */
     public String getFieldDefinitionId() {
         return originalFieldDefinitionId;
@@ -818,9 +841,9 @@ public class FieldEditorDialog extends JDialog {
     /**
      * Show the dialog and return whether OK was clicked.
      * 
-     * @param owner      The parent frame
-     * @param schema     The schema containing classes
-     * @param field      The field to edit
+     * @param owner The parent frame
+     * @param schema The schema containing classes
+     * @param field The field to edit
      * @param isNewField Whether this is a new field being added
      * @return The dialog instance if OK was clicked, null otherwise
      */

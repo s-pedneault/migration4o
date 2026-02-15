@@ -2095,11 +2095,11 @@
         <reference class="gest.secCiv.RessSecCiv" field="mLieu" />
         <reference class="gest.borne.Borne" field="mLieu" />
         <reference class="gest.intervention.Intervention" field="mLieuInterv" />
-        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="INDEX_toString" destinationName="iNDEX_toString" isExported="false" skipWhen="DEFAULT" type="string" />
         <field source="mArrond" destinationName="arrond" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mCodeGeo" destinationName="codeGeo" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mCodePost" destinationName="codePost" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mDescLieu" destinationName="descLieu" isExported="true" skipWhen="DEFAULT" type="string" />
+        <field source="mDescLieu" destinationName="descLieu" isExported="true" skipWhen="DEFAULT" type="string" format="TRIM" />
         <field source="mDistrict" destinationName="district" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
@@ -2723,7 +2723,7 @@
     <class source="gest.intervention.IntervFeuExterieur" destinationName="IntervFeuExterieur" isExported="true" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mIntervFeuExterieur" />
         <field source="mDetail" definition="mDetail" />
-        <field source="mPerte" destinationName="perte" isExported="true" skipWhen="DEFAULT" type="double" />
+        <field source="mPerte" destinationName="perte" isExported="true" skipWhen="ZERO" type="double" />
         <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003H5" embedContents="true" />
     </class>
     <class source="gest.intervention.IntervIntervEmploye" destinationName="IntervIntervEmploye" isExported="true" parentClass="gest.activite.InfoEmploye">

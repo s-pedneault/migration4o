@@ -51,8 +51,7 @@ public class DOReferenceSchemaWriter {
     /**
      * Write a shared field definition (source attribute is the key).
      */
-    private void writeSharedField(FileWriter writer, String definitionId, DOSchemaField field, int indentLevel)
-            throws IOException {
+    private void writeSharedField(FileWriter writer, String definitionId, DOSchemaField field, int indentLevel) throws IOException {
         String indent = getIndent(indentLevel);
 
         writer.write(indent + "<field");
@@ -76,6 +75,10 @@ public class DOReferenceSchemaWriter {
 
         if (field.type != null && !field.type.isEmpty()) {
             writeAttribute(writer, "type", field.type);
+        }
+
+        if (field.format != null && !field.format.isEmpty()) {
+            writeAttribute(writer, "format", field.format);
         }
 
         if (field.isCollection) {
@@ -103,8 +106,7 @@ public class DOReferenceSchemaWriter {
         }
 
         // Check if we have child elements (valueMap, criterias)
-        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty())
-                || (field.criterias != null && !field.criterias.isEmpty());
+        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty()) || (field.criterias != null && !field.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
@@ -136,8 +138,7 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", schemaClass.description);
         }
 
-        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty()
-                && !"Undetermined".equals(schemaClass.parentClassName)) {
+        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty() && !"Undetermined".equals(schemaClass.parentClassName)) {
             writeAttribute(writer, "parentClass", schemaClass.parentClassName);
         }
 
@@ -147,8 +148,7 @@ public class DOReferenceSchemaWriter {
 
         // Check if we have fields, references or nested content
         boolean hasFields = schemaClass.fields != null && schemaClass.fields.length > 0;
-        boolean hasReferences = schemaClass.schemaReferences != null
-                && schemaClass.schemaReferences.length > 0;
+        boolean hasReferences = schemaClass.schemaReferences != null && schemaClass.schemaReferences.length > 0;
 
         if (!hasFields && !hasReferences) {
             writer.write(">\n");
@@ -182,6 +182,9 @@ public class DOReferenceSchemaWriter {
             writer.write(indent + "<field");
             writeAttribute(writer, "source", field.source);
             writeAttribute(writer, "definition", field.definitionId);
+            if (field.format != null && !field.format.isEmpty()) {
+                writeAttribute(writer, "format", field.format);
+            }
             writer.write(" />\n");
             return;
         }
@@ -209,6 +212,10 @@ public class DOReferenceSchemaWriter {
 
         if (field.type != null && !field.type.isEmpty()) {
             writeAttribute(writer, "type", field.type);
+        }
+
+        if (field.format != null && !field.format.isEmpty()) {
+            writeAttribute(writer, "format", field.format);
         }
 
         if (field.isCollection) {
@@ -240,8 +247,7 @@ public class DOReferenceSchemaWriter {
         }
 
         // Check if we have child elements (valueMap, criterias)
-        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty())
-                || (field.criterias != null && !field.criterias.isEmpty());
+        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty()) || (field.criterias != null && !field.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
@@ -266,9 +272,7 @@ public class DOReferenceSchemaWriter {
         String indent = getIndent(indentLevel);
         writer.write(indent + "<criterias");
 
-        String operator = (field.criteriasOperator != null && !field.criteriasOperator.trim().isEmpty())
-                ? field.criteriasOperator
-                : "AND";
+        String operator = (field.criteriasOperator != null && !field.criteriasOperator.trim().isEmpty()) ? field.criteriasOperator : "AND";
         writeAttribute(writer, "operator", operator);
         writer.write(">\n");
 
@@ -281,9 +285,7 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "match", criteria.match);
             writeAttribute(writer, "with", criteria.with);
 
-            String criteriaOperator = (criteria.operator != null && !criteria.operator.trim().isEmpty())
-                    ? criteria.operator
-                    : "equals";
+            String criteriaOperator = (criteria.operator != null && !criteria.operator.trim().isEmpty()) ? criteria.operator : "equals";
             writeAttribute(writer, "operator", criteriaOperator);
             writer.write(" />\n");
         }
@@ -291,8 +293,7 @@ public class DOReferenceSchemaWriter {
         writer.write(indent + "</criterias>\n");
     }
 
-    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel)
-            throws IOException {
+    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel) throws IOException {
         String indent = getIndent(indentLevel);
         writer.write(indent + "<valueMap>\n");
 
@@ -324,11 +325,7 @@ public class DOReferenceSchemaWriter {
         if (text == null) {
             return "";
         }
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
     }
 
     private String getIndent(int level) {

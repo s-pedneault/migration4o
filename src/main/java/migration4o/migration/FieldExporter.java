@@ -388,6 +388,7 @@ public class FieldExporter {
         } else {
             // Convert byte array to Base64 string
             String base64String = Base64.getEncoder().encodeToString(byteArray);
+            base64String = ValueUtil.formatFieldValue(base64String, schemaField);
             xmlWriter.elementWithContent(fieldName, null, base64String, false);
         }
     }
@@ -421,6 +422,7 @@ public class FieldExporter {
                 return;
             }
 
+            className = ValueUtil.formatFieldValue(className, schemaField);
             xmlWriter.elementWithContent(fieldName, null, className, false);
             return;
         }
@@ -456,7 +458,8 @@ public class FieldExporter {
                 if (schemaField != null && !schemaField.embedContents) {
                     Long mID = IDEntityHandler.extractMID(container, fieldValue);
                     if (mID != null) {
-                        xmlWriter.elementWithContent(fieldName, mID.toString(), false);
+                        String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
+                        xmlWriter.elementWithContent(fieldName, formattedId, false);
                         return;
                     } else {
                         // mID is null - skip this field to avoid empty tags
@@ -503,6 +506,7 @@ public class FieldExporter {
 
             // Apply value mapping if defined for this field
             stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
+            stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
 
             xmlWriter.elementWithContent(fieldName, null, stringValue, true);
         }
@@ -917,6 +921,7 @@ public class FieldExporter {
                     classNameValue = str;
                 }
             }
+            classNameValue = ValueUtil.formatFieldValue(classNameValue, schemaField);
             xmlWriter.elementWithContent(fieldName, classNameValue, false);
             return;
         }
@@ -934,6 +939,7 @@ public class FieldExporter {
             } else {
                 stringValue = fieldValue.toString();
             }
+            stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
             xmlWriter.elementWithContent(fieldName, stringValue, true);
         }
     }

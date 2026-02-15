@@ -55,14 +55,15 @@ import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
 
 /**
- * Editor panel for reference-schema.xml file.
- * Provides a tree view with property editing.
+ * Editor panel for reference-schema.xml file. Provides a tree view with
+ * property editing.
  */
 public class SchemaEditorPanel extends JPanel {
 
     private DOSchema schema;
     private boolean modified;
-    private boolean isReadOnly; // true for database structure panels (cannot be saved)
+    private boolean isReadOnly; // true for database structure panels (cannot be
+                                // saved)
 
     private JTree schemaTree;
     private DefaultTreeModel treeModel;
@@ -91,8 +92,8 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
-     * Constructor for viewing an inferred schema (not backed by a file).
-     * The schema cannot be saved in this mode.
+     * Constructor for viewing an inferred schema (not backed by a file). The
+     * schema cannot be saved in this mode.
      */
     public SchemaEditorPanel(DOSchema schema, String displayName) {
         this.schema = schema;
@@ -116,18 +117,18 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
-     * Get the current schema.
-     * This returns the live schema object, which may have been reloaded.
+     * Get the current schema. This returns the live schema object, which may
+     * have been reloaded.
      */
     public DOSchema getSchema() {
         return schema;
     }
 
     /**
-     * Add a class from another schema to this schema.
-     * This is used when adding a database-only class to the reference schema.
+     * Add a class from another schema to this schema. This is used when adding
+     * a database-only class to the reference schema.
      * 
-     * @param className   The name of the class to add
+     * @param className The name of the class to add
      * @param sourceClass The source class to copy from
      */
     public void addClassFromComparison(String className, DOSchemaClass sourceClass) {
@@ -139,9 +140,7 @@ public class SchemaEditorPanel extends JPanel {
         if (schema.getClasses() != null) {
             for (DOSchemaClass existing : schema.getClasses()) {
                 if (existing.source.equals(className) || existing.source.equals(className)) {
-                    JOptionPane.showMessageDialog(this,
-                            "Class '" + className + "' already exists in the schema.",
-                            "Class Exists", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Class '" + className + "' already exists in the schema.", "Class Exists", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
             }
@@ -176,13 +175,12 @@ public class SchemaEditorPanel extends JPanel {
 
         markModified();
 
-        setStatus("Added class: " + className + " with " +
-                (sourceClass.fields != null ? sourceClass.fields.length : 0) + " field(s)");
+        setStatus("Added class: " + className + " with " + (sourceClass.fields != null ? sourceClass.fields.length : 0) + " field(s)");
     }
 
     /**
-     * Clear the search filter and select a class by name.
-     * Used after adding classes or fields to ensure they're visible.
+     * Clear the search filter and select a class by name. Used after adding
+     * classes or fields to ensure they're visible.
      */
     private void clearSearchAndSelectClass(String className) {
         if (searchField != null && !searchField.getText().isEmpty()) {
@@ -208,9 +206,7 @@ public class SchemaEditorPanel extends JPanel {
         // Check if this node is the class we're looking for
         if (node.getNodeType() == NodeType.CLASS) {
             DOSchemaClass schemaClass = (DOSchemaClass) node.getSchemaElement();
-            if (schemaClass != null &&
-                    (schemaClass.source.equals(className)
-                            || schemaClass.source.equals(className))) {
+            if (schemaClass != null && (schemaClass.source.equals(className) || schemaClass.source.equals(className))) {
                 TreePath path = new TreePath(node.getPath());
                 schemaTree.setSelectionPath(path);
                 schemaTree.scrollPathToVisible(path);
@@ -230,11 +226,11 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
-     * Add a field from another schema/database to a class in this schema.
-     * This is used when adding a database-only field to a reference schema class.
+     * Add a field from another schema/database to a class in this schema. This
+     * is used when adding a database-only field to a reference schema class.
      * 
      * @param parentClass The class to add the field to
-     * @param field       The field to add
+     * @param field The field to add
      */
     public void addFieldFromComparison(DOSchemaClass parentClass, DOSchemaField field) {
         if (parentClass == null || field == null || schema == null) {
@@ -255,9 +251,7 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         if (targetClass == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Class '" + parentClass.source + "' not found in schema.",
-                    "Class Not Found", JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Class '" + parentClass.source + "' not found in schema.", "Class Not Found", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
@@ -265,10 +259,7 @@ public class SchemaEditorPanel extends JPanel {
         if (targetClass.fields != null) {
             for (DOSchemaField existing : targetClass.fields) {
                 if (existing.source.equals(field.source)) {
-                    JOptionPane.showMessageDialog(this,
-                            "Field '" + field.source + "' already exists in class '" +
-                                    targetClass.source + "'.",
-                            "Field Exists", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(this, "Field '" + field.source + "' already exists in class '" + targetClass.source + "'.", "Field Exists", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
             }
@@ -346,7 +337,8 @@ public class SchemaEditorPanel extends JPanel {
         JToolBar toolbar = new JToolBar();
         toolbar.setFloatable(false);
 
-        // Reload button (only enabled for reference schema, not for database structure)
+        // Reload button (only enabled for reference schema, not for database
+        // structure)
         if (!isReadOnly) {
             JButton reloadButton = new JButton("Reload");
             reloadButton.setIcon(UIManager.getIcon("FileView.hardDriveIcon"));
@@ -354,7 +346,8 @@ public class SchemaEditorPanel extends JPanel {
             toolbar.add(reloadButton);
         }
 
-        // Save button (only enabled for reference schema, not for database structure)
+        // Save button (only enabled for reference schema, not for database
+        // structure)
         if (!isReadOnly) {
             toolbar.addSeparator();
             JButton saveButton = new JButton("Save");
@@ -469,16 +462,7 @@ public class SchemaEditorPanel extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Fields"));
 
         // Define columns with their properties
-        fieldColumns = new ColumnDefinition[] {
-                new ColumnDefinition("Source", 200, String.class),
-                new ColumnDefinition("Destination", 150, String.class),
-                new ColumnDefinition("Type", 150, String.class),
-                new ColumnDefinition("Exported", 60, Boolean.class),
-                new ColumnDefinition("Skip When", 150, String.class),
-                new ColumnDefinition("Collection", 70, Boolean.class),
-                new ColumnDefinition("Embed Contents", 120, Boolean.class),
-                new ColumnDefinition("Children Type", 200, String.class)
-        };
+        fieldColumns = new ColumnDefinition[] { new ColumnDefinition("Source", 200, String.class), new ColumnDefinition("Destination", 150, String.class), new ColumnDefinition("Type", 150, String.class), new ColumnDefinition("Exported", 60, Boolean.class), new ColumnDefinition("Skip When", 150, String.class), new ColumnDefinition("Collection", 70, Boolean.class), new ColumnDefinition("Embed Contents", 120, Boolean.class), new ColumnDefinition("Children Type", 200, String.class) };
 
         // Extract column names
         String[] columnNames = new String[fieldColumns.length];
@@ -536,8 +520,7 @@ public class SchemaEditorPanel extends JPanel {
                     openFieldEditor(row);
                 }
                 // Single click on Type or Children Type column to navigate
-                else if (e.getClickCount() == 1 && col >= 0 && col < fieldColumns.length
-                        && (fieldColumns[col].name.equals("Type") || fieldColumns[col].name.equals("Children Type"))) {
+                else if (e.getClickCount() == 1 && col >= 0 && col < fieldColumns.length && (fieldColumns[col].name.equals("Type") || fieldColumns[col].name.equals("Children Type"))) {
                     String typeName = (String) fieldsTableModel.getValueAt(row, col);
                     if (typeName != null && !typeName.isEmpty()) {
                         navigateToClass(typeName);
@@ -573,7 +556,8 @@ public class SchemaEditorPanel extends JPanel {
         try {
             setStatus("Loading schema...");
 
-            // Load schema using the central service (business logic is centralized)
+            // Load schema using the central service (business logic is
+            // centralized)
             schema = DOSchemaService.getInstance().loadReferenceSchema();
 
             // Debug: print loaded classes count and check for ParamConfig
@@ -591,18 +575,14 @@ public class SchemaEditorPanel extends JPanel {
 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error loading schema: " + e.getMessage(),
-                    "Load Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error loading schema: " + e.getMessage(), "Load Error", JOptionPane.ERROR_MESSAGE);
             setStatus("Error loading schema");
         }
     }
 
     /**
-     * Updates the table cell renderers with the loaded schema.
-     * Must be called after schema is loaded to ensure renderers have access to
-     * schema classes.
+     * Updates the table cell renderers with the loaded schema. Must be called
+     * after schema is loaded to ensure renderers have access to schema classes.
      */
     private void updateTableRenderers() {
         if (fieldsTable != null && schema != null) {
@@ -636,7 +616,8 @@ public class SchemaEditorPanel extends JPanel {
             return;
         }
 
-        // If filtering (by text or errors only), show all matching classes as a flat
+        // If filtering (by text or errors only), show all matching classes as a
+        // flat
         // list
         if (!currentFilter.isEmpty() || showOnlyErrors) {
             List<DOSchemaClass> matchingClasses = new ArrayList<>();
@@ -664,9 +645,7 @@ public class SchemaEditorPanel extends JPanel {
         // Build class name to class map for quick lookup
         java.util.Map<String, DOSchemaClass> classMap = new java.util.HashMap<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String shortName = schemaClass.source.contains(".")
-                    ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
-                    : schemaClass.source;
+            String shortName = schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
             classMap.put(shortName, schemaClass);
             // Also map by absolute name for parent lookups
             if (schemaClass.source != null) {
@@ -785,8 +764,8 @@ public class SchemaEditorPanel extends JPanel {
 
     /**
      * Finds and adds all fields throughout the schema that reference the given
-     * class.
-     * Includes both direct field type references and IDEntite-style references.
+     * class. Includes both direct field type references and IDEntite-style
+     * references.
      */
     private void addFieldReferencesToClass(SchemaTreeNode classNode, DOSchemaClass targetClass) {
         if (schema == null || schema.getClasses() == null) {
@@ -794,9 +773,7 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         List<String> references = new ArrayList<>();
-        String targetShortName = targetClass.source.contains(".")
-                ? targetClass.source.substring(targetClass.source.lastIndexOf('.') + 1)
-                : targetClass.source;
+        String targetShortName = targetClass.source.contains(".") ? targetClass.source.substring(targetClass.source.lastIndexOf('.') + 1) : targetClass.source;
         String targetAbsoluteName = targetClass.source;
 
         // Search all classes and their fields for references to this class
@@ -822,12 +799,12 @@ public class SchemaEditorPanel extends JPanel {
                     if (childrenType.equals(targetShortName) || childrenType.equals(targetAbsoluteName)) {
                         isReference = true;
                     } else {
-                        // Check if childrenType is an IDEntite class that points to target
+                        // Check if childrenType is an IDEntite class that
+                        // points to target
                         DOSchemaClass childrenClass = findClassByName(childrenType);
                         if (childrenClass != null && isIDEntiteType(childrenType)) {
                             String pointsTo = childrenClass.pointsTo;
-                            if (pointsTo != null &&
-                                    (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
+                            if (pointsTo != null && (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
                                 isReference = true;
                             }
                         }
@@ -840,14 +817,12 @@ public class SchemaEditorPanel extends JPanel {
                     DOSchemaClass idEntiteClass = findClassByName(fieldType);
                     if (idEntiteClass != null) {
                         String pointsTo = idEntiteClass.pointsTo;
-                        if (pointsTo != null &&
-                                (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
+                        if (pointsTo != null && (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
                             isReference = true;
                         } else if (pointsTo == null) {
                             // Fallback to name extraction if pointsTo not set
                             String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
-                            if (expectedType != null &&
-                                    (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
+                            if (expectedType != null && (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
                                 isReference = true;
                             }
                         }
@@ -864,10 +839,7 @@ public class SchemaEditorPanel extends JPanel {
         // Sort and add references as child nodes
         if (!references.isEmpty()) {
             references.sort(String::compareToIgnoreCase);
-            SchemaTreeNode referencesFolder = new SchemaTreeNode(
-                    "Referenced by (" + references.size() + " fields)",
-                    NodeType.FOLDER,
-                    null);
+            SchemaTreeNode referencesFolder = new SchemaTreeNode("Referenced by (" + references.size() + " fields)", NodeType.FOLDER, null);
             classNode.add(referencesFolder);
 
             for (String ref : references) {
@@ -904,9 +876,7 @@ public class SchemaEditorPanel extends JPanel {
         // Otherwise try to extract from the ID class name
         // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
         if (idClassName != null) {
-            String simpleClassName = idClassName.contains(".")
-                    ? idClassName.substring(idClassName.lastIndexOf('.') + 1)
-                    : idClassName;
+            String simpleClassName = idClassName.contains(".") ? idClassName.substring(idClassName.lastIndexOf('.') + 1) : idClassName;
             if (simpleClassName.startsWith("ID")) {
                 return simpleClassName.substring(2); // Remove "ID" prefix
             }
@@ -948,23 +918,18 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (className.equals(schemaClass.destinationName) ||
-                    className.equals(schemaClass.source)) {
+            if (className.equals(schemaClass.destinationName) || className.equals(schemaClass.source)) {
                 return schemaClass;
             }
         }
         return null;
     }
 
-    private void addChildClasses(SchemaTreeNode parentNode, DOSchemaClass parentClass,
-            java.util.Map<String, List<DOSchemaClass>> childrenMap,
-            java.util.Map<String, DOSchemaClass> classMap) {
+    private void addChildClasses(SchemaTreeNode parentNode, DOSchemaClass parentClass, java.util.Map<String, List<DOSchemaClass>> childrenMap, java.util.Map<String, DOSchemaClass> classMap) {
         // Look for children by short name and absolute name
         List<DOSchemaClass> children = new ArrayList<>();
 
-        String parentShortName = parentClass.source.contains(".")
-                ? parentClass.source.substring(parentClass.source.lastIndexOf('.') + 1)
-                : parentClass.source;
+        String parentShortName = parentClass.source.contains(".") ? parentClass.source.substring(parentClass.source.lastIndexOf('.') + 1) : parentClass.source;
         if (childrenMap.containsKey(parentShortName)) {
             children.addAll(childrenMap.get(parentShortName));
         }
@@ -990,15 +955,10 @@ public class SchemaEditorPanel extends JPanel {
 
     private String getClassDisplayName(DOSchemaClass schemaClass) {
         String sourceName = schemaClass.source;
-        String shortName = sourceName != null && sourceName.contains(".")
-                ? sourceName.substring(sourceName.lastIndexOf('.') + 1)
-                : sourceName;
+        String shortName = sourceName != null && sourceName.contains(".") ? sourceName.substring(sourceName.lastIndexOf('.') + 1) : sourceName;
 
-        String destinationName = schemaClass.source.contains(".")
-                ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
-                : schemaClass.source;
-        if (destinationName != null && !destinationName.isEmpty()
-                && !shortName.equals(destinationName)) {
+        String destinationName = schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+        if (destinationName != null && !destinationName.isEmpty() && !shortName.equals(destinationName)) {
             return shortName + " > " + destinationName;
         }
         return shortName;
@@ -1030,23 +990,24 @@ public class SchemaEditorPanel extends JPanel {
         clearFieldsTable();
 
         switch (node.getNodeType()) {
-            case MODULE:
-                // Modules are now in migration-format.xml, not in reference schema
-                // displayModuleProperties((DOSchemaModule) node.getSchemaElement());
-                propertyPanel.addReadOnlyTextField("Type", "Module");
-                propertyPanel.addReadOnlyTextField("Info", "Modules are now managed in migration-format.xml");
-                break;
-            case CLASS:
-                displayClassProperties((DOSchemaClass) node.getSchemaElement());
-                break;
-            default:
-                break;
+        case MODULE:
+            // Modules are now in migration-format.xml, not in reference schema
+            // displayModuleProperties((DOSchemaModule)
+            // node.getSchemaElement());
+            propertyPanel.addReadOnlyTextField("Type", "Module");
+            propertyPanel.addReadOnlyTextField("Info", "Modules are now managed in migration-format.xml");
+            break;
+        case CLASS:
+            displayClassProperties((DOSchemaClass) node.getSchemaElement());
+            break;
+        default:
+            break;
         }
     }
 
     /**
-     * Apply current property panel values to the schema object.
-     * This is called before saving or switching selections to preserve edits.
+     * Apply current property panel values to the schema object. This is called
+     * before saving or switching selections to preserve edits.
      */
     private void applyCurrentProperties() {
         if (currentSelectedNode == null) {
@@ -1054,34 +1015,29 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         switch (currentSelectedNode.getNodeType()) {
-            case MODULE:
-                // Modules are now in migration-format.xml, not in reference schema
-                // applyModuleProperties((DOSchemaModule)
-                // currentSelectedNode.getSchemaElement());
-                break;
-            case CLASS:
-                applyClassProperties((DOSchemaClass) currentSelectedNode.getSchemaElement());
-                break;
-            default:
-                break;
+        case MODULE:
+            // Modules are now in migration-format.xml, not in reference schema
+            // applyModuleProperties((DOSchemaModule)
+            // currentSelectedNode.getSchemaElement());
+            break;
+        case CLASS:
+            applyClassProperties((DOSchemaClass) currentSelectedNode.getSchemaElement());
+            break;
+        default:
+            break;
         }
     }
 
     /**
-     * Apply module property changes from the property panel.
-     * DISABLED: Modules are now in migration-format.xml, not in reference schema
+     * Apply module property changes from the property panel. DISABLED: Modules
+     * are now in migration-format.xml, not in reference schema
      */
     /*
-     * /*
-     * private void applyModuleProperties(DOSchemaModule module) {
-     * JComponent nameField = propertyPanel.getField("Name");
-     * if (nameField instanceof JTextField) {
-     * String newName = ((JTextField) nameField).getText();
-     * if (newName != null && !newName.trim().isEmpty()) {
-     * module.setName(newName.trim());
-     * }
-     * }
-     * }
+     * /* private void applyModuleProperties(DOSchemaModule module) { JComponent
+     * nameField = propertyPanel.getField("Name"); if (nameField instanceof
+     * JTextField) { String newName = ((JTextField) nameField).getText(); if
+     * (newName != null && !newName.trim().isEmpty()) {
+     * module.setName(newName.trim()); } } }
      */
 
     /**
@@ -1147,16 +1103,14 @@ public class SchemaEditorPanel extends JPanel {
     /*
      * private void displayModuleProperties(DOSchemaModule module) {
      * propertyPanel.addReadOnlyTextField("Type", "Module");
-     * propertyPanel.addTextField("Name", module.getName())
-     * .addActionListener(e -> markModified());
-     * }
+     * propertyPanel.addTextField("Name", module.getName()) .addActionListener(e
+     * -> markModified()); }
      */
 
     private void displayClassProperties(DOSchemaClass schemaClass) {
         propertyPanel.addReadOnlyTextField("Type", "Class");
         propertyPanel.addReadOnlyTextField("Source", schemaClass.source);
-        propertyPanel.addTextField("Destination Name", schemaClass.destinationName)
-                .addActionListener(e -> markModified());
+        propertyPanel.addTextField("Destination Name", schemaClass.destinationName).addActionListener(e -> markModified());
 
         JCheckBox exportCheckBox = propertyPanel.addCheckBox("Export (migrate)", schemaClass.migrate);
         exportCheckBox.addActionListener(e -> {
@@ -1179,13 +1133,11 @@ public class SchemaEditorPanel extends JPanel {
 
         // Always show Title field (editable)
         String title = schemaClass.title != null ? schemaClass.title : "";
-        propertyPanel.addTextField("Title", title)
-                .addActionListener(e -> markModified());
+        propertyPanel.addTextField("Title", title).addActionListener(e -> markModified());
 
         // Always show Description field (editable)
         String description = schemaClass.description != null ? schemaClass.description : "";
-        propertyPanel.addTextField("Description", description)
-                .addActionListener(e -> markModified());
+        propertyPanel.addTextField("Description", description).addActionListener(e -> markModified());
 
         int fieldCount = schemaClass.fields != null ? schemaClass.fields.length : 0;
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));
@@ -1208,10 +1160,7 @@ public class SchemaEditorPanel extends JPanel {
         // Get database schema
         DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
         if (databaseSchema == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Database schema not available.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -1225,21 +1174,13 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         if (dbSchemaClass == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Class not found in database schema: " + schemaClass.source,
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Class not found in database schema: " + schemaClass.source, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         // Open dialog
         String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
-        ClassObjectsDialog dialog = new ClassObjectsDialog(
-                (Frame) SwingUtilities.getWindowAncestor(this),
-                schemaClass.source,
-                dbSchemaClass,
-                databaseSchema,
-                databasePath);
+        ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath);
         dialog.setVisible(true);
     }
 
@@ -1315,29 +1256,18 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         for (DOSchemaField field : schemaClass.fields) {
-            Object[] rowData = {
-                    field.source,
-                    field.destinationName,
-                    field.type != null ? field.type : "",
-                    field.isExported,
-                    field.skipWhen != null ? field.skipWhen : "",
-                    field.isCollection,
-                    field.embedContents,
-                    field.childrenType != null ? field.childrenType : ""
-            };
+            Object[] rowData = { field.source, field.destinationName, field.type != null ? field.type : "", field.isExported, field.skipWhen != null ? field.skipWhen : "", field.isCollection, field.embedContents, field.childrenType != null ? field.childrenType : "" };
             fieldsTableModel.addRow(rowData);
         }
     }
 
     /**
-     * Custom renderer for the Type column.
-     * - Classes: blue
-     * - Primitives: green
+     * Custom renderer for the Type column. - Classes: blue - Primitives: green
      * - Others: red (unresolved)
      */
     /**
-     * Custom renderer for the Collection column.
-     * Displays a checkbox and highlights the cell with red background if there's a
+     * Custom renderer for the Collection column. Displays a checkbox and
+     * highlights the cell with red background if there's a
      * collection/childrenType mismatch.
      */
     private class CollectionRenderer extends JCheckBox implements TableCellRenderer {
@@ -1347,9 +1277,7 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus,
-                int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 
             // Set checkbox state
             if (value instanceof Boolean) {
@@ -1387,7 +1315,8 @@ public class SchemaEditorPanel extends JPanel {
             // Set background color and tooltip based on error state
             if (hasError) {
                 if (!isSelected) {
-                    setBackground(new Color(255, 200, 200)); // Light red background
+                    setBackground(new Color(255, 200, 200)); // Light red
+                                                             // background
                 } else {
                     setBackground(table.getSelectionBackground().darker());
                 }
@@ -1421,20 +1350,22 @@ public class SchemaEditorPanel extends JPanel {
      */
     private class SharedFieldRenderer extends DefaultTableCellRenderer {
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus, int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
 
             Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
             // Check if this field is a shared field reference
-            if (row >= 0 && row < fieldsTableModel.getRowCount() && currentSelectedNode != null &&
-                    currentSelectedNode.getNodeType() == NodeType.CLASS) {
+            if (row >= 0 && row < fieldsTableModel.getRowCount() && currentSelectedNode != null && currentSelectedNode.getNodeType() == NodeType.CLASS) {
                 DOSchemaClass schemaClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
                 if (schemaClass.fields != null && row < schemaClass.fields.length) {
                     DOSchemaField field = schemaClass.fields[row];
                     if (field.isSharedField()) {
                         if (!isSelected) {
-                            c.setBackground(new Color(200, 220, 255)); // Light blue for shared fields
+                            c.setBackground(new Color(200, 220, 255)); // Light
+                                                                       // blue
+                                                                       // for
+                                                                       // shared
+                                                                       // fields
                         } else {
                             c.setBackground(table.getSelectionBackground());
                         }
@@ -1552,6 +1483,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.source = dialog.getFieldSource();
             newFieldWithData.destinationName = dialog.getFieldDestination();
             newFieldWithData.type = dialog.getFieldType();
+            newFieldWithData.format = dialog.getFieldFormat();
             newFieldWithData.isExported = dialog.isFieldExported();
             newFieldWithData.skipWhen = dialog.getFieldSkipWhen();
             newFieldWithData.skipUserOption = dialog.getFieldSkipUserOption();
@@ -1565,16 +1497,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.childrenSchemaClass = null;
 
             // Add the new field to the table
-            Object[] rowData = {
-                    dialog.getFieldSource(),
-                    dialog.getFieldDestination(),
-                    dialog.getFieldType(),
-                    dialog.isFieldExported(),
-                    dialog.getFieldSkipWhen(),
-                    dialog.isFieldCollection(),
-                    dialog.isFieldEmbedContents(),
-                    dialog.getFieldChildrenType()
-            };
+            Object[] rowData = { dialog.getFieldSource(), dialog.getFieldDestination(), dialog.getFieldType(), dialog.isFieldExported(), dialog.getFieldSkipWhen(), dialog.isFieldCollection(), dialog.isFieldEmbedContents(), dialog.getFieldChildrenType() };
             fieldsTableModel.addRow(rowData);
 
             // Rebuild the class with the updated fields
@@ -1630,11 +1553,13 @@ public class SchemaEditorPanel extends JPanel {
             fieldsTableModel.setValueAt(dialog.isFieldEmbedContents(), rowIndex, 6);
             fieldsTableModel.setValueAt(dialog.getFieldChildrenType(), rowIndex, 7);
 
-            // Update fields not shown in the table (title, description, pointsTo, valueMap,
+            // Update fields not shown in the table (title, description,
+            // pointsTo, valueMap,
             // definitionId)
             field.title = dialog.getFieldTitle();
             field.description = dialog.getFieldDescription();
             field.pointsTo = dialog.getFieldPointsTo();
+            field.format = dialog.getFieldFormat();
             field.valueMap = dialog.getValueMappings();
             field.skipUserOption = dialog.getFieldSkipUserOption();
             field.definitionId = dialog.getFieldDefinitionId();
@@ -1659,9 +1584,7 @@ public class SchemaEditorPanel extends JPanel {
         // Check if class already exists
         if (schema.getClasses() != null) {
             for (DOSchemaClass existing : schema.getClasses()) {
-                String shortName = existing.source.contains(".")
-                        ? existing.source.substring(existing.source.lastIndexOf('.') + 1)
-                        : existing.source;
+                String shortName = existing.source.contains(".") ? existing.source.substring(existing.source.lastIndexOf('.') + 1) : existing.source;
                 if (existing.source.equals(className) || shortName.equals(className)) {
                     // Class already exists, no need to create
                     return;
@@ -1693,8 +1616,8 @@ public class SchemaEditorPanel extends JPanel {
 
     /**
      * Rebuild the currently selected class with updated fields from the table
-     * model.
-     * This is necessary because DOSchemaClass and DOSchemaField are immutable.
+     * model. This is necessary because DOSchemaClass and DOSchemaField are
+     * immutable.
      */
     private void rebuildCurrentClassFields() {
         if (currentSelectedNode == null || currentSelectedNode.getNodeType() != NodeType.CLASS) {
@@ -1726,11 +1649,13 @@ public class SchemaEditorPanel extends JPanel {
             Boolean embedContents = (Boolean) fieldsTableModel.getValueAt(i, 6);
             String childrenType = (String) fieldsTableModel.getValueAt(i, 7);
 
-            // Try to find the original field by source name to preserve title and
+            // Try to find the original field by source name to preserve title
+            // and
             // description
             String title = null;
             String description = null;
             String pointsTo = null;
+            String format = null;
             String skipUserOption = null;
             String definitionId = null;
             java.util.Map<String, String> valueMap = null;
@@ -1739,6 +1664,7 @@ public class SchemaEditorPanel extends JPanel {
                 title = originalField.title;
                 description = originalField.description;
                 pointsTo = originalField.pointsTo;
+                format = originalField.format;
                 skipUserOption = originalField.skipUserOption;
                 definitionId = originalField.definitionId;
                 valueMap = originalField.valueMap;
@@ -1748,6 +1674,7 @@ public class SchemaEditorPanel extends JPanel {
             field.source = source != null ? source : "";
             field.destinationName = destination != null ? destination : "";
             field.type = type != null ? type : "";
+            field.format = format;
             field.isExported = exported != null ? exported : false;
             field.skipWhen = skipWhen != null ? skipWhen : "";
             field.isCollection = collection != null ? collection : false;
@@ -1811,10 +1738,7 @@ public class SchemaEditorPanel extends JPanel {
 
     private void reloadSchema() {
         if (modified) {
-            int result = JOptionPane.showConfirmDialog(this,
-                    "You have unsaved changes. Reload anyway?",
-                    "Confirm Reload",
-                    JOptionPane.YES_NO_OPTION);
+            int result = JOptionPane.showConfirmDialog(this, "You have unsaved changes. Reload anyway?", "Confirm Reload", JOptionPane.YES_NO_OPTION);
 
             if (result != JOptionPane.YES_OPTION) {
                 return;
@@ -1831,10 +1755,7 @@ public class SchemaEditorPanel extends JPanel {
 
     private void saveSchema() {
         if (schema == null) {
-            JOptionPane.showMessageDialog(this,
-                    "No schema loaded to save.",
-                    "Save Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No schema loaded to save.", "Save Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -1851,17 +1772,11 @@ public class SchemaEditorPanel extends JPanel {
             modified = false;
             setStatus("Schema saved successfully");
 
-            JOptionPane.showMessageDialog(this,
-                    "Schema saved successfully!\nBackup created.",
-                    "Save Successful",
-                    JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Schema saved successfully!\nBackup created.", "Save Successful", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (Exception e) {
             e.printStackTrace();
-            JOptionPane.showMessageDialog(this,
-                    "Error saving schema: " + e.getMessage(),
-                    "Save Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error saving schema: " + e.getMessage(), "Save Error", JOptionPane.ERROR_MESSAGE);
             setStatus("Error saving schema");
         }
     }
@@ -1909,17 +1824,14 @@ public class SchemaEditorPanel extends JPanel {
         // Check source class name only (last part of absolute name)
         if (schemaClass.source != null) {
             String sourceName = schemaClass.source;
-            String sourceClassName = sourceName.contains(".")
-                    ? sourceName.substring(sourceName.lastIndexOf('.') + 1)
-                    : sourceName;
+            String sourceClassName = sourceName.contains(".") ? sourceName.substring(sourceName.lastIndexOf('.') + 1) : sourceName;
             if (sourceClassName.toLowerCase().contains(currentFilter)) {
                 return true;
             }
         }
 
         // Check destination name
-        if (schemaClass.destinationName != null &&
-                schemaClass.destinationName.toLowerCase().contains(currentFilter)) {
+        if (schemaClass.destinationName != null && schemaClass.destinationName.toLowerCase().contains(currentFilter)) {
             return true;
         }
 
@@ -1927,13 +1839,12 @@ public class SchemaEditorPanel extends JPanel {
     }
 
     /**
-     * Check if a class has errors (unresolved field types).
-     * A field type is unresolved if it's not a primitive and not found in the
-     * schema classes.
+     * Check if a class has errors (unresolved field types). A field type is
+     * unresolved if it's not a primitive and not found in the schema classes.
      */
     /**
-     * Check if a class has any unresolved type errors.
-     * Made package-private so the renderer can access it.
+     * Check if a class has any unresolved type errors. Made package-private so
+     * the renderer can access it.
      */
     public boolean hasErrors(DOSchemaClass schemaClass) {
         if (schemaClass.fields == null || schemaClass.fields.length == 0) {
@@ -1987,8 +1898,7 @@ public class SchemaEditorPanel extends JPanel {
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
                 // Check both absolute name and short name
-                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                        : cls.source;
+                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
                 if (cls.source.equals(typeName) || shortName.equals(typeName)) {
                     return false;
                 }
@@ -2031,7 +1941,7 @@ public class SchemaEditorPanel extends JPanel {
      * Navigate to an anomaly by selecting its class in the tree and optionally
      * opening the field editor.
      * 
-     * @param anomaly    The anomaly to navigate to
+     * @param anomaly The anomaly to navigate to
      * @param openEditor Whether to open the field editor
      */
     private void navigateToAnomaly(DOSchemaAnomaly anomaly, boolean openEditor) {
@@ -2043,10 +1953,10 @@ public class SchemaEditorPanel extends JPanel {
         String className = anomaly.schemaClass.source;
         selectClassByName(className);
 
-        // If there's a field, select it in the fields table and optionally open the
+        // If there's a field, select it in the fields table and optionally open
+        // the
         // editor
-        if (anomaly.schemaField != null && currentSelectedNode != null
-                && currentSelectedNode.getNodeType() == NodeType.CLASS) {
+        if (anomaly.schemaField != null && currentSelectedNode != null && currentSelectedNode.getNodeType() == NodeType.CLASS) {
 
             DOSchemaClass schemaClass = (DOSchemaClass) currentSelectedNode.getSchemaElement();
             if (schemaClass.fields != null) {

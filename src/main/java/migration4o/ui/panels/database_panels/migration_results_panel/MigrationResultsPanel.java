@@ -21,9 +21,9 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Panel that displays migration export results in the Database tab.
- * Shows statistics, warnings, and errors from the most recent export.
- * This is the full-featured panel converted from ExportResultDialog.
+ * Panel that displays migration export results in the Database tab. Shows
+ * statistics, warnings, and errors from the most recent export. This is the
+ * full-featured panel converted from ExportResultDialog.
  */
 public class MigrationResultsPanel extends JPanel {
     private ExportStatistics result;
@@ -40,8 +40,7 @@ public class MigrationResultsPanel extends JPanel {
      */
     private void showEmptyState() {
         JTextArea emptyText = new JTextArea();
-        emptyText.setText(
-                "Migration Results\n\nNo export has been run yet.\nUse the Migration structure tab in the Schema section to configure and run an export.");
+        emptyText.setText("Migration Results\n\nNo export has been run yet.\nUse the Migration structure tab in the Schema section to configure and run an export.");
         emptyText.setEditable(false);
         emptyText.setOpaque(false);
         emptyText.setFont(new Font("Arial", Font.PLAIN, 14));
@@ -111,26 +110,18 @@ public class MigrationResultsPanel extends JPanel {
         statsPanel.setMaximumSize(new Dimension(800, 80));
 
         // Attempted
-        statsPanel.add(createStatBox("Objects Attempted",
-                String.valueOf(result.objectsAttempted),
-                new Color(100, 100, 100)));
+        statsPanel.add(createStatBox("Objects Attempted", String.valueOf(result.objectsAttempted), new Color(100, 100, 100)));
 
         // Succeeded
-        statsPanel.add(createStatBox("Objects Succeeded",
-                String.valueOf(result.objectsSucceeded),
-                new Color(34, 197, 94))); // Green
+        statsPanel.add(createStatBox("Objects Succeeded", String.valueOf(result.objectsSucceeded), new Color(34, 197, 94))); // Green
 
         // Failed
         Color failedColor = !result.errors.isEmpty() ? new Color(239, 68, 68) : new Color(100, 100, 100);
-        statsPanel.add(createStatBox("Objects Failed",
-                String.valueOf(result.errors.size()),
-                failedColor));
+        statsPanel.add(createStatBox("Objects Failed", String.valueOf(result.errors.size()), failedColor));
 
         // Warnings (only show if there are warnings)
         if (!result.schemaWarnings.isEmpty()) {
-            statsPanel.add(createStatBox("Schema Warnings",
-                    String.valueOf(result.schemaWarnings.size()),
-                    new Color(234, 179, 8))); // Yellow/amber
+            statsPanel.add(createStatBox("Schema Warnings", String.valueOf(result.schemaWarnings.size()), new Color(234, 179, 8))); // Yellow/amber
         }
 
         panel.add(statsPanel);
@@ -173,9 +164,7 @@ public class MigrationResultsPanel extends JPanel {
     private JPanel createStatBox(String label, String value, Color color) {
         JPanel box = new JPanel();
         box.setLayout(new BoxLayout(box, BoxLayout.Y_AXIS));
-        box.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(color, 2),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
+        box.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(color, 2), BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 
         JLabel valueLabel = new JLabel(value);
         valueLabel.setFont(new Font("Arial", Font.BOLD, 32));
@@ -198,10 +187,7 @@ public class MigrationResultsPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createEmptyBorder(10, 15, 10, 15));
 
-        JLabel successLabel = new JLabel("<html><div style='text-align: center;'>" +
-                "<p style='font-size: 14px;'>All objects were exported successfully.</p>" +
-                "<p style='font-size: 12px; color: gray; margin-top: 10px;'>The export file is ready to use.</p>" +
-                "</div></html>");
+        JLabel successLabel = new JLabel("<html><div style='text-align: center;'>" + "<p style='font-size: 14px;'>All objects were exported successfully.</p>" + "<p style='font-size: 12px; color: gray; margin-top: 10px;'>The export file is ready to use.</p>" + "</div></html>");
         successLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
         panel.add(successLabel, BorderLayout.CENTER);
@@ -217,8 +203,7 @@ public class MigrationResultsPanel extends JPanel {
         if (!result.errors.isEmpty() && !result.schemaWarnings.isEmpty()) {
             JTabbedPane tabbedPane = new JTabbedPane();
             tabbedPane.addTab("Errors (" + result.errors.size() + ")", createErrorTable());
-            tabbedPane.addTab("Schema Warnings (" + result.schemaWarnings.size() + ")",
-                    createSchemaWarningsPanel());
+            tabbedPane.addTab("Schema Warnings (" + result.schemaWarnings.size() + ")", createSchemaWarningsPanel());
             panel.add(tabbedPane, BorderLayout.CENTER);
         } else if (!result.errors.isEmpty()) {
             panel.add(createErrorTable(), BorderLayout.CENTER);
@@ -297,8 +282,7 @@ public class MigrationResultsPanel extends JPanel {
         panel.add(scrollPane, BorderLayout.CENTER);
 
         // Add explanation label
-        JLabel explanationLabel = new JLabel("<html><i>Errors are grouped by message. " +
-                "Sample object IDs and affected classes are shown for each error type.</i></html>");
+        JLabel explanationLabel = new JLabel("<html><i>Errors are grouped by message. " + "Sample object IDs and affected classes are shown for each error type.</i></html>");
         explanationLabel.setForeground(Color.GRAY);
         explanationLabel.setBorder(BorderFactory.createEmptyBorder(5, 0, 0, 0));
         panel.add(explanationLabel, BorderLayout.SOUTH);
@@ -310,8 +294,7 @@ public class MigrationResultsPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(0, 10));
 
         // Create table model - group by source class + source field combination
-        String[] columnNames = { "Warning Type", "Count", "Sample Embedded Classes", "Sample Object IDs",
-                "Source Class (from schema)", "Source Field (from schema)", "Fix" };
+        String[] columnNames = { "Warning Type", "Count", "Sample Embedded Classes", "Sample Object IDs", "Source Class (from schema)", "Source Field (from schema)", "Fix" };
         DefaultTableModel tableModel = new DefaultTableModel(columnNames, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
@@ -342,9 +325,7 @@ public class MigrationResultsPanel extends JPanel {
             ExportWarning firstWarning = warnings.get(0);
 
             // Warning type description
-            String warningType = firstWarning.type == ExportWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE
-                    ? "Duplicate Embedded Reference"
-                    : firstWarning.type.toString();
+            String warningType = firstWarning.type == ExportWarning.WarningType.DUPLICATE_EMBEDDED_REFERENCE ? "Duplicate Embedded Reference" : firstWarning.type.toString();
 
             // Extract from first embedded field reference
             String sourceContainingClass = "N/A";
@@ -366,28 +347,18 @@ public class MigrationResultsPanel extends JPanel {
             }
 
             // Limit samples to first 5 for display
-            String embeddedClassesSample = embeddedClasses.stream()
-                    .limit(5)
-                    .collect(java.util.stream.Collectors.joining(", "));
+            String embeddedClassesSample = embeddedClasses.stream().limit(5).collect(java.util.stream.Collectors.joining(", "));
             if (embeddedClasses.size() > 5) {
                 embeddedClassesSample += "...";
             }
 
-            String objectIdsSample = objectIds.stream()
-                    .limit(5)
-                    .collect(java.util.stream.Collectors.joining(", "));
+            String objectIdsSample = objectIds.stream().limit(5).collect(java.util.stream.Collectors.joining(", "));
             if (objectIds.size() > 5) {
                 objectIdsSample += "...";
             }
 
-            tableModel.addRow(new Object[] {
-                    warningType,
-                    String.valueOf(warnings.size()),
-                    embeddedClassesSample,
-                    objectIdsSample,
-                    sourceContainingClass,
-                    sourceFieldName,
-                    "Fix" // Button text
+            tableModel.addRow(new Object[] { warningType, String.valueOf(warnings.size()), embeddedClassesSample, objectIdsSample, sourceContainingClass, sourceFieldName, "Fix" // Button
+                                                                                                                                                                                 // text
             });
         }
 
@@ -481,19 +452,13 @@ public class MigrationResultsPanel extends JPanel {
         String sourceField = (String) tableModel.getValueAt(row, 5);
 
         if ("N/A".equals(sourceClass) || "N/A".equals(sourceField)) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot open field editor: Source class or field information is not available.",
-                    "Field Editor",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot open field editor: Source class or field information is not available.", "Field Editor", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         DOSchema schema = DOSchemaService.getInstance().getReferenceSchema();
         if (schema == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot open field editor: Reference schema is not loaded.",
-                    "Field Editor",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot open field editor: Reference schema is not loaded.", "Field Editor", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -506,10 +471,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         if (schemaClass == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot open field editor: Class '" + sourceClass + "' not found in reference schema.",
-                    "Field Editor",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot open field editor: Class '" + sourceClass + "' not found in reference schema.", "Field Editor", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -524,10 +486,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         if (field == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot open field editor: Field '" + sourceField + "' not found in class '" + sourceClass + "'.",
-                    "Field Editor",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot open field editor: Field '" + sourceField + "' not found in class '" + sourceClass + "'.", "Field Editor", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -540,6 +499,7 @@ public class MigrationResultsPanel extends JPanel {
             field.source = dialog.getFieldSource();
             field.destinationName = dialog.getFieldDestination();
             field.type = dialog.getFieldType();
+            field.format = dialog.getFieldFormat();
             field.isExported = dialog.isFieldExported();
             field.skipWhen = dialog.getFieldSkipWhen();
             field.isCollection = dialog.isFieldCollection();
@@ -616,10 +576,7 @@ public class MigrationResultsPanel extends JPanel {
         java.awt.datatransfer.StringSelection selection = new java.awt.datatransfer.StringSelection(sb.toString());
         java.awt.Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
 
-        JOptionPane.showMessageDialog(this,
-                "Error details copied to clipboard",
-                "Copied",
-                JOptionPane.INFORMATION_MESSAGE);
+        JOptionPane.showMessageDialog(this, "Error details copied to clipboard", "Copied", JOptionPane.INFORMATION_MESSAGE);
     }
 
     /**
@@ -631,8 +588,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus, int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             if (editedRows.contains(row)) {
                 setBackground(new Color(200, 255, 200));
                 setEnabled(false);
@@ -665,8 +621,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         @Override
-        public Component getTableCellEditorComponent(JTable table, Object value,
-                boolean isSelected, int row, int column) {
+        public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
             currentRow = row;
             label = (value == null) ? "Fix" : value.toString();
             button.setText(label);
@@ -699,19 +654,13 @@ public class MigrationResultsPanel extends JPanel {
         String sourceField = (String) tableModel.getValueAt(row, 5);
 
         if ("N/A".equals(sourceClass) || "N/A".equals(sourceField)) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot apply fix: Source class or field information is not available.",
-                    "Fix Error",
-                    JOptionPane.WARNING_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot apply fix: Source class or field information is not available.", "Fix Error", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
         DOSchema schema = DOSchemaService.getInstance().getReferenceSchema();
         if (schema == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot apply fix: Reference schema is not loaded.",
-                    "Fix Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot apply fix: Reference schema is not loaded.", "Fix Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -724,10 +673,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         if (schemaClass == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot apply fix: Class '" + sourceClass + "' not found in reference schema.",
-                    "Fix Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot apply fix: Class '" + sourceClass + "' not found in reference schema.", "Fix Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -742,10 +688,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         if (field == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Cannot apply fix: Field '" + sourceField + "' not found in class '" + sourceClass + "'.",
-                    "Fix Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Cannot apply fix: Field '" + sourceField + "' not found in class '" + sourceClass + "'.", "Fix Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -760,7 +703,8 @@ public class MigrationResultsPanel extends JPanel {
     }
 
     /**
-     * Shows a detailed list of all objects mentioned in the selected warning group.
+     * Shows a detailed list of all objects mentioned in the selected warning
+     * group.
      */
     private void showObjectsList(int tableRow, Map<String, List<ExportWarning>> groupedWarnings) {
         List<ExportWarning> selectedGroupWarnings = new ArrayList<>(groupedWarnings.values()).get(tableRow);
@@ -835,12 +779,7 @@ public class MigrationResultsPanel extends JPanel {
             // Export count = actual number of times this object appears in XML
             int actualExportCount = allReferences.size();
 
-            tableModel.addRow(new Object[] {
-                    objectId,
-                    firstRef.className,
-                    actualExportCount,
-                    referencesText
-            });
+            tableModel.addRow(new Object[] { objectId, firstRef.className, actualExportCount, referencesText });
         }
 
         // Create table
@@ -854,8 +793,7 @@ public class MigrationResultsPanel extends JPanel {
         // Multi-line renderer for "References" column
         table.getColumnModel().getColumn(3).setCellRenderer(new TableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 JTextArea textArea = new JTextArea(value != null ? value.toString() : "");
                 textArea.setLineWrap(true);
                 textArea.setWrapStyleWord(true);
@@ -881,8 +819,7 @@ public class MigrationResultsPanel extends JPanel {
         JPanel infoPanel = new JPanel(new BorderLayout());
         infoPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        JLabel titleLabel = new JLabel(String.format("Objects referenced multiple times from: %s → %s",
-                sourceClass, sourceField));
+        JLabel titleLabel = new JLabel(String.format("Objects referenced multiple times from: %s → %s", sourceClass, sourceField));
         titleLabel.setFont(new Font("Arial", Font.BOLD, 14));
         infoPanel.add(titleLabel, BorderLayout.NORTH);
 
@@ -906,8 +843,8 @@ public class MigrationResultsPanel extends JPanel {
     }
 
     /**
-     * Custom table cell renderer that supports multi-line text wrapping
-     * and highlights edited rows in green.
+     * Custom table cell renderer that supports multi-line text wrapping and
+     * highlights edited rows in green.
      */
     private class MultiLineTableCellRenderer extends JTextArea implements TableCellRenderer {
         public MultiLineTableCellRenderer() {
@@ -917,9 +854,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus,
-                int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             if (isSelected) {
                 setForeground(table.getSelectionForeground());
                 setBackground(table.getSelectionBackground());

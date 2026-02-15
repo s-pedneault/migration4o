@@ -10,8 +10,10 @@ public class DOSchemaField {
     public String source;
     public String destinationName;
     public String type;
+    public String format;
     public boolean isExported;
-    public String skipWhen; // Comma-separated skip conditions (NULL,ZERO,MINUS_ONE,etc.)
+    public String skipWhen; // Comma-separated skip conditions
+                            // (NULL,ZERO,MINUS_ONE,etc.)
     public String skipUserOption;
     public boolean isCollection;
     public boolean embedContents;
@@ -19,14 +21,18 @@ public class DOSchemaField {
     public String title;
     public String description;
     public String pointsTo;
-    public Map<String, String> valueMap; // Maps database values to export values
+    public Map<String, String> valueMap; // Maps database values to export
+                                         // values
 
     // Shared field definition support
-    public String definitionId; // If set, this field references a shared definition
+    public String definitionId; // If set, this field references a shared
+                                // definition
 
     // Virtual field support (source starts with @)
-    public List<DOFieldCriteria> criterias; // Query criterias for virtual fields
-    public String criteriasOperator; // Logical operator for multiple criterias: "AND" or "OR" (default: "AND")
+    public List<DOFieldCriteria> criterias; // Query criterias for virtual
+                                            // fields
+    public String criteriasOperator; // Logical operator for multiple criterias:
+                                     // "AND" or "OR" (default: "AND")
 
     public DOSchemaClass childrenSchemaClass;
     public DOSchemaClass parentClass; // The class that contains this field
@@ -35,8 +41,8 @@ public class DOSchemaField {
     }
 
     /**
-     * Gets the mapped value for the given database value, or returns the original
-     * value if no mapping exists.
+     * Gets the mapped value for the given database value, or returns the
+     * original value if no mapping exists.
      */
     public String getMappedValue(String databaseValue) {
         if (valueMap == null || valueMap.isEmpty() || databaseValue == null) {
@@ -63,9 +69,9 @@ public class DOSchemaField {
     }
 
     /**
-     * Returns true if this is a virtual field (source starts with @).
-     * Virtual fields query the database for related objects instead of reading
-     * actual fields.
+     * Returns true if this is a virtual field (source starts with @). Virtual
+     * fields query the database for related objects instead of reading actual
+     * fields.
      */
     public boolean isVirtualField() {
         return source != null && source.startsWith("@");
@@ -82,7 +88,8 @@ public class DOSchemaField {
     }
 
     /**
-     * Creates a deep copy of this field (used when instantiating shared fields).
+     * Creates a deep copy of this field (used when instantiating shared
+     * fields).
      */
     public DOSchemaField copy() {
         DOSchemaField copy = new DOSchemaField();
@@ -99,6 +106,7 @@ public class DOSchemaField {
         // y.source = this.source;
         copy.destinationName = this.destinationName;
         copy.type = this.type;
+        copy.format = this.format;
         copy.isExported = this.isExported;
         copy.skipWhen = this.skipWhen;
         copy.skipUserOption = this.skipUserOption;
@@ -115,7 +123,8 @@ public class DOSchemaField {
             copy.valueMap = new LinkedHashMap<>(this.valueMap);
         }
 
-        // Note: childrenSchemaClass and parentClass are not copied as they're set later
+        // Note: childrenSchemaClass and parentClass are not copied as they're
+        // set later
         return copy;
     }
 }

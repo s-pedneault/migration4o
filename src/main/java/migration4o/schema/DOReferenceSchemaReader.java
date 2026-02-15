@@ -20,10 +20,9 @@ import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
 
 /**
- * Reader for the new reference-schema.xml format.
- * This format uses <classes> as root element with direct class children.
- * Attributes use 'source' and 'isExported' instead of 'sourceName' and
- * 'migrate'.
+ * Reader for the new reference-schema.xml format. This format uses <classes> as
+ * root element with direct class children. Attributes use 'source' and
+ * 'isExported' instead of 'sourceName' and 'migrate'.
  */
 public class DOReferenceSchemaReader {
 
@@ -53,16 +52,19 @@ public class DOReferenceSchemaReader {
             // Set classes array
             schema.classes = allClasses;
 
-            // Post-process: detect and add missing references (e.g., IDEntite collections)
+            // Post-process: detect and add missing references (e.g., IDEntite
+            // collections)
             DOReferenceDetector.detectAndAddReferences(schema);
 
             // Post-process: validate embedContents configuration
             DOEmbeddingDetector.detectEmbeddingAnomalies(schema);
 
-            // Post-process: determine optimal embedding strategy based on reference
+            // Post-process: determine optimal embedding strategy based on
+            // reference
             // patterns
             // DISABLED: Using embedContents values from XML file instead
-            // DOEmbeddingCoordinator coordinator = new DOEmbeddingCoordinator(schema);
+            // DOEmbeddingCoordinator coordinator = new
+            // DOEmbeddingCoordinator(schema);
             // coordinator.coordinateEmbedding();
 
             return schema;
@@ -93,7 +95,8 @@ public class DOReferenceSchemaReader {
                 DOSchemaField field = parseField(fieldElement);
                 // Use source attribute as the key for shared field definitions
                 if (field.source != null && !field.source.trim().isEmpty()) {
-                    field.definitionId = field.source; // Mark as shared field definition
+                    field.definitionId = field.source; // Mark as shared field
+                                                       // definition
                     schema.sharedFields.put(field.source, field);
                 }
             }
@@ -125,10 +128,12 @@ public class DOReferenceSchemaReader {
         String isExportedAttr = classElement.getAttribute("isExported");
         String pointsTo = classElement.getAttribute("pointsTo");
 
-        // Use destinationName as simpleName if available, otherwise derive from source
+        // Use destinationName as simpleName if available, otherwise derive from
+        // source
         String simpleName = !destinationName.isEmpty() ? destinationName : getSimpleClassName(absoluteName);
 
-        // Parse isExported attribute to migrate flag (default to true if not specified)
+        // Parse isExported attribute to migrate flag (default to true if not
+        // specified)
         boolean migrate = isExportedAttr.isEmpty() || "true".equalsIgnoreCase(isExportedAttr);
 
         // Use null if pointsTo is empty
@@ -180,9 +185,8 @@ public class DOReferenceSchemaReader {
 
     /**
      * Parse a field element which could be either a full field definition or a
-     * reference to a shared field.
-     * If it's a reference (has 'definition' attribute), resolve it from the
-     * schema's shared fields.
+     * reference to a shared field. If it's a reference (has 'definition'
+     * attribute), resolve it from the schema's shared fields.
      */
     private DOSchemaField parseFieldOrReference(Element fieldElement, DOSchema schema) {
         String definitionRef = fieldElement.getAttribute("definition");
@@ -200,11 +204,18 @@ public class DOReferenceSchemaReader {
             DOSchemaField field = sharedField.copy();
             field.definitionId = definitionRef; // Keep the reference ID
 
-            // CRITICAL: Use the source from THIS element, not from the shared definition
-            // This allows the actual field name to vary per class (e.g., mID vs mIDEntite)
+            // CRITICAL: Use the source from THIS element, not from the shared
+            // definition
+            // This allows the actual field name to vary per class (e.g., mID vs
+            // mIDEntite)
             String classSpecificSource = fieldElement.getAttribute("source");
             if (classSpecificSource != null && !classSpecificSource.trim().isEmpty()) {
                 field.source = classSpecificSource;
+            }
+
+            String classSpecificFormat = fieldElement.getAttribute("format");
+            if (classSpecificFormat != null && !classSpecificFormat.trim().isEmpty()) {
+                field.format = classSpecificFormat;
             }
 
             return field;
@@ -218,6 +229,7 @@ public class DOReferenceSchemaReader {
         String source = fieldElement.getAttribute("source");
         String destinationName = fieldElement.getAttribute("destinationName");
         String type = fieldElement.getAttribute("type");
+        String format = fieldElement.getAttribute("format");
         String isExportedAttr = fieldElement.getAttribute("isExported");
         String skipWhen = fieldElement.getAttribute("skipWhen");
         String skipUserOption = fieldElement.getAttribute("skipUserOption");
@@ -240,6 +252,7 @@ public class DOReferenceSchemaReader {
         field.source = source;
         field.destinationName = destinationName;
         field.type = type;
+        field.format = format.isEmpty() ? null : format;
         field.isExported = isExported;
         field.skipWhen = skipWhen != null && !skipWhen.trim().isEmpty() ? skipWhen : null;
         field.skipUserOption = skipUserOption != null && !skipUserOption.trim().isEmpty() ? skipUserOption : null;
