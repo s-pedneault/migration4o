@@ -1029,9 +1029,13 @@ public class MigrationStructurePanel extends JPanel {
 
         // Get previous export limit from history (for default value)
         Integer defaultLimit = 50; // default
+        String defaultOutputFormat = "XML";
         ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
         if (lastExport != null && lastExport.maxObjectsPerClass != null) {
             defaultLimit = lastExport.maxObjectsPerClass;
+        }
+        if (lastExport != null && lastExport.outputFormat != null && !lastExport.outputFormat.isBlank()) {
+            defaultOutputFormat = lastExport.outputFormat;
         }
 
         // Show confirmation dialog with object limit options
@@ -1042,7 +1046,7 @@ public class MigrationStructurePanel extends JPanel {
         // Collect available skip options from the schema
         java.util.List<migration4o.models.schema.DOSchemaField> availableSkipOptions = migration4o.util.SchemaUtil.collectSkipUserOptions(referenceSchema);
 
-        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions);
+        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions, defaultOutputFormat);
         confirmDialog.showDialog();
 
         if (!confirmDialog.isConfirmed()) {
@@ -1052,10 +1056,11 @@ public class MigrationStructurePanel extends JPanel {
         Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
         boolean exportNativeIds = confirmDialog.getExportNativeIds();
         java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = confirmDialog.getSelectedSkipOptions();
+        String outputFormat = confirmDialog.getOutputFormat();
         String outputPath = "output";
 
         // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath);
+        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputFormat);
     }
 
     /**

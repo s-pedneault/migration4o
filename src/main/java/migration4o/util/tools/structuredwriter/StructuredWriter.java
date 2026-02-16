@@ -2,6 +2,7 @@ package migration4o.util.tools.structuredwriter;
 
 import java.io.IOException;
 import java.io.Writer;
+import java.nio.file.Path;
 import java.util.Map;
 import java.util.Vector;
 
@@ -22,12 +23,18 @@ elementWithStructure()
 public class StructuredWriter {
 
     final StructuredWriterAPI api;
-    final Writer writer;
+    public final Writer writer;
+    public final Path outputPath;
     public Vector<StructuredWriterElement> branch = new Vector<StructuredWriterElement>();
 
     public StructuredWriter(StructuredWriterAPI api, Writer writer) throws IOException {
+        this(api, writer, null);
+    }
+
+    public StructuredWriter(StructuredWriterAPI api, Writer writer, Path outputPath) throws IOException {
         this.api = api;
         this.writer = writer;
+        this.outputPath = outputPath;
         api.initialize(this);
     }
 
@@ -93,6 +100,9 @@ public class StructuredWriter {
         api.closeStructure((StructuredWriterElementWithStructure) element);
         writer.write(element.suffix.toString());
         popElement(element);
+        if (branch.isEmpty()) {
+            api.onDocumentComplete(this);
+        }
         return this;
     }
 

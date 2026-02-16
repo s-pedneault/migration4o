@@ -4,11 +4,16 @@ import java.io.IOException;
 
 public interface StructuredWriterAPI {
 
+    public String getName();
+
     default void initialize(StructuredWriter writer) throws IOException {
     }
 
     default boolean includeCollectionSizeMetadata() {
         return true;
+    }
+
+    default void onDocumentComplete(StructuredWriter writer) throws IOException {
     }
 
     public void add(StructuredWriterElementWithoutContent element) throws IOException;

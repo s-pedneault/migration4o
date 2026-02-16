@@ -1,11 +1,23 @@
-package migration4o.util.tools.structuredwriter;
+package migration4o.util.tools.structuredwriter.formats;
 
 import java.io.IOException;
 import java.util.Map;
 
+import migration4o.util.tools.structuredwriter.StructuredWriter;
+import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
+import migration4o.util.tools.structuredwriter.StructuredWriterElement;
+import migration4o.util.tools.structuredwriter.StructuredWriterElementWithContent;
+import migration4o.util.tools.structuredwriter.StructuredWriterElementWithStructure;
+import migration4o.util.tools.structuredwriter.StructuredWriterElementWithoutContent;
+
 public class StructuredWriterJSON implements StructuredWriterAPI {
 
     private static final String INDENT = "  ";
+
+    @Override
+    public String getName() {
+        return "JSON";
+    }
 
     @Override
     public void initialize(StructuredWriter writer) throws IOException {

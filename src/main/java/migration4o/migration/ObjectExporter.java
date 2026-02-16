@@ -46,8 +46,8 @@ public class ObjectExporter {
     }
 
     /**
-     * Resets the state for a new export operation. Only clears state if not
-     * using shared tracking.
+     * Resets the state for a new export operation. Only clears state if not using
+     * shared tracking.
      */
     public void reset() {
         if (!operation.useSharedTracking) {
@@ -62,8 +62,8 @@ public class ObjectExporter {
      * Recursively exports an object and all its referenced objects. This is the
      * main entry point - assumes objects are NOT embedded by default. For root
      * objects (those directly from a class's objectIds array), the shared
-     * deduplication set is NOT checked, allowing the same object to be exported
-     * in multiple criteria-based exports of the same class.
+     * deduplication set is NOT checked, allowing the same object to be exported in
+     * multiple criteria-based exports of the same class.
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel) throws IOException {
         exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true, null);
@@ -72,27 +72,27 @@ public class ObjectExporter {
     /**
      * Recursively exports an object and all its referenced objects.
      * 
-     * @param isEmbedded true if this object is embedded in a parent field (not
-     * a top-level export)
-     * @param fieldName the name of the field this object is embedded in (for
-     * warning messages)
-     * @param containingClassName the name of the class that contains the field
-     * (for warning messages)
-     * @param sourceFieldName the source field name from schema (e.g.,
-     * mVectCompartiment)
+     * @param isEmbedded                true if this object is embedded in a parent
+     *                                  field (not a top-level export)
+     * @param fieldName                 the name of the field this object is
+     *                                  embedded in (for warning messages)
+     * @param containingClassName       the name of the class that contains the
+     *                                  field (for warning messages)
+     * @param sourceFieldName           the source field name from schema (e.g.,
+     *                                  mVectCompartiment)
      * @param sourceContainingClassName the source class name from schema (e.g.,
-     * gest.vehicule.Vehicule)
-     * @param isRootObject true if this is a root object (from class's
-     * objectIds), false if referenced
-     * @param parentObjectId the ID of the parent object containing the field
-     * that references this object
+     *                                  gest.vehicule.Vehicule)
+     * @param isRootObject              true if this is a root object (from class's
+     *                                  objectIds), false if referenced
+     * @param parentObjectId            the ID of the parent object containing the
+     *                                  field that references this object
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel, boolean isEmbedded, String fieldName, String containingClassName, String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId) throws IOException {
 
         // Check if this object should be exported (handles duplicate tracking
         // and
         // statistics)
-        if (!ObjectIdTracker.shouldExport(container, objectId, isRootObject, operation.exportedObjectIds, operation.statistics, parentObjectId, sourceContainingClassName, sourceFieldName)) {
+        if (!ObjectIdTracker.shouldExport(container, objectId, isRootObject, isEmbedded, operation.exportedObjectIds, operation.statistics, parentObjectId, sourceContainingClassName, sourceFieldName)) {
             // Object already exported - just return (warnings will be generated
             // at end)
             return;

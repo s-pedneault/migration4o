@@ -19,6 +19,7 @@ public class ExportHistory {
     private static final String PROP_MODULE_NAMES = "export.moduleNames";
     private static final String PROP_MAX_OBJECTS_PER_CLASS = "export.maxObjectsPerClass";
     private static final String PROP_EXPORT_NATIVE_IDS = "export.exportNativeIds";
+    private static final String PROP_OUTPUT_FORMAT = "export.outputFormat";
 
     public enum ExportType {
         CLASS, MODULE
@@ -27,25 +28,29 @@ public class ExportHistory {
     /**
      * Saves export parameters for later replay.
      */
-    public static void saveExport(ExportType type, String targetName, String outputPath,
-            List<String> classNames) {
-        saveExport(type, targetName, outputPath, classNames, null, null, false);
+    public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames) {
+        saveExport(type, targetName, outputPath, classNames, null, null, false, "XML");
     }
 
     /**
      * Saves export parameters for bulk module export.
      */
-    public static void saveExport(ExportType type, String targetName, String outputPath,
-            List<String> classNames, List<String> moduleNames) {
-        saveExport(type, targetName, outputPath, classNames, moduleNames, null, false);
+    public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames) {
+        saveExport(type, targetName, outputPath, classNames, moduleNames, null, false, "XML");
     }
 
     /**
      * Saves export parameters with object limit for bulk module export.
      */
-    public static void saveExport(ExportType type, String targetName, String outputPath,
-            List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass,
-            boolean exportNativeIds) {
+    public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass, boolean exportNativeIds) {
+        saveExport(type, targetName, outputPath, classNames, moduleNames, maxObjectsPerClass, exportNativeIds, "XML");
+    }
+
+    /**
+     * Saves export parameters with object limit and output format for bulk module
+     * export.
+     */
+    public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat) {
         Properties props = new Properties();
         props.setProperty(PROP_TYPE, type.name());
         props.setProperty(PROP_TARGET, targetName);
@@ -65,6 +70,7 @@ public class ExportHistory {
         }
 
         props.setProperty(PROP_EXPORT_NATIVE_IDS, String.valueOf(exportNativeIds));
+        props.setProperty(PROP_OUTPUT_FORMAT, (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : "XML");
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
             props.store(writer, "Last export operation - automatically generated");
@@ -93,6 +99,7 @@ public class ExportHistory {
             List<String> classNames = null;
             List<String> moduleNames = null;
             Integer maxObjectsPerClass = null;
+            String outputFormat = props.getProperty(PROP_OUTPUT_FORMAT, "XML");
 
             if (type == ExportType.MODULE) {
                 String classNamesStr = props.getProperty(PROP_CLASS_NAMES);
@@ -117,8 +124,7 @@ public class ExportHistory {
 
             boolean exportNativeIds = Boolean.parseBoolean(props.getProperty(PROP_EXPORT_NATIVE_IDS, "false"));
 
-            return new ExportParams(type, target, output, classNames, moduleNames,
-                    timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass, exportNativeIds);
+            return new ExportParams(type, target, output, classNames, moduleNames, timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass, exportNativeIds, outputFormat);
         } catch (IOException | IllegalArgumentException e) {
             System.err.println("Warning: Could not load export history: " + e.getMessage());
             return null;
@@ -144,10 +150,9 @@ public class ExportHistory {
         public final long timestamp;
         public final Integer maxObjectsPerClass; // null = all objects
         public final boolean exportNativeIds; // whether to export DB4O object IDs
+        public final String outputFormat; // selected output format (XML, EXCEL, ...)
 
-        public ExportParams(ExportType type, String targetName, String outputPath,
-                List<String> classNames, List<String> moduleNames, long timestamp,
-                Integer maxObjectsPerClass, boolean exportNativeIds) {
+        public ExportParams(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, long timestamp, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat) {
             this.type = type;
             this.targetName = targetName;
             this.outputPath = outputPath;
@@ -156,6 +161,7 @@ public class ExportHistory {
             this.timestamp = timestamp;
             this.maxObjectsPerClass = maxObjectsPerClass;
             this.exportNativeIds = exportNativeIds;
+            this.outputFormat = (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : "XML";
         }
 
         public String getDescription() {
@@ -166,8 +172,7 @@ public class ExportHistory {
                 if (moduleNames != null && moduleNames.size() > 1) {
                     baseDesc = "Export " + moduleNames.size() + " modules to " + outputPath;
                 } else {
-                    baseDesc = "Export module '" + targetName + "' (" +
-                            (classNames != null ? classNames.size() : 0) + " classes) to " + outputPath;
+                    baseDesc = "Export module '" + targetName + "' (" + (classNames != null ? classNames.size() : 0) + " classes) to " + outputPath;
                 }
 
                 if (maxObjectsPerClass != null) {

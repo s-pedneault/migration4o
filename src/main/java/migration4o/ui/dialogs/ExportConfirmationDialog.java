@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
+import migration4o.util.tools.structuredwriter.StructuredWriterProvider;
 
 /**
  * Dialog for confirming export operations with options for object limits.
@@ -18,6 +20,7 @@ public class ExportConfirmationDialog extends JDialog {
     private boolean confirmed = false;
     private Integer maxObjectsPerClass = null; // null = all objects
     private boolean exportNativeIds = false;
+    private String outputFormat = "XML";
     private List<DOSchemaField> availableSkipOptions;
     private List<DOSchemaField> selectedSkipOptions = new ArrayList<>();
 
@@ -25,6 +28,7 @@ public class ExportConfirmationDialog extends JDialog {
     private JRadioButton limitObjectsRadio;
     private JSpinner limitSpinner;
     private JCheckBox exportNativeIdsCheckbox;
+    private JComboBox<String> outputFormatCombo;
     private Map<DOSchemaField, JCheckBox> skipOptionCheckboxes = new HashMap<>();
 
     /**
@@ -36,8 +40,7 @@ public class ExportConfirmationDialog extends JDialog {
      *                             selected)
      * @param availableSkipOptions List of fields that can be skipped by user choice
      */
-    public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit,
-            List<DOSchemaField> availableSkipOptions) {
+    public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit, List<DOSchemaField> availableSkipOptions, String defaultOutputFormat) {
         super(parent, "Confirm Bulk Export", true);
 
         if (defaultLimit == null || defaultLimit <= 0) {
@@ -45,6 +48,9 @@ public class ExportConfirmationDialog extends JDialog {
         }
 
         this.availableSkipOptions = availableSkipOptions != null ? availableSkipOptions : new ArrayList<>();
+        if (defaultOutputFormat != null && !defaultOutputFormat.isBlank()) {
+            this.outputFormat = defaultOutputFormat;
+        }
 
         initComponents(moduleCount, defaultLimit);
         pack();
@@ -60,7 +66,7 @@ public class ExportConfirmationDialog extends JDialog {
         mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
         // Message
-        JLabel messageLabel = new JLabel("Export " + moduleCount + " module(s) to XML?");
+        JLabel messageLabel = new JLabel("Export " + moduleCount + " module(s)?");
         messageLabel.setFont(messageLabel.getFont().deriveFont(Font.BOLD, 14f));
         messageLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainPanel.add(messageLabel);
@@ -146,11 +152,34 @@ public class ExportConfirmationDialog extends JDialog {
 
         mainPanel.add(additionalPanel);
 
+        mainPanel.add(Box.createVerticalStrut(10));
+
+        JPanel formatPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        formatPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        formatPanel.add(new JLabel("Output format:"));
+
+        List<StructuredWriterAPI> formats = StructuredWriterProvider.listFormats();
+        java.util.List<String> formatNames = new java.util.ArrayList<>();
+        for (StructuredWriterAPI format : formats) {
+            if (format != null && format.getName() != null && !format.getName().isBlank()) {
+                formatNames.add(format.getName());
+            }
+        }
+        if (formatNames.isEmpty()) {
+            formatNames.add("XML");
+        }
+
+        outputFormatCombo = new JComboBox<>(formatNames.toArray(new String[0]));
+        outputFormatCombo.setPreferredSize(new Dimension(180, 25));
+        outputFormatCombo.setSelectedItem(resolveDefaultFormat(formatNames, outputFormat));
+        formatPanel.add(outputFormatCombo);
+
+        mainPanel.add(formatPanel);
+
         mainPanel.add(Box.createVerticalStrut(15));
 
         // Help text
-        JLabel helpLabel = new JLabel(
-                "<html><i>Note: Object limits apply per class (e.g., max 50 items from Class A, 50 from Class B, etc.)</i></html>");
+        JLabel helpLabel = new JLabel("<html><i>Note: Object limits apply per class (e.g., max 50 items from Class A, 50 from Class B, etc.)</i></html>");
         helpLabel.setFont(helpLabel.getFont().deriveFont(11f));
         helpLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         mainPanel.add(helpLabel);
@@ -177,6 +206,10 @@ public class ExportConfirmationDialog extends JDialog {
 
             // Update selected skip options one last time
             updateSelectedSkipOptions();
+
+            // Read output format
+            Object selected = outputFormatCombo.getSelectedItem();
+            outputFormat = selected != null ? selected.toString() : "XML";
 
             dispose();
         });
@@ -240,6 +273,30 @@ public class ExportConfirmationDialog extends JDialog {
         return selectedSkipOptions;
     }
 
+    public String getOutputFormat() {
+        return outputFormat;
+    }
+
+    private String resolveDefaultFormat(List<String> formatNames, String requestedFormat) {
+        if (requestedFormat == null || requestedFormat.isBlank()) {
+            return formatNames.get(0);
+        }
+
+        for (String formatName : formatNames) {
+            if (formatName.equalsIgnoreCase(requestedFormat)) {
+                return formatName;
+            }
+        }
+
+        for (String formatName : formatNames) {
+            if ("XML".equalsIgnoreCase(formatName)) {
+                return formatName;
+            }
+        }
+
+        return formatNames.get(0);
+    }
+
     /**
      * Updates the selected skip options list based on checkbox states.
      */
@@ -253,8 +310,8 @@ public class ExportConfirmationDialog extends JDialog {
     }
 
     /**
-     * Shows the dialog and returns the result.
-     * Convenience method that shows the dialog modally.
+     * Shows the dialog and returns the result. Convenience method that shows the
+     * dialog modally.
      */
     public void showDialog() {
         setVisible(true);

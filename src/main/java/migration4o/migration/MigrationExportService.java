@@ -15,8 +15,8 @@ import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.DOExportMonitor;
 
 /**
- * Service for coordinating XML export operations.
- * Handles validation, export execution, and history tracking.
+ * Service for coordinating XML export operations. Handles validation, export
+ * execution, and history tracking.
  */
 public class MigrationExportService {
 
@@ -25,22 +25,17 @@ public class MigrationExportService {
 
     public ValidationResult validateExportPrerequisites() {
         if (!databaseService.isDatabaseOpen()) {
-            return ValidationResult.error("No database is currently open. Please open a database first.",
-                    "No Database");
+            return ValidationResult.error("No database is currently open. Please open a database first.", "No Database");
         }
 
         if (!schemaService.isSchemaLoaded()) {
-            return ValidationResult.error("No reference schema loaded. Please load the schema first.",
-                    "No Schema");
+            return ValidationResult.error("No reference schema loaded. Please load the schema first.", "No Schema");
         }
 
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(List<MigrationModule> modules, List<String> modulePaths,
-            String baseOutputPath,
-            DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds,
-            List<migration4o.models.schema.DOSchemaField> selectedSkipOptions) throws Exception {
+    public ExportStatistics exportModules(List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
@@ -49,6 +44,7 @@ public class MigrationExportService {
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         exporter.setExportNativeIds(exportNativeIds);
         exporter.setSelectedSkipOptions(selectedSkipOptions);
+        exporter.setOutputFormat(outputFormat);
 
         // CRITICAL FIX: Always use shared tracking for module exports to avoid
         // generating
@@ -70,12 +66,14 @@ public class MigrationExportService {
 
         // Write comprehensive XSD after all exports are complete
         try {
-            if (monitor != null) {
-                monitor.onStatusMessage("Generating comprehensive XSD schema...");
-            }
-            exporter.writeComprehensiveXSD(baseOutputPath);
-            if (monitor != null) {
-                monitor.onStatusMessage("Comprehensive XSD schema generated: migration-schema.xsd");
+            if (exporter.isXMLFormat()) {
+                if (monitor != null) {
+                    monitor.onStatusMessage("Generating comprehensive XSD schema...");
+                }
+                exporter.writeComprehensiveXSD(baseOutputPath);
+                if (monitor != null) {
+                    monitor.onStatusMessage("Comprehensive XSD schema generated: migration-schema.xsd");
+                }
             }
         } catch (Exception e) {
             if (monitor != null) {
@@ -87,7 +85,7 @@ public class MigrationExportService {
         // Validate exported XML files against the comprehensive XSD
         try {
             java.util.Set<String> xmlFiles = exporter.getExportedXMLFiles();
-            if (xmlFiles != null && !xmlFiles.isEmpty()) {
+            if (exporter.isXMLFormat() && xmlFiles != null && !xmlFiles.isEmpty()) {
                 if (monitor != null) {
                     monitor.onStatusMessage("Validating " + xmlFiles.size() + " XML files against schema...");
                 }
@@ -95,29 +93,22 @@ public class MigrationExportService {
                 Path dbBasePath = exporter.getBaseOutputPath(baseOutputPath);
                 Path xsdPath = dbBasePath.resolve("schema.xsd");
 
-                migration4o.util.XMLValidator.ValidationResult validationResult = migration4o.util.XMLValidator
-                        .validateMultiple(
-                                new java.util.ArrayList<>(xmlFiles),
-                                xsdPath.toString());
+                migration4o.util.XMLValidator.ValidationResult validationResult = migration4o.util.XMLValidator.validateMultiple(new java.util.ArrayList<>(xmlFiles), xsdPath.toString());
 
                 // Print final summary
                 System.out.println();
                 if (validationResult.allValid()) {
-                    System.out.println(
-                            "=== OVERALL VALIDATION: PASS (" + validationResult.getTotalCount() + " files) ===");
+                    System.out.println("=== OVERALL VALIDATION: PASS (" + validationResult.getTotalCount() + " files) ===");
                 } else {
-                    System.out.println("=== OVERALL VALIDATION: FAIL (" + validationResult.successCount + " passed, " +
-                            validationResult.failedFiles.size() + " failed) ===");
+                    System.out.println("=== OVERALL VALIDATION: FAIL (" + validationResult.successCount + " passed, " + validationResult.failedFiles.size() + " failed) ===");
                 }
                 System.out.println();
 
                 if (monitor != null) {
                     if (validationResult.allValid()) {
-                        monitor.onStatusMessage(
-                                "✓ All " + validationResult.getTotalCount() + " XML files validated successfully");
+                        monitor.onStatusMessage("✓ All " + validationResult.getTotalCount() + " XML files validated successfully");
                     } else {
-                        monitor.onStatusMessage("⚠ Validation: " + validationResult.successCount + " passed, " +
-                                validationResult.failedFiles.size() + " failed");
+                        monitor.onStatusMessage("⚠ Validation: " + validationResult.successCount + " passed, " + validationResult.failedFiles.size() + " failed");
                         for (String failedFile : validationResult.failedFiles) {
                             String fileName = new java.io.File(failedFile).getName();
                             monitor.onStatusMessage("  ✗ " + fileName);
@@ -145,12 +136,10 @@ public class MigrationExportService {
         File outputFile = new File(params.outputPath);
         String path = outputFile.getAbsolutePath();
         int outputIndex = path.lastIndexOf("/output");
-        String baseOutput = outputIndex >= 0 ? path.substring(0, outputIndex + 7)
-                : (outputFile.getParent() != null ? outputFile.getParent() : "output");
+        String baseOutput = outputIndex >= 0 ? path.substring(0, outputIndex + 7) : (outputFile.getParent() != null ? outputFile.getParent() : "output");
 
         if (params.type == ExportHistory.ExportType.CLASS) {
-            throw new UnsupportedOperationException(
-                    "Single-class export is no longer supported. Please export via modules instead.");
+            throw new UnsupportedOperationException("Single-class export is no longer supported. Please export via modules instead.");
         }
 
         List<MigrationModule> modules = new ArrayList<>();
@@ -172,7 +161,6 @@ public class MigrationExportService {
             // Build full hierarchical path for the module
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass,
-            params.exportNativeIds, null);
+        return exportModules(modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat);
     }
 }

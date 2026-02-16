@@ -20,9 +20,9 @@ import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
 
 /**
- * UI adapter that manages async export operations using SwingWorker.
- * Handles progress dialogs and result displays for export operations.
- * All business logic is delegated to MigrationExportService.
+ * UI adapter that manages async export operations using SwingWorker. Handles
+ * progress dialogs and result displays for export operations. All business
+ * logic is delegated to MigrationExportService.
  */
 public class MigrationServiceCallback {
 
@@ -62,10 +62,9 @@ public class MigrationServiceCallback {
      *                            attributes
      * @param selectedSkipOptions list of fields that user has chosen to skip
      * @param outputPath          the output directory path
+     * @param outputFormat        selected structured writer format
      */
-    public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass,
-            boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions,
-            String outputPath) {
+    public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass, boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputPath, String outputFormat) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
@@ -80,8 +79,7 @@ public class MigrationServiceCallback {
         // Get migration report monitor from main window
         DOExportMonitor monitor = getExportMonitor();
         if (monitor == null) {
-            handleExportError(new IllegalStateException(
-                    "Migration report panel not available. Please ensure a database is loaded."));
+            handleExportError(new IllegalStateException("Migration report panel not available. Please ensure a database is loaded."));
             return;
         }
 
@@ -93,8 +91,7 @@ public class MigrationServiceCallback {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
-                ExportStatistics result = exportService.exportModules(modules, modulePaths, outputPath,
-                        monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions);
+                ExportStatistics result = exportService.exportModules(modules, modulePaths, outputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputFormat);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -105,9 +102,7 @@ public class MigrationServiceCallback {
                 // Save to history if successful
                 if (result.errors.isEmpty()) {
                     String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
-                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, outputPath,
-                            new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass,
-                            exportNativeIds);
+                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, outputPath, new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass, exportNativeIds, outputFormat);
                 }
 
                 return result;
@@ -142,8 +137,7 @@ public class MigrationServiceCallback {
         // Get migration report monitor from main window
         DOExportMonitor monitor = getExportMonitor();
         if (monitor == null) {
-            handleExportError(new IllegalStateException(
-                    "Migration report panel not available. Please ensure a database is loaded."));
+            handleExportError(new IllegalStateException("Migration report panel not available. Please ensure a database is loaded."));
             return;
         }
 
