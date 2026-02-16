@@ -13,8 +13,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
@@ -36,42 +34,35 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
  * generation - ExportStatistics: tracking metrics and errors - ObjectExporter:
  * object graph traversal - XSDBuilder: schema generation
  */
-public class XMLExportEngine {
-    private final DOSchema schema;
-    private final DOSchema databaseSchema;
-    private final String databasePath;
-    private final ExtObjectContainer container;
-    private Integer maxObjectsPerClass = null; // null = all objects
-    private boolean exportNativeIds = false; // whether to include DB4O object
-                                             // IDs in XML
-    private String outputFormat = "XML";
-    private List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = new ArrayList<>();
-    private Set<Long> sharedExportedObjectIds = null; // Shared across module
-                                                      // exports to prevent
-                                                      // duplicate counting
-    private XSDBuilder sharedXSDBuilder = null; // Shared XSD builder for
-                                                // comprehensive schema
-                                                // generation
-    private Set<String> exportedXMLFiles = null; // Track XML files for
-                                                 // validation
+public class ExportEngine {
+    private final ExportOperation operation;
 
     /**
-     * Creates export engine using the shared in-memory database from
-     * DODatabaseService.
+     * Creates export engine using the shared in-memory database from DODatabaseService.
      * 
      * @param schema         The reference schema
      * @param databaseSchema The database schema
      * @param databasePath   The database file path (for naming output folders)
      */
-    public XMLExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
-        this.schema = schema;
-        this.databaseSchema = databaseSchema;
-        this.databasePath = databasePath;
+    public ExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
+        this.operation = new ExportOperation();
+        this.operation.referenceSchema = schema;
+        this.operation.databaseSchema = databaseSchema;
+        this.operation.databasePath = databasePath;
+        this.operation.maxObjectsPerClass = null;
+        this.operation.exportNativeIds = false;
+        this.operation.outputFormat = "XML";
+        this.operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
+        this.operation.selectedSkipUserOptions = new ArrayList<>();
+        this.operation.exportedObjectIds = new HashSet<>();
+        this.operation.useSharedTracking = false;
+        this.operation.sharedXSDBuilder = null;
+        this.operation.exportedXMLFiles = null;
 
         // Get the shared in-memory container from the service
-        this.container = DODatabaseService.getInstance().getContainer();
+        this.operation.container = DODatabaseService.getInstance().getContainer();
 
-        if (container == null) {
+        if (operation.container == null) {
             throw new IllegalStateException("No database is open. Please open a database first using DODatabaseService.");
         }
     }
@@ -83,7 +74,7 @@ public class XMLExportEngine {
      *                           all objects
      */
     public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
-        this.maxObjectsPerClass = maxObjectsPerClass;
+        this.operation.maxObjectsPerClass = maxObjectsPerClass;
     }
 
     /**
@@ -92,7 +83,7 @@ public class XMLExportEngine {
      * @param exportNativeIds true to include id attribute with DB4O object ID
      */
     public void setExportNativeIds(boolean exportNativeIds) {
-        this.exportNativeIds = exportNativeIds;
+        this.operation.exportNativeIds = exportNativeIds;
     }
 
     /**
@@ -102,9 +93,9 @@ public class XMLExportEngine {
      */
     public void setSelectedSkipOptions(List<migration4o.models.schema.DOSchemaField> selectedSkipOptions) {
         if (selectedSkipOptions == null) {
-            this.selectedSkipOptions = new ArrayList<>();
+            this.operation.selectedSkipUserOptions = new ArrayList<>();
         } else {
-            this.selectedSkipOptions = new ArrayList<>(selectedSkipOptions);
+            this.operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
         }
     }
 
@@ -116,9 +107,9 @@ public class XMLExportEngine {
      */
     public void setOutputFormat(String outputFormat) {
         if (outputFormat == null || outputFormat.isBlank()) {
-            this.outputFormat = "XML";
+            this.operation.outputFormat = "XML";
         } else {
-            this.outputFormat = outputFormat;
+            this.operation.outputFormat = outputFormat;
         }
     }
 
@@ -130,7 +121,7 @@ public class XMLExportEngine {
         if ("EXCEL".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
             return true;
         }
-        return exportNativeIds;
+        return operation.exportNativeIds;
     }
 
     /**
@@ -139,10 +130,11 @@ public class XMLExportEngine {
      * counted once and a single comprehensive XSD is generated.
      */
     public void initializeSharedTracking() {
-        this.sharedExportedObjectIds = new HashSet<>();
-        this.sharedXSDBuilder = new XSDBuilder();
-        this.sharedXSDBuilder.startExportRoot();
-        this.exportedXMLFiles = new HashSet<>();
+        operation.exportedObjectIds = new HashSet<>();
+        operation.useSharedTracking = true;
+        operation.sharedXSDBuilder = new XSDBuilder();
+        operation.sharedXSDBuilder.startExportRoot();
+        operation.exportedXMLFiles = new HashSet<>();
     }
 
     /**
@@ -150,9 +142,10 @@ public class XMLExportEngine {
      * state between different export sessions.
      */
     public void resetSharedTracking() {
-        this.sharedExportedObjectIds = null;
-        this.sharedXSDBuilder = null;
-        this.exportedXMLFiles = null;
+        operation.useSharedTracking = false;
+        operation.exportedObjectIds = new HashSet<>();
+        operation.sharedXSDBuilder = null;
+        operation.exportedXMLFiles = null;
     }
 
     /**
@@ -162,7 +155,7 @@ public class XMLExportEngine {
      * @return Set of XML file paths, or null if not using shared tracking
      */
     public Set<String> getExportedXMLFiles() {
-        return exportedXMLFiles;
+        return operation.exportedXMLFiles;
     }
 
     /**
@@ -173,7 +166,7 @@ public class XMLExportEngine {
      * @throws IOException if writing fails
      */
     public void writeComprehensiveXSD(String baseOutputPath) throws IOException {
-        if (sharedXSDBuilder == null) {
+        if (operation.sharedXSDBuilder == null) {
             throw new IllegalStateException("Shared XSD builder not initialized. Call initializeSharedTracking() first.");
         }
 
@@ -181,7 +174,7 @@ public class XMLExportEngine {
         Files.createDirectories(dbBasePath);
 
         Path xsdPath = dbBasePath.resolve("schema.xsd");
-        sharedXSDBuilder.writeXSD(xsdPath.toString());
+        operation.sharedXSDBuilder.writeXSD(xsdPath.toString());
     }
 
     /**
@@ -189,11 +182,11 @@ public class XMLExportEngine {
      * "local/54060/BackupManuel.dat" -> "54060"
      */
     private String getDatabaseFolderName() {
-        if (databasePath == null) {
+        if (operation.databasePath == null) {
             return "default";
         }
 
-        Path path = Paths.get(databasePath);
+        Path path = Paths.get(operation.databasePath);
         Path parent = path.getParent();
 
         if (parent != null) {
@@ -242,15 +235,17 @@ public class XMLExportEngine {
         // Count total classes for progress reporting
         int totalClasses = countTotalClasses(module);
 
-        if (monitor != null) {
-            monitor.onExportStart(module.getName(), totalClasses);
+        operation.monitor = monitor;
+        operation.baseOutputPath = baseOutputPath;
+
+        if (operation.monitor != null) {
+            operation.monitor.onExportStart(module.getName(), totalClasses);
         }
 
-        // Initialize components
-        ExportStatistics statistics = new ExportStatistics(monitor);
+        operation.statistics = new ExportStatistics(operation.monitor);
 
         // Use shared tracker if provided, otherwise create new one
-        ReferencedClassTracker referencedClassTracker = sharedTracker != null ? sharedTracker : new ReferencedClassTracker();
+        operation.referencedClassTracker = sharedTracker != null ? sharedTracker : new ReferencedClassTracker();
 
         try {
             // Use the in-memory container (already open)
@@ -260,7 +255,7 @@ public class XMLExportEngine {
             Files.createDirectories(dbBasePath);
 
             // Register all modules and their classes with the tracker
-            registerModuleClasses(module, referencedClassTracker);
+            registerModuleClasses(module, operation.referencedClassTracker);
 
             // Build the full path including parent modules
             // For example, "Activités/Intervention" becomes
@@ -286,7 +281,7 @@ public class XMLExportEngine {
                 moduleBasePath = dbBasePath;
             }
 
-            exportModuleRecursive(container, module, moduleBasePath, statistics, monitor, 0, referencedClassTracker);
+            exportModuleRecursive(module, moduleBasePath, 0);
 
             // Only export referenced classes if we created the tracker (not
             // shared)
@@ -294,32 +289,32 @@ public class XMLExportEngine {
             if (sharedTracker == null) {
                 // After exporting requested modules, check for referenced
                 // classes
-                Set<String> referencedClasses = referencedClassTracker.getReferencedClasses();
-                if (!referencedClasses.isEmpty() && monitor != null) {
-                    monitor.onStatusMessage("Discovered " + referencedClasses.size() + " referenced classes not in export request");
+                Set<String> referencedClasses = operation.referencedClassTracker.getReferencedClasses();
+                if (!referencedClasses.isEmpty() && operation.monitor != null) {
+                    operation.monitor.onStatusMessage("Discovered " + referencedClasses.size() + " referenced classes not in export request");
                 }
 
                 // Export referenced classes to a "Referenced" module
                 if (!referencedClasses.isEmpty()) {
-                    exportReferencedClasses(container, referencedClasses, dbBasePath, statistics, monitor, referencedClassTracker);
+                    exportReferencedClasses(referencedClasses, dbBasePath);
                 }
             }
 
             // Generate duplicate warnings and set export info
             String fullOutputPath = dbBasePath.toString();
-            statistics.schemaWarnings.clear();
-            statistics.schemaWarnings.addAll(statistics.duplicationDetector.generateDuplicateWarnings());
-            statistics.setExportInfo(module.getName(), fullOutputPath);
+            operation.statistics.schemaWarnings.clear();
+            operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
+            operation.statistics.setExportInfo(module.getName(), fullOutputPath);
 
-            if (monitor != null) {
-                monitor.onExportComplete(module.getName(), statistics.objectsSucceeded, statistics.schemaWarnings.size());
+            if (operation.monitor != null) {
+                operation.monitor.onExportComplete(module.getName(), operation.statistics.objectsSucceeded, operation.statistics.schemaWarnings.size());
             }
 
-            return statistics;
+            return operation.statistics;
 
         } catch (Exception e) {
-            if (monitor != null) {
-                monitor.onExportError(module.getName(), e.getMessage());
+            if (operation.monitor != null) {
+                operation.monitor.onExportError(module.getName(), e.getMessage());
             }
             throw e;
         } finally {
@@ -375,25 +370,29 @@ public class XMLExportEngine {
      */
     public void exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker tracker) throws Exception {
 
+        operation.baseOutputPath = baseOutputPath;
+        operation.monitor = monitor;
+        operation.referencedClassTracker = tracker;
+
         Set<String> referencedClasses = tracker.getReferencedClasses();
         if (referencedClasses.isEmpty()) {
             return;
         }
 
-        ExportStatistics statistics = new ExportStatistics(monitor);
+        operation.statistics = new ExportStatistics(operation.monitor);
 
-        if (monitor != null) {
-            monitor.onStatusMessage("Exporting " + referencedClasses.size() + " referenced classes");
+        if (operation.monitor != null) {
+            operation.monitor.onStatusMessage("Exporting " + referencedClasses.size() + " referenced classes");
         }
 
         try {
             Path dbBasePath = getBaseOutputPath(baseOutputPath);
 
-            exportReferencedClasses(container, referencedClasses, dbBasePath, statistics, monitor, tracker);
+            exportReferencedClasses(referencedClasses, dbBasePath);
 
         } catch (Exception e) {
-            if (monitor != null) {
-                monitor.onExportError("Referenced", e.getMessage());
+            if (operation.monitor != null) {
+                operation.monitor.onExportError("Referenced", e.getMessage());
             }
             throw e;
         }
@@ -413,10 +412,10 @@ public class XMLExportEngine {
     /**
      * Recursively exports a module and its children to folder structure.
      */
-    private void exportModuleRecursive(ExtObjectContainer container, MigrationModule module, Path currentBasePath, ExportStatistics statistics, DOExportMonitor monitor, int depth, ReferencedClassTracker referencedClassTracker) throws Exception {
+    private void exportModuleRecursive(MigrationModule module, Path currentBasePath, int depth) throws Exception {
 
-        if (monitor != null) {
-            monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
+        if (operation.monitor != null) {
+            operation.monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
         }
 
         // Create folder for this module (use module name to preserve proper
@@ -430,7 +429,7 @@ public class XMLExportEngine {
         // + "' has "
         // + module.getClassConfigs().size() + " class configs");
         for (ClassExportConfig config : module.getClassConfigs()) {
-            if (monitor != null && monitor.isCancelled()) {
+            if (operation.monitor != null && operation.monitor.isCancelled()) {
                 break;
             }
 
@@ -446,13 +445,13 @@ public class XMLExportEngine {
                 System.out.println("DEBUG: Exporting " + className + " with " + config.getCriteria().size() + " criteria: " + config.getCriteria());
             }
 
-            DOSchemaClass schemaClass = schema.findClassByName(className);
+            DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
             if (schemaClass == null) {
                 continue; // Skip missing classes silently - errors tracked via
                           // monitor
             }
 
-            DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
+            DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
             if (dbSchemaClass == null) {
                 continue; // Skip missing classes silently - errors tracked via
                           // monitor
@@ -466,24 +465,24 @@ public class XMLExportEngine {
             Path xsdPath = isXMLFormat() ? modulePath.resolve(xsdFileName) : null;
 
             // Track XML file for validation if using shared tracking
-            if (isXMLFormat() && exportedXMLFiles != null) {
-                exportedXMLFiles.add(xmlPath.toString());
+            if (isXMLFormat() && operation.exportedXMLFiles != null) {
+                operation.exportedXMLFiles.add(xmlPath.toString());
             }
 
             // Export this class with criteria filtering
-            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, referencedClassTracker, config);
+            exportClassToFile(schemaClass, dbSchemaClass, xmlPath, xsdPath, config);
         }
 
         // Recursively export child modules
         for (MigrationModule childModule : module.getChildModules()) {
-            if (monitor != null && monitor.isCancelled()) {
+            if (operation.monitor != null && operation.monitor.isCancelled()) {
                 break;
             }
-            exportModuleRecursive(container, childModule, modulePath, statistics, monitor, depth + 1, referencedClassTracker);
+            exportModuleRecursive(childModule, modulePath, depth + 1);
         }
 
-        if (monitor != null) {
-            monitor.onModuleComplete(module.getName());
+        if (operation.monitor != null) {
+            operation.monitor.onModuleComplete(module.getName());
         }
     }
 
@@ -493,12 +492,12 @@ public class XMLExportEngine {
      * @param config Optional export configuration with criteria filtering. If null,
      *               exports all objects.
      */
-    private void exportClassToFile(ExtObjectContainer container, DOSchemaClass schemaClass, DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath, ExportStatistics statistics, DOExportMonitor monitor, ReferencedClassTracker referencedClassTracker, migration4o.models.ui.ClassExportConfig config) throws Exception {
+    private void exportClassToFile(DOSchemaClass schemaClass, DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath, migration4o.models.ui.ClassExportConfig config) throws Exception {
 
         // Use shared XSD builder if available, otherwise create a new one
-        XSDBuilder xsdBuilder = sharedXSDBuilder != null ? sharedXSDBuilder : new XSDBuilder();
-        if (sharedXSDBuilder == null) {
-            xsdBuilder.startExportRoot();
+        operation.xsdBuilder = operation.sharedXSDBuilder != null ? operation.sharedXSDBuilder : new XSDBuilder();
+        if (operation.sharedXSDBuilder == null) {
+            operation.xsdBuilder.startExportRoot();
         }
 
         Writer outputWriter = null;
@@ -506,39 +505,30 @@ public class XMLExportEngine {
         try {
             // Create structured writer
             outputWriter = new FileWriter(xmlPath.toFile());
-            StructuredWriter xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, xmlPath);
+            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, xmlPath);
 
             // Create export operation
-            ExportOperation operation = new ExportOperation();
-            operation.referenceSchema = schema;
-            operation.databaseSchema = databaseSchema;
-            operation.databasePath = databasePath;
             operation.baseOutputPath = xmlPath.getParent().getParent().toString();
-            operation.monitor = monitor;
-            operation.maxObjectsPerClass = maxObjectsPerClass;
             operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
-            operation.statistics = statistics;
             operation.exportConfig = config;
-            operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
-            operation.useSharedTracking = (sharedExportedObjectIds != null);
-            operation.referencedClassTracker = referencedClassTracker;
-            operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
-            operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
+            if (!operation.useSharedTracking) {
+                operation.exportedObjectIds = new HashSet<>();
+            }
 
             // Create object exporter
-            ObjectExporter objectExporter = new ObjectExporter(operation, xmlWriter, xsdBuilder);
+            ObjectExporter objectExporter = new ObjectExporter(operation, operation.xmlWriter, operation.xsdBuilder);
             objectExporter.reset();
 
             // Copy the tracker state if we have a tracker
-            if (referencedClassTracker != null) {
-                for (String className : referencedClassTracker.getReferencedClasses()) {
+            if (operation.referencedClassTracker != null) {
+                for (String className : operation.referencedClassTracker.getReferencedClasses()) {
                     operation.referencedClassTracker.registerReferencedClass(className);
                 }
             }
             String module = xmlPath.getParent().toString();
 
             // Write XML header and metadata
-            if (isXMLFormat() && sharedXSDBuilder != null) {
+            if (isXMLFormat() && operation.sharedXSDBuilder != null) {
                 // Using shared XSD - calculate relative path from XML file to
                 // schema.xsd
                 Path xmlDir = xmlPath.getParent();
@@ -561,82 +551,82 @@ public class XMLExportEngine {
                 pathBuilder.append("schema.xsd");
                 String relativeSchemaPath = pathBuilder.toString();
 
-                xmlWriter.openRootStructure("export", relativeSchemaPath);
-                xmlWriter.metadata(schemaClass.getMetadata(module));
+                operation.xmlWriter.openRootStructure("export", relativeSchemaPath);
+                operation.xmlWriter.metadata(schemaClass.getMetadata(module));
 
             } else if (isXMLFormat()) {
                 // Individual XSD - no schema reference needed (pass null for
                 // schemaLocation)
-                xmlWriter.openRootStructure("export", null);
-                xmlWriter.metadata(schemaClass.getMetadata(module));
+                operation.xmlWriter.openRootStructure("export", null);
+                operation.xmlWriter.metadata(schemaClass.getMetadata(module));
             } else {
-                xmlWriter.openStructure("export");
-                xmlWriter.metadata(schemaClass.getMetadata(module));
+                operation.xmlWriter.openStructure("export");
+                operation.xmlWriter.metadata(schemaClass.getMetadata(module));
             }
-            xmlWriter.openStructure("objects");
+            operation.xmlWriter.openStructure("objects");
 
             // Export all objects of this class
-            xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
+            operation.xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
             long[] objectIds = dbSchemaClass.objectIds;
             int objectCount = (objectIds != null ? objectIds.length : 0);
 
             // Apply object limit if set
             int actualCount = objectCount;
-            if (maxObjectsPerClass != null && objectCount > maxObjectsPerClass) {
-                actualCount = maxObjectsPerClass;
+            if (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) {
+                actualCount = operation.maxObjectsPerClass;
             }
 
-            if (monitor != null) {
-                monitor.onClassStart(schemaClass.source, schemaClass.destinationName, actualCount);
+            if (operation.monitor != null) {
+                operation.monitor.onClassStart(schemaClass.source, schemaClass.destinationName, actualCount);
             }
 
             if (objectIds != null) {
-                statistics.setCurrentClass(schemaClass.source, actualCount);
+                operation.statistics.setCurrentClass(schemaClass.source, actualCount);
 
                 // Export up to maxObjectsPerClass objects that match criteria
                 int exportedCount = 0;
                 for (long objectId : objectIds) {
-                    if (monitor != null && monitor.isCancelled()) {
+                    if (operation.monitor != null && operation.monitor.isCancelled()) {
                         break;
                     }
 
-                    if (maxObjectsPerClass != null && exportedCount >= maxObjectsPerClass) {
+                    if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass) {
                         break; // Stop at limit
                     }
 
-                    objectExporter.exportObjectRecursively(container, objectId, 2);
+                    objectExporter.exportObjectRecursively(operation.container, objectId, 2);
                     exportedCount++;
                 }
             }
 
             // Merge discovered references back to main tracker
-            if (referencedClassTracker != null) {
+            if (operation.referencedClassTracker != null) {
                 for (String className : objectExporter.getReferencedClassTracker().getReferencedClasses()) {
-                    referencedClassTracker.registerReferencedClass(className);
+                    operation.referencedClassTracker.registerReferencedClass(className);
                 }
             }
 
             // Write XML footer
-            xmlWriter.closeStructure("objects");
-            xmlWriter.closeStructure("export");
+            operation.xmlWriter.closeStructure("objects");
+            operation.xmlWriter.closeStructure("export");
 
             // Only generate individual XSD if not using shared builder
-            if (isXMLFormat() && sharedXSDBuilder == null && xsdPath != null) {
-                if (monitor != null) {
-                    monitor.onXSDGenerationStart(xsdPath.toString());
+            if (isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
+                if (operation.monitor != null) {
+                    operation.monitor.onXSDGenerationStart(xsdPath.toString());
                 }
 
                 // Generate XSD schema
-                xsdBuilder.writeXSD(xsdPath.toString());
+                operation.xsdBuilder.writeXSD(xsdPath.toString());
 
-                if (monitor != null) {
-                    monitor.onXSDGenerationComplete(xsdPath.toString());
+                if (operation.monitor != null) {
+                    operation.monitor.onXSDGenerationComplete(xsdPath.toString());
                 }
             }
 
-            if (monitor != null) {
-                int exportedCount = statistics.objectsSucceeded;
-                monitor.onClassComplete(schemaClass.source, exportedCount);
+            if (operation.monitor != null) {
+                int exportedCount = operation.statistics.objectsSucceeded;
+                operation.monitor.onClassComplete(schemaClass.source, exportedCount);
             }
 
         } finally {
@@ -651,7 +641,7 @@ public class XMLExportEngine {
     }
 
     private StructuredWriterAPI getStructuredWriterAPI() {
-        StructuredWriterAPI configured = StructuredWriterProvider.getFormat(outputFormat);
+        StructuredWriterAPI configured = StructuredWriterProvider.getFormat(operation.outputFormat);
         if (configured != null) {
             return configured;
         }
@@ -686,10 +676,10 @@ public class XMLExportEngine {
      * Exports referenced classes that were discovered during export but not in the
      * original request. Creates a "Referenced" module to hold these classes.
      */
-    private void exportReferencedClasses(ExtObjectContainer container, Set<String> referencedClasses, Path basePath, ExportStatistics statistics, DOExportMonitor monitor, ReferencedClassTracker referencedClassTracker) throws Exception {
+    private void exportReferencedClasses(Set<String> referencedClasses, Path basePath) throws Exception {
 
-        if (monitor != null) {
-            monitor.onModuleStart("Referenced", referencedClasses.size(), 0);
+        if (operation.monitor != null) {
+            operation.monitor.onModuleStart("Referenced", referencedClasses.size(), 0);
         }
 
         // Create "Referenced" module folder
@@ -697,27 +687,27 @@ public class XMLExportEngine {
         Files.createDirectories(referencedPath);
 
         for (String className : referencedClasses) {
-            if (monitor != null && monitor.isCancelled()) {
+            if (operation.monitor != null && operation.monitor.isCancelled()) {
                 break;
             }
 
             // Skip if already exported as a referenced class
-            if (referencedClassTracker.isReferencedClassExported(className)) {
+            if (operation.referencedClassTracker.isReferencedClassExported(className)) {
                 continue;
             }
 
-            DOSchemaClass schemaClass = schema.findClassByName(className);
+            DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
             if (schemaClass == null) {
-                if (monitor != null) {
-                    monitor.onStatusMessage("Referenced class not found in schema: " + className);
+                if (operation.monitor != null) {
+                    operation.monitor.onStatusMessage("Referenced class not found in schema: " + className);
                 }
                 continue;
             }
 
-            DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
+            DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
             if (dbSchemaClass == null) {
-                if (monitor != null) {
-                    monitor.onStatusMessage("Referenced class not found in database: " + className);
+                if (operation.monitor != null) {
+                    operation.monitor.onStatusMessage("Referenced class not found in database: " + className);
                 }
                 continue;
             }
@@ -731,18 +721,24 @@ public class XMLExportEngine {
             // Export this referenced class (without further reference tracking
             // to avoid
             // infinite loops, and without criteria filtering)
-            exportClassToFile(container, schemaClass, dbSchemaClass, xmlPath, xsdPath, statistics, monitor, null, null);
+            ReferencedClassTracker previousTracker = operation.referencedClassTracker;
+            operation.referencedClassTracker = null;
+            try {
+                exportClassToFile(schemaClass, dbSchemaClass, xmlPath, xsdPath, null);
+            } finally {
+                operation.referencedClassTracker = previousTracker;
+            }
 
             // Mark as exported
-            referencedClassTracker.markReferencedClassAsExported(className);
+            operation.referencedClassTracker.markReferencedClassAsExported(className);
 
-            if (monitor != null) {
-                monitor.onStatusMessage("Exported referenced class: " + schemaClass.destinationName);
+            if (operation.monitor != null) {
+                operation.monitor.onStatusMessage("Exported referenced class: " + schemaClass.destinationName);
             }
         }
 
-        if (monitor != null) {
-            monitor.onModuleComplete("Referenced");
+        if (operation.monitor != null) {
+            operation.monitor.onModuleComplete("Referenced");
         }
     }
 
@@ -752,9 +748,12 @@ public class XMLExportEngine {
     public ExportStatistics exportModule(List<String> classNames, String moduleName, String outputPath, String xsdOutputPath) throws Exception {
 
         // Initialize components
-        ExportStatistics statistics = new ExportStatistics();
-        XSDBuilder xsdBuilder = new XSDBuilder();
-        xsdBuilder.startExportRoot();
+        operation.classNames = classNames;
+        operation.monitor = null;
+        operation.statistics = new ExportStatistics();
+        operation.xsdBuilder = new XSDBuilder();
+        operation.xsdBuilder.startExportRoot();
+        operation.referencedClassTracker = null;
 
         Writer outputWriter = null;
 
@@ -765,55 +764,48 @@ public class XMLExportEngine {
 
             // Create structured writer
             outputWriter = new FileWriter(outputPath);
-            StructuredWriter xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, Paths.get(outputPath));
+            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, Paths.get(outputPath));
 
             // Create export operation
-            ExportOperation operation = new ExportOperation();
-            operation.referenceSchema = schema;
-            operation.databaseSchema = databaseSchema;
-            operation.databasePath = databasePath;
             operation.baseOutputPath = outputPath;
-            operation.maxObjectsPerClass = maxObjectsPerClass;
             operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
-            operation.statistics = statistics;
-            operation.exportedObjectIds = sharedExportedObjectIds != null ? sharedExportedObjectIds : new HashSet<>();
-            operation.useSharedTracking = (sharedExportedObjectIds != null);
-            operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
-            operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
+            if (!operation.useSharedTracking) {
+                operation.exportedObjectIds = new HashSet<>();
+            }
 
             // Create object exporter
-            ObjectExporter objectExporter = new ObjectExporter(operation, xmlWriter, xsdBuilder);
+            ObjectExporter objectExporter = new ObjectExporter(operation, operation.xmlWriter, operation.xsdBuilder);
             objectExporter.reset();
 
             // Write XML header and metadata
             // xmlWriter.writeExportHeader(moduleName, "module",
             // classNames.size(), null);
             if (isXMLFormat()) {
-                xmlWriter.openRootStructure("export", null);
+                operation.xmlWriter.openRootStructure("export", null);
             } else {
-                xmlWriter.openStructure("export");
+                operation.xmlWriter.openStructure("export");
             }
-            xmlWriter.metadata(getMetadata(moduleName, null, classNames.size()));
-            xmlWriter.openStructure("objects");
+            operation.xmlWriter.metadata(getMetadata(moduleName, null, classNames.size()));
+            operation.xmlWriter.openStructure("objects");
 
             // Export all classes in the module
             for (String className : classNames) {
-                DOSchemaClass dbSchemaClass = databaseSchema.findClassByName(className);
+                DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
                 if (dbSchemaClass != null) {
-                    xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
+                    operation.xsdBuilder.addTopLevelObject(dbSchemaClass.destinationName, dbSchemaClass);
                     long[] objectIds = dbSchemaClass.objectIds;
 
                     if (objectIds != null) {
                         for (long objectId : objectIds) {
-                            objectExporter.exportObjectRecursively(container, objectId, 2);
+                            objectExporter.exportObjectRecursively(operation.container, objectId, 2);
                         }
                     }
                 }
             }
 
             // Write XML footer
-            xmlWriter.closeStructure("objects");
-            xmlWriter.closeStructure("export");
+            operation.xmlWriter.closeStructure("objects");
+            operation.xmlWriter.closeStructure("export");
 
             // Generate XSD schema
             if (isXMLFormat()) {
@@ -821,16 +813,16 @@ public class XMLExportEngine {
                 if (xsdPath == null) {
                     xsdPath = outputPath.replace(".xml", ".xsd");
                 }
-                xsdBuilder.writeXSD(xsdPath);
+                operation.xsdBuilder.writeXSD(xsdPath);
                 System.out.println("Generated XSD schema: " + xsdPath);
             }
 
             // Generate duplicate warnings and set export info
-            statistics.schemaWarnings.clear();
-            statistics.schemaWarnings.addAll(statistics.duplicationDetector.generateDuplicateWarnings());
-            statistics.setExportInfo(moduleName, outputPath);
+            operation.statistics.schemaWarnings.clear();
+            operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
+            operation.statistics.setExportInfo(moduleName, outputPath);
 
-            return statistics;
+            return operation.statistics;
 
         } finally {
             // Note: We do NOT close the container here as it's a shared

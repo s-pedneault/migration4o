@@ -5,6 +5,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import com.db4o.ext.ExtObjectContainer;
+
+import migration4o.util.tools.structuredwriter.StructuredWriter;
+
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
@@ -22,10 +26,12 @@ public class ExportOperation {
     public DOSchema referenceSchema;
     public DOSchema databaseSchema;
     public String databasePath;
+    public ExtObjectContainer container;
 
     // Output configuration
     public String baseOutputPath;
     public DOExportMonitor monitor;
+    public String outputFormat = "XML";
 
     // Export limits and options
     public Integer maxObjectsPerClass;
@@ -41,6 +47,10 @@ public class ExportOperation {
 
     // Shared export state (across multiple ObjectExporter instances)
     public Set<Long> exportedObjectIds = new HashSet<>();
+    public XSDBuilder sharedXSDBuilder;
+    public Set<String> exportedXMLFiles;
+    public StructuredWriter xmlWriter;
+    public XSDBuilder xsdBuilder;
     public ExportStatistics statistics;
     public ClassExportConfig exportConfig;
     public ReferencedClassTracker referencedClassTracker;

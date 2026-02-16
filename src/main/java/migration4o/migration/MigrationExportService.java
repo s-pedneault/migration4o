@@ -40,7 +40,7 @@ public class MigrationExportService {
         DOSchema databaseSchema = databaseService.getDatabaseSchema();
         String databasePath = databaseService.getCurrentDatabasePath();
 
-        XMLExportEngine exporter = new XMLExportEngine(referenceSchema, databaseSchema, databasePath);
+        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         exporter.setExportNativeIds(exportNativeIds);
         exporter.setSelectedSkipOptions(selectedSkipOptions);

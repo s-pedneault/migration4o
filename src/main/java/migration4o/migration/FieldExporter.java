@@ -48,14 +48,14 @@ public class FieldExporter {
     }
 
     /**
-     * Counts how many fields would be exported from this GenericObject (dry
-     * run). Goes through all the same skip logic as exportAllFields but doesn't
-     * write anything.
+     * Counts how many fields would be exported from this GenericObject (dry run).
+     * Goes through all the same skip logic as exportAllFields but doesn't write
+     * anything.
      * 
-     * @param container DB4O container
-     * @param obj The GenericObject to analyze
+     * @param container   DB4O container
+     * @param obj         The GenericObject to analyze
      * @param parentClass Schema class definition
-     * @param schema Reference schema for skip condition checking
+     * @param schema      Reference schema for skip condition checking
      * @return number of fields that will be exported
      */
     public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass, DOSchema schema) {
@@ -143,17 +143,19 @@ public class FieldExporter {
     /**
      * Exports all fields of a GenericObject.
      * 
-     * @param container DB4O container for object activation and ID lookups
-     * @param obj The GenericObject whose fields are being exported
-     * @param parentClass Schema class definition for the object being exported
-     * (not the parent in object graph)
-     * @param indentLevel Current XML indentation level
+     * @param container            DB4O container for object activation and ID
+     *                             lookups
+     * @param obj                  The GenericObject whose fields are being exported
+     * @param parentClass          Schema class definition for the object being
+     *                             exported (not the parent in object graph)
+     * @param indentLevel          Current XML indentation level
      * @param destinationClassName Destination class name from schema (e.g.,
-     * "Vehicule") - used for tracking field context
-     * @param sourceClassName Source class name from schema (e.g.,
-     * "gest.vehicule.Vehicule") - used for tracking field context
-     * @param parentObjectId DB4O object ID of the object being exported - used
-     * for duplicate detection and tracking
+     *                             "Vehicule") - used for tracking field context
+     * @param sourceClassName      Source class name from schema (e.g.,
+     *                             "gest.vehicule.Vehicule") - used for tracking
+     *                             field context
+     * @param parentObjectId       DB4O object ID of the object being exported -
+     *                             used for duplicate detection and tracking
      * @return the number of fields actually written to XML
      * @throws IOException if XML writing fails
      */
@@ -199,21 +201,11 @@ public class FieldExporter {
                         continue;
                     }
 
-                    // Check schema flag first - DB4O collections may not be
-                    // Java Collection
-                    // instances
-                    // CRITICAL: Always use schema-driven extraction for DB4O
-                    // objects, even if they
-                    // implement Collection interface, because calling .size()
-                    // on GenericObject
-                    // proxies
-                    // may return incorrect values before proper activation and
-                    // extraction
+                    // Check schema flag first - DB4O collections may not be Java Collection instances
+                    // CRITICAL: Always use schema-driven extraction for DB4O objects, even if they implement Collection interface, because calling .size() on GenericObject proxies may return incorrect values before proper activation and extraction
                     if (schemaField != null && schemaField.isCollection) {
-                        // CRITICAL FIX: Activate collection fields directly to
-                        // populate their contents
-                        // This matches the working pattern from
-                        // ClassObjectsDialog.getFieldValue
+                        // CRITICAL FIX: Activate collection fields directly to populate their contents
+                        // This matches the working pattern from ClassObjectsDialog.getFieldValue
                         if (fieldValue instanceof Collection) {
                             try {
                                 container.activate(fieldValue, 1);
@@ -265,17 +257,17 @@ public class FieldExporter {
      * schema collection). Handles all the common logic: skip conditions, size
      * attributes, ID reference detection, and item export.
      * 
-     * @param container DB4O container
-     * @param items Iterable of items to export (extracted from
-     * collection/array)
-     * @param size Number of items
-     * @param itemsValue Original collection/array value for skip condition
-     * checking
-     * @param schemaField Schema field definition
-     * @param indentLevel Current indentation level
-     * @param parentClassName Parent class name for tracking
+     * @param container             DB4O container
+     * @param items                 Iterable of items to export (extracted from
+     *                              collection/array)
+     * @param size                  Number of items
+     * @param itemsValue            Original collection/array value for skip
+     *                              condition checking
+     * @param schemaField           Schema field definition
+     * @param indentLevel           Current indentation level
+     * @param parentClassName       Parent class name for tracking
      * @param parentSourceClassName Parent source class name for tracking
-     * @param parentObjectId Parent object ID for tracking
+     * @param parentObjectId        Parent object ID for tracking
      * @return true if field was written, false if skipped
      * @throws IOException if XML writing fails
      */
@@ -321,9 +313,9 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a collection field that is marked as collection in the schema but
-     * may be stored as a DB4O persistent object (like VectRechID). This method
-     * extracts the collection items from the DB4O object structure.
+     * Exports a collection field that is marked as collection in the schema but may
+     * be stored as a DB4O persistent object (like VectRechID). This method extracts
+     * the collection items from the DB4O object structure.
      * 
      * @return true if field was written, false if skipped
      */
@@ -513,9 +505,9 @@ public class FieldExporter {
     }
 
     /**
-     * Exports virtual fields defined in schema but not present in database.
-     * Virtual fields use @ prefix in source and criteria-based queries.
-     * Example: source="@mVectRapportOfficier" with criteria match="this.mID"
+     * Exports virtual fields defined in schema but not present in database. Virtual
+     * fields use @ prefix in source and criteria-based queries. Example:
+     * source="@mVectRapportOfficier" with criteria match="this.mID"
      * with="mIDIntervention" Queries database for objects where mIDIntervention
      * equals this object's mID.
      * 
@@ -568,15 +560,15 @@ public class FieldExporter {
     }
 
     /**
-     * Executes a database query for a virtual field based on its criteria. Uses
-     * a preloaded cache of all objects of the target class type, loading them
-     * once per class and reusing across all exports for efficiency. Finds
-     * objects where criterion.with field matches value from criterion.match
-     * field of current object. Supports multiple criteria combined with AND/OR
-     * operators and comparison operators.
+     * Executes a database query for a virtual field based on its criteria. Uses a
+     * preloaded cache of all objects of the target class type, loading them once
+     * per class and reusing across all exports for efficiency. Finds objects where
+     * criterion.with field matches value from criterion.match field of current
+     * object. Supports multiple criteria combined with AND/OR operators and
+     * comparison operators.
      * 
-     * @param container DB4O container
-     * @param obj Current object being exported
+     * @param container   DB4O container
+     * @param obj         Current object being exported
      * @param schemaField Virtual field definition with criterias
      * @return Collection of matching objects
      */
@@ -734,13 +726,13 @@ public class FieldExporter {
      * 
      * 
      * /** Gets a field value by navigating through a dotted path (e.g.,
-     * "mIDIntervention.mID"). Supports nested object navigation for virtual
-     * field queries.
+     * "mIDIntervention.mID"). Supports nested object navigation for virtual field
+     * queries.
      * 
      * @param container DB4O container
-     * @param obj Starting object
+     * @param obj       Starting object
      * @param fieldPath Dotted field path (e.g., "mIDIntervention.mID")
-     * @param debug Whether to print debug information
+     * @param debug     Whether to print debug information
      * @return The value at the end of the path, or null if any step fails
      */
     private Object getFieldValueByPath(ExtObjectContainer container, Object obj, String fieldPath, boolean debug) {
