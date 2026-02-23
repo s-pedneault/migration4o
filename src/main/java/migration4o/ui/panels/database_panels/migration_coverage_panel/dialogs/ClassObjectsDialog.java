@@ -54,8 +54,7 @@ public class ClassObjectsDialog extends JFrame {
     private boolean showOnlyUnique = true;
     private boolean showOnlyUnreached = false;
 
-    public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass,
-            DOSchema schema, String databasePath) {
+    public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass, DOSchema schema, String databasePath) {
         super("Objects: " + className);
         this.schemaClass = schemaClass;
         this.schema = schema;
@@ -189,8 +188,7 @@ public class ClassObjectsDialog extends JFrame {
         // Update status
         int startIdx = currentPage * PAGE_SIZE;
         int endIdx = Math.min(startIdx + PAGE_SIZE, objectIds.length);
-        statusLabel.setText(String.format("Page %d of %d - Showing objects %d to %d of %d total",
-                currentPage + 1, totalPages, startIdx + 1, endIdx, objectIds.length));
+        statusLabel.setText(String.format("Page %d of %d - Showing objects %d to %d of %d total", currentPage + 1, totalPages, startIdx + 1, endIdx, objectIds.length));
 
         // Update buttons
         prevButton.setEnabled(currentPage > 0);
@@ -209,10 +207,7 @@ public class ClassObjectsDialog extends JFrame {
                 try {
                     get();
                 } catch (Exception ex) {
-                    JOptionPane.showMessageDialog(ClassObjectsDialog.this,
-                            "Error loading objects: " + ex.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(ClassObjectsDialog.this, "Error loading objects: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 }
             }
@@ -266,12 +261,8 @@ public class ClassObjectsDialog extends JFrame {
                         Object[] rowData = new Object[fields.size() + 2];
 
                         // Get actual class name from object
-                        String actualClassName = obj instanceof com.db4o.reflect.generic.GenericObject
-                                ? ((com.db4o.reflect.generic.GenericObject) obj).getGenericClass().getName()
-                                : obj.getClass().getName();
-                        String shortClassName = actualClassName.contains(".")
-                                ? actualClassName.substring(actualClassName.lastIndexOf('.') + 1)
-                                : actualClassName;
+                        String actualClassName = obj instanceof com.db4o.reflect.generic.GenericObject ? ((com.db4o.reflect.generic.GenericObject) obj).getGenericClass().getName() : obj.getClass().getName();
+                        String shortClassName = actualClassName.contains(".") ? actualClassName.substring(actualClassName.lastIndexOf('.') + 1) : actualClassName;
 
                         rowData[0] = shortClassName;
                         rowData[1] = objectId;
@@ -297,10 +288,7 @@ public class ClassObjectsDialog extends JFrame {
 
         } catch (Exception ex) {
             ex.printStackTrace();
-            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this,
-                    "Error loading objects: " + ex.getMessage(),
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE));
+            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Error loading objects: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE));
         }
         // Note: We do NOT close the container here as it's a shared resource managed by
         // DODatabaseService
@@ -320,12 +308,8 @@ public class ClassObjectsDialog extends JFrame {
                 for (DOSchemaField field : currentClass.fields) {
                     String fieldName = field.source;
                     if (!addedFields.contains(fieldName)) {
-                        String currentShortName = currentClass.source != null && currentClass.source.contains(".")
-                                ? currentClass.source.substring(currentClass.source.lastIndexOf('.') + 1)
-                                : currentClass.source;
-                        String displayName = currentClass.source.equals(targetClass.source)
-                                ? fieldName
-                                : currentShortName + "." + fieldName;
+                        String currentShortName = currentClass.source != null && currentClass.source.contains(".") ? currentClass.source.substring(currentClass.source.lastIndexOf('.') + 1) : currentClass.source;
+                        String displayName = currentClass.source.equals(targetClass.source) ? fieldName : currentShortName + "." + fieldName;
                         allFields.add(new FieldInfo(fieldName, displayName));
                         addedFields.add(fieldName);
                     }
@@ -352,9 +336,7 @@ public class ClassObjectsDialog extends JFrame {
             return null;
         }
         for (DOSchemaClass cls : schema.getClasses()) {
-            String clsShortName = cls.source != null && cls.source.contains(".")
-                    ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                    : cls.source;
+            String clsShortName = cls.source != null && cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
             if (className.equals(clsShortName) || className.equals(cls.source)) {
                 return cls;
             }
@@ -366,9 +348,7 @@ public class ClassObjectsDialog extends JFrame {
      * Get field value from a GenericObject.
      * Searches through the entire class hierarchy to find the field.
      */
-    private Object getFieldValue(ExtObjectContainer container,
-            com.db4o.reflect.generic.GenericObject obj,
-            String fieldName) {
+    private Object getFieldValue(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj, String fieldName) {
         try {
             // Start with the object's immediate class
             com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
@@ -433,7 +413,7 @@ public class ClassObjectsDialog extends JFrame {
         if (collection != null) {
             // Empty collection
             if (collection.isEmpty()) {
-                return "[]";
+                return "[Collection<?>: 0 items]";
             }
 
             // Check if it's a collection of IDEntite objects
@@ -447,8 +427,7 @@ public class ClassObjectsDialog extends JFrame {
                     boolean first = true;
                     for (Object item : collection) {
                         if (item instanceof com.db4o.reflect.generic.GenericObject) {
-                            Long mID = extractMIDFromIDEntite(container,
-                                    (com.db4o.reflect.generic.GenericObject) item);
+                            Long mID = extractMIDFromIDEntite(container, (com.db4o.reflect.generic.GenericObject) item);
                             if (mID != null) {
                                 if (!first) {
                                     sb.append(", ");
@@ -475,8 +454,7 @@ public class ClassObjectsDialog extends JFrame {
                             if (!first) {
                                 sb.append(", ");
                             }
-                            sb.append(formatGenericObjectSummary(container,
-                                    (com.db4o.reflect.generic.GenericObject) item));
+                            sb.append(formatGenericObjectSummary(container, (com.db4o.reflect.generic.GenericObject) item));
                             first = false;
                             count++;
                         }
@@ -486,8 +464,8 @@ public class ClassObjectsDialog extends JFrame {
                 }
             }
 
-            // Non-GenericObject collection - show size
-            return "[Collection: " + collection.size() + " items]";
+            // Non-GenericObject collection - show item type(s) and size
+            return "[Collection<" + inferCollectionItemTypes(container, collection) + ">: " + collection.size() + " items]";
         }
 
         // Handle GenericObject (potential IDEntite)
@@ -517,6 +495,72 @@ public class ClassObjectsDialog extends JFrame {
         }
 
         return value.toString();
+    }
+
+    /**
+     * Infer child type(s) from collection contents for display.
+     */
+    private String inferCollectionItemTypes(ExtObjectContainer container, java.util.Collection<?> collection) {
+        java.util.LinkedHashSet<String> typeNames = new java.util.LinkedHashSet<>();
+        int inspected = 0;
+        int maxInspected = 100;
+        int maxTypes = 3;
+
+        for (Object item : collection) {
+            if (item != null) {
+                String typeName = resolveItemTypeName(container, item);
+                if (typeName != null && !typeName.isEmpty()) {
+                    typeNames.add(typeName);
+                }
+            }
+
+            inspected++;
+            if (inspected >= maxInspected || typeNames.size() >= maxTypes) {
+                break;
+            }
+        }
+
+        if (typeNames.isEmpty()) {
+            return "?";
+        }
+
+        if (typeNames.size() == 1) {
+            return typeNames.iterator().next();
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int index = 0;
+        for (String typeName : typeNames) {
+            if (index > 0) {
+                sb.append("|");
+            }
+            sb.append(typeName);
+            index++;
+        }
+
+        if (typeNames.size() >= maxTypes) {
+            sb.append("|...");
+        }
+
+        return sb.toString();
+    }
+
+    /**
+     * Resolve display type name for a single collection item.
+     */
+    private String resolveItemTypeName(ExtObjectContainer container, Object item) {
+        if (item instanceof com.db4o.reflect.generic.GenericObject) {
+            try {
+                com.db4o.reflect.generic.GenericObject genericObject = (com.db4o.reflect.generic.GenericObject) item;
+                com.db4o.ext.StoredClass storedClass = container.ext().storedClass(genericObject);
+                if (storedClass != null && storedClass.getName() != null && !storedClass.getName().isEmpty()) {
+                    return storedClass.getName();
+                }
+            } catch (Exception e) {
+                // Fall through to runtime class name below.
+            }
+        }
+        return item.getClass().getName();
     }
 
     /**
@@ -590,8 +634,7 @@ public class ClassObjectsDialog extends JFrame {
     /**
      * Format a GenericObject into a meaningful summary showing type and key fields.
      */
-    private String formatGenericObjectSummary(ExtObjectContainer container,
-            com.db4o.reflect.generic.GenericObject obj) {
+    private String formatGenericObjectSummary(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj) {
         try {
             // Get the class name
             com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
@@ -654,8 +697,7 @@ public class ClassObjectsDialog extends JFrame {
                             }
                         } catch (Exception fieldEx) {
                             // Skip this field if we can't get its value
-                            System.out.println(
-                                    "DEBUG: Could not get field " + field.getName() + ": " + fieldEx.getMessage());
+                            System.out.println("DEBUG: Could not get field " + field.getName() + ": " + fieldEx.getMessage());
                         }
                     }
                 }
@@ -676,8 +718,7 @@ public class ClassObjectsDialog extends JFrame {
     /**
      * Get a specific field value from a GenericObject.
      */
-    private Object getFieldValueFromObject(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj,
-            String fieldName) {
+    private Object getFieldValueFromObject(ExtObjectContainer container, com.db4o.reflect.generic.GenericObject obj, String fieldName) {
         try {
             com.db4o.ext.StoredClass storedClass = container.ext().storedClass(obj);
             while (storedClass != null) {
@@ -701,8 +742,7 @@ public class ClassObjectsDialog extends JFrame {
      * Check if a value is a primitive type or String.
      */
     private boolean isPrimitiveOrString(Object value) {
-        return value instanceof String || value instanceof Number || value instanceof Boolean
-                || value instanceof Character;
+        return value instanceof String || value instanceof Number || value instanceof Boolean || value instanceof Character;
     }
 
     /**
@@ -751,10 +791,7 @@ public class ClassObjectsDialog extends JFrame {
         try {
             selectedObjectId = Long.parseLong(objectIdValue.toString());
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this,
-                    "Invalid object ID",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid object ID", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
