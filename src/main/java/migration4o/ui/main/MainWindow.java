@@ -900,12 +900,7 @@ public class MainWindow extends JFrame {
         editor.addClassFromComparison(className, sourceClass);
 
         // Switch to the reference schema tab to show the added class
-        for (Map.Entry<Component, SchemaTabInfo> entry : schemaTabs.entrySet()) {
-            if (entry.getValue().editorPanel == editor) {
-                tabbedPane.setSelectedComponent(entry.getKey());
-                break;
-            }
-        }
+        focusSchemaEditorTab(editor);
     }
 
     private void addFieldToReference(SchemaEditorPanel editor, DOSchemaClass parentClass, DOSchemaField field) {
@@ -913,11 +908,35 @@ public class MainWindow extends JFrame {
         editor.addFieldFromComparison(parentClass, field);
 
         // Switch to the reference schema tab to show the added field
-        for (Map.Entry<Component, SchemaTabInfo> entry : schemaTabs.entrySet()) {
-            if (entry.getValue().editorPanel == editor) {
-                tabbedPane.setSelectedComponent(entry.getKey());
-                break;
+        focusSchemaEditorTab(editor);
+    }
+
+    private void focusSchemaEditorTab(SchemaEditorPanel editor) {
+        if (editor == null) {
+            return;
+        }
+
+        // Preferred path: editor lives in Schema nested tabs
+        if (schemaTabPane != null && schemaTabPane.indexOfComponent(editor) >= 0) {
+            if (tabbedPane.indexOfComponent(schemaTabPane) >= 0) {
+                tabbedPane.setSelectedComponent(schemaTabPane);
             }
+            schemaTabPane.setSelectedComponent(editor);
+            return;
+        }
+
+        // Fallback: editor lives in Database nested tabs
+        if (databaseTabPane != null && databaseTabPane.indexOfComponent(editor) >= 0) {
+            if (databaseTabContainer != null && tabbedPane.indexOfComponent(databaseTabContainer) >= 0) {
+                tabbedPane.setSelectedComponent(databaseTabContainer);
+            }
+            databaseTabPane.setSelectedComponent(editor);
+            return;
+        }
+
+        // Legacy fallback: editor is directly in top-level tabbed pane
+        if (tabbedPane.indexOfComponent(editor) >= 0) {
+            tabbedPane.setSelectedComponent(editor);
         }
     }
 
