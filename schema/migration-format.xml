@@ -101,6 +101,7 @@
                 <classRef sourceName="gest.secCiv.NivAlerte"/>
                 <classRef sourceName="gest.secCiv.RessSecCiv"/>
                 <classRef sourceName="gest.secCiv.Sinistre"/>
+                <classRef sourceName="gest.secCiv.MesurePrev"/>
             </module>
         </module>
         <module name="Matériel" id="Matériel">

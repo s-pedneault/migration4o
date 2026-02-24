@@ -3363,7 +3363,7 @@
         <field source="mRestrictionUtilisation" destinationName="restrictionUtilisation" isExported="true" skipWhen="DEFAULT" type="gest.utilGroupe.DroitPourUtilisateurs" embedContents="true" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mIDTypeMaintSurNouvMaint" destinationName="idTypeMaintenanceSurNouvelleMaintenance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.maintenance.IDTypeMaint" embedContents="true" />
-        <field source="mVectAnnexeMaintenance" destinationName="listeAnnexeMaintenance" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="java.lang.Object" description="TODO nouvelle BD" />
+        <field source="mVectAnnexeMaintenance" destinationName="listeAnnexeMaintenance" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.equipement.AnnexeMaintenance" />
     </class>
     <class source="gest.maintEquip.IDEtatEquipement" destinationName="IDEtatEquipement" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.maintEquip.EtatEquipement">
         <reference class="gest.maintenance.TypeMaint" field="mNouvEtatParDefaut" />
