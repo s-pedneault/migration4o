@@ -17,16 +17,7 @@ public class ClassFinderDialog extends FilteredListDialog<String> {
     private final DOSchema schema;
 
     // Primitive types to include in the list
-    private static final String[] PRIMITIVES = {
-            "boolean", "byte", "char", "short", "int", "long", "float", "double",
-            "boolean[]", "byte[]", "char[]", "short[]", "int[]", "long[]", "float[]", "double[]",
-            "java.lang.Object", "java.lang.String", "java.lang.Integer", "java.lang.Long",
-            "java.lang.Double", "java.lang.Float", "java.lang.Boolean", "java.lang.Character",
-            "java.lang.Byte", "java.lang.Short", "java.math.BigDecimal", "java.math.BigInteger",
-            "java.util.Date", "java.sql.Date", "java.sql.Time", "java.sql.Timestamp",
-            "java.time.LocalDate", "java.time.LocalTime", "java.time.LocalDateTime",
-            "java.time.ZonedDateTime", "java.util.UUID"
-    };
+    private static final String[] PRIMITIVES = { "boolean", "byte", "char", "short", "int", "long", "float", "double", "boolean[]", "byte[]", "char[]", "short[]", "int[]", "long[]", "float[]", "double[]", "java.lang.Object", "java.lang.String", "java.lang.Integer", "java.lang.Long", "java.lang.Double", "java.lang.Float", "java.lang.Boolean", "java.lang.Character", "java.lang.Byte", "java.lang.Short", "java.math.BigDecimal", "java.math.BigInteger", "java.util.Date", "java.sql.Date", "java.sql.Time", "java.sql.Timestamp", "java.time.LocalDate", "java.time.LocalTime", "java.time.LocalDateTime", "java.time.ZonedDateTime", "java.util.UUID" };
 
     public ClassFinderDialog(Frame owner, DOSchema schema, String initialValue) {
         super(owner, "Class Finder", initialValue, "Type to search classes...");

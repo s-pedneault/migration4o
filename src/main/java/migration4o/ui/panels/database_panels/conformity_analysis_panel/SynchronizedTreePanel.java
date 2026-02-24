@@ -248,9 +248,7 @@ public class SynchronizedTreePanel extends JPanel {
      * Build synchronized trees from class differences.
      * Creates aligned trees with ghost nodes for missing classes.
      */
-    public void buildTrees(List<ClassDifference> differences,
-            String refLabel, String cmpLabel,
-            boolean groupByPackage) {
+    public void buildTrees(List<ClassDifference> differences, String refLabel, String cmpLabel, boolean groupByPackage) {
         DefaultMutableTreeNode leftRoot = (DefaultMutableTreeNode) leftModel.getRoot();
         DefaultMutableTreeNode rightRoot = (DefaultMutableTreeNode) rightModel.getRoot();
 
@@ -278,9 +276,7 @@ public class SynchronizedTreePanel extends JPanel {
         }
     }
 
-    private void buildTreesByPackage(List<ClassDifference> differences,
-            DefaultMutableTreeNode leftRoot, DefaultMutableTreeNode rightRoot,
-            String refLabel, String cmpLabel) {
+    private void buildTreesByPackage(List<ClassDifference> differences, DefaultMutableTreeNode leftRoot, DefaultMutableTreeNode rightRoot, String refLabel, String cmpLabel) {
         // Group by package
         Map<String, List<ClassDifference>> packageMap = new TreeMap<>();
 
@@ -332,9 +328,7 @@ public class SynchronizedTreePanel extends JPanel {
                     leftHasOnlyInSchema = true;
                 } else if (diff.isOnlyInCompared()) {
                     leftHasGhost = true;
-                } else if (!diff.getFieldsOnlyInCompared().isEmpty() ||
-                        !diff.getFieldsOnlyInReference().isEmpty() ||
-                        !diff.getFieldsWithDifferences().isEmpty()) {
+                } else if (!diff.getFieldsOnlyInCompared().isEmpty() || !diff.getFieldsOnlyInReference().isEmpty() || !diff.getFieldsWithDifferences().isEmpty()) {
                     leftHasDifferences = true;
                 }
 
@@ -343,21 +337,14 @@ public class SynchronizedTreePanel extends JPanel {
                     // Only in compared is normal for right tree
                 } else if (diff.isOnlyInReference()) {
                     rightHasGhost = true;
-                } else if (!diff.getFieldsOnlyInCompared().isEmpty() ||
-                        !diff.getFieldsOnlyInReference().isEmpty() ||
-                        !diff.getFieldsWithDifferences().isEmpty()) {
+                } else if (!diff.getFieldsOnlyInCompared().isEmpty() || !diff.getFieldsOnlyInReference().isEmpty() || !diff.getFieldsWithDifferences().isEmpty()) {
                     rightHasDifferences = true;
                 }
             }
 
             // Create package nodes with status
-            DefaultMutableTreeNode leftPackage = new DefaultMutableTreeNode(
-                    new SyncTreeNode(packageName, packageName + " (" + classes.size() + ")",
-                            leftHasGhost, leftHasDifferences, true, leftHasOnlyInSchema, false, leftOnlyHasNotExported,
-                            null));
-            DefaultMutableTreeNode rightPackage = new DefaultMutableTreeNode(
-                    new SyncTreeNode(packageName, packageName + " (" + classes.size() + ")",
-                            rightHasGhost, rightHasDifferences, true, false, false, rightOnlyHasNotExported, null));
+            DefaultMutableTreeNode leftPackage = new DefaultMutableTreeNode(new SyncTreeNode(packageName, packageName + " (" + classes.size() + ")", leftHasGhost, leftHasDifferences, true, leftHasOnlyInSchema, false, leftOnlyHasNotExported, null));
+            DefaultMutableTreeNode rightPackage = new DefaultMutableTreeNode(new SyncTreeNode(packageName, packageName + " (" + classes.size() + ")", rightHasGhost, rightHasDifferences, true, false, false, rightOnlyHasNotExported, null));
 
             leftRoot.add(leftPackage);
             rightRoot.add(rightPackage);
@@ -369,9 +356,7 @@ public class SynchronizedTreePanel extends JPanel {
         }
     }
 
-    private void buildTreesByInheritance(List<ClassDifference> differences,
-            DefaultMutableTreeNode leftRoot, DefaultMutableTreeNode rightRoot,
-            String refLabel, String cmpLabel) {
+    private void buildTreesByInheritance(List<ClassDifference> differences, DefaultMutableTreeNode leftRoot, DefaultMutableTreeNode rightRoot, String refLabel, String cmpLabel) {
         // Build parent-child map
         Map<String, List<ClassDifference>> childrenMap = new HashMap<>();
         List<ClassDifference> rootClasses = new ArrayList<>();
@@ -393,10 +378,8 @@ public class SynchronizedTreePanel extends JPanel {
 
         // Build tree recursively
         for (ClassDifference diff : rootClasses) {
-            DefaultMutableTreeNode leftClass = new DefaultMutableTreeNode(
-                    createClassNode(diff, true));
-            DefaultMutableTreeNode rightClass = new DefaultMutableTreeNode(
-                    createClassNode(diff, false));
+            DefaultMutableTreeNode leftClass = new DefaultMutableTreeNode(createClassNode(diff, true));
+            DefaultMutableTreeNode rightClass = new DefaultMutableTreeNode(createClassNode(diff, false));
 
             leftRoot.add(leftClass);
             rightRoot.add(rightClass);
@@ -405,9 +388,7 @@ public class SynchronizedTreePanel extends JPanel {
         }
     }
 
-    private void addClassNodes(ClassDifference diff,
-            DefaultMutableTreeNode leftParent,
-            DefaultMutableTreeNode rightParent) {
+    private void addClassNodes(ClassDifference diff, DefaultMutableTreeNode leftParent, DefaultMutableTreeNode rightParent) {
         DefaultMutableTreeNode leftClass = new DefaultMutableTreeNode(createClassNode(diff, true));
         DefaultMutableTreeNode rightClass = new DefaultMutableTreeNode(createClassNode(diff, false));
 
@@ -418,10 +399,7 @@ public class SynchronizedTreePanel extends JPanel {
         addFieldNodes(diff, leftClass, rightClass);
     }
 
-    private void addChildClasses(ClassDifference parentDiff,
-            DefaultMutableTreeNode leftParent,
-            DefaultMutableTreeNode rightParent,
-            Map<String, List<ClassDifference>> childrenMap) {
+    private void addChildClasses(ClassDifference parentDiff, DefaultMutableTreeNode leftParent, DefaultMutableTreeNode rightParent, Map<String, List<ClassDifference>> childrenMap) {
         List<ClassDifference> children = childrenMap.get(parentDiff.getClassName());
         if (children == null)
             return;
@@ -441,9 +419,7 @@ public class SynchronizedTreePanel extends JPanel {
         }
     }
 
-    private void addFieldNodes(ClassDifference diff,
-            DefaultMutableTreeNode leftParent,
-            DefaultMutableTreeNode rightParent) {
+    private void addFieldNodes(ClassDifference diff, DefaultMutableTreeNode leftParent, DefaultMutableTreeNode rightParent) {
         // Get all field names from both schemas
         Set<String> allFieldNames = new HashSet<>();
 
@@ -499,8 +475,7 @@ public class SynchronizedTreePanel extends JPanel {
             boolean rightHasDiff = leftHasDiff; // Same difference status
             String rightType = cmpField != null ? cmpField.type : (isVirtualQueryField && refField != null ? refField.type : "?");
             String rightDisplay = fieldName + " : " + rightType;
-            SyncTreeNode rightFieldNode = new SyncTreeNode(fieldName, rightDisplay, rightIsGhost, rightHasDiff,
-                    cmpField);
+            SyncTreeNode rightFieldNode = new SyncTreeNode(fieldName, rightDisplay, rightIsGhost, rightHasDiff, cmpField);
             rightParent.add(new DefaultMutableTreeNode(rightFieldNode));
         }
     }
@@ -511,9 +486,7 @@ public class SynchronizedTreePanel extends JPanel {
         // Left (reference): ghost if only in compared (missing from reference)
         // Right (compared): ghost if only in reference (missing from compared)
         boolean isGhost = isLeft ? diff.isOnlyInCompared() : diff.isOnlyInReference();
-        boolean hasDifferences = !isGhost && (!diff.getFieldsOnlyInCompared().isEmpty() ||
-                !diff.getFieldsOnlyInReference().isEmpty() ||
-                !diff.getFieldsWithDifferences().isEmpty());
+        boolean hasDifferences = !isGhost && (!diff.getFieldsOnlyInCompared().isEmpty() || !diff.getFieldsOnlyInReference().isEmpty() || !diff.getFieldsWithDifferences().isEmpty());
 
         // Check if class is not exported (isMigrate=false in reference schema)
         boolean isNotExported = false;
@@ -522,8 +495,7 @@ public class SynchronizedTreePanel extends JPanel {
             className += " (not exported)";
         }
 
-        return new SyncTreeNode(diff.getClassName(), className, isGhost, hasDifferences, false, false, isNotExported,
-                diff);
+        return new SyncTreeNode(diff.getClassName(), className, isGhost, hasDifferences, false, false, isNotExported, diff);
     }
 
     private String getShortClassName(String fullName) {
@@ -535,8 +507,7 @@ public class SynchronizedTreePanel extends JPanel {
 
     private String getParentClassName(ClassDifference diff) {
         DOSchemaClass cls = diff.getReferenceClass() != null ? diff.getReferenceClass() : diff.getComparedClass();
-        if (cls != null && cls.parentClassName != null && !cls.parentClassName.isEmpty()
-                && !cls.parentClassName.equals("Undetermined")) {
+        if (cls != null && cls.parentClassName != null && !cls.parentClassName.isEmpty() && !cls.parentClassName.equals("Undetermined")) {
             return cls.parentClassName;
         }
         return null;
@@ -593,14 +564,11 @@ public class SynchronizedTreePanel extends JPanel {
         }
 
         @Override
-        public Component getTreeCellRendererComponent(JTree tree, Object value,
-                boolean sel, boolean expanded,
-                boolean leaf, int row, boolean hasFocus) {
+        public Component getTreeCellRendererComponent(JTree tree, Object value, boolean sel, boolean expanded, boolean leaf, int row, boolean hasFocus) {
             super.getTreeCellRendererComponent(tree, value, sel, expanded, leaf, row, hasFocus);
 
             // Determine if this tree is the active one
-            boolean isActive = (isLeftTree && panel.isLeftTreeActive()) ||
-                    (!isLeftTree && !panel.isLeftTreeActive());
+            boolean isActive = (isLeftTree && panel.isLeftTreeActive()) || (!isLeftTree && !panel.isLeftTreeActive());
 
             // Override selection colors based on active/passive state
             if (sel) {

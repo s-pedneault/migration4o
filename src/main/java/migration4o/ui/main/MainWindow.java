@@ -978,11 +978,7 @@ public class MainWindow extends JFrame {
                 SchemaTabInfo referenceTabInfo = findReferenceTabInfo();
                 if (referenceTabInfo != null) {
                     SchemaComparisonPanel conformityPanel = (SchemaComparisonPanel) conformityAnalysisTab;
-                    SchemaComparison updatedComparison = new SchemaComparison(
-                            referenceTabInfo.editorPanel.getSchema(),
-                            referenceTabInfo.label,
-                            liveDatabaseSchema,
-                            "Database");
+                    SchemaComparison updatedComparison = new SchemaComparison(referenceTabInfo.editorPanel.getSchema(), referenceTabInfo.label, liveDatabaseSchema, "Database");
                     conformityPanel.updateComparison(updatedComparison);
                 }
             }

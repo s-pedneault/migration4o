@@ -23,8 +23,7 @@ public class SchemaComparison {
     private final List<ClassDifference> differences;
     private boolean showAllClasses = false;
 
-    public SchemaComparison(DOSchema referenceSchema, String referenceLabel,
-            DOSchema comparedSchema, String comparedLabel) {
+    public SchemaComparison(DOSchema referenceSchema, String referenceLabel, DOSchema comparedSchema, String comparedLabel) {
         this.referenceSchema = referenceSchema;
         this.comparedSchema = comparedSchema;
         this.referenceLabel = referenceLabel;
@@ -37,7 +36,6 @@ public class SchemaComparison {
     private void performComparison() {
         Map<String, DOSchemaClass> referenceClasses = buildClassMap(referenceSchema);
         Map<String, DOSchemaClass> comparedClasses = buildClassMap(comparedSchema);
-
 
         Set<String> allClassNames = new HashSet<>();
         allClassNames.addAll(referenceClasses.keySet());
@@ -119,15 +117,12 @@ public class SchemaComparison {
         // do not flag:
         // - compared is missing/empty
         // - compared is java.lang.Object placeholder
-        boolean referenceHasSpecificChildrenType = refChildren != null &&
-            !"java.lang.Object".equals(normalizeType(refChildren));
+        boolean referenceHasSpecificChildrenType = refChildren != null && !"java.lang.Object".equals(normalizeType(refChildren));
         boolean comparedMissingChildrenType = cmpChildren == null;
         boolean comparedIsObjectPlaceholder = "java.lang.Object".equals(normalizeType(cmpChildren));
-        boolean referenceMorePreciseChildrenType = referenceHasSpecificChildrenType &&
-            (comparedMissingChildrenType || comparedIsObjectPlaceholder);
+        boolean referenceMorePreciseChildrenType = referenceHasSpecificChildrenType && (comparedMissingChildrenType || comparedIsObjectPlaceholder);
 
-        if (!Objects.equals(normalizeType(refChildren), normalizeType(cmpChildren)) &&
-            !referenceMorePreciseChildrenType) {
+        if (!Objects.equals(normalizeType(refChildren), normalizeType(cmpChildren)) && !referenceMorePreciseChildrenType) {
             diff.addDifference("childrenType", refField.childrenType, cmpField.childrenType);
         }
 
@@ -147,28 +142,28 @@ public class SchemaComparison {
 
         // Map of short names to fully qualified names
         switch (type) {
-            case "String":
-                return "java.lang.String";
-            case "Integer":
-                return "java.lang.Integer";
-            case "Long":
-                return "java.lang.Long";
-            case "Double":
-                return "java.lang.Double";
-            case "Float":
-                return "java.lang.Float";
-            case "Boolean":
-                return "java.lang.Boolean";
-            case "Byte":
-                return "java.lang.Byte";
-            case "Short":
-                return "java.lang.Short";
-            case "Character":
-                return "java.lang.Character";
-            case "Date":
-                return "java.util.Date";
-            default:
-                return type;
+        case "String":
+            return "java.lang.String";
+        case "Integer":
+            return "java.lang.Integer";
+        case "Long":
+            return "java.lang.Long";
+        case "Double":
+            return "java.lang.Double";
+        case "Float":
+            return "java.lang.Float";
+        case "Boolean":
+            return "java.lang.Boolean";
+        case "Byte":
+            return "java.lang.Byte";
+        case "Short":
+            return "java.lang.Short";
+        case "Character":
+            return "java.lang.Character";
+        case "Date":
+            return "java.util.Date";
+        default:
+            return type;
         }
     }
 
@@ -190,32 +185,21 @@ public class SchemaComparison {
 
                 // Debug ParamConfig specifically
                 if ("ParamConfig".equals(schemaClass.destinationName)) {
-                    String shortName1 = schemaClass.source != null && schemaClass.source.contains(".")
-                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
-                            : schemaClass.source;
-                    System.out.println("DEBUG buildClassMap: Found ParamConfig - source='" + key + "', dest='" +
-                            shortName1 + "'");
+                    String shortName1 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                    System.out.println("DEBUG buildClassMap: Found ParamConfig - source='" + key + "', dest='" + shortName1 + "'");
                 }
 
                 // Skip classes with null or empty source name
                 if (key == null || key.trim().isEmpty()) {
-                    String shortName2 = schemaClass.source != null && schemaClass.source.contains(".")
-                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
-                            : schemaClass.source;
-                    System.out.println(
-                            "WARNING: Skipping class with null/empty source name: " + shortName2);
+                    String shortName2 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                    System.out.println("WARNING: Skipping class with null/empty source name: " + shortName2);
                     continue;
                 }
 
                 if (map.containsKey(key)) {
-                    String shortName3 = map.get(key).source != null && map.get(key).source.contains(".")
-                            ? map.get(key).source.substring(map.get(key).source.lastIndexOf('.') + 1)
-                            : map.get(key).source;
-                    String shortName4 = schemaClass.source != null && schemaClass.source.contains(".")
-                            ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1)
-                            : schemaClass.source;
-                    System.out.println("WARNING: Duplicate class key '" + key + "' - overwriting " +
-                            shortName3 + " with " + shortName4);
+                    String shortName3 = map.get(key).source != null && map.get(key).source.contains(".") ? map.get(key).source.substring(map.get(key).source.lastIndexOf('.') + 1) : map.get(key).source;
+                    String shortName4 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                    System.out.println("WARNING: Duplicate class key '" + key + "' - overwriting " + shortName3 + " with " + shortName4);
                 }
                 map.put(key, schemaClass);
             }

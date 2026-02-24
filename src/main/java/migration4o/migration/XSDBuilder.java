@@ -85,8 +85,7 @@ public class XSDBuilder {
         }
 
         if (refField != null && refField.isExported) {
-            fieldsByClass.computeIfAbsent(refClass.source, k -> new LinkedHashMap<>())
-                    .put(refField.destinationName, refField);
+            fieldsByClass.computeIfAbsent(refClass.source, k -> new LinkedHashMap<>()).put(refField.destinationName, refField);
 
             // Value mappings will be written inline with fields
         }
@@ -95,8 +94,7 @@ public class XSDBuilder {
     public void writeXSD(String xsdPath) throws IOException {
         try (FileWriter xsdWriter = new FileWriter(xsdPath)) {
             xsdWriter.write("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
-            xsdWriter.write(
-                    "<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n\n");
+            xsdWriter.write("<xs:schema xmlns:xs=\"http://www.w3.org/2001/XMLSchema\">\n\n");
 
             // Global annotations
             xsdWriter.write("  <xs:annotation>\n");
@@ -116,8 +114,7 @@ public class XSDBuilder {
             List<String> sortedTopLevelObjects = new ArrayList<>(topLevelObjects);
             Collections.sort(sortedTopLevelObjects);
             for (String obj : sortedTopLevelObjects) {
-                xsdWriter.write("              <xs:element ref=\"" + obj
-                        + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+                xsdWriter.write("              <xs:element ref=\"" + obj + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             }
             xsdWriter.write("            </xs:sequence>\n");
             xsdWriter.write("          </xs:complexType>\n");
@@ -184,8 +181,7 @@ public class XSDBuilder {
                         if (schemaClass.destinationName.equals(referencedTypeName)) {
                             // Only export classes that have migrate=true (isExported in XML)
                             if (!schemaClass.migrate) {
-                                System.err.println("WARNING: Referenced type '" + referencedTypeName
-                                        + "' (source: " + schemaClass.source + ") has isExported=false");
+                                System.err.println("WARNING: Referenced type '" + referencedTypeName + "' (source: " + schemaClass.source + ") has isExported=false");
                                 writtenTypes.add(referencedTypeName); // Mark as handled to avoid infinite loop
                                 found = true;
                                 break;
@@ -216,8 +212,7 @@ public class XSDBuilder {
                     }
 
                     if (!found) {
-                        System.err.println("ERROR: Referenced type '" + referencedTypeName
-                                + "' not found in reference schema. XSD validation will fail.");
+                        System.err.println("ERROR: Referenced type '" + referencedTypeName + "' not found in reference schema. XSD validation will fail.");
                     }
                 }
             }
@@ -231,16 +226,14 @@ public class XSDBuilder {
                     System.err.println("  - " + missingType);
                 }
                 System.err.println("These types should be added to reference-schema.xml with isExported=\"true\"");
-                System.err.println(
-                        "or the fields referencing them should have embedContents=\"false\" if they are ID references.\n");
+                System.err.println("or the fields referencing them should have embedContents=\"false\" if they are ID references.\n");
             }
 
             xsdWriter.write("</xs:schema>\n");
         }
     }
 
-    private void writeClassTypeDefinition(FileWriter xsdWriter, DOSchemaClass schemaClass,
-            boolean writeElement, boolean writeType) throws IOException {
+    private void writeClassTypeDefinition(FileWriter xsdWriter, DOSchemaClass schemaClass, boolean writeElement, boolean writeType) throws IOException {
         if (!writeElement && !writeType) {
             return; // Class not used anywhere
         }
@@ -316,8 +309,7 @@ public class XSDBuilder {
                 DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
 
                 if (childClass == null) {
-                    System.err.println("WARNING: Collection field '" + fieldName
-                            + "' references childrenType='" + childrenType + "' which is not found in schema");
+                    System.err.println("WARNING: Collection field '" + fieldName + "' references childrenType='" + childrenType + "' which is not found in schema");
                     itemType = "xs:anyType"; // Fallback
                 } else if (childClass.isIDEntite(databaseSchema) && !field.embedContents) {
                     // Non-embedded IDEntite collections use xs:long items
@@ -334,8 +326,7 @@ public class XSDBuilder {
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\">\n");
             xsdWriter.write(indent + "  <xs:complexType>\n");
             xsdWriter.write(indent + "    <xs:sequence>\n");
-            xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + itemType
-                    + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+            xsdWriter.write(indent + "      <xs:element name=\"item\" type=\"" + itemType + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             xsdWriter.write(indent + "    </xs:sequence>\n");
             xsdWriter.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
             xsdWriter.write(indent + "  </xs:complexType>\n");
@@ -354,8 +345,7 @@ public class XSDBuilder {
                 xsdWriter.write(indent + "</xs:element>\n");
             } else {
                 String xsdType = getXSDType(fieldType);
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
-                        + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             }
         } else {
             // Check if this is a non-embedded IDEntite reference
@@ -366,8 +356,7 @@ public class XSDBuilder {
                 // Non-embedded IDEntite references are exported as simple long values
                 // If field has a valueMap, write inline restriction
                 if (field.valueMap != null && !field.valueMap.isEmpty()) {
-                    xsdWriter.write(
-                            indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
                     xsdWriter.write(indent + "  <xs:simpleType>\n");
                     xsdWriter.write(indent + "    <xs:restriction base=\"xs:string\">\n");
                     for (String mappedValue : field.valueMap.values()) {
@@ -377,35 +366,29 @@ public class XSDBuilder {
                     xsdWriter.write(indent + "  </xs:simpleType>\n");
                     xsdWriter.write(indent + "</xs:element>\n");
                 } else {
-                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" "
-                            + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" " + "minOccurs=\"0\" maxOccurs=\"1\"/>\n");
                 }
             } else if (fieldClass != null) {
                 // Field is a schema class - use its destinationName
                 String refClassName = fieldClass.destinationName;
                 referencedTypes.add(refClassName); // Track that this type is referenced
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
-                        + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 // Field type is not in the schema - check if it's a known primitive/Java type
                 if (isPrimitiveType(fieldType)) {
                     String xsdType = getXSDType(fieldType);
-                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType
-                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
                 } else {
                     // Unknown type - use simple class name as fallback
                     String refClassName = getSimpleClassName(fieldType);
-                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName
-                            + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                    xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
                 }
             }
         }
     }
 
     private boolean isPrimitiveType(String typeName) {
-        return TypeUtil.isPrimitiveType(typeName) ||
-                typeName.equals("java.lang.Class") ||
-                typeName.equals("Class");
+        return TypeUtil.isPrimitiveType(typeName) || typeName.equals("java.lang.Class") || typeName.equals("Class");
     }
 
     private String getXSDType(String javaType) {
@@ -480,10 +463,6 @@ public class XSDBuilder {
         if (text == null) {
             return "";
         }
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
     }
 }

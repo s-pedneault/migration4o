@@ -42,9 +42,7 @@ public class DOFieldConverter {
      *                    map
      * @return A DOSchemaField representing the stored field
      */
-    public static DOSchemaField convertStoredFieldToSchemaField(
-            StoredField storedField,
-            DODatabaseContext context) {
+    public static DOSchemaField convertStoredFieldToSchemaField(StoredField storedField, DODatabaseContext context) {
 
         String source = storedField.getName();
         String destination = DatabaseUtil.normalizeFieldName(source);
@@ -125,8 +123,7 @@ public class DOFieldConverter {
      * @param storedClassMap Map of stored classes for reference lookups
      * @return The children type name, or empty string if not a collection
      */
-    public static String determineChildrenType(String typeName, boolean isCollection,
-            Map<String, StoredClass> storedClassMap) {
+    public static String determineChildrenType(String typeName, boolean isCollection, Map<String, StoredClass> storedClassMap) {
 
         if (!isCollection) {
             return ""; // Not a collection
