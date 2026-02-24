@@ -54,11 +54,12 @@ public class DOFieldConverter {
         // Determine field type
         String type = determineFieldType(typeName, isArray);
 
-        // Determine if this is a collection
-        boolean isCollection = isArray || CollectionTypeUtil.isCollectionType(typeName);
+        // Determine if this is a collection (arrays are represented as typed scalars,
+        // e.g. byte[] / int[], not as collection=true fields)
+        boolean isCollection = CollectionTypeUtil.isCollectionType(typeName);
 
         // Determine children type for collections
-        String childrenType = determineChildrenType(typeName, isArray, context.storedClassMap);
+        String childrenType = determineChildrenType(typeName, isCollection, context.storedClassMap);
 
         // Create schema field
         DOSchemaField field = new DOSchemaField();
@@ -87,16 +88,17 @@ public class DOFieldConverter {
      */
     public static String determineFieldType(String typeName, boolean isArray) {
         if (typeName == null || typeName.isEmpty()) {
-            return "java.lang.Object";
-        }
-
-        // For arrays, get the component type
-        if (isArray && typeName.endsWith("[]")) {
-            typeName = typeName.substring(0, typeName.length() - 2);
+            return isArray ? "java.lang.Object[]" : "java.lang.Object";
         }
 
         // Normalize the type name
-        return normalizeTypeName(typeName);
+        String normalizedType = normalizeTypeName(typeName);
+
+        if (isArray && !normalizedType.endsWith("[]")) {
+            return normalizedType + "[]";
+        }
+
+        return normalizedType;
     }
 
     /**
@@ -119,40 +121,15 @@ public class DOFieldConverter {
      * Determines the children type for collection fields.
      * 
      * @param typeName       The type name from the stored field
-     * @param isArray        Whether the field is an array
+     * @param isCollection   Whether the field is a collection type
      * @param storedClassMap Map of stored classes for reference lookups
      * @return The children type name, or empty string if not a collection
      */
-    public static String determineChildrenType(String typeName, boolean isArray,
+    public static String determineChildrenType(String typeName, boolean isCollection,
             Map<String, StoredClass> storedClassMap) {
 
-        if (!isArray && !CollectionTypeUtil.isCollectionType(typeName)) {
+        if (!isCollection) {
             return ""; // Not a collection
-        }
-
-        // For arrays, try to get the component type
-        if (isArray && typeName.endsWith("[]")) {
-            return typeName.substring(0, typeName.length() - 2);
-        }
-
-        // For primitive arrays
-        if (isArray) {
-            if (typeName.equals("int"))
-                return "int";
-            if (typeName.equals("long"))
-                return "long";
-            if (typeName.equals("double"))
-                return "double";
-            if (typeName.equals("float"))
-                return "float";
-            if (typeName.equals("boolean"))
-                return "boolean";
-            if (typeName.equals("byte"))
-                return "byte";
-            if (typeName.equals("char"))
-                return "char";
-            if (typeName.equals("short"))
-                return "short";
         }
 
         // For generic collections, try to extract type parameters

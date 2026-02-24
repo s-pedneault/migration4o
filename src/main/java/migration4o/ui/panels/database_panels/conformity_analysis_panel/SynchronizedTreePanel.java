@@ -481,9 +481,10 @@ public class SynchronizedTreePanel extends JPanel {
         for (String fieldName : sortedFieldNames) {
             DOSchemaField refField = refFieldMap.get(fieldName);
             DOSchemaField cmpField = cmpFieldMap.get(fieldName);
+            boolean isVirtualQueryField = fieldName != null && fieldName.startsWith("@");
 
             // Left tree (reference/schema)
-            boolean leftIsGhost = (refField == null && diff.getReferenceClass() != null);
+            boolean leftIsGhost = (refField == null && diff.getReferenceClass() != null && !isVirtualQueryField);
             boolean leftHasDiff = false;
             if (refField != null && cmpField != null) {
                 // Check if this field has differences
@@ -494,9 +495,10 @@ public class SynchronizedTreePanel extends JPanel {
             leftParent.add(new DefaultMutableTreeNode(leftFieldNode));
 
             // Right tree (compared/database)
-            boolean rightIsGhost = (cmpField == null && diff.getComparedClass() != null);
+            boolean rightIsGhost = (cmpField == null && diff.getComparedClass() != null && !isVirtualQueryField);
             boolean rightHasDiff = leftHasDiff; // Same difference status
-            String rightDisplay = fieldName + " : " + (cmpField != null ? cmpField.type : "?");
+            String rightType = cmpField != null ? cmpField.type : (isVirtualQueryField && refField != null ? refField.type : "?");
+            String rightDisplay = fieldName + " : " + rightType;
             SyncTreeNode rightFieldNode = new SyncTreeNode(fieldName, rightDisplay, rightIsGhost, rightHasDiff,
                     cmpField);
             rightParent.add(new DefaultMutableTreeNode(rightFieldNode));

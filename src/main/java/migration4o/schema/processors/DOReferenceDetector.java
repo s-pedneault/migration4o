@@ -174,6 +174,16 @@ public class DOReferenceDetector {
 
         String lower = typeName.toLowerCase();
 
+        // Filter out primitive arrays (e.g., int[], long[][])
+        if (lower.endsWith("[]")) {
+            String baseType = lower.replaceAll("\\[\\]", "");
+            if (baseType.equals("boolean") || baseType.equals("byte") || baseType.equals("char") ||
+                    baseType.equals("short") || baseType.equals("int") || baseType.equals("long") ||
+                    baseType.equals("float") || baseType.equals("double")) {
+                return false;
+            }
+        }
+
         // Filter out primitive types (including common variants)
         if (lower.equals("string") || lower.equals("int") || lower.equals("integer") ||
                 lower.equals("long") || lower.equals("double") || lower.equals("float") ||

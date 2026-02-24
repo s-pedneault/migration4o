@@ -98,10 +98,9 @@ public class SchemaComparisonPanel extends JPanel {
      * Update the comparison with new schemas and refresh the display.
      */
     public void updateComparison(SchemaComparison newComparison) {
-        this.comparison = newComparison;
-
         // Preserve the show all classes setting
-        boolean showAllClasses = comparison.isShowAllClasses();
+        boolean showAllClasses = this.comparison != null && this.comparison.isShowAllClasses();
+        this.comparison = newComparison;
         newComparison.setShowAllClasses(showAllClasses);
 
         // Preserve tree state before rebuilding

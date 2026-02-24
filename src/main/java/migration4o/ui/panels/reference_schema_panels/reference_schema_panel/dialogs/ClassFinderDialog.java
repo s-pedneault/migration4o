@@ -19,6 +19,7 @@ public class ClassFinderDialog extends FilteredListDialog<String> {
     // Primitive types to include in the list
     private static final String[] PRIMITIVES = {
             "boolean", "byte", "char", "short", "int", "long", "float", "double",
+            "boolean[]", "byte[]", "char[]", "short[]", "int[]", "long[]", "float[]", "double[]",
             "java.lang.Object", "java.lang.String", "java.lang.Integer", "java.lang.Long",
             "java.lang.Double", "java.lang.Float", "java.lang.Boolean", "java.lang.Character",
             "java.lang.Byte", "java.lang.Short", "java.math.BigDecimal", "java.math.BigInteger",

@@ -15,6 +15,7 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.schema.DOSchemaService;
+import migration4o.util.TypeUtil;
 
 /**
  * Builds XSD (XML Schema) definitions for exported XML files.
@@ -402,54 +403,45 @@ public class XSDBuilder {
     }
 
     private boolean isPrimitiveType(String typeName) {
-        return typeName.equals("java.lang.String") ||
-                typeName.equals("string") ||
-                typeName.equals("java.lang.Integer") ||
-                typeName.equals("int") ||
-                typeName.equals("java.lang.Long") ||
-                typeName.equals("long") ||
-                typeName.equals("java.lang.Boolean") ||
-                typeName.equals("boolean") ||
-                typeName.equals("java.lang.Double") ||
-                typeName.equals("double") ||
-                typeName.equals("java.lang.Float") ||
-                typeName.equals("float") ||
-                typeName.equals("java.lang.Byte") ||
-                typeName.equals("byte") ||
-                typeName.equals("java.lang.Short") ||
-                typeName.equals("short") ||
-                typeName.equals("java.util.Date") ||
-                typeName.equals("date") ||
-                typeName.equals("java.lang.Object") ||
-                typeName.equals("Object") ||
-                typeName.equals("object") ||
+        return TypeUtil.isPrimitiveType(typeName) ||
                 typeName.equals("java.lang.Class") ||
-                typeName.equals("Class") ||
-                typeName.equals("byte[]");
+                typeName.equals("Class");
     }
 
     private String getXSDType(String javaType) {
-        if (javaType.equals("java.lang.String") || javaType.equals("string"))
+        if (javaType == null || javaType.isEmpty()) {
             return "xs:string";
-        if (javaType.equals("java.lang.Integer") || javaType.equals("int"))
+        }
+
+        String normalizedType = javaType;
+        boolean isArrayType = normalizedType.endsWith("[]");
+
+        // Keep byte[] as base64, but map other primitive arrays to their component type
+        if (isArrayType && !normalizedType.equals("byte[]")) {
+            normalizedType = normalizedType.replaceAll("\\[\\]", "");
+        }
+
+        if (normalizedType.equals("java.lang.String") || normalizedType.equals("string"))
+            return "xs:string";
+        if (normalizedType.equals("java.lang.Integer") || normalizedType.equals("int"))
             return "xs:int";
-        if (javaType.equals("java.lang.Long") || javaType.equals("long"))
+        if (normalizedType.equals("java.lang.Long") || normalizedType.equals("long"))
             return "xs:long";
-        if (javaType.equals("java.lang.Boolean") || javaType.equals("boolean"))
+        if (normalizedType.equals("java.lang.Boolean") || normalizedType.equals("boolean"))
             return "xs:boolean";
-        if (javaType.equals("java.lang.Double") || javaType.equals("double"))
+        if (normalizedType.equals("java.lang.Double") || normalizedType.equals("double"))
             return "xs:double";
-        if (javaType.equals("java.lang.Float") || javaType.equals("float"))
+        if (normalizedType.equals("java.lang.Float") || normalizedType.equals("float"))
             return "xs:float";
-        if (javaType.equals("java.lang.Byte") || javaType.equals("byte"))
+        if (normalizedType.equals("java.lang.Byte") || normalizedType.equals("byte"))
             return "xs:byte";
-        if (javaType.equals("java.lang.Short") || javaType.equals("short"))
+        if (normalizedType.equals("java.lang.Short") || normalizedType.equals("short"))
             return "xs:short";
-        if (javaType.equals("java.util.Date") || javaType.equals("date"))
+        if (normalizedType.equals("java.util.Date") || normalizedType.equals("date"))
             return "xs:dateTime";
-        if (javaType.equals("java.lang.Object") || javaType.equals("Object") || javaType.equals("object"))
+        if (normalizedType.equals("java.lang.Object") || normalizedType.equals("Object") || normalizedType.equals("object"))
             return "xs:anyType";
-        if (javaType.equals("java.lang.Class") || javaType.equals("Class"))
+        if (normalizedType.equals("java.lang.Class") || normalizedType.equals("Class"))
             return "xs:string";
         if (javaType.equals("byte[]"))
             return "xs:base64Binary";

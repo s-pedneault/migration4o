@@ -79,7 +79,11 @@ public class SchemaComparison {
             if (refField == null) {
                 diff.addFieldOnlyInCompared(cmpField);
             } else if (cmpField == null) {
-                diff.addFieldOnlyInReference(refField);
+                // Virtual query fields (source starts with '@') are schema-only by
+                // design and should not be treated as missing anomalies.
+                if (!isVirtualQueryField(refField)) {
+                    diff.addFieldOnlyInReference(refField);
+                }
             } else {
                 // Both exist - check for property differences
                 FieldPropertyDifference propDiff = compareFieldProperties(refField, cmpField);
@@ -100,7 +104,10 @@ public class SchemaComparison {
             diff.addDifference("type", refField.type, cmpField.type);
         }
 
-        if (refField.isCollection != cmpField.isCollection) {
+        // If reference marks this as collection but compared schema does not,
+        // treat reference as authoritative (more precise metadata) and do not flag.
+        boolean referenceMorePreciseCollection = refField.isCollection && !cmpField.isCollection;
+        if (refField.isCollection != cmpField.isCollection && !referenceMorePreciseCollection) {
             diff.addDifference("collection", refField.isCollection, cmpField.isCollection);
         }
 
@@ -108,14 +115,19 @@ public class SchemaComparison {
         String refChildren = normalizeEmptyString(refField.childrenType);
         String cmpChildren = normalizeEmptyString(cmpField.childrenType);
 
-        // Special case: if reference schema defines a proper type and database has
-        // java.lang.Object,
-        // don't consider it a difference (schema takes precedence)
-        boolean isObjectPlaceholder = (refChildren != null && !refChildren.isEmpty() &&
-                !refChildren.equals("java.lang.Object") &&
-                "java.lang.Object".equals(cmpChildren));
+        // If reference has more precise children type metadata, prefer reference and
+        // do not flag:
+        // - compared is missing/empty
+        // - compared is java.lang.Object placeholder
+        boolean referenceHasSpecificChildrenType = refChildren != null &&
+            !"java.lang.Object".equals(normalizeType(refChildren));
+        boolean comparedMissingChildrenType = cmpChildren == null;
+        boolean comparedIsObjectPlaceholder = "java.lang.Object".equals(normalizeType(cmpChildren));
+        boolean referenceMorePreciseChildrenType = referenceHasSpecificChildrenType &&
+            (comparedMissingChildrenType || comparedIsObjectPlaceholder);
 
-        if (!Objects.equals(refChildren, cmpChildren) && !isObjectPlaceholder) {
+        if (!Objects.equals(normalizeType(refChildren), normalizeType(cmpChildren)) &&
+            !referenceMorePreciseChildrenType) {
             diff.addDifference("childrenType", refField.childrenType, cmpField.childrenType);
         }
 
@@ -219,6 +231,10 @@ public class SchemaComparison {
             }
         }
         return map;
+    }
+
+    private boolean isVirtualQueryField(DOSchemaField field) {
+        return field != null && field.source != null && field.source.startsWith("@");
     }
 
     public List<ClassDifference> getDifferences() {

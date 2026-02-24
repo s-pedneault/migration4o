@@ -965,6 +965,44 @@ public class MainWindow extends JFrame {
                 info.panel.updateComparison(comparison);
             }
         }
+
+        // Refresh the Database -> Conformity analysis tab when either reference or
+        // database schema is reloaded, so analysis stays up to date without
+        // reopening the database.
+        SchemaTabInfo reloadedTabInfo = schemaTabs.get(editor);
+        DOSchema liveDatabaseSchema = getLiveDatabaseSchemaForConformity();
+        if (reloadedTabInfo != null && conformityAnalysisTab instanceof SchemaComparisonPanel && liveDatabaseSchema != null) {
+            boolean reloadedReference = reloadedTabInfo.isReference;
+            boolean reloadedDatabase = databaseSchemaTab == editor;
+            if (reloadedReference || reloadedDatabase) {
+                SchemaTabInfo referenceTabInfo = findReferenceTabInfo();
+                if (referenceTabInfo != null) {
+                    SchemaComparisonPanel conformityPanel = (SchemaComparisonPanel) conformityAnalysisTab;
+                    SchemaComparison updatedComparison = new SchemaComparison(
+                            referenceTabInfo.editorPanel.getSchema(),
+                            referenceTabInfo.label,
+                            liveDatabaseSchema,
+                            "Database");
+                    conformityPanel.updateComparison(updatedComparison);
+                }
+            }
+        }
+    }
+
+    private SchemaTabInfo findReferenceTabInfo() {
+        for (SchemaTabInfo tabInfo : schemaTabs.values()) {
+            if (tabInfo.isReference) {
+                return tabInfo;
+            }
+        }
+        return null;
+    }
+
+    private DOSchema getLiveDatabaseSchemaForConformity() {
+        if (databaseSchemaTab instanceof SchemaEditorPanel) {
+            return ((SchemaEditorPanel) databaseSchemaTab).getSchema();
+        }
+        return currentDatabaseSchema;
     }
 
     /**
