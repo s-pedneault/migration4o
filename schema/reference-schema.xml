@@ -42,10 +42,18 @@
         <field source="i_signature" destinationName="i_signature" isExported="true" skipWhen="DEFAULT" type="byte" />
         <field source="i_uuid" destinationName="i_uuid" isExported="true" skipWhen="DEFAULT" type="long" />
     </class>
-    <class source="gen.requete.DynamicStaticDate" destinationName="DynamicStaticDate" isExported="false" parentClass="gest.gen.Entite">
-        <field source="mDynamicDate" destinationName="dynamicDate" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mStatic" destinationName="static" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mStaticDate" destinationName="staticDate" isExported="true" skipWhen="DEFAULT" type="date" />
+    <class source="gen.requete.DynamicStaticDate" destinationName="DateStatiqueOuDynamique" isExported="false" parentClass="gest.gen.Entite">
+        <field source="mDynamicDate" destinationName="dateDynamique" isExported="true" skipWhen="DEFAULT" type="int">
+            <valueMap>
+                <mapping from="1" to="1JOUR" />
+                <mapping from="2" to="1SEMAINE" />
+                <mapping from="3" to="1MOIS" />
+                <mapping from="4" to="3MOIS" />
+                <mapping from="5" to="6MOIS" />
+            </valueMap>
+        </field>
+        <field source="mStatic" destinationName="statique" isExported="true" skipWhen="DEFAULT" type="boolean" />
+        <field source="mStaticDate" destinationName="dateStatique" isExported="true" skipWhen="DEFAULT" type="date" />
     </class>
     <class source="gen.util.HVector" destinationName="HVector" isExported="true" parentClass="java.util.Vector">
         <field source="mReadOnly" destinationName="readOnly" isExported="true" skipWhen="DEFAULT" type="boolean" />
