@@ -2,9 +2,13 @@ package migration4o.ui.main;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Desktop;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.io.File;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -29,9 +33,12 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.schema.DOSchemaService;
+import migration4o.schema.diagram.SchemaDiagramExporter;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ComparisonTabInfo;
 import migration4o.models.ui.SchemaTabInfo;
 import migration4o.ui.common.DatabaseProgressMonitor;
@@ -230,7 +237,62 @@ public class MainWindow extends JFrame {
         migrateButton.addActionListener(e -> triggerMigrateAllModules());
         toolbar.add(migrateButton);
 
+        JButton diagramButton = new JButton("Schema Diagrams");
+        diagramButton.setToolTipText("Generate one reference schema diagram per module (DOT/SVG)");
+        diagramButton.addActionListener(e -> generateReferenceSchemaDiagram());
+        toolbar.add(diagramButton);
+
         return toolbar;
+    }
+
+    private void generateReferenceSchemaDiagram() {
+        DOSchema referenceSchema = referenceSchemaPanel != null ? referenceSchemaPanel.getSchema() : schemaService.getReferenceSchema();
+
+        if (referenceSchema == null || referenceSchema.getClasses() == null || referenceSchema.getClasses().length == 0) {
+            JOptionPane.showMessageDialog(this, "Reference schema is not loaded or empty.", "Schema Diagram", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        SwingWorker<List<SchemaDiagramExporter.Result>, Void> moduleWorker = new SwingWorker<>() {
+            @Override
+            protected List<SchemaDiagramExporter.Result> doInBackground() throws Exception {
+                SchemaDiagramExporter exporter = new SchemaDiagramExporter();
+                Path outputDir = Paths.get("output", "diagrams");
+
+                DOModuleService moduleService = DOModuleService.getInstance();
+                List<MigrationModule> modules = moduleService.getModules();
+                if (modules.isEmpty()) {
+                    modules = moduleService.loadModuleStructure();
+                }
+
+                return exporter.exportPerModule(referenceSchema, modules, outputDir);
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    List<SchemaDiagramExporter.Result> results = get();
+
+                    if (results == null || results.isEmpty()) {
+                        JOptionPane.showMessageDialog(MainWindow.this, "No module diagrams were generated.\nCheck migration-format.xml module/class definitions.", "Schema Diagrams", JOptionPane.WARNING_MESSAGE);
+                        return;
+                    }
+
+                    StringBuilder message = new StringBuilder();
+                    long svgCount = results.stream().filter(r -> r.svgGenerated).count();
+                    message.append("Generated module diagrams: ").append(results.size()).append("\n");
+                    message.append("SVG rendered: ").append(svgCount).append("\n\n");
+                    message.append("Output folder: ").append(Paths.get("output", "diagrams").toAbsolutePath()).append("\n");
+
+                    JOptionPane.showMessageDialog(MainWindow.this, message.toString(), "Schema Diagrams", JOptionPane.INFORMATION_MESSAGE);
+
+                } catch (Exception e) {
+                    JOptionPane.showMessageDialog(MainWindow.this, "Failed to generate module diagrams:\n" + e.getMessage(), "Schema Diagrams Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        };
+
+        moduleWorker.execute();
     }
 
     private void triggerMigrateAllModules() {
