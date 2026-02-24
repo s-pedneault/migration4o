@@ -3,6 +3,7 @@ package migration4o.ui.panels.database_panels.reachability_analysis_panel;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Font;
 import java.awt.FlowLayout;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -20,12 +21,16 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JRadioButton;
 import javax.swing.JScrollPane;
-import javax.swing.JTree;
+import javax.swing.JTable;
+import javax.swing.UIManager;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
-import javax.swing.tree.DefaultTreeModel;
 import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
+
+import org.jdesktop.swingx.JXTreeTable;
+import org.jdesktop.swingx.treetable.AbstractTreeTableModel;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -43,18 +48,17 @@ public class ReachabilityAnalysisPanel extends JPanel {
     private final DOSchema databaseSchema;
     private final DOSchema referenceSchema;
 
-    private JTree tree;
-    private DefaultTreeModel treeModel;
+    private JXTreeTable treeTable;
+    private ReachabilityTreeTableModel treeTableModel;
     private DefaultMutableTreeNode rootNode;
 
     private JRadioButton showAllRadio;
     private JRadioButton showReachedRadio;
     private JRadioButton showUnreachedRadio;
+    private JRadioButton showUnreachedUnjustifiedRadio;
 
     private enum FilterMode {
-        SHOW_ALL,
-        SHOW_REACHED,
-        SHOW_UNREACHED
+        SHOW_ALL, SHOW_REACHED, SHOW_UNREACHED, SHOW_UNREACHED_UNJUSTIFIED
     }
 
     private FilterMode currentFilterMode = FilterMode.SHOW_ALL;
@@ -88,11 +92,13 @@ public class ReachabilityAnalysisPanel extends JPanel {
         showAllRadio = new JRadioButton("Show all", true);
         showReachedRadio = new JRadioButton("Show reached");
         showUnreachedRadio = new JRadioButton("Show unreached");
+        showUnreachedUnjustifiedRadio = new JRadioButton("Show unreached and unjustified");
 
         ButtonGroup filterGroup = new ButtonGroup();
         filterGroup.add(showAllRadio);
         filterGroup.add(showReachedRadio);
         filterGroup.add(showUnreachedRadio);
+        filterGroup.add(showUnreachedUnjustifiedRadio);
 
         showAllRadio.addActionListener(e -> {
             currentFilterMode = FilterMode.SHOW_ALL;
@@ -109,18 +115,19 @@ public class ReachabilityAnalysisPanel extends JPanel {
             applyFilter();
         });
 
+        showUnreachedUnjustifiedRadio.addActionListener(e -> {
+            currentFilterMode = FilterMode.SHOW_UNREACHED_UNJUSTIFIED;
+            applyFilter();
+        });
+
         topPanel.add(showAllRadio);
         topPanel.add(showReachedRadio);
         topPanel.add(showUnreachedRadio);
+        topPanel.add(showUnreachedUnjustifiedRadio);
 
         // Create help label
         JPanel helpPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        JLabel helpLabel = new JLabel(
-                "<html><b style='background-color: green; color: white; padding: 2px 4px;'>&nbsp;Green&nbsp;</b> Top-level class that reaches a module&nbsp;&nbsp;&nbsp;"
-                        +
-                        "<b style='background-color: #0064C8; color: white; padding: 2px 4px;'>&nbsp;Blue&nbsp;</b> Class found in modules&nbsp;&nbsp;&nbsp;"
-                        +
-                        "<b style='color: #0064C8;'>→ Module</b> Module name</html>");
+        JLabel helpLabel = new JLabel("<html><b style='background-color: green; color: white; padding: 2px 4px;'>&nbsp;Green&nbsp;</b> Top-level class that reaches a module&nbsp;&nbsp;&nbsp;" + "<b style='background-color: #0064C8; color: white; padding: 2px 4px;'>&nbsp;Blue&nbsp;</b> Class found in modules&nbsp;&nbsp;&nbsp;" + "<b style='color: #0064C8;'>→ Module</b> Module name</html>");
         helpPanel.add(helpLabel);
 
         JPanel northPanel = new JPanel(new BorderLayout());
@@ -131,18 +138,24 @@ public class ReachabilityAnalysisPanel extends JPanel {
 
         // Create tree
         rootNode = new DefaultMutableTreeNode("Reference Hierarchy");
-        treeModel = new DefaultTreeModel(rootNode);
-        tree = new JTree(treeModel);
-        tree.setRootVisible(false);
-        tree.setShowsRootHandles(true);
-        tree.setCellRenderer(new ReachabilityTreeCellRenderer());
+        treeTableModel = new ReachabilityTreeTableModel(rootNode);
+        treeTable = new JXTreeTable(treeTableModel);
+        treeTable.setRootVisible(false);
+        treeTable.setShowsRootHandles(true);
+        treeTable.setTreeCellRenderer(new ReachabilityTreeCellRenderer());
+        treeTable.setRowHeight(22);
+        treeTable.setColumnMargin(8);
+        treeTable.getColumnModel().getColumn(0).setPreferredWidth(460);
+        treeTable.getColumnModel().getColumn(1).setPreferredWidth(680);
+        treeTable.getColumnModel().getColumn(1).setCellRenderer(new ReachabilityTableCellRenderer());
 
         // Add double-click listener to navigate to class in schema editor
-        tree.addMouseListener(new MouseAdapter() {
+        treeTable.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
                 if (e.getClickCount() == 2) {
-                    TreePath path = tree.getPathForLocation(e.getX(), e.getY());
+                    int row = treeTable.rowAtPoint(e.getPoint());
+                    TreePath path = row >= 0 ? treeTable.getPathForRow(row) : null;
                     if (path != null) {
                         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                         Object userObject = node.getUserObject();
@@ -162,7 +175,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
             }
         });
 
-        JScrollPane scrollPane = new JScrollPane(tree);
+        JScrollPane scrollPane = new JScrollPane(treeTable);
         add(scrollPane, BorderLayout.CENTER);
     }
 
@@ -172,7 +185,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
         // Get all classes from database schema, sorted alphabetically
         DOSchemaClass[] classes = databaseSchema.getClasses();
         if (classes == null || classes.length == 0) {
-            treeModel.reload();
+            treeTableModel.reloadTree();
             return;
         }
 
@@ -182,8 +195,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
 
         // Create top-level nodes for each class
         for (DOSchemaClass dbClass : sortedClasses) {
-            DefaultMutableTreeNode topLevelNode = new DefaultMutableTreeNode(
-                    new ClassNodeData(dbClass.source, true));
+            DefaultMutableTreeNode topLevelNode = new DefaultMutableTreeNode(new ClassNodeData(dbClass.source, true));
 
             // Check if the top-level class itself is in a module
             DOSchemaClass refClass = referenceSchema.findClassByName(dbClass.source);
@@ -191,18 +203,19 @@ public class ReachabilityAnalysisPanel extends JPanel {
             String topLevelModuleName = null;
 
             if (refClass != null) {
+                ClassNodeData topLevelData = (ClassNodeData) topLevelNode.getUserObject();
+
                 topLevelInModule = ModuleUtil.isClassListedInAnyModule(refClass);
                 if (topLevelInModule) {
                     topLevelModuleName = ModuleUtil.findModuleForClass(refClass);
-                    ((ClassNodeData) topLevelNode.getUserObject()).setInModule(true);
-                    ((ClassNodeData) topLevelNode.getUserObject()).setReached(true); // Blue classes are reached
+                    topLevelData.setInModule(true);
+                    topLevelData.setReached(true); // Blue classes are reached
                 }
             }
 
             // If top-level is in a module, add module name node and don't expand further
             if (topLevelInModule && topLevelModuleName != null) {
-                DefaultMutableTreeNode moduleNode = new DefaultMutableTreeNode(
-                        new ModuleNodeData(topLevelModuleName));
+                DefaultMutableTreeNode moduleNode = new DefaultMutableTreeNode(new ModuleNodeData(topLevelModuleName));
                 topLevelNode.add(moduleNode);
             } else {
                 // Build reference chain for this class
@@ -218,7 +231,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
             rootNode.add(topLevelNode);
         }
 
-        treeModel.reload();
+        treeTableModel.reloadTree();
         collapseAll();
     }
 
@@ -242,8 +255,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
             }
 
             // Create node for referenced class
-            DefaultMutableTreeNode referencedNode = new DefaultMutableTreeNode(
-                    new ClassNodeData(referencedClassName, false));
+            DefaultMutableTreeNode referencedNode = new DefaultMutableTreeNode(new ClassNodeData(referencedClassName, false));
 
             // Check if referenced class is in any module
             DOSchemaClass referencedClass = referenceSchema.findClassByName(referencedClassName);
@@ -251,10 +263,12 @@ public class ReachabilityAnalysisPanel extends JPanel {
             String moduleName = null;
 
             if (referencedClass != null) {
+                ClassNodeData referencedNodeData = (ClassNodeData) referencedNode.getUserObject();
+
                 inModule = ModuleUtil.isClassListedInAnyModule(referencedClass);
                 if (inModule) {
                     moduleName = ModuleUtil.findModuleForClass(referencedClass);
-                    ((ClassNodeData) referencedNode.getUserObject()).setInModule(true);
+                    referencedNodeData.setInModule(true);
                 }
             }
 
@@ -262,8 +276,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
 
             // If this class is in a module, add a child node showing the module name
             if (inModule && moduleName != null) {
-                DefaultMutableTreeNode moduleNode = new DefaultMutableTreeNode(
-                        new ModuleNodeData(moduleName));
+                DefaultMutableTreeNode moduleNode = new DefaultMutableTreeNode(new ModuleNodeData(moduleName));
                 referencedNode.add(moduleNode);
             }
 
@@ -347,6 +360,10 @@ public class ReachabilityAnalysisPanel extends JPanel {
                     shouldShow = true;
                 } else if (currentFilterMode == FilterMode.SHOW_UNREACHED && !data.isReached()) {
                     shouldShow = true;
+                } else if (currentFilterMode == FilterMode.SHOW_UNREACHED_UNJUSTIFIED && !data.isReached()) {
+                    DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
+                    String schemaNotes = liveClass != null ? liveClass.schemaNotes : null;
+                    shouldShow = schemaNotes == null || schemaNotes.trim().isEmpty();
                 }
 
                 if (!shouldShow) {
@@ -360,7 +377,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
             }
         }
 
-        treeModel.reload();
+        treeTableModel.reloadTree();
         collapseAll();
     }
 
@@ -368,9 +385,18 @@ public class ReachabilityAnalysisPanel extends JPanel {
      * Collapses all nodes in the tree
      */
     private void collapseAll() {
-        for (int i = 0; i < tree.getRowCount(); i++) {
-            tree.collapseRow(i);
+        for (int i = 0; i < treeTable.getRowCount(); i++) {
+            treeTable.collapseRow(i);
         }
+    }
+
+    private DefaultMutableTreeNode getNodeForRow(int row) {
+        TreePath path = treeTable.getPathForRow(row);
+        if (path == null) {
+            return null;
+        }
+        Object node = path.getLastPathComponent();
+        return node instanceof DefaultMutableTreeNode ? (DefaultMutableTreeNode) node : null;
     }
 
     /**
@@ -440,11 +466,48 @@ public class ReachabilityAnalysisPanel extends JPanel {
     /**
      * Custom cell renderer for color-coding nodes
      */
-    private static class ReachabilityTreeCellRenderer extends DefaultTreeCellRenderer {
+    private class ReachabilityTreeCellRenderer extends DefaultTreeCellRenderer {
+
+        private static final int LIGHT_COLOR_THRESHOLD = 240;
+
+        private static boolean isLightColor(Color color) {
+            if (color == null) {
+                return false;
+            }
+            return color.getRed() >= LIGHT_COLOR_THRESHOLD && color.getGreen() >= LIGHT_COLOR_THRESHOLD && color.getBlue() >= LIGHT_COLOR_THRESHOLD;
+        }
+
+        private void applySelectionColors(javax.swing.JTree tree) {
+            Color selectionBackground = getBackgroundSelectionColor();
+            if (selectionBackground == null) {
+                selectionBackground = UIManager.getColor("Tree.selectionBackground");
+            }
+            if (selectionBackground == null) {
+                selectionBackground = tree.getBackground();
+            }
+            setBackground(selectionBackground);
+            setBackgroundSelectionColor(selectionBackground);
+
+            if (isLightColor(selectionBackground)) {
+                setForeground(Color.BLACK);
+                setTextSelectionColor(Color.BLACK);
+            } else {
+                Color selectionForeground = getTextSelectionColor();
+                if (selectionForeground == null) {
+                    selectionForeground = UIManager.getColor("Tree.selectionForeground");
+                }
+                if (selectionForeground == null) {
+                    selectionForeground = tree.getForeground();
+                }
+                setForeground(selectionForeground);
+                setTextSelectionColor(selectionForeground);
+            }
+
+            setOpaque(true);
+        }
 
         @Override
-        public Component getTreeCellRendererComponent(JTree tree, Object value,
-                boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
+        public Component getTreeCellRendererComponent(javax.swing.JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) {
 
             super.getTreeCellRendererComponent(tree, value, selected, expanded, leaf, row, hasFocus);
 
@@ -454,48 +517,207 @@ public class ReachabilityAnalysisPanel extends JPanel {
 
                 if (userObject instanceof ClassNodeData) {
                     ClassNodeData data = (ClassNodeData) userObject;
+                    DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
+                    boolean exported = liveClass == null || liveClass.migrate;
+                    setText(data.getClassName());
 
                     if (!selected) {
                         // Nodes that are in modules: White text on blue background
                         // (this takes priority over top-level reached)
                         if (data.isInModule()) {
-                            setForeground(Color.WHITE);
+                            setForeground(exported ? Color.WHITE : new Color(255, 230, 230));
                             setBackground(new Color(0, 200, 100)); // Blue
                             setBackgroundNonSelectionColor(new Color(0, 100, 200));
                             setOpaque(true);
                         }
                         // Top-level nodes that are reached: White text on green background
                         else if (data.isTopLevel() && data.isReached()) {
-                            setForeground(Color.WHITE);
+                            setForeground(exported ? Color.WHITE : new Color(255, 230, 230));
                             setBackground(new Color(0, 128, 0)); // Dark green
                             setBackgroundNonSelectionColor(new Color(0, 128, 0));
                             setOpaque(true);
                         }
                         // Default color for other nodes
                         else {
-                            setForeground(Color.BLACK);
-                            setBackground(tree.getBackground());
-                            setBackgroundNonSelectionColor(tree.getBackground());
+                            setForeground(exported ? Color.BLACK : new Color(192, 0, 0));
+                            setFont(getFont().deriveFont(exported ? Font.PLAIN : Font.BOLD));
+                            setBackground(treeTable.getBackground());
+                            setBackgroundNonSelectionColor(treeTable.getBackground());
                             setOpaque(false);
                         }
                     } else {
-                        // When selected, use default selection colors
-                        setOpaque(true);
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                        applySelectionColors(tree);
                     }
                 } else if (userObject instanceof ModuleNodeData) {
+                    setText("→ " + ((ModuleNodeData) userObject).getModuleName());
                     // Module name nodes: Blue text, no special background
                     if (!selected) {
                         setForeground(new Color(0, 100, 200)); // Blue
-                        setBackground(tree.getBackground());
-                        setBackgroundNonSelectionColor(tree.getBackground());
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                        setBackground(treeTable.getBackground());
+                        setBackgroundNonSelectionColor(treeTable.getBackground());
                         setOpaque(false);
                     } else {
-                        setOpaque(true);
+                        setFont(getFont().deriveFont(Font.PLAIN));
+                        applySelectionColors(tree);
                     }
                 }
             }
 
             return this;
+        }
+    }
+
+    private class ReachabilityTableCellRenderer extends DefaultTableCellRenderer {
+
+        @Override
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+            super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+
+            DefaultMutableTreeNode node = getNodeForRow(row);
+            if (node == null) {
+                return this;
+            }
+
+            Object userObject = node.getUserObject();
+
+            if (isSelected) {
+                Color selectionBackground = UIManager.getColor("Tree.selectionBackground");
+                if (selectionBackground == null) {
+                    selectionBackground = table.getSelectionBackground();
+                }
+                Color selectionForeground = UIManager.getColor("Tree.selectionForeground");
+                if (selectionForeground == null) {
+                    selectionForeground = table.getSelectionForeground();
+                }
+                if (selectionBackground != null && selectionBackground.getRed() >= 240 && selectionBackground.getGreen() >= 240 && selectionBackground.getBlue() >= 240) {
+                    selectionForeground = Color.BLACK;
+                }
+                setBackground(selectionBackground);
+                setForeground(selectionForeground);
+                setOpaque(true);
+                setFont(getFont().deriveFont(Font.PLAIN));
+                return this;
+            }
+
+            if (userObject instanceof ClassNodeData) {
+                ClassNodeData data = (ClassNodeData) userObject;
+                DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
+                boolean exported = liveClass == null || liveClass.migrate;
+
+                if (data.isInModule()) {
+                    setBackground(new Color(0, 100, 200));
+                    setForeground(exported ? Color.WHITE : new Color(255, 230, 230));
+                    setOpaque(true);
+                } else if (data.isTopLevel() && data.isReached()) {
+                    setBackground(new Color(0, 128, 0));
+                    setForeground(exported ? Color.WHITE : new Color(255, 230, 230));
+                    setOpaque(true);
+                } else {
+                    setBackground(table.getBackground());
+                    setForeground(exported ? Color.BLACK : new Color(192, 0, 0));
+                    setOpaque(true);
+                }
+            } else if (userObject instanceof ModuleNodeData) {
+                setBackground(table.getBackground());
+                setForeground(new Color(0, 100, 200));
+                setOpaque(true);
+            }
+
+            setFont(getFont().deriveFont(Font.PLAIN));
+            return this;
+        }
+    }
+
+    private class ReachabilityTreeTableModel extends AbstractTreeTableModel {
+
+        private final String[] columnNames = { "Class", "Schema notes" };
+        private final Class<?>[] columnTypes = { String.class, String.class };
+
+        public ReachabilityTreeTableModel(Object root) {
+            super(root);
+        }
+
+        public void reloadTree() {
+            modelSupport.fireNewRoot();
+        }
+
+        @Override
+        public int getColumnCount() {
+            return columnNames.length;
+        }
+
+        @Override
+        public String getColumnName(int column) {
+            return columnNames[column];
+        }
+
+        @Override
+        public Class<?> getColumnClass(int column) {
+            return columnTypes[column];
+        }
+
+        @Override
+        public Object getValueAt(Object node, int column) {
+            if (!(node instanceof DefaultMutableTreeNode)) {
+                return "";
+            }
+
+            DefaultMutableTreeNode treeNode = (DefaultMutableTreeNode) node;
+            Object userObject = treeNode.getUserObject();
+
+            if (userObject instanceof ClassNodeData) {
+                ClassNodeData classNodeData = (ClassNodeData) userObject;
+                if (column == 0) {
+                    return classNodeData.getClassName();
+                }
+                DOSchemaClass liveClass = referenceSchema.findClassByName(classNodeData.getClassName());
+                return liveClass != null && liveClass.schemaNotes != null ? liveClass.schemaNotes : "";
+            }
+
+            if (userObject instanceof ModuleNodeData) {
+                return column == 0 ? "→ " + ((ModuleNodeData) userObject).getModuleName() : "";
+            }
+
+            return userObject != null ? userObject.toString() : "";
+        }
+
+        @Override
+        public Object getChild(Object parent, int index) {
+            if (parent instanceof DefaultMutableTreeNode) {
+                return ((DefaultMutableTreeNode) parent).getChildAt(index);
+            }
+            return null;
+        }
+
+        @Override
+        public int getChildCount(Object parent) {
+            if (parent instanceof DefaultMutableTreeNode) {
+                return ((DefaultMutableTreeNode) parent).getChildCount();
+            }
+            return 0;
+        }
+
+        @Override
+        public int getIndexOfChild(Object parent, Object child) {
+            if (parent instanceof DefaultMutableTreeNode && child instanceof DefaultMutableTreeNode) {
+                return ((DefaultMutableTreeNode) parent).getIndex((DefaultMutableTreeNode) child);
+            }
+            return -1;
+        }
+
+        @Override
+        public boolean isLeaf(Object node) {
+            if (node instanceof DefaultMutableTreeNode) {
+                return ((DefaultMutableTreeNode) node).isLeaf();
+            }
+            return true;
+        }
+
+        @Override
+        public boolean isCellEditable(Object node, int column) {
+            return false;
         }
     }
 }

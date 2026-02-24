@@ -138,6 +138,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", schemaClass.description);
         }
 
+        if (schemaClass.schemaNotes != null && !schemaClass.schemaNotes.isEmpty()) {
+            writeAttribute(writer, "schemaNotes", schemaClass.schemaNotes);
+        }
+
         if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty() && !"Undetermined".equals(schemaClass.parentClassName)) {
             writeAttribute(writer, "parentClass", schemaClass.parentClassName);
         }

@@ -11,6 +11,7 @@ public class DOSchemaClass {
     public String destinationName;
     public String parentClassName;
     public boolean migrate;
+    public String schemaNotes;
     public String title;
     public String description;
     public DOSchemaField[] fields;

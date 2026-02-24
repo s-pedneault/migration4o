@@ -1023,6 +1023,7 @@ public class SchemaComparisonPanel extends JPanel {
             newClass.source = oldClass.source;
             newClass.destinationName = oldClass.destinationName;
             newClass.description = oldClass.description;
+            newClass.schemaNotes = oldClass.schemaNotes;
             newClass.title = oldClass.title;
             newClass.parentClassName = oldClass.parentClassName;
             newClass.setFields(newFields);

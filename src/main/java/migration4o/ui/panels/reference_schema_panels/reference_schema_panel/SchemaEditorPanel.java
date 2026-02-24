@@ -27,6 +27,8 @@ import javax.swing.JTree;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingUtilities;
 import javax.swing.UIManager;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableCellRenderer;
@@ -59,6 +61,10 @@ import migration4o.util.TypeUtil;
  * property editing.
  */
 public class SchemaEditorPanel extends JPanel {
+
+    private static final String EXPORT_ROW_LABEL = "Export (migrate)";
+    private static final String EXPORT_CHECKBOX_COMPONENT_NAME = "exportCheckBox";
+    private static final String SCHEMA_NOTES_COMPONENT_NAME = "schemaNotesField";
 
     private DOSchema schema;
     private boolean modified;
@@ -151,6 +157,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.source = sourceClass.source;
         newClass.destinationName = sourceClass.destinationName;
         newClass.description = sourceClass.description;
+        newClass.schemaNotes = sourceClass.schemaNotes;
         newClass.title = sourceClass.title;
         newClass.parentClassName = sourceClass.parentClassName;
 
@@ -277,6 +284,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.source = targetClass.source;
         newClass.destinationName = targetClass.destinationName;
         newClass.description = targetClass.description;
+        newClass.schemaNotes = targetClass.schemaNotes;
         newClass.title = targetClass.title;
         newClass.parentClassName = targetClass.parentClassName;
         newClass.setFields(newFields);
@@ -1053,11 +1061,16 @@ public class SchemaEditorPanel extends JPanel {
             }
         }
 
-        // Apply Export checkbox
-        JComponent exportField = propertyPanel.getField("Export (migrate)");
-        if (exportField instanceof JCheckBox) {
-            boolean migrate = ((JCheckBox) exportField).isSelected();
-            schemaClass.migrate = migrate;
+        // Apply Export checkbox and Schema Notes
+        JCheckBox exportCheckBox = getExportCheckBoxFromPanel();
+        if (exportCheckBox != null) {
+            schemaClass.migrate = exportCheckBox.isSelected();
+        }
+
+        JTextField schemaNotesField = getSchemaNotesFieldFromPanel();
+        if (schemaNotesField != null) {
+            String notes = schemaNotesField.getText();
+            schemaClass.schemaNotes = notes != null && !notes.trim().isEmpty() ? notes.trim() : null;
         }
 
         // Apply Parent Class
@@ -1112,8 +1125,24 @@ public class SchemaEditorPanel extends JPanel {
         propertyPanel.addReadOnlyTextField("Source", schemaClass.source);
         propertyPanel.addTextField("Destination Name", schemaClass.destinationName).addActionListener(e -> markModified());
 
-        JCheckBox exportCheckBox = propertyPanel.addCheckBox("Export (migrate)", schemaClass.migrate);
+        JPanel exportAndNotesPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
+
+        JCheckBox exportCheckBox = new JCheckBox();
+        exportCheckBox.setName(EXPORT_CHECKBOX_COMPONENT_NAME);
+        exportCheckBox.setSelected(schemaClass.migrate);
+        exportAndNotesPanel.add(exportCheckBox);
+
+        JLabel schemaNotesLabel = new JLabel("Schema notes:");
+        exportAndNotesPanel.add(schemaNotesLabel);
+
+        JTextField schemaNotesField = new JTextField(schemaClass.schemaNotes != null ? schemaClass.schemaNotes : "", 24);
+        schemaNotesField.setName(SCHEMA_NOTES_COMPONENT_NAME);
+        exportAndNotesPanel.add(schemaNotesField);
+
+        propertyPanel.addCustomField(EXPORT_ROW_LABEL, exportAndNotesPanel);
+
         exportCheckBox.addActionListener(e -> {
+            schemaClass.migrate = exportCheckBox.isSelected();
             markModified();
             // Update tree label based on checkbox state
             String className = getClassDisplayName(schemaClass);
@@ -1123,6 +1152,29 @@ public class SchemaEditorPanel extends JPanel {
             if (currentSelectedNode != null) {
                 currentSelectedNode.setUserObject(className);
                 treeModel.nodeChanged(currentSelectedNode);
+            }
+        });
+
+        schemaNotesField.getDocument().addDocumentListener(new DocumentListener() {
+            private void updateSchemaNotes() {
+                String notes = schemaNotesField.getText();
+                schemaClass.schemaNotes = notes != null && !notes.trim().isEmpty() ? notes.trim() : null;
+                markModified();
+            }
+
+            @Override
+            public void insertUpdate(DocumentEvent e) {
+                updateSchemaNotes();
+            }
+
+            @Override
+            public void removeUpdate(DocumentEvent e) {
+                updateSchemaNotes();
+            }
+
+            @Override
+            public void changedUpdate(DocumentEvent e) {
+                updateSchemaNotes();
             }
         });
 
@@ -1597,6 +1649,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.source = className;
         newClass.destinationName = className;
         newClass.description = null;
+        newClass.schemaNotes = null;
         newClass.title = null;
         newClass.parentClassName = null;
         newClass.setFields(new DOSchemaField[0]);
@@ -1695,6 +1748,7 @@ public class SchemaEditorPanel extends JPanel {
         newClass.source = oldClass.source;
         newClass.destinationName = oldClass.destinationName;
         newClass.description = oldClass.description;
+        newClass.schemaNotes = oldClass.schemaNotes;
         newClass.title = oldClass.title;
         newClass.parentClassName = oldClass.parentClassName;
         newClass.setFields(newFields);
@@ -1734,6 +1788,36 @@ public class SchemaEditorPanel extends JPanel {
             modified = true;
             setStatus("Modified - unsaved changes");
         }
+    }
+
+    private JCheckBox getExportCheckBoxFromPanel() {
+        JComponent exportField = propertyPanel.getField(EXPORT_ROW_LABEL);
+        if (!(exportField instanceof JPanel)) {
+            return null;
+        }
+
+        for (Component component : ((JPanel) exportField).getComponents()) {
+            if (component instanceof JCheckBox && EXPORT_CHECKBOX_COMPONENT_NAME.equals(component.getName())) {
+                return (JCheckBox) component;
+            }
+        }
+
+        return null;
+    }
+
+    private JTextField getSchemaNotesFieldFromPanel() {
+        JComponent exportField = propertyPanel.getField(EXPORT_ROW_LABEL);
+        if (!(exportField instanceof JPanel)) {
+            return null;
+        }
+
+        for (Component component : ((JPanel) exportField).getComponents()) {
+            if (component instanceof JTextField && SCHEMA_NOTES_COMPONENT_NAME.equals(component.getName())) {
+                return (JTextField) component;
+            }
+        }
+
+        return null;
     }
 
     private void reloadSchema() {

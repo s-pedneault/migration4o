@@ -25,20 +25,20 @@
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDTypeActivite" />
         <field source="mIDDossPrev" destinationName="idDossierAdresse" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" />
     </fields>
-    <class source="com.db4o.StaticClass" destinationName="StaticClass" isExported="false">
+    <class source="com.db4o.StaticClass" destinationName="StaticClass" isExported="false" schemaNotes="Internal DB4O class, excluded specifically">
         <field source="fields" destinationName="fields" isExported="true" skipWhen="DEFAULT" type="com.db4o.StaticField" embedContents="true" />
         <field source="name" destinationName="name" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
-    <class source="com.db4o.StaticField" destinationName="StaticField" isExported="false">
+    <class source="com.db4o.StaticField" destinationName="StaticField" isExported="false" schemaNotes="Internal DB4O class, excluded specifically">
         <reference class="com.db4o.StaticClass" field="fields" />
         <field source="name" destinationName="name" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="value" destinationName="value" isExported="true" skipWhen="DEFAULT" type="object" />
     </class>
-    <class source="com.db4o.config.Entry" destinationName="Entry" isExported="false">
+    <class source="com.db4o.config.Entry" destinationName="Entry" isExported="false" schemaNotes="Internal DB4O class, excluded specifically">
         <field source="key" destinationName="key" isExported="true" skipWhen="DEFAULT" type="object" />
         <field source="value" destinationName="value" isExported="true" skipWhen="DEFAULT" type="object" />
     </class>
-    <class source="com.db4o.ext.Db4oDatabase" destinationName="Db4oDatabase" isExported="false">
+    <class source="com.db4o.ext.Db4oDatabase" destinationName="Db4oDatabase" isExported="false" schemaNotes="Internal DB4O class, excluded specifically">
         <field source="i_signature" destinationName="i_signature" isExported="true" skipWhen="DEFAULT" type="byte" />
         <field source="i_uuid" destinationName="i_uuid" isExported="true" skipWhen="DEFAULT" type="long" />
     </class>
@@ -2142,7 +2142,7 @@
         <reference class="gest.gen.ValeurParIDEntites" field="mVectIDGroupe" />
         <field source="idJPA" destinationName="idJPA" isExported="false" skipWhen="MINUS_ONE,NULL" type="long" />
     </class>
-    <class source="gest.gen.EntiteContientID" destinationName="EntiteContientID" isExported="true" parentClass="gest.gen.Entite">
+    <class source="gest.gen.EntiteContientID" destinationName="EntiteContientID" isExported="true" schemaNotes="Ancestor-only class, reached through leaves" parentClass="gest.gen.Entite">
         <field source="mDernModif" destinationName="derniereModification" isExported="true" skipWhen="DEFAULT" type="long" />
         <field source="mLastFusionTime" destinationName="derniereFusion" isExported="false" skipWhen="DEFAULT" type="long" />
         <field source="mIDDBConso" definition="mIDDBConso" />
@@ -5012,16 +5012,16 @@
         <reference class="gest.listePerso.FormatDonnee" field="mClassePourPasserAJasper" />
         <field source="com.db4o.config.TClass" destinationName="TClass" isExported="true" skipWhen="DEFAULT" />
     </class>
-    <class source="java.util.AbstractCollection" destinationName="AbstractCollection" isExported="false">
+    <class source="java.util.AbstractCollection" destinationName="AbstractCollection" isExported="false" schemaNotes="Ancestor-only class, reached through leaves">
         <field source="com.db4o.config.TCollection" destinationName="TCollection" isExported="true" skipWhen="DEFAULT" />
     </class>
-    <class source="java.util.AbstractList" destinationName="AbstractList" isExported="false" parentClass="java.util.AbstractCollection">
+    <class source="java.util.AbstractList" destinationName="AbstractList" isExported="false" schemaNotes="Ancestor-only class, reached through leaves" parentClass="java.util.AbstractCollection">
         <field source="com.db4o.config.TNull" destinationName="TNull" isExported="true" skipWhen="DEFAULT" />
     </class>
-    <class source="java.util.AbstractSet" destinationName="AbstractSet" isExported="false" parentClass="java.util.AbstractCollection">
+    <class source="java.util.AbstractSet" destinationName="AbstractSet" isExported="false" schemaNotes="Ancestor-only class, reached through leaves" parentClass="java.util.AbstractCollection">
         <field source="com.db4o.config.TNull" destinationName="TNull" isExported="true" skipWhen="DEFAULT" />
     </class>
-    <class source="java.util.Dictionary" destinationName="Dictionary" isExported="false">
+    <class source="java.util.Dictionary" destinationName="Dictionary" isExported="false" schemaNotes="Ancestor-only class, reached through leaves">
     </class>
     <class source="java.util.HashSet" destinationName="HashSet" isExported="true" parentClass="java.util.AbstractSet">
         <reference class="gest.dossPrev.ParamDossPrev" field="mSetPropPasSync" />
@@ -5342,6 +5342,7 @@
         <field source="mNom" definition="mNom" />
     </class>
     <class source="gest.equipement.AnnexeMaintenance" destinationName="AnnexeMaintenance" isExported="true" parentClass="gest.gen.Entite">
+        <reference class="gest.maintEquip.EtatEquipement" field="mVectAnnexeMaintenance" />
         <field source="mCouleur" destinationName="couleur" isExported="true" skipWhen="DEFAULT" type="java.awt.Color" embedContents="true" />
         <field source="mTitre" destinationName="titre" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDetails" destinationName="details" isExported="true" skipWhen="DEFAULT" type="string" />

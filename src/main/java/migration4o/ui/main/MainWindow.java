@@ -176,6 +176,8 @@ public class MainWindow extends JFrame {
             return;
         }
 
+        Component previouslySelectedTab = tabbedPane != null ? tabbedPane.getSelectedComponent() : null;
+
         // First navigate to the class
         navigateToReferenceSchemaClass(className);
 
@@ -184,10 +186,14 @@ public class MainWindow extends JFrame {
             for (int i = 0; i < tabbedPane.getTabCount(); i++) {
                 if (tabbedPane.getComponentAt(i) == schemaTabPane) {
                     // Found the Schema tab, detach it
-                    tearOffTab(i);
+                    tearOffTab(i, previouslySelectedTab, false);
                     break;
                 }
             }
+        }
+
+        if (previouslySelectedTab != null && tabbedPane != null && tabbedPane.indexOfComponent(previouslySelectedTab) >= 0) {
+            tabbedPane.setSelectedComponent(previouslySelectedTab);
         }
     }
 
@@ -856,6 +862,10 @@ public class MainWindow extends JFrame {
     }
 
     private void tearOffTab(int tabIndex) {
+        tearOffTab(tabIndex, null, true);
+    }
+
+    private void tearOffTab(int tabIndex, Component preferredSelectionOnReattach, boolean selectDetachedOnReattach) {
         if (tabIndex < 0 || tabIndex >= tabbedPane.getTabCount()) {
             return;
         }
@@ -884,7 +894,7 @@ public class MainWindow extends JFrame {
             public void windowClosing(java.awt.event.WindowEvent e) {
                 // Reattach the component to the main window
                 tabbedPane.addTab(title, component);
-                tabbedPane.setSelectedComponent(component);
+                restoreSelectionAfterReattach(component, preferredSelectionOnReattach, selectDetachedOnReattach);
                 detachedWindow.dispose();
             }
         });
@@ -898,7 +908,7 @@ public class MainWindow extends JFrame {
         JButton reattachButton = new JButton("Reattach to Main Window");
         reattachButton.addActionListener(e -> {
             tabbedPane.addTab(title, component);
-            tabbedPane.setSelectedComponent(component);
+            restoreSelectionAfterReattach(component, preferredSelectionOnReattach, selectDetachedOnReattach);
             detachedWindow.dispose();
         });
         toolbar.add(reattachButton);
@@ -906,6 +916,16 @@ public class MainWindow extends JFrame {
 
         // Show the new window
         detachedWindow.setVisible(true);
+    }
+
+    private void restoreSelectionAfterReattach(Component reattachedComponent, Component preferredSelectionOnReattach, boolean selectDetachedOnReattach) {
+        Component targetSelection = reattachedComponent;
+
+        if (!selectDetachedOnReattach && preferredSelectionOnReattach != null && tabbedPane.indexOfComponent(preferredSelectionOnReattach) >= 0) {
+            targetSelection = preferredSelectionOnReattach;
+        }
+
+        tabbedPane.setSelectedComponent(targetSelection);
     }
 
     private void compareSchemas() {
