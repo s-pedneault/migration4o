@@ -114,7 +114,7 @@ public class ObjectExporter {
         try {
 
             // Apply export criteria filtering (only for top-level objects)
-            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, operation.exportConfig, operation.statistics)) {
+            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, operation.statistics)) {
                 return;
             }
 
@@ -158,7 +158,11 @@ public class ObjectExporter {
             // fields
             if (operation.statistics != null) {
                 operation.statistics.incrementSucceeded();
-                operation.statistics.recordClassExport(schemaClass, objectId);
+                if (schemaClass != null) {
+                    operation.statistics.recordClassExport(schemaClass, objectId);
+                } else {
+                    operation.statistics.recordReachedOnly(className, objectId);
+                }
             }
         } catch (Exception e) {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();

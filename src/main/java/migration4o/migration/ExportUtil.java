@@ -29,8 +29,7 @@ public class ExportUtil {
 
             if (result.exportedObjectIds != null) {
                 for (Map.Entry<String, List<Long>> entry : result.exportedObjectIds.entrySet()) {
-                    allObjectIdsSet.computeIfAbsent(entry.getKey(), k -> new HashSet<>())
-                            .addAll(entry.getValue());
+                    allObjectIdsSet.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).addAll(entry.getValue());
                 }
             }
 
@@ -56,6 +55,19 @@ public class ExportUtil {
         result.schemaWarnings.addAll(allWarnings);
         result.exportedClassCounts.putAll(allClassCounts);
         result.exportedObjectIds.putAll(allObjectIds);
+
+        for (ExportStatistics moduleResult : results) {
+            for (Map.Entry<Long, Set<String>> entry : moduleResult.objectDecisionNotes.entrySet()) {
+                result.objectDecisionNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+            }
+            for (Map.Entry<String, Set<String>> entry : moduleResult.exportedRelationshipNotes.entrySet()) {
+                result.exportedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+            }
+            for (Map.Entry<String, Set<String>> entry : moduleResult.skippedRelationshipNotes.entrySet()) {
+                result.skippedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+            }
+        }
+
         return result;
     }
 
@@ -97,8 +109,7 @@ public class ExportUtil {
     }
 
     public static MigrationModule findModuleByName(String moduleName) throws Exception {
-        List<MigrationModule> modules = DOModuleService.getInstance()
-                .loadModuleStructure("schema/migration-format.xml");
+        List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
         return findModuleRecursive(modules, moduleName);
     }
 
@@ -124,8 +135,7 @@ public class ExportUtil {
      * @throws Exception if module structure cannot be loaded
      */
     public static String findModulePathByName(String moduleName) throws Exception {
-        List<MigrationModule> modules = DOModuleService.getInstance()
-                .loadModuleStructure("schema/migration-format.xml");
+        List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
         String path = findModulePathRecursive(modules, moduleName, "");
         return path != null ? path : moduleName; // Fallback to module name if not found
     }
@@ -141,11 +151,11 @@ public class ExportUtil {
     private static String findModulePathRecursive(List<MigrationModule> modules, String moduleName, String parentPath) {
         for (MigrationModule module : modules) {
             String currentPath = parentPath.isEmpty() ? module.getName() : parentPath + "/" + module.getName();
-            
+
             if (module.getName().equals(moduleName)) {
                 return currentPath;
             }
-            
+
             String found = findModulePathRecursive(module.getChildModules(), moduleName, currentPath);
             if (found != null) {
                 return found;

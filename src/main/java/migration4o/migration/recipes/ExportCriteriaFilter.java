@@ -25,16 +25,12 @@ public class ExportCriteriaFilter {
      *                     objects)
      * @return true if object should be exported, false if filtered out
      */
-    public static boolean shouldExport(
-            ExtObjectContainer container,
-            Object obj,
-            String className,
-            boolean isEmbedded,
-            ClassExportConfig exportConfig,
-            ExportStatistics statistics) {
+    public static boolean shouldExport(ExtObjectContainer container, Object obj, String className, boolean isEmbedded, boolean isRootObject, ClassExportConfig exportConfig, ExportStatistics statistics) {
 
-        // Only apply criteria filtering to top-level objects
-        if (isEmbedded) {
+        // Only apply criteria filtering to root objects of the exported class
+        // References discovered during traversal should not be filtered by the
+        // root class criteria.
+        if (isEmbedded || !isRootObject) {
             return true;
         }
 
@@ -54,6 +50,13 @@ public class ExportCriteriaFilter {
             // Object doesn't match criteria, skip export
             if (statistics != null) {
                 statistics.incrementFiltered(); // Track filtered objects
+                try {
+                    long objectId = container.ext().getID(obj);
+                    statistics.recordReachedOnly(className, objectId);
+                    statistics.recordObjectDecision(objectId, className, "filtered out by export criteria: " + exportConfig);
+                } catch (Exception ignored) {
+                    // Best-effort diagnostics only
+                }
             }
             return false;
         }

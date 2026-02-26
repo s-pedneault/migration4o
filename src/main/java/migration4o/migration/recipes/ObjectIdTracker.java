@@ -54,6 +54,10 @@ public class ObjectIdTracker {
         // - embedded objects: value objects can be reused and must be exported inline
         if (!isRootObject && !isEmbedded && !exportedObjectIds.add(objectId)) {
             // Object already exported - it's a duplicate
+            if (statistics != null) {
+                String relation = (sourceContainingClassName != null && sourceFieldName != null) ? " via " + sourceContainingClassName + "." + sourceFieldName : "";
+                statistics.recordObjectDecision(objectId, className, "not exported again (duplicate non-embedded object" + relation + ")");
+            }
             return false;
         }
 

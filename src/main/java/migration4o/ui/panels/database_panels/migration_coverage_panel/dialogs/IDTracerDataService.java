@@ -8,6 +8,9 @@ import java.nio.file.Paths;
 import java.util.*;
 
 import migration4o.database.DODatabaseService;
+import migration4o.migration.monitoring.ExportStatistics;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
 
 /**
  * Singleton service for managing object ID data used by the ID Tracer.
@@ -21,8 +24,16 @@ public class IDTracerDataService {
     private final Map<Long, List<Long>> objectContents = new HashMap<>();
     // Maps object ID -> ALL class names (for inheritance hierarchy)
     private final Map<Long, Set<String>> objectAllClasses = new HashMap<>();
+    // Reverse index: class name -> object IDs seen as that class layer
+    private final Map<String, Set<Long>> classToObjectIds = new HashMap<>();
     // Track which IDs exist in the file
     private final Set<Long> allObjectIds = new HashSet<>();
+    // Track IDs currently marked as reached by coverage/export tracking
+    private final Set<Long> reachedObjectIds = new HashSet<>();
+    // Diagnostics from latest export run (best effort, in-memory)
+    private final Map<Long, Set<String>> objectDecisionNotes = new HashMap<>();
+    private final Map<String, Set<String>> exportedRelationshipNotes = new HashMap<>();
+    private final Map<String, Set<String>> skippedRelationshipNotes = new HashMap<>();
 
     private boolean isLoaded = false;
     private boolean isLoading = false;
@@ -109,7 +120,9 @@ public class IDTracerDataService {
         synchronized (this) {
             objectContents.clear();
             objectAllClasses.clear();
+            classToObjectIds.clear();
             allObjectIds.clear();
+            reachedObjectIds.clear();
         }
 
         // Determine database folder name from database path
@@ -173,9 +186,14 @@ public class IDTracerDataService {
 
                             if (!containedIds.isEmpty()) {
                                 synchronized (this) {
-                                    objectContents.put(containerId, containedIds);
-                                    objectAllClasses.computeIfAbsent(containerId, k -> new HashSet<>())
-                                            .add(actualClassName);
+                                    List<Long> existing = objectContents.computeIfAbsent(containerId, key -> new ArrayList<>());
+                                    Set<Long> merged = new LinkedHashSet<>(existing);
+                                    merged.addAll(containedIds);
+                                    existing.clear();
+                                    existing.addAll(merged);
+
+                                    objectAllClasses.computeIfAbsent(containerId, k -> new HashSet<>()).add(actualClassName);
+                                    classToObjectIds.computeIfAbsent(actualClassName, key -> new LinkedHashSet<>()).add(containerId);
                                     allObjectIds.add(containerId);
                                 }
                             }
@@ -192,6 +210,7 @@ public class IDTracerDataService {
                             synchronized (this) {
                                 allObjectIds.add(id);
                                 objectAllClasses.computeIfAbsent(id, k -> new HashSet<>()).add(className);
+                                classToObjectIds.computeIfAbsent(className, key -> new LinkedHashSet<>()).add(id);
                             }
                         } catch (NumberFormatException e) {
                             // Skip invalid IDs
@@ -201,6 +220,42 @@ public class IDTracerDataService {
             }
         } catch (IOException e) {
             e.printStackTrace();
+        }
+
+        enrichFromDatabaseSchema();
+    }
+
+    /**
+     * Enriches ID->class mappings from the in-memory database schema.
+     * This ensures type resolution is available even when an ID only appears as a
+     * contained ID in all-object-ids.txt.
+     */
+    private void enrichFromDatabaseSchema() {
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        if (databaseSchema == null || databaseSchema.getClasses() == null) {
+            return;
+        }
+
+        synchronized (this) {
+            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+                if (schemaClass == null || schemaClass.source == null) {
+                    continue;
+                }
+
+                if (schemaClass.objectIds != null) {
+                    for (long objectId : schemaClass.objectIds) {
+                        allObjectIds.add(objectId);
+                        objectAllClasses.computeIfAbsent(objectId, key -> new HashSet<>()).add(schemaClass.source);
+                        classToObjectIds.computeIfAbsent(schemaClass.source, key -> new LinkedHashSet<>()).add(objectId);
+                    }
+                }
+
+                if (schemaClass.reachedObjectIds != null) {
+                    for (long reachedId : schemaClass.reachedObjectIds) {
+                        reachedObjectIds.add(reachedId);
+                    }
+                }
+            }
         }
     }
 
@@ -218,6 +273,145 @@ public class IDTracerDataService {
 
     public synchronized boolean containsObjectId(long objectId) {
         return allObjectIds.contains(objectId);
+    }
+
+    public synchronized void setLatestExportDiagnostics(ExportStatistics statistics) {
+        refreshReachedFromSchema();
+
+        objectDecisionNotes.clear();
+        exportedRelationshipNotes.clear();
+        skippedRelationshipNotes.clear();
+
+        if (statistics == null) {
+            return;
+        }
+
+        for (Map.Entry<Long, Set<String>> entry : statistics.objectDecisionNotes.entrySet()) {
+            objectDecisionNotes.put(entry.getKey(), new LinkedHashSet<>(entry.getValue()));
+        }
+
+        for (Map.Entry<String, Set<String>> entry : statistics.exportedRelationshipNotes.entrySet()) {
+            exportedRelationshipNotes.put(entry.getKey(), new LinkedHashSet<>(entry.getValue()));
+        }
+
+        for (Map.Entry<String, Set<String>> entry : statistics.skippedRelationshipNotes.entrySet()) {
+            skippedRelationshipNotes.put(entry.getKey(), new LinkedHashSet<>(entry.getValue()));
+        }
+    }
+
+    private void refreshReachedFromSchema() {
+        reachedObjectIds.clear();
+        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        if (databaseSchema == null || databaseSchema.getClasses() == null) {
+            return;
+        }
+
+        for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+            if (schemaClass == null || schemaClass.reachedObjectIds == null) {
+                continue;
+            }
+            for (long reachedId : schemaClass.reachedObjectIds) {
+                reachedObjectIds.add(reachedId);
+            }
+        }
+    }
+
+    public synchronized Map<String, Integer> getSkippedButReachedReasonCounts() {
+        Map<String, Integer> counts = new LinkedHashMap<>();
+
+        for (Map.Entry<String, Set<String>> entry : skippedRelationshipNotes.entrySet()) {
+            Long childId = extractChildId(entry.getKey());
+            if (childId == null || !reachedObjectIds.contains(childId)) {
+                continue;
+            }
+
+            for (String note : entry.getValue()) {
+                String reason = extractReason(note);
+                counts.merge(reason, 1, Integer::sum);
+            }
+        }
+
+        List<Map.Entry<String, Integer>> sorted = new ArrayList<>(counts.entrySet());
+        sorted.sort((a, b) -> Integer.compare(b.getValue(), a.getValue()));
+
+        Map<String, Integer> ordered = new LinkedHashMap<>();
+        for (Map.Entry<String, Integer> entry : sorted) {
+            ordered.put(entry.getKey(), entry.getValue());
+        }
+        return ordered;
+    }
+
+    public synchronized Map<String, String> getSkippedButReachedReasonExamples(int maxExamplesPerReason) {
+        Map<String, List<String>> grouped = new LinkedHashMap<>();
+
+        for (Map.Entry<String, Set<String>> entry : skippedRelationshipNotes.entrySet()) {
+            Long childId = extractChildId(entry.getKey());
+            if (childId == null || !reachedObjectIds.contains(childId)) {
+                continue;
+            }
+
+            for (String note : entry.getValue()) {
+                String reason = extractReason(note);
+                grouped.computeIfAbsent(reason, ignored -> new ArrayList<>()).add(entry.getKey() + " | " + note);
+            }
+        }
+
+        Map<String, String> examples = new LinkedHashMap<>();
+        for (Map.Entry<String, List<String>> entry : grouped.entrySet()) {
+            List<String> values = entry.getValue();
+            String joined = values.stream().limit(Math.max(1, maxExamplesPerReason)).reduce((a, b) -> a + " ; " + b).orElse("");
+            examples.put(entry.getKey(), joined);
+        }
+        return examples;
+    }
+
+    private Long extractChildId(String edgeKey) {
+        if (edgeKey == null) {
+            return null;
+        }
+        int sep = edgeKey.indexOf("->");
+        if (sep < 0 || sep + 2 >= edgeKey.length()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(edgeKey.substring(sep + 2));
+        } catch (NumberFormatException ignored) {
+            return null;
+        }
+    }
+
+    private String extractReason(String note) {
+        if (note == null || note.isBlank()) {
+            return "unknown";
+        }
+        int arrow = note.indexOf(" → ");
+        if (arrow >= 0 && arrow + 3 < note.length()) {
+            return note.substring(arrow + 3).trim();
+        }
+        return note.trim();
+    }
+
+    public synchronized boolean isReachedObjectId(long objectId) {
+        return reachedObjectIds.contains(objectId);
+    }
+
+    public synchronized Set<String> getObjectDecisionNotes(long objectId) {
+        Set<String> notes = objectDecisionNotes.get(objectId);
+        return notes != null ? new LinkedHashSet<>(notes) : Collections.emptySet();
+    }
+
+    public synchronized boolean isRelationshipExported(long parentObjectId, long childObjectId) {
+        return exportedRelationshipNotes.containsKey(ExportStatistics.edgeKey(parentObjectId, childObjectId));
+    }
+
+    public synchronized Set<String> getExportedRelationshipNotes(long parentObjectId, long childObjectId) {
+        Set<String> notes = exportedRelationshipNotes.get(ExportStatistics.edgeKey(parentObjectId, childObjectId));
+        return notes != null ? new LinkedHashSet<>(notes) : Collections.emptySet();
+    }
+
+    public synchronized Set<String> getSkippedRelationshipNotes(long parentObjectId, long childObjectId) {
+        Set<String> notes = skippedRelationshipNotes.get(ExportStatistics.edgeKey(parentObjectId, childObjectId));
+        return notes != null ? new LinkedHashSet<>(notes) : Collections.emptySet();
     }
 
     /**
@@ -257,5 +451,47 @@ public class IDTracerDataService {
             }
         }
         return containers;
+    }
+
+    public static class ClassContainmentSample {
+        public final long parentObjectId;
+        public final long childObjectId;
+
+        public ClassContainmentSample(long parentObjectId, long childObjectId) {
+            this.parentObjectId = parentObjectId;
+            this.childObjectId = childObjectId;
+        }
+    }
+
+    public synchronized Set<Long> getObjectIdsForClass(String className) {
+        Set<Long> ids = classToObjectIds.get(className);
+        return ids != null ? new LinkedHashSet<>(ids) : Collections.emptySet();
+    }
+
+    public synchronized ClassContainmentSample findContainmentSampleForClasses(String parentClassName, String childClassName) {
+        if (parentClassName == null || childClassName == null || parentClassName.isBlank() || childClassName.isBlank()) {
+            return null;
+        }
+
+        Set<Long> parentIds = classToObjectIds.get(parentClassName);
+        if (parentIds == null || parentIds.isEmpty()) {
+            return null;
+        }
+
+        for (Long parentId : parentIds) {
+            List<Long> contained = objectContents.get(parentId);
+            if (contained == null || contained.isEmpty()) {
+                continue;
+            }
+
+            for (Long childId : contained) {
+                Set<String> childClasses = objectAllClasses.get(childId);
+                if (childClasses != null && childClasses.contains(childClassName)) {
+                    return new ClassContainmentSample(parentId, childId);
+                }
+            }
+        }
+
+        return null;
     }
 }

@@ -2576,7 +2576,7 @@
         <field source="mNote" definition="mNote" />
         <field source="mNumActivite" destinationName="numeroActivite" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" />
-        <field source="mVectChampPerso" destinationName="listeChampPerso" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" embedContents="true" />
+        <field source="mVectChampPerso" destinationName="listeChampPerso" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
         <field source="mVectEmployeDispo" destinationName="listeEmployeDispo" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.employe.IDEmploye" />
         <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" />
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
@@ -3442,7 +3442,7 @@
         <field source="mQteDebutConsom" destinationName="quantiteDebutConsommable" isExported="true" skipWhen="DEFAULT" type="double" />
         <field source="mRefComptable" destinationName="referenceComptable" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mUtiliserNouvelleQteSiDisponible" destinationName="utiliserNouvelleQuantiteSiDisponible" isExported="true" skipWhen="DEFAULT" type="boolean" />
-        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
+        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
         <field source="mVectNDeplaceConsom" destinationName="listeDeplacementConsommable" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.maintEquip.MaintEquipHisto$NDeplaceConsom" />
         <field source="mVectPieceJointe" definition="mVectPhotoFich" />
         <field source="mIDCaserne" definition="mIDCaserne" />
@@ -4033,7 +4033,7 @@
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mTexteAvis" destinationName="texteAvis" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mTexteIntro" destinationName="texteIntro" isExported="true" skipWhen="DEFAULT" type="string" />
-        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
+        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" />
         <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" />
         <field source="mVectHistoActivite" destinationName="listeHistoActivite" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.activite.HistoActivite" />
         <field source="mVectInfoHistoEmploye" destinationName="listeInfoHistoEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.InfoHistoEmploye" />
@@ -4865,7 +4865,7 @@
         <field source="mVectTypeAnom" destinationName="listeTypeAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typeAnom.TypeAnom" />
         <field source="mVectTypeChampPerso" destinationName="listeTypeChampPersonnalise" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.champPerso.TypeChampPerso" />
         <field source="mIDSSI" definition="mIDSSI" />
-        <field source="mVectAssocExtraDataCP" destinationName="listeAssociationExtraDonneesChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gen.util.VectObjetToString" embedContents="true" />
+        <field source="mVectAssocExtraDataCP" destinationName="listeAssociationExtraDonneesChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gen.util.VectObjetToString" collection="true" embedContents="true" />
     </class>
     <class source="gest.typeToit.IDTypeToit" destinationName="IDTypeToit" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.typeToit.TypeToit">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeToit" />

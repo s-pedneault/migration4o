@@ -591,6 +591,9 @@ public class ExportEngine {
                     }
 
                     if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass) {
+                        if (operation.statistics != null) {
+                            operation.statistics.recordObjectDecision(objectId, schemaClass.source, "not exported due to class limit maxObjectsPerClass=" + operation.maxObjectsPerClass);
+                        }
                         break; // Stop at limit
                     }
 

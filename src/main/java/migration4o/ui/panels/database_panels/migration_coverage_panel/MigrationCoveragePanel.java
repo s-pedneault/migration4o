@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,13 +46,15 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.database.DODatabaseService;
-import migration4o.database.reach.ReachResultAggregator;
+import migration4o.database.reach.ObjectExportTrackingIndex;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.recipes.RecipeCollectionItems;
-import migration4o.util.CollectionUtil;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDialog;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.SkippedReachDiagnosticsDialog;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.UnreachedObjectsDialog;
+import migration4o.util.DatabaseUtil;
 import migration4o.util.ObjectResolverUtil;
 
 /**
@@ -65,6 +68,7 @@ public class MigrationCoveragePanel extends JPanel {
     private DOSchema referenceSchema;
     private DOSchema databaseSchema;
     private String databasePath;
+    private final ObjectExportTrackingIndex trackingIndex;
     private javax.swing.JTextField searchField;
     private Set<String> classNameFilter = null; // Filter to specific class names (null = no filter)
 
@@ -83,6 +87,7 @@ public class MigrationCoveragePanel extends JPanel {
         this.referenceSchema = referenceSchema;
         this.databaseSchema = databaseSchema;
         this.databasePath = databasePath;
+        this.trackingIndex = new ObjectExportTrackingIndex(databaseSchema);
 
         // Create table model
         String[] columnNames = { "Class Name", "Unique", "Objects", "Reached", "Not reached", "Migration" };
@@ -172,6 +177,15 @@ public class MigrationCoveragePanel extends JPanel {
         idTracerButton.addActionListener(e -> openIdTracer());
         buttonPanel.add(idTracerButton);
 
+        JButton unreachedButton = new JButton("Unreached IDs");
+        unreachedButton.addActionListener(e -> openUnreachedExplorer());
+        buttonPanel.add(unreachedButton);
+
+        JButton diagnosticsButton = new JButton("Skip Diagnostics");
+        diagnosticsButton.setToolTipText("Show skipped-but-reached counts by reason");
+        diagnosticsButton.addActionListener(e -> openSkipDiagnostics());
+        buttonPanel.add(diagnosticsButton);
+
         add(buttonPanel, BorderLayout.SOUTH);
     }
 
@@ -205,11 +219,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Should be called before starting a new export to avoid accumulating values.
      */
     public void resetReachedValues() {
-        if (databaseSchema != null && databaseSchema.getClasses() != null) {
-            for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                schemaClass.reachedObjectIds = null;
-            }
-        }
+        trackingIndex.resetReached();
 
         // Refresh the table to show updated values
         populateTable(referenceSchema, databaseSchema);
@@ -219,15 +229,10 @@ public class MigrationCoveragePanel extends JPanel {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT));
         panel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
-        int refCount = referenceSchema != null && referenceSchema.getClasses() != null
-                ? referenceSchema.getClasses().length
-                : 0;
-        int dbCount = databaseSchema != null && databaseSchema.getClasses() != null ? databaseSchema.getClasses().length
-                : 0;
+        int refCount = referenceSchema != null && referenceSchema.getClasses() != null ? referenceSchema.getClasses().length : 0;
+        int dbCount = databaseSchema != null && databaseSchema.getClasses() != null ? databaseSchema.getClasses().length : 0;
 
-        JLabel summaryLabel = new JLabel(String.format(
-                "Reference Schema: %d classes  |  Database: %d classes  |  Total unique: %d classes",
-                refCount, dbCount, tableModel.getRowCount()));
+        JLabel summaryLabel = new JLabel(String.format("Reference Schema: %d classes  |  Database: %d classes  |  Total unique: %d classes", refCount, dbCount, tableModel.getRowCount()));
         summaryLabel.setFont(new Font("Arial", Font.BOLD, 12));
         panel.add(summaryLabel);
 
@@ -501,13 +506,11 @@ public class MigrationCoveragePanel extends JPanel {
             String notReachedEquation = uniqueUnreached + " + " + nonUniqueUnreached + " = " + totalUnreached;
 
             // Migration column now shows reached count (what we actually use for progress)
-            fullTableModel.addRow(new Object[] { className, uniqueCount, objectCount, reachedCount, notReachedEquation,
-                    reachedCount });
+            fullTableModel.addRow(new Object[] { className, uniqueCount, objectCount, reachedCount, notReachedEquation, reachedCount });
 
             // Debug specific class
             if (className.equals("gest.dossPrev.PersonneRess")) {
-                System.out.println("DEBUG TABLE: Adding PersonneRess row - Objects=" + objectCount + ", Unique="
-                        + uniqueCount + ", Reached=" + reachedCount);
+                System.out.println("DEBUG TABLE: Adding PersonneRess row - Objects=" + objectCount + ", Unique=" + uniqueCount + ", Reached=" + reachedCount);
             }
         }
 
@@ -524,8 +527,7 @@ public class MigrationCoveragePanel extends JPanel {
      */
     private class ClassNameRenderer extends DefaultTableCellRenderer {
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus, int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
             Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
 
             if (!isSelected && value instanceof String) {
@@ -539,8 +541,7 @@ public class MigrationCoveragePanel extends JPanel {
                 if (refClass != null && !refClass.migrate) {
                     // Grey: class not set to migrate
                     c.setForeground(Color.GRAY);
-                } else if (dbClass != null
-                        && (dbClass.uniqueObjectIds == null || dbClass.uniqueObjectIds.length == 0)) {
+                } else if (dbClass != null && (dbClass.uniqueObjectIds == null || dbClass.uniqueObjectIds.length == 0)) {
                     // Black: class has 0 unique objects
                     c.setForeground(Color.BLACK);
                 } else if (refClass != null) {
@@ -596,8 +597,7 @@ public class MigrationCoveragePanel extends JPanel {
         }
 
         @Override
-        public Component getTableCellRendererComponent(JTable table, Object val,
-                boolean isSelected, boolean hasFocus, int row, int column) {
+        public Component getTableCellRendererComponent(JTable table, Object val, boolean isSelected, boolean hasFocus, int row, int column) {
 
             if (val instanceof Integer) {
                 // Get class name from column 0
@@ -778,16 +778,12 @@ public class MigrationCoveragePanel extends JPanel {
      */
     private void performReachAnalysis() {
         if (databasePath == null || databasePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No database path available. Please reopen the database.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No database path available. Please reopen the database.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         // Create monitoring dialog with tree view
-        JDialog monitorDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                "Reach Analysis Monitor", true);
+        JDialog monitorDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Reach Analysis Monitor", true);
         JPanel dialogPanel = new JPanel(new BorderLayout(10, 10));
         dialogPanel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
@@ -847,16 +843,14 @@ public class MigrationCoveragePanel extends JPanel {
 
                     // Pre-calculate total counts for each class
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        classTotalCount.put(schemaClass.source,
-                                schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0);
+                        classTotalCount.put(schemaClass.source, schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0);
                         classProcessedCount.put(schemaClass.source, 0);
                     }
 
                     // Count classes to process
                     int classCount = 0;
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        if (schemaClass.isEntite(referenceSchema) ||
-                                schemaClass.isParam(referenceSchema)) {
+                        if (schemaClass.isEntite(referenceSchema) || schemaClass.isParam(referenceSchema)) {
                             classCount++;
                         }
                     }
@@ -866,62 +860,28 @@ public class MigrationCoveragePanel extends JPanel {
                     // Process all root classes (descendants of EntiteContientID or EntiteParam)
                     int processedCount = 0;
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        if (schemaClass.isEntite(referenceSchema) ||
-                                schemaClass.isParam(referenceSchema)) {
+                        if (schemaClass.isEntite(referenceSchema) || schemaClass.isParam(referenceSchema)) {
 
                             processedCount++;
                             String simpleName = schemaClass.source;
                             if (simpleName.contains(".")) {
                                 simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
                             }
-                            publish(new TreeUpdate(TreeUpdateType.STATUS,
-                                    String.format("Exploring %d/%d: %s (%d objects)",
-                                            processedCount, classCount, simpleName,
-                                            schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length
-                                                    : 0)));
+                            publish(new TreeUpdate(TreeUpdateType.STATUS, String.format("Exploring %d/%d: %s (%d objects)", processedCount, classCount, simpleName, schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0)));
 
                             // Explore all objects in this root class recursively
                             long[] uniqueIds = schemaClass.uniqueObjectIds;
                             if (uniqueIds != null) {
                                 for (long objectId : uniqueIds) {
-                                    MigrationCoveragePanel.this.exploreObjectRecursively(container, objectId,
-                                            reachedObjectIds,
-                                            this::publish, rootNode, treeModel, classProcessedCount, classTotalCount);
+                                    MigrationCoveragePanel.this.exploreObjectRecursively(container, objectId, reachedObjectIds, this::publish, rootNode, treeModel, classProcessedCount, classTotalCount);
                                 }
                             }
                         }
                     }
 
-                    publish(new TreeUpdate(TreeUpdateType.STATUS,
-                            "Reached " + reachedObjectIds.size() + " total objects"));
-                    publish(new TreeUpdate(TreeUpdateType.STATUS,
-                            "Adding reached objects to class reachedObjectIds arrays..."));
-
-                    // Now add all reached object IDs to their respective classes' reachedObjectIds
-                    Map<String, Set<Long>> reachedByClass = new HashMap<>();
-                    for (long objectId : reachedObjectIds) {
-                        try {
-                            Object obj = container.ext().getByID(objectId);
-                            if (obj != null) {
-                                String className = getClassName(obj);
-                                if (className != null) {
-                                    reachedByClass.computeIfAbsent(className, k -> new HashSet<>()).add(objectId);
-                                }
-                            }
-                        } catch (Exception e) {
-                            // Skip objects that can't be retrieved
-                        }
-                    }
-
-                    for (Map.Entry<String, Set<Long>> entry : reachedByClass.entrySet()) {
-                        String childClassName = entry.getKey();
-                        Set<Long> idsToAdd = entry.getValue();
-
-                        DOSchemaClass childClass = findClassInSchemaByName(databaseSchema, childClassName);
-                        if (childClass != null) {
-                            addIdsToReachedList(childClass, idsToAdd);
-                        }
-                    }
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Reached " + reachedObjectIds.size() + " total objects"));
+                    publish(new TreeUpdate(TreeUpdateType.STATUS, "Applying reached object IDs through unified tracking index..."));
+                    trackingIndex.markReachedAll(reachedObjectIds);
 
                     publish(new TreeUpdate(TreeUpdateType.STATUS, "Finalizing reach analysis..."));
 
@@ -940,40 +900,40 @@ public class MigrationCoveragePanel extends JPanel {
                 // Update UI based on tree update type
                 for (TreeUpdate update : chunks) {
                     switch (update.type) {
-                        case STATUS:
-                            statusLabel.setText(update.message);
-                            System.out.println(update.message);
-                            break;
-                        case ADD_NODE:
-                            // Add node to tree
-                            if (update.parentLabel != null && update.childLabel != null) {
-                                DefaultMutableTreeNode parentNode = nodeMap.get(update.parentLabel);
-                                if (parentNode == null) {
-                                    // If parent not found, try using root
-                                    parentNode = rootNode;
-                                }
-                                DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(update.childLabel);
-                                parentNode.add(newNode);
-                                nodeMap.put(update.childLabel, newNode);
-                                treeModel.nodeStructureChanged(parentNode);
-                                // Expand and scroll to show the new node
-                                TreePath path = new TreePath(newNode.getPath());
-                                explorationTree.scrollPathToVisible(path);
-                                explorationTree.expandPath(path.getParentPath());
+                    case STATUS:
+                        statusLabel.setText(update.message);
+                        System.out.println(update.message);
+                        break;
+                    case ADD_NODE:
+                        // Add node to tree
+                        if (update.parentLabel != null && update.childLabel != null) {
+                            DefaultMutableTreeNode parentNode = nodeMap.get(update.parentLabel);
+                            if (parentNode == null) {
+                                // If parent not found, try using root
+                                parentNode = rootNode;
                             }
-                            break;
-                        case REMOVE_NODE:
-                            // Remove node from tree
-                            if (update.nodeLabel != null) {
-                                DefaultMutableTreeNode nodeToRemove = nodeMap.get(update.nodeLabel);
-                                if (nodeToRemove != null && nodeToRemove.getParent() != null) {
-                                    DefaultMutableTreeNode parent = (DefaultMutableTreeNode) nodeToRemove.getParent();
-                                    parent.remove(nodeToRemove);
-                                    nodeMap.remove(update.nodeLabel);
-                                    treeModel.nodeStructureChanged(parent);
-                                }
+                            DefaultMutableTreeNode newNode = new DefaultMutableTreeNode(update.childLabel);
+                            parentNode.add(newNode);
+                            nodeMap.put(update.childLabel, newNode);
+                            treeModel.nodeStructureChanged(parentNode);
+                            // Expand and scroll to show the new node
+                            TreePath path = new TreePath(newNode.getPath());
+                            explorationTree.scrollPathToVisible(path);
+                            explorationTree.expandPath(path.getParentPath());
+                        }
+                        break;
+                    case REMOVE_NODE:
+                        // Remove node from tree
+                        if (update.nodeLabel != null) {
+                            DefaultMutableTreeNode nodeToRemove = nodeMap.get(update.nodeLabel);
+                            if (nodeToRemove != null && nodeToRemove.getParent() != null) {
+                                DefaultMutableTreeNode parent = (DefaultMutableTreeNode) nodeToRemove.getParent();
+                                parent.remove(nodeToRemove);
+                                nodeMap.remove(update.nodeLabel);
+                                treeModel.nodeStructureChanged(parent);
                             }
-                            break;
+                        }
+                        break;
                     }
                 }
             }
@@ -989,8 +949,7 @@ public class MigrationCoveragePanel extends JPanel {
                     // Debug: Check a specific class before refresh
                     DOSchemaClass testClass = findClassInSchemaByName(databaseSchema, "gest.dossPrev.PersonneRess");
                     if (testClass != null) {
-                        System.out.println("DEBUG: Before refresh - PersonneRess unique count: "
-                                + (testClass.uniqueObjectIds != null ? testClass.uniqueObjectIds.length : 0));
+                        System.out.println("DEBUG: Before refresh - PersonneRess unique count: " + (testClass.uniqueObjectIds != null ? testClass.uniqueObjectIds.length : 0));
                     }
 
                     // Refresh table to show updated counts
@@ -999,20 +958,13 @@ public class MigrationCoveragePanel extends JPanel {
 
                     // Debug: Check after refresh
                     if (testClass != null) {
-                        System.out.println("DEBUG: After refresh - PersonneRess unique count: "
-                                + (testClass.uniqueObjectIds != null ? testClass.uniqueObjectIds.length : 0));
+                        System.out.println("DEBUG: After refresh - PersonneRess unique count: " + (testClass.uniqueObjectIds != null ? testClass.uniqueObjectIds.length : 0));
                     }
 
-                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
-                            "Reach analysis completed successfully!\nThe table has been updated with new object counts.",
-                            "Success",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this, "Reach analysis completed successfully!\nThe table has been updated with new object counts.", "Success", JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception e) {
                     e.printStackTrace();
-                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
-                            "Error during reach analysis: " + e.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this, "Error during reach analysis: " + e.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             }
         };
@@ -1059,11 +1011,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Recursively explores an object and all objects reachable from it.
      * Marks all encountered objects as reached.
      */
-    public void exploreObjectRecursively(ExtObjectContainer container, long objectId, Set<Long> reachedObjectIds,
-            java.util.function.Consumer<TreeUpdate> publisher,
-            DefaultMutableTreeNode parentNode, DefaultTreeModel treeModel,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount) {
+    public void exploreObjectRecursively(ExtObjectContainer container, long objectId, Set<Long> reachedObjectIds, java.util.function.Consumer<TreeUpdate> publisher, DefaultMutableTreeNode parentNode, DefaultTreeModel treeModel, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount) {
         // Avoid processing the same object twice - check and add atomically
         if (!reachedObjectIds.add(objectId)) {
             // Object was already processed, skip it
@@ -1104,8 +1052,7 @@ public class MigrationCoveragePanel extends JPanel {
                 if (storedClass != null) {
                     // Don't pre-add field nodes - they will be added on-demand when important
                     // objects are found
-                    exploreAllFields(container, genericObj, className, reachedObjectIds, publisher,
-                            objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
+                    exploreAllFields(container, genericObj, className, reachedObjectIds, publisher, objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
                 }
             }
 
@@ -1126,12 +1073,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Explores all fields of a GenericObject, following references recursively.
      * Field nodes are added on-demand only when important child objects are found.
      */
-    private void exploreAllFields(ExtObjectContainer container, GenericObject obj, String parentClassName,
-            Set<Long> reachedObjectIds,
-            java.util.function.Consumer<TreeUpdate> publisher,
-            String objectNodeLabel, DefaultTreeModel treeModel,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount) {
+    private void exploreAllFields(ExtObjectContainer container, GenericObject obj, String parentClassName, Set<Long> reachedObjectIds, java.util.function.Consumer<TreeUpdate> publisher, String objectNodeLabel, DefaultTreeModel treeModel, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount) {
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
             if (storedClass == null) {
@@ -1165,18 +1107,14 @@ public class MigrationCoveragePanel extends JPanel {
 
                             for (Object item : extractedCollection) {
                                 if (item != null) {
-                                    processFieldReference(container, item, field.getName(), parentClassName,
-                                            reachedObjectIds, publisher, fieldLabel, treeModel,
-                                            classProcessedCount, classTotalCount);
+                                    processFieldReference(container, item, field.getName(), parentClassName, reachedObjectIds, publisher, fieldLabel, treeModel, classProcessedCount, classTotalCount);
                                 }
                             }
                         } else {
                             // Process without showing in tree
                             for (Object item : extractedCollection) {
                                 if (item != null) {
-                                    processFieldReference(container, item, field.getName(), parentClassName,
-                                            reachedObjectIds, publisher, objectNodeLabel, treeModel,
-                                            classProcessedCount, classTotalCount);
+                                    processFieldReference(container, item, field.getName(), parentClassName, reachedObjectIds, publisher, objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
                                 }
                             }
                         }
@@ -1202,9 +1140,7 @@ public class MigrationCoveragePanel extends JPanel {
                             for (int i = 0; i < length; i++) {
                                 Object item = java.lang.reflect.Array.get(fieldValue, i);
                                 if (item != null) {
-                                    processFieldReference(container, item, field.getName(), parentClassName,
-                                            reachedObjectIds, publisher, fieldLabel, treeModel,
-                                            classProcessedCount, classTotalCount);
+                                    processFieldReference(container, item, field.getName(), parentClassName, reachedObjectIds, publisher, fieldLabel, treeModel, classProcessedCount, classTotalCount);
                                 }
                             }
                         } else {
@@ -1212,9 +1148,7 @@ public class MigrationCoveragePanel extends JPanel {
                             for (int i = 0; i < length; i++) {
                                 Object item = java.lang.reflect.Array.get(fieldValue, i);
                                 if (item != null) {
-                                    processFieldReference(container, item, field.getName(), parentClassName,
-                                            reachedObjectIds, publisher, objectNodeLabel, treeModel,
-                                            classProcessedCount, classTotalCount);
+                                    processFieldReference(container, item, field.getName(), parentClassName, reachedObjectIds, publisher, objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
                                 }
                             }
                         }
@@ -1229,14 +1163,10 @@ public class MigrationCoveragePanel extends JPanel {
                                 String fieldLabel = "Field: " + field.getName();
                                 publisher.accept(new TreeUpdate(TreeUpdateType.ADD_NODE, objectNodeLabel, fieldLabel));
 
-                                processFieldReference(container, fieldValue, field.getName(), parentClassName,
-                                        reachedObjectIds, publisher, fieldLabel, treeModel,
-                                        classProcessedCount, classTotalCount);
+                                processFieldReference(container, fieldValue, field.getName(), parentClassName, reachedObjectIds, publisher, fieldLabel, treeModel, classProcessedCount, classTotalCount);
                             } else {
                                 // Process without showing in tree
-                                processFieldReference(container, fieldValue, field.getName(), parentClassName,
-                                        reachedObjectIds, publisher, objectNodeLabel, treeModel,
-                                        classProcessedCount, classTotalCount);
+                                processFieldReference(container, fieldValue, field.getName(), parentClassName, reachedObjectIds, publisher, objectNodeLabel, treeModel, classProcessedCount, classTotalCount);
                             }
                         }
                         // Primitives and non-persistent values are ignored
@@ -1259,12 +1189,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Processes a field value that might be a reference to another object.
      * Handles special IDEntite relationships with type matching.
      */
-    private void processFieldReference(ExtObjectContainer container, Object item, String fieldName,
-            String parentClassName, Set<Long> reachedObjectIds,
-            java.util.function.Consumer<TreeUpdate> publisher,
-            String parentLabel, DefaultTreeModel treeModel,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount) {
+    private void processFieldReference(ExtObjectContainer container, Object item, String fieldName, String parentClassName, Set<Long> reachedObjectIds, java.util.function.Consumer<TreeUpdate> publisher, String parentLabel, DefaultTreeModel treeModel, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount) {
         long childId = container.ext().getID(item);
         if (childId <= 0) {
             return; // Not a persistent object
@@ -1287,13 +1212,11 @@ public class MigrationCoveragePanel extends JPanel {
             }
 
             // Handle the special mID relationship with type filtering
-            handleIDEntiteRelationship(container, item, childId, expectedType, reachedObjectIds,
-                    publisher, parentLabel, treeModel, classProcessedCount, classTotalCount);
+            handleIDEntiteRelationship(container, item, childId, expectedType, reachedObjectIds, publisher, parentLabel, treeModel, classProcessedCount, classTotalCount);
         } else {
             // Regular object - explore it recursively
             DefaultMutableTreeNode parentNode = new DefaultMutableTreeNode(parentLabel);
-            exploreObjectRecursively(container, childId, reachedObjectIds, publisher, parentNode,
-                    treeModel, classProcessedCount, classTotalCount);
+            exploreObjectRecursively(container, childId, reachedObjectIds, publisher, parentNode, treeModel, classProcessedCount, classTotalCount);
         }
     }
 
@@ -1319,12 +1242,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Handles IDEntite relationships: marks the IDEntite as reached, then finds
      * the corresponding EntiteContientID object with matching mID and type.
      */
-    private void handleIDEntiteRelationship(ExtObjectContainer container, Object idEntiteObj,
-            long idEntiteId, String expectedType, Set<Long> reachedObjectIds,
-            java.util.function.Consumer<TreeUpdate> publisher,
-            String parentLabel, DefaultTreeModel treeModel,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount) {
+    private void handleIDEntiteRelationship(ExtObjectContainer container, Object idEntiteObj, long idEntiteId, String expectedType, Set<Long> reachedObjectIds, java.util.function.Consumer<TreeUpdate> publisher, String parentLabel, DefaultTreeModel treeModel, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount) {
         // Mark the IDEntite object itself as reached
         if (!reachedObjectIds.contains(idEntiteId)) {
             reachedObjectIds.add(idEntiteId);
@@ -1367,8 +1285,7 @@ public class MigrationCoveragePanel extends JPanel {
                                         // Show this object in tree even if already reached elsewhere
                                         // This allows users to see the IDEntite field relationships
                                         DefaultMutableTreeNode parentNode = new DefaultMutableTreeNode(parentLabel);
-                                        exploreObjectRecursively(container, objectId, reachedObjectIds,
-                                                publisher, parentNode, treeModel, classProcessedCount, classTotalCount);
+                                        exploreObjectRecursively(container, objectId, reachedObjectIds, publisher, parentNode, treeModel, classProcessedCount, classTotalCount);
                                         // Only show the first matching object for this field
                                         break;
                                     }
@@ -1432,67 +1349,6 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
-     * Adds a set of object IDs to a class's reachedObjectIds array.
-     * Only IDs that exist in uniqueObjectIds are added (to avoid counting
-     * duplicates).
-     */
-    private void addIdsToReachedList(DOSchemaClass schemaClass, Set<Long> idsToAdd) {
-        long[] currentReachedIds = schemaClass.reachedObjectIds;
-        if (currentReachedIds == null) {
-            currentReachedIds = new long[0];
-        }
-
-        // Create a set of unique IDs for this class (only these should be counted as
-        // reached)
-        Set<Long> uniqueIds = new HashSet<>();
-        if (schemaClass.uniqueObjectIds != null) {
-            for (long id : schemaClass.uniqueObjectIds) {
-                uniqueIds.add(id);
-            }
-        }
-
-        // Create a set of existing reached IDs to avoid duplicates
-        Set<Long> existingIds = new HashSet<>();
-        for (long id : currentReachedIds) {
-            existingIds.add(id);
-        }
-
-        // Add new IDs that are:
-        // 1. In the uniqueObjectIds list (not duplicates)
-        // 2. Not already in reachedObjectIds
-        Set<Long> newIds = new HashSet<>();
-        int skippedDuplicates = 0;
-        for (long id : idsToAdd) {
-            if (!uniqueIds.contains(id)) {
-                // Skip IDs that are not in the unique list (they're duplicates)
-                skippedDuplicates++;
-                continue;
-            }
-            if (!existingIds.contains(id)) {
-                newIds.add(id);
-            }
-        }
-
-        // Combine existing and new IDs
-        if (!newIds.isEmpty()) {
-            long[] combinedIds = new long[currentReachedIds.length + newIds.size()];
-            System.arraycopy(currentReachedIds, 0, combinedIds, 0, currentReachedIds.length);
-            int index = currentReachedIds.length;
-            for (long id : newIds) {
-                combinedIds[index++] = id;
-            }
-            schemaClass.reachedObjectIds = combinedIds;
-            System.out.println("Added " + newIds.size() +
-                    " reached objects to class " + schemaClass.source +
-                    " (was " + currentReachedIds.length + ", now " + combinedIds.length +
-                    ", skipped " + skippedDuplicates + " duplicate object instances)");
-        } else if (skippedDuplicates > 0) {
-            System.out.println("Skipped " + skippedDuplicates +
-                    " duplicate object instances for class " + schemaClass.source);
-        }
-    }
-
-    /**
      * Helper method to find a class by name in a schema array.
      */
     private DOSchemaClass findClassInSchemaByName(DOSchema schema, String className) {
@@ -1523,8 +1379,7 @@ public class MigrationCoveragePanel extends JPanel {
 
         DOSchemaClass objClass = findClassInSchemaByName(databaseSchema, className);
         if (objClass != null) {
-            return objClass.isEntite(referenceSchema) ||
-                    objClass.isIDEntite(referenceSchema);
+            return objClass.isEntite(referenceSchema) || objClass.isIDEntite(referenceSchema);
         }
 
         return false;
@@ -1544,12 +1399,7 @@ public class MigrationCoveragePanel extends JPanel {
             java.nio.file.Path leafsFile = outputDir.resolve("leafs.txt");
             java.nio.file.Path countersFile = outputDir.resolve("counters.txt");
 
-            try (java.io.PrintWriter entriesWriter = new java.io.PrintWriter(
-                    java.nio.file.Files.newBufferedWriter(entriesFile));
-                    java.io.PrintWriter leafsWriter = new java.io.PrintWriter(
-                            java.nio.file.Files.newBufferedWriter(leafsFile));
-                    java.io.PrintWriter countersWriter = new java.io.PrintWriter(
-                            java.nio.file.Files.newBufferedWriter(countersFile))) {
+            try (java.io.PrintWriter entriesWriter = new java.io.PrintWriter(java.nio.file.Files.newBufferedWriter(entriesFile)); java.io.PrintWriter leafsWriter = new java.io.PrintWriter(java.nio.file.Files.newBufferedWriter(leafsFile)); java.io.PrintWriter countersWriter = new java.io.PrintWriter(java.nio.file.Files.newBufferedWriter(countersFile))) {
 
                 // Iterate through all classes in the database schema
                 if (databaseSchema != null && databaseSchema.getClasses() != null) {
@@ -1610,19 +1460,10 @@ public class MigrationCoveragePanel extends JPanel {
                     }
                 }
 
-                JOptionPane.showMessageDialog(this,
-                        "Object IDs exported successfully to:\n" +
-                                entriesFile.toAbsolutePath() + "\n" +
-                                leafsFile.toAbsolutePath() + "\n" +
-                                countersFile.toAbsolutePath(),
-                        "Export Successful",
-                        JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Object IDs exported successfully to:\n" + entriesFile.toAbsolutePath() + "\n" + leafsFile.toAbsolutePath() + "\n" + countersFile.toAbsolutePath(), "Export Successful", JOptionPane.INFORMATION_MESSAGE);
             }
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Error exporting object IDs: " + ex.getMessage(),
-                    "Export Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Error exporting object IDs: " + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
             ex.printStackTrace();
         }
     }
@@ -1633,8 +1474,7 @@ public class MigrationCoveragePanel extends JPanel {
      */
     private void exportAllObjectIds() {
         // Show options dialog
-        JDialog optionsDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                "Export Options", true);
+        JDialog optionsDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Export Options", true);
         JPanel optionsPanel = new JPanel(new BorderLayout(10, 10));
         optionsPanel.setBorder(BorderFactory.createEmptyBorder(15, 15, 15, 15));
 
@@ -1642,8 +1482,7 @@ public class MigrationCoveragePanel extends JPanel {
         checkboxPanel.setLayout(new javax.swing.BoxLayout(checkboxPanel, javax.swing.BoxLayout.Y_AXIS));
 
         javax.swing.JCheckBox cbAllClasses = new javax.swing.JCheckBox("Export all object IDs of all classes", true);
-        javax.swing.JCheckBox cbCollections = new javax.swing.JCheckBox(
-                "Export children IDs of all collections (including Vectors)", true);
+        javax.swing.JCheckBox cbCollections = new javax.swing.JCheckBox("Export children IDs of all collections (including Vectors)", true);
         javax.swing.JCheckBox cbFieldObjects = new javax.swing.JCheckBox("Export field objects", true);
 
         checkboxPanel.add(cbAllClasses);
@@ -1656,8 +1495,7 @@ public class MigrationCoveragePanel extends JPanel {
         // Class filters
         javax.swing.JCheckBox cbIncludeEntite = new javax.swing.JCheckBox("Include gest.gen.Entite", false);
         javax.swing.JCheckBox cbIncludeIDEntite = new javax.swing.JCheckBox("Include gest.gen.IDEntite", false);
-        javax.swing.JCheckBox cbIncludeIDEntiteDescendants = new javax.swing.JCheckBox(
-                "Include descendants of IDEntite", false);
+        javax.swing.JCheckBox cbIncludeIDEntiteDescendants = new javax.swing.JCheckBox("Include descendants of IDEntite", false);
 
         checkboxPanel.add(cbIncludeEntite);
         checkboxPanel.add(javax.swing.Box.createVerticalStrut(5));
@@ -1705,8 +1543,7 @@ public class MigrationCoveragePanel extends JPanel {
         final boolean includeIDEntiteDescendants = cbIncludeIDEntiteDescendants.isSelected();
 
         // Create processing dialog
-        JDialog processingDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                "Processing", true);
+        JDialog processingDialog = new JDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), "Processing", true);
         JPanel dialogPanel = new JPanel(new BorderLayout(10, 10));
         dialogPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
@@ -1750,8 +1587,7 @@ public class MigrationCoveragePanel extends JPanel {
                 // Prepare output file
                 java.nio.file.Path outputFile = outputDir.resolve("all-object-ids.txt");
 
-                try (java.io.PrintWriter writer = new java.io.PrintWriter(
-                        java.nio.file.Files.newBufferedWriter(outputFile))) {
+                try (java.io.PrintWriter writer = new java.io.PrintWriter(java.nio.file.Files.newBufferedWriter(outputFile))) {
 
                     // Get all stored classes from DB4O
                     StoredClass[] storedClasses = container.storedClasses();
@@ -1820,47 +1656,36 @@ public class MigrationCoveragePanel extends JPanel {
                                 continue;
                             }
 
-                            // Check if class is a Collection
-                            try {
-                                Class<?> clazz = Class.forName(className);
-                                if (java.util.Collection.class.isAssignableFrom(clazz)) {
-                                    long[] collectionIds = storedClass.getIDs();
-                                    if (collectionIds != null && collectionIds.length > 0) {
-                                        for (long collectionId : collectionIds) {
-                                            try {
-                                                Object obj = container.ext().getByID(collectionId);
-                                                if (obj != null) {
-                                                    // Activate the object to turn it into a real Collection
-                                                    container.activate(obj, 1);
+                            long[] collectionIds = storedClass.getIDs();
+                            if (collectionIds == null || collectionIds.length == 0) {
+                                continue;
+                            }
 
-                                                    if (obj instanceof java.util.Collection) {
-                                                        writer.print(className + "[" + collectionId + "]");
-
-                                                        java.util.Collection<?> collection = (java.util.Collection<?>) obj;
-                                                        for (Object element : collection) {
-                                                            if (element != null) {
-                                                                try {
-                                                                    long elementId = container.getID(element);
-                                                                    if (elementId > 0) {
-                                                                        writer.print("\t");
-                                                                        writer.print(elementId);
-                                                                    }
-                                                                } catch (Exception e) {
-                                                                    // Skip elements without IDs
-                                                                }
-                                                            }
-                                                        }
-                                                        writer.println();
-                                                    }
-                                                }
-                                            } catch (Exception e) {
-                                                // Skip collections that can't be loaded
-                                            }
-                                        }
+                            for (long collectionId : collectionIds) {
+                                try {
+                                    Object obj = container.ext().getByID(collectionId);
+                                    if (obj == null) {
+                                        continue;
                                     }
+
+                                    Collection<?> items = RecipeCollectionItems.getItems(container, obj);
+                                    if (items == null) {
+                                        continue;
+                                    }
+
+                                    writer.print(className + "[" + collectionId + "]");
+                                    Set<Long> elementIds = new LinkedHashSet<>();
+                                    for (Object item : items) {
+                                        collectPersistentIdsFromValue(container, item, elementIds, 0);
+                                    }
+                                    for (Long elementId : elementIds) {
+                                        writer.print("\t");
+                                        writer.print(elementId);
+                                    }
+                                    writer.println();
+                                } catch (Exception e) {
+                                    // Skip collection-like objects that can't be loaded
                                 }
-                            } catch (ClassNotFoundException e) {
-                                // Skip classes that can't be loaded
                             }
                         }
                     }
@@ -1885,54 +1710,24 @@ public class MigrationCoveragePanel extends JPanel {
                                             // Handle GenericObject (most DB4O objects)
                                             if (obj instanceof GenericObject) {
                                                 GenericObject genericObj = (GenericObject) obj;
-                                                StoredField[] fields = storedClass.getStoredFields();
+                                                StoredClass objectStoredClass = container.ext().storedClass(genericObj);
+                                                StoredField[] fields = objectStoredClass != null ? DatabaseUtil.getAllFieldsIncludingAncestors(objectStoredClass) : storedClass.getStoredFields();
                                                 if (fields != null) {
+                                                    Set<Long> rowIds = new LinkedHashSet<>();
                                                     for (StoredField field : fields) {
                                                         try {
                                                             Object fieldValue = field.get(genericObj);
                                                             if (fieldValue != null) {
-                                                                // Handle arrays - iterate through elements
-                                                                if (fieldValue.getClass().isArray()) {
-                                                                    try {
-                                                                        int length = java.lang.reflect.Array
-                                                                                .getLength(fieldValue);
-                                                                        for (int i = 0; i < length; i++) {
-                                                                            Object element = java.lang.reflect.Array
-                                                                                    .get(fieldValue, i);
-                                                                            if (element != null) {
-                                                                                try {
-                                                                                    long elementId = container
-                                                                                            .getID(element);
-                                                                                    if (elementId > 0) {
-                                                                                        writer.print("\t");
-                                                                                        writer.print(elementId);
-                                                                                    }
-                                                                                } catch (Exception e) {
-                                                                                    // Skip elements without IDs
-                                                                                }
-                                                                            }
-                                                                        }
-                                                                    } catch (Exception e) {
-                                                                        // Skip arrays that can't be accessed
-                                                                    }
-                                                                }
-                                                                // Handle single object references
-                                                                else {
-                                                                    try {
-                                                                        long fieldObjectId = container
-                                                                                .getID(fieldValue);
-                                                                        if (fieldObjectId > 0) {
-                                                                            writer.print("\t");
-                                                                            writer.print(fieldObjectId);
-                                                                        }
-                                                                    } catch (Exception e) {
-                                                                        // Skip fields without IDs (primitives, etc.)
-                                                                    }
-                                                                }
+                                                                collectPersistentIdsFromValue(container, fieldValue, rowIds, 0);
                                                             }
                                                         } catch (Exception e) {
                                                             // Skip fields that can't be accessed
                                                         }
+                                                    }
+
+                                                    for (Long referencedId : rowIds) {
+                                                        writer.print("\t");
+                                                        writer.print(referencedId);
                                                     }
                                                 }
                                             }
@@ -1958,16 +1753,10 @@ public class MigrationCoveragePanel extends JPanel {
                 try {
                     // Get the result and show success message
                     String filePath = get();
-                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
-                            "All object IDs exported successfully to:\n" + filePath,
-                            "Export Successful",
-                            JOptionPane.INFORMATION_MESSAGE);
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this, "All object IDs exported successfully to:\n" + filePath, "Export Successful", JOptionPane.INFORMATION_MESSAGE);
                 } catch (Exception ex) {
                     // Show error message
-                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this,
-                            "Error exporting object IDs: " + ex.getMessage(),
-                            "Export Error",
-                            JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(MigrationCoveragePanel.this, "Error exporting object IDs: " + ex.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
                     ex.printStackTrace();
                 }
             }
@@ -1985,30 +1774,19 @@ public class MigrationCoveragePanel extends JPanel {
      */
     private void viewClassObjects(String className) {
         if (databasePath == null || databasePath.isEmpty()) {
-            JOptionPane.showMessageDialog(this,
-                    "No database path available. Please reopen the database.",
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "No database path available. Please reopen the database.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         // Find the schema class
         DOSchemaClass schemaClass = findClassInSchemaByName(databaseSchema, className);
         if (schemaClass == null) {
-            JOptionPane.showMessageDialog(this,
-                    "Class not found: " + className,
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Class not found: " + className, "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
         // Open dialog
-        ClassObjectsDialog dialog = new ClassObjectsDialog(
-                (java.awt.Frame) SwingUtilities.getWindowAncestor(this),
-                className,
-                schemaClass,
-                databaseSchema,
-                databasePath);
+        ClassObjectsDialog dialog = new ClassObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), className, schemaClass, databaseSchema, databasePath);
         dialog.setVisible(true);
     }
 
@@ -2030,13 +1808,6 @@ public class MigrationCoveragePanel extends JPanel {
             return;
         }
 
-        // Get database container for class lookups
-        ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
-        if (container == null) {
-            System.err.println("Cannot update exported counts: no database container available");
-            return;
-        }
-
         // Collect all exported object IDs across all classes
         Set<Long> allExportedIds = new HashSet<>();
         if (exportedObjectIds != null) {
@@ -2047,31 +1818,55 @@ public class MigrationCoveragePanel extends JPanel {
             }
         }
 
-        // Use ReachResultAggregator to add object IDs to all classes in their
-        // inheritance hierarchy
-        ReachResultAggregator aggregator = new ReachResultAggregator(databaseSchema);
-        Map<String, Set<Long>> reachedByClass = aggregator.aggregateReachedObjects(allExportedIds, container);
-
-        // Update reachedObjectIds for each class in the database schema
-        for (Map.Entry<String, Set<Long>> entry : reachedByClass.entrySet()) {
-            String className = entry.getKey();
-            Set<Long> objectIdSet = entry.getValue();
-
-            // Find the class in database schema
-            DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
-            if (dbClass != null && objectIdSet != null && !objectIdSet.isEmpty()) {
-                // Convert Set<Long> to long[] array
-                long[] reachedIds = new long[objectIdSet.size()];
-                int i = 0;
-                for (Long id : objectIdSet) {
-                    reachedIds[i++] = id;
-                }
-                dbClass.reachedObjectIds = reachedIds;
-            }
-        }
+        trackingIndex.markReachedAll(allExportedIds);
 
         // Refresh the table to show updated counts
         refreshTable();
+    }
+
+    private void openUnreachedExplorer() {
+        UnreachedObjectsDialog dialog = new UnreachedObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), trackingIndex, databaseSchema);
+        dialog.setVisible(true);
+    }
+
+    private void openSkipDiagnostics() {
+        SkippedReachDiagnosticsDialog dialog = new SkippedReachDiagnosticsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this));
+        dialog.setVisible(true);
+    }
+
+    private void collectPersistentIdsFromValue(ExtObjectContainer container, Object value, Set<Long> outputIds, int depth) {
+        if (value == null || outputIds == null || depth > 5) {
+            return;
+        }
+
+        try {
+            long objectId = container.getID(value);
+            if (objectId > 0) {
+                outputIds.add(objectId);
+            }
+        } catch (Exception ignored) {
+            // Best effort
+        }
+
+        if (value.getClass().isArray()) {
+            try {
+                int length = java.lang.reflect.Array.getLength(value);
+                for (int i = 0; i < length; i++) {
+                    Object element = java.lang.reflect.Array.get(value, i);
+                    collectPersistentIdsFromValue(container, element, outputIds, depth + 1);
+                }
+            } catch (Exception ignored) {
+                // Best effort
+            }
+            return;
+        }
+
+        Collection<?> items = RecipeCollectionItems.getItems(container, value);
+        if (items != null) {
+            for (Object item : items) {
+                collectPersistentIdsFromValue(container, item, outputIds, depth + 1);
+            }
+        }
     }
 
     /**

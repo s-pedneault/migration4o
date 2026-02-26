@@ -111,9 +111,7 @@ public class ReachResultAggregator {
                 combinedIds[index++] = id;
             }
             schemaClass.reachedObjectIds = combinedIds;
-            System.out.println("Added " + newIds.size() +
-                    " reached objects to class " + schemaClass.source +
-                    " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
+            System.out.println("Added " + newIds.size() + " reached objects to class " + schemaClass.source + " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
         }
     }
 

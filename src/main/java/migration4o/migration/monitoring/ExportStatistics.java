@@ -1,6 +1,7 @@
 package migration4o.migration.monitoring;
 
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -23,6 +24,9 @@ public class ExportStatistics {
     public final List<ExportWarning> schemaWarnings = new ArrayList<>();
     public final Map<String, Integer> exportedClassCounts = new java.util.HashMap<>();
     public final Map<String, List<Long>> exportedObjectIds = new java.util.HashMap<>();
+    public final Map<Long, Set<String>> objectDecisionNotes = new java.util.HashMap<>();
+    public final Map<String, Set<String>> exportedRelationshipNotes = new java.util.HashMap<>();
+    public final Map<String, Set<String>> skippedRelationshipNotes = new java.util.HashMap<>();
 
     public final DOExportMonitor monitor;
     public final ObjectDuplicationDetector duplicationDetector = new ObjectDuplicationDetector();
@@ -59,6 +63,53 @@ public class ExportStatistics {
         objectsFiltered++;
     }
 
+    public void recordObjectDecision(long objectId, String className, String decision) {
+        if (objectId <= 0 || decision == null || decision.trim().isEmpty()) {
+            return;
+        }
+
+        String note = className != null && !className.isBlank() ? className + ": " + decision : decision;
+        objectDecisionNotes.computeIfAbsent(objectId, key -> new LinkedHashSet<>()).add(note);
+    }
+
+    public void recordRelationshipExported(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String detail) {
+        if (parentObjectId <= 0 || childObjectId <= 0) {
+            return;
+        }
+        String note = buildRelationshipNote(sourceContainingClass, sourceFieldName, detail != null && !detail.isBlank() ? detail : "exported");
+        exportedRelationshipNotes.computeIfAbsent(edgeKey(parentObjectId, childObjectId), key -> new LinkedHashSet<>()).add(note);
+    }
+
+    public void recordRelationshipSkipped(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String reason) {
+        if (parentObjectId <= 0 || childObjectId <= 0 || reason == null || reason.trim().isEmpty()) {
+            return;
+        }
+        String note = buildRelationshipNote(sourceContainingClass, sourceFieldName, reason);
+        skippedRelationshipNotes.computeIfAbsent(edgeKey(parentObjectId, childObjectId), key -> new LinkedHashSet<>()).add(note);
+    }
+
+    private static String buildRelationshipNote(String sourceContainingClass, String sourceFieldName, String detail) {
+        StringBuilder builder = new StringBuilder();
+        if (sourceContainingClass != null && !sourceContainingClass.isBlank()) {
+            builder.append(sourceContainingClass);
+        }
+        if (sourceFieldName != null && !sourceFieldName.isBlank()) {
+            if (builder.length() > 0) {
+                builder.append(".");
+            }
+            builder.append(sourceFieldName);
+        }
+        if (builder.length() > 0) {
+            builder.append(" → ");
+        }
+        builder.append(detail);
+        return builder.toString();
+    }
+
+    public static String edgeKey(long parentObjectId, long childObjectId) {
+        return parentObjectId + "->" + childObjectId;
+    }
+
     public void recordClassExport(DOSchemaClass schemaClass, long objectId) {
         if (schemaClass != null) {
             String className = schemaClass.source;
@@ -71,6 +122,27 @@ public class ExportStatistics {
                 }
             }
         }
+    }
+
+    /**
+     * Records an object as reached for coverage tracking without counting it as a
+     * successfully exported object in progress metrics.
+     * Used for objects encountered during resolution flows (e.g. IDEntite) where
+     * another resolved object may be exported instead.
+     */
+    public void recordReachedOnly(DOSchemaClass schemaClass, long objectId) {
+        if (schemaClass == null) {
+            return;
+        }
+        String className = schemaClass.source;
+        recordReachedOnly(className, objectId);
+    }
+
+    public void recordReachedOnly(String className, long objectId) {
+        if (className == null || className.isBlank() || objectId <= 0) {
+            return;
+        }
+        exportedObjectIdsSet.computeIfAbsent(className, k -> new HashSet<>()).add(objectId);
     }
 
     public void addError(long objectId, String className, String errorMessage, Exception exception) {

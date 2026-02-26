@@ -46,6 +46,7 @@ import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaCom
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
+import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDataService;
 import migration4o.ui.panels.database_panels.reachability_analysis_panel.ReachabilityAnalysisPanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
@@ -752,6 +753,14 @@ public class MainWindow extends JFrame {
             migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
             coveragePanel.updateExportedCounts(exportedClasses, exportedObjectIds);
         }
+    }
+
+    public void notifyExportCompleted(ExportStatistics result) {
+        if (result == null) {
+            return;
+        }
+        notifyExportCompleted(result.exportedClassCounts, result.exportedObjectIds);
+        IDTracerDataService.getInstance().setLatestExportDiagnostics(result);
     }
 
     /**

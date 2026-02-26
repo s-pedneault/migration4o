@@ -4,6 +4,9 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+
 /**
  * Utility class for detecting and working with collection types.
  * Provides centralized logic for identifying collections, arrays, and their
@@ -14,22 +17,7 @@ public class CollectionTypeUtil {
     /**
      * Set of type name substrings that indicate a collection type.
      */
-    private static final Set<String> COLLECTION_TYPE_NAMES = new HashSet<>(Arrays.asList(
-            "Vector",
-            "ArrayList",
-            "LinkedList",
-            "HashSet",
-            "TreeSet",
-            "LinkedHashSet",
-            "HashMap",
-            "TreeMap",
-            "Stack",
-            "Queue",
-            "Collection",
-            "List",
-            "Set",
-            "Map",
-            "VectRechID" // Project-specific collection type
+    private static final Set<String> COLLECTION_TYPE_NAMES = new HashSet<>(Arrays.asList("Vector", "ArrayList", "LinkedList", "HashSet", "TreeSet", "LinkedHashSet", "HashMap", "TreeMap", "Stack", "Queue", "Collection", "List", "Set", "Map", "VectRechID" // Project-specific collection type
     ));
 
     // /**
@@ -71,6 +59,69 @@ public class CollectionTypeUtil {
         }
 
         return false;
+    }
+
+    /**
+     * Well-known collection base classes. If a class in the schema has one of these
+     * as an ancestor (via parentClassName chain), it is a collection type regardless
+     * of its own name.
+     */
+    private static final Set<String> COLLECTION_BASE_CLASSES = new HashSet<>(Arrays.asList("java.util.Vector", "java.util.ArrayList", "java.util.LinkedList", "java.util.HashSet", "java.util.TreeSet", "java.util.LinkedHashSet", "java.util.AbstractList", "java.util.AbstractCollection", "java.util.AbstractSet"));
+
+    /**
+     * Determines if a type name represents a collection type by walking the class
+     * hierarchy in the reference schema. This catches custom classes that extend
+     * Vector/List/etc. but whose names don't contain recognizable collection keywords.
+     *
+     * @param typeName The type name to check
+     * @param schemas  The reference and/or database schemas to search for class hierarchy
+     * @return true if the type inherits from a known collection base class
+     */
+    public static boolean isCollectionByAncestry(String typeName, DOSchema[] schemas) {
+        if (typeName == null || schemas == null) {
+            return false;
+        }
+
+        // Fast path: already recognized by name
+        if (isCollectionType(typeName)) {
+            return true;
+        }
+
+        // Walk the parentClassName chain in the schema
+        String currentClassName = typeName;
+        Set<String> visited = new HashSet<>();
+        while (currentClassName != null && !visited.contains(currentClassName)) {
+            visited.add(currentClassName);
+
+            if (COLLECTION_BASE_CLASSES.contains(currentClassName)) {
+                return true;
+            }
+
+            // Look up class in schemas to find its parent
+            DOSchemaClass schemaClass = findClassInSchemas(currentClassName, schemas);
+            if (schemaClass == null) {
+                break;
+            }
+            currentClassName = schemaClass.parentClassName;
+        }
+
+        return false;
+    }
+
+    /**
+     * Finds a class definition across multiple schemas.
+     */
+    private static DOSchemaClass findClassInSchemas(String className, DOSchema[] schemas) {
+        for (DOSchema schema : schemas) {
+            if (schema == null || schema.classes == null)
+                continue;
+            for (DOSchemaClass cls : schema.classes) {
+                if (cls != null && className.equals(cls.source)) {
+                    return cls;
+                }
+            }
+        }
+        return null;
     }
 
     // /**
