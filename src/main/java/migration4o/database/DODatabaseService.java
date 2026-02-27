@@ -1,7 +1,5 @@
 package migration4o.database;
 
-import com.db4o.ext.ExtObjectContainer;
-import migration4o.models.schema.DOSchema;
 import java.io.IOException;
 
 /**
@@ -14,10 +12,14 @@ public class DODatabaseService {
 
     private static DODatabaseService instance;
 
-    private final DODatabaseContext context;
+    private DODatabaseContext context;
 
     private DODatabaseService() {
         this.context = new DODatabaseContext(null, null);
+    }
+
+    public DODatabaseContext context() {
+        return context;
     }
 
     /**
@@ -31,136 +33,43 @@ public class DODatabaseService {
     }
 
     /**
-     * Open a database and load it into memory.
-     * If a database is already open, it will be closed first.
-     * 
-     * @param databasePath Path to the database file
-     * @return The opened database container
-     * @throws IOException If the database cannot be opened
-     */
-    public synchronized ExtObjectContainer openDatabase(String databasePath) throws IOException {
-        return openDatabase(databasePath, null);
-    }
-
-    /**
      * Open a database and load it into memory with progress monitoring.
      * If a database is already open, it will be closed first.
      * 
-     * @param databasePath Path to the database file
-     * @param monitor      Progress monitor for UI feedback (can be null)
-     * @return The opened database container
+        * @param context Database open context (file path + monitor + runtime state)
      * @throws IOException If the database cannot be opened
      */
-    public synchronized ExtObjectContainer openDatabase(String databasePath, DODatabaseMonitor monitor)
-            throws IOException {
-        // Close existing database if any
-        closeDatabase();
+    public synchronized void openDatabase(DODatabaseContext context) throws IOException {
+        if (context == null || context.databaseFilePath == null || context.databaseFilePath.trim().isEmpty()) {
+            throw new IllegalArgumentException("Database context and file path are required");
+        }
 
-        context.monitor = monitor;
+        // Keep the requested path in case we are reusing the same context instance
+        // and closing an already-open container clears the path.
+        String requestedDatabasePath = context.databaseFilePath;
+
+        // Close existing database if any
+        if (this.context != null && this.context.isDatabaseOpen()) {
+            this.context.closeDatabase();
+        }
+
+        // Store the new context in the singleton service so all callers share it.
+        this.context = context;
+        this.context.databaseFilePath = requestedDatabasePath;
 
         // Create and store opener for this open operation
-        context.opener = new DODatabaseOpener(monitor);
+        DODatabaseOpener opener = new DODatabaseOpener(this.context.monitor);
 
         // Open new database in memory
-        context.container = context.opener.openDatabase(databasePath, true);
-        context.currentDatabasePath = databasePath;
+        this.context.container = opener.openDatabase(this.context, true);
 
-        // Clear cached schema since we have a new database
-        context.databaseSchema = null;
+        // Infer schema from database
+        DODatabaseReader reader = this.context.monitor != null ? new DODatabaseReader(this.context.monitor) : new DODatabaseReader();
+        this.context.databaseSchema = reader.readDatabaseAsSchema(this.context.container);
 
-        if (context.monitor != null) {
-            context.monitor.onServiceDatabaseOpened(databasePath);
+        if (this.context.monitor != null) {
+            this.context.monitor.onServiceDatabaseOpened(this.context.databaseFilePath);
         }
-        return context.container;
     }
 
-    /**
-     * Get the currently open database container.
-     * 
-     * @return The database container, or null if no database is open
-     */
-    public synchronized ExtObjectContainer getContainer() {
-        return context.container;
-    }
-
-    /**
-     * Check if a database is currently open.
-     * 
-     * @return true if a database is open, false otherwise
-     */
-    public synchronized boolean isDatabaseOpen() {
-        return context.container != null && !context.container.ext().isClosed();
-    }
-
-    /**
-     * Get the path of the currently open database.
-     * 
-     * @return The database path, or null if no database is open
-     */
-    public synchronized String getCurrentDatabasePath() {
-        return context.currentDatabasePath;
-    }
-
-    /**
-     * Get the database schema from the currently open database.
-     * The schema is cached after the first read.
-     * 
-     * @return The database schema, or null if no database is open
-     */
-    public synchronized DOSchema getDatabaseSchema() {
-        return getDatabaseSchema(null);
-    }
-
-    /**
-     * Get the database schema from the currently open database with progress
-     * monitoring.
-     * The schema is cached after the first read.
-     * 
-     * @param monitor Progress monitor for UI feedback (can be null)
-     * @return The database schema, or null if no database is open
-     */
-    public synchronized DOSchema getDatabaseSchema(DODatabaseMonitor monitor) {
-        if (!isDatabaseOpen()) {
-            return null;
-        }
-
-        // Return cached schema if available
-        if (context.databaseSchema != null) {
-            return context.databaseSchema;
-        }
-
-        // Read schema from database and cache it
-        DODatabaseReader reader = monitor != null ? new DODatabaseReader(monitor) : new DODatabaseReader();
-        context.databaseSchema = reader.readDatabaseAsSchema(context.container);
-        return context.databaseSchema;
-    }
-
-    /**
-     * Close the currently open database.
-     * Does nothing if no database is open.
-     */
-    public synchronized void closeDatabase() {
-        if (context.container != null && !context.container.ext().isClosed()) {
-            try {
-                context.container.close();
-                if (context.monitor != null) {
-                    context.monitor.onServiceDatabaseClosed(context.currentDatabasePath);
-                }
-            } catch (Exception e) {
-                if (context.monitor != null) {
-                    context.monitor.onServiceDatabaseCloseFailed(context.currentDatabasePath, e.getMessage());
-                }
-            }
-        }
-        context.container = null;
-        context.currentDatabasePath = null;
-        context.databaseSchema = null;
-    }
-
-    /**
-     * Get the database opener instance (for advanced use cases).
-     */
-    public DODatabaseOpener getOpener() {
-        return context.opener;
-    }
 }

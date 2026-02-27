@@ -24,7 +24,7 @@ public class MigrationExportService {
     private final DOSchemaService schemaService = DOSchemaService.getInstance();
 
     public ValidationResult validateExportPrerequisites() {
-        if (!databaseService.isDatabaseOpen()) {
+        if (!databaseService.context().isDatabaseOpen()) {
             return ValidationResult.error("No database is currently open. Please open a database first.", "No Database");
         }
 
@@ -37,8 +37,8 @@ public class MigrationExportService {
 
     public ExportStatistics exportModules(List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
-        DOSchema databaseSchema = databaseService.getDatabaseSchema();
-        String databasePath = databaseService.getCurrentDatabasePath();
+        DOSchema databaseSchema = databaseService.context().databaseSchema;
+        String databasePath = databaseService.context().databaseFilePath;
 
         ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, databasePath);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);

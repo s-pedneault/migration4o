@@ -151,7 +151,7 @@ public class MigrationStructurePanel extends JPanel {
      * Updates the root node name to show the database folder name.
      */
     private void updateRootNodeName() {
-        String databasePath = migration4o.database.DODatabaseService.getInstance().getCurrentDatabasePath();
+        String databasePath = migration4o.database.DODatabaseService.getInstance().context().databaseFilePath;
         if (databasePath != null && !databasePath.isEmpty()) {
             java.io.File dbFile = new java.io.File(databasePath);
             String folderName = dbFile.getParentFile() != null ? dbFile.getParentFile().getName() : "Database";
@@ -537,7 +537,7 @@ public class MigrationStructurePanel extends JPanel {
 
         // Use databaseSchema if available (has object counts), otherwise use reference
         // schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
         DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : referenceSchema;
 
@@ -853,7 +853,7 @@ public class MigrationStructurePanel extends JPanel {
             contextMenu.add(addToExportItem);
 
             // Add View Objects option if database is open
-            if (DODatabaseService.getInstance().isDatabaseOpen()) {
+            if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
                 contextMenu.addSeparator();
                 ClassNode classNode = (ClassNode) node.getUserObject();
                 JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
@@ -945,7 +945,7 @@ public class MigrationStructurePanel extends JPanel {
             contextMenu.add(removeFromExportItem);
 
             // Add View Objects option if database is open
-            if (DODatabaseService.getInstance().isDatabaseOpen()) {
+            if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
                 contextMenu.addSeparator();
                 JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
                 viewObjectsItem.addActionListener(evt -> viewClassObjects(classNode.getSchemaClass()));
@@ -963,7 +963,7 @@ public class MigrationStructurePanel extends JPanel {
      */
     private void viewClassObjects(DOSchemaClass schemaClass) {
         // Get database schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         if (databaseSchema == null) {
             JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -984,7 +984,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Open dialog
-        String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
+        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
         ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath);
         dialog.setVisible(true);
     }
@@ -1128,7 +1128,7 @@ public class MigrationStructurePanel extends JPanel {
 
     private void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module) {
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         MigrationStructurePanelUtil.addModuleToTree(parentNode, module, referenceSchema, databaseSchema, exportedClasses);
     }
 
@@ -1138,7 +1138,7 @@ public class MigrationStructurePanel extends JPanel {
     private void reloadExportTree() {
         DefaultMutableTreeNode root = getExportRoot();
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         MigrationStructurePanelUtil.updateNodeCounts(root, referenceSchema, databaseSchema);
         reloadExportModel();
     }

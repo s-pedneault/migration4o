@@ -55,19 +55,16 @@ public class DODatabaseReader {
                 monitor.onCreatingDatabaseContext();
             }
 
-            DODatabaseContext context = new DODatabaseContext(
-                    container,
-                    DOClassConverter.createStoredClassMap(storedClasses));
+            DODatabaseContext context = new DODatabaseContext(container.identity().toString(), monitor);
+            context.container = container;
+            context.storedClassMap = DOClassConverter.createStoredClassMap(storedClasses);
 
             // Convert stored classes to schema classes
             if (monitor != null) {
                 monitor.onConvertingClasses(storedClasses.length);
             }
 
-            DOSchemaClass[] schemaClasses = DOClassesConverter.convertStoredClassesToSchemaClasses(
-                    storedClasses,
-                    context,
-                    monitor);
+            DOSchemaClass[] schemaClasses = DOClassesConverter.convertStoredClassesToSchemaClasses(storedClasses, context, monitor);
 
             // Create schema
             if (monitor != null) {

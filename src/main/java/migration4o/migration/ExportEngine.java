@@ -60,7 +60,7 @@ public class ExportEngine {
         this.operation.exportedXMLFiles = null;
 
         // Get the shared in-memory container from the service
-        this.operation.container = DODatabaseService.getInstance().getContainer();
+        this.operation.container = DODatabaseService.getInstance().context().container;
 
         if (operation.container == null) {
             throw new IllegalStateException("No database is open. Please open a database first using DODatabaseService.");

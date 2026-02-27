@@ -30,6 +30,7 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import migration4o.database.DODatabaseContext;
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.schema.DOSchemaService;
@@ -423,8 +424,9 @@ public class MainWindow extends JFrame {
 
                     // Open database and read schema using the central service
                     // All business logic is in DODatabaseService
-                    databaseService.openDatabase(selectedFile.getAbsolutePath(), monitor);
-                    DOSchema schema = databaseService.getDatabaseSchema(monitor);
+                    DODatabaseContext context = new DODatabaseContext(selectedFile.getAbsolutePath(), monitor);
+                    databaseService.openDatabase(context);
+                    DOSchema schema = databaseService.context().databaseSchema;
 
                     return schema;
 
@@ -516,7 +518,7 @@ public class MainWindow extends JFrame {
                     createMigrationResultsTab();
 
                     // Notify all tabs that a database has been opened
-                    notifyTabsDatabaseOpened(databaseService.getCurrentDatabasePath(), inferredSchema);
+                    notifyTabsDatabaseOpened(databaseService.context().databaseFilePath, inferredSchema);
 
                     // Update welcome panel state
                     welcomePanel.setDatabaseOpen(true);
@@ -633,7 +635,7 @@ public class MainWindow extends JFrame {
         }
 
         // Create migration coverage panel
-        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), databaseSchema, databaseService.getCurrentDatabasePath());
+        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), databaseSchema, databaseService.context().databaseFilePath);
 
         // Store and add migration coverage tab to Database section
         migrationCoverageTab = coveragePanel;
@@ -679,7 +681,7 @@ public class MainWindow extends JFrame {
      */
     private void closeDatabase() {
         // Close the database using the service
-        databaseService.closeDatabase();
+        databaseService.context().closeDatabase();
 
         // Remove entire Database tab container
         if (databaseTabContainer != null) {
@@ -728,7 +730,7 @@ public class MainWindow extends JFrame {
      * @return The database container, or null if no database is open
      */
     public com.db4o.ext.ExtObjectContainer getDatabaseContainer() {
-        return databaseService.getContainer();
+        return databaseService.context().container;
     }
 
     /**

@@ -1,7 +1,6 @@
 package migration4o.database.processors;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +33,7 @@ public class DOFieldsConverter {
      *                    map
      * @return Array of converted schema fields
      */
-    public static DOSchemaField[] convertStoredFieldsToSchemaFields(
-            StoredClass storedClass,
-            DODatabaseContext context) {
+    public static DOSchemaField[] convertStoredFieldsToSchemaFields(StoredClass storedClass, DODatabaseContext context) {
         return convertStoredFieldsToSchemaFields(storedClass, context, null);
     }
 
@@ -50,10 +47,7 @@ public class DOFieldsConverter {
      * @param monitor     Optional monitor for progress feedback
      * @return Array of converted schema fields
      */
-    public static DOSchemaField[] convertStoredFieldsToSchemaFields(
-            StoredClass storedClass,
-            DODatabaseContext context,
-            DODatabaseMonitor monitor) {
+    public static DOSchemaField[] convertStoredFieldsToSchemaFields(StoredClass storedClass, DODatabaseContext context, DODatabaseMonitor monitor) {
 
         try {
             StoredField[] storedFields = storedClass.getStoredFields();
@@ -62,24 +56,8 @@ public class DOFieldsConverter {
                 monitor.onConvertingFields(storedClass.getName(), storedFields.length);
             }
 
-            // Use a map to deduplicate fields by name
-            Map<String, StoredField> fieldMap = new LinkedHashMap<>();
-
-            for (StoredField sf : storedFields) {
-                String fieldName = sf.getName();
-                StoredField existing = fieldMap.get(fieldName);
-
-                if (existing == null) {
-                    // First occurrence of this field name
-                    fieldMap.put(fieldName, sf);
-                } else {
-                    // Duplicate field name - prefer array version
-                    if (sf.isArray() && !existing.isArray()) {
-                        // New field is array, existing is not - replace with array version
-                        fieldMap.put(fieldName, sf);
-                    }
-                }
-            }
+            // Deduplicate fields by name (prefers array version on duplicates)
+            Map<String, StoredField> fieldMap = DOStoredFieldDeduplicationProcessor.deduplicateByNamePreferArray(storedFields);
 
             // Convert deduplicated fields to DOSchemaField array
             List<DOSchemaField> schemaFields = new ArrayList<>();

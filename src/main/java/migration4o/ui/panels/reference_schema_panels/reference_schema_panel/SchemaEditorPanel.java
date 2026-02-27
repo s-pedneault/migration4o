@@ -1195,7 +1195,7 @@ public class SchemaEditorPanel extends JPanel {
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));
 
         // Add View Objects button if database is open
-        if (DODatabaseService.getInstance().isDatabaseOpen()) {
+        if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
             JButton viewObjectsButton = new JButton("View Objects...");
             viewObjectsButton.addActionListener(e -> viewClassObjects(schemaClass));
             propertyPanel.addCustomField("", viewObjectsButton);
@@ -1210,7 +1210,7 @@ public class SchemaEditorPanel extends JPanel {
      */
     private void viewClassObjects(DOSchemaClass schemaClass) {
         // Get database schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         if (databaseSchema == null) {
             JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -1231,7 +1231,7 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         // Open dialog
-        String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
+        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
         ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath);
         dialog.setVisible(true);
     }

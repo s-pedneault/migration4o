@@ -32,8 +32,7 @@ public class ClassNode {
     }
 
     public boolean hasConfiguration() {
-        return exportConfig != null &&
-                (exportConfig.hasCustomDestination() || exportConfig.hasCriteria());
+        return exportConfig != null && (exportConfig.hasCustomDestination() || exportConfig.hasCriteria());
     }
 
     /**
@@ -56,7 +55,7 @@ public class ClassNode {
         }
 
         // Calculate filtered count
-        ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+        ExtObjectContainer container = DODatabaseService.getInstance().context().container;
         if (container != null && schemaClass.uniqueObjectIds != null) {
             filteredObjectCount = exportConfig.countMatchingObjects(container, schemaClass.uniqueObjectIds);
             return filteredObjectCount;

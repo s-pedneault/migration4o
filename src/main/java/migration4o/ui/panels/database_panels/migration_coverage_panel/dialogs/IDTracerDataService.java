@@ -56,7 +56,7 @@ public class IDTracerDataService {
      * Returns true if data is ready, false if loading is in progress.
      */
     public synchronized boolean ensureDataLoaded(Runnable onLoadComplete) {
-        String currentDatabase = DODatabaseService.getInstance().getCurrentDatabasePath();
+        String currentDatabase = DODatabaseService.getInstance().context().databaseFilePath;
 
         // Check if we need to reload (different database or not loaded yet)
         if (isLoaded && Objects.equals(currentDatabase, loadedForDatabase)) {
@@ -127,7 +127,7 @@ public class IDTracerDataService {
 
         // Determine database folder name from database path
         String dbFolder = "default";
-        String databasePath = DODatabaseService.getInstance().getCurrentDatabasePath();
+        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
         if (databasePath != null) {
             Path dbPath = Paths.get(databasePath);
             Path parent = dbPath.getParent();
@@ -231,7 +231,7 @@ public class IDTracerDataService {
      * contained ID in all-object-ids.txt.
      */
     private void enrichFromDatabaseSchema() {
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         if (databaseSchema == null || databaseSchema.getClasses() == null) {
             return;
         }
@@ -301,7 +301,7 @@ public class IDTracerDataService {
 
     private void refreshReachedFromSchema() {
         reachedObjectIds.clear();
-        DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
         if (databaseSchema == null || databaseSchema.getClasses() == null) {
             return;
         }

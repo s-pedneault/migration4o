@@ -305,7 +305,7 @@ public class XSDBuilder {
             } else {
                 // Check if childrenType is an IDEntite with embedContents=false
                 DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-                DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+                DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
                 DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
 
                 if (childClass == null) {
@@ -350,7 +350,7 @@ public class XSDBuilder {
         } else {
             // Check if this is a non-embedded IDEntite reference
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-            DOSchema databaseSchema = DODatabaseService.getInstance().getDatabaseSchema();
+            DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values

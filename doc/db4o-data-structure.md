@@ -6,7 +6,7 @@ How objects are stored in a DB4O database file, and every technique we use to ac
 
 - DB4O databases are single binary files (`.dat`, `.nozip`, or renamed archives)
 - We load the entire file into memory via `MemoryIoAdapter` for performance → `DODatabaseOpener.openDatabase()`
-- Multiple encoding configurations are tried in order until one succeeds → `DODatabaseOpener.getEncodingConfigs()`
+- Multiple encoding configurations are tried in order until one succeeds → `DODatabaseEncoding.encodings`
   - UTF-8 (default), Latin-1 (legacy), UTF-8 no-intern, Latin-1 no-intern, minimal config
   - Each `DODatabaseEncoding` controls: unicode, internStrings, dotnetSupport
 - Configuration flags applied to every attempt → `DODatabaseOpener.createDatabaseConfiguration()`:

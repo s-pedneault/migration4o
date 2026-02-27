@@ -7,11 +7,9 @@ import java.nio.file.Files;
 import com.db4o.Db4o;
 import com.db4o.ObjectContainer;
 import com.db4o.config.Configuration;
-import com.db4o.config.DotnetSupport;
 import com.db4o.ext.ExtObjectContainer;
+import com.db4o.io.IoAdapter;
 import com.db4o.io.MemoryIoAdapter;
-import com.db4o.reflect.jdk.JdkReflector;
-import com.db4o.ta.TransparentActivationSupport;
 
 /**
  * DB4O database opener with support for multiple encodings.
@@ -20,15 +18,7 @@ import com.db4o.ta.TransparentActivationSupport;
  */
 public class DODatabaseOpener {
 
-    private DODatabaseEncoding successfulEncoding;
     private DODatabaseMonitor monitor;
-
-    /**
-     * Creates a new database opener without a monitor
-     */
-    // public DODatabaseOpener() {
-    // this(null);
-    // }
 
     /**
      * Creates a new database opener with an optional monitor
@@ -40,81 +30,39 @@ public class DODatabaseOpener {
     /**
      * Opens a DB4O database file with optional in-memory caching.
      * 
-     * @param filePath       Path to the database file
+     * @param context       Path to the database file
      * @param useMemoryCache If true, loads the entire file into memory for faster
      *                       access
      * @return Opened database container
      */
-    public ExtObjectContainer openDatabase(String filePath, boolean useMemoryCache) {
-        if (filePath == null || filePath.trim().isEmpty()) {
+    public ExtObjectContainer openDatabase(DODatabaseContext context, boolean useMemoryCache) {
+        if (context == null || context.databaseFilePath == null || context.databaseFilePath.trim().isEmpty()) {
             throw new IllegalArgumentException("Database file path cannot be null or empty");
         }
 
-        File dbFile = new File(filePath);
+        File dbFile = new File(context.databaseFilePath);
         if (!dbFile.exists()) {
-            throw new IllegalArgumentException("Database file does not exist: " + filePath);
+            throw new IllegalArgumentException("Database file does not exist: " + context.databaseFilePath);
         }
 
-        byte[] fileContent = null;
+        IoAdapter adapter = null;
+
         if (useMemoryCache) {
-            try {
-                if (monitor != null) {
-                    monitor.onTryingEncoding("Loading database into memory...");
-                }
-
-                long startTime = System.currentTimeMillis();
-                fileContent = Files.readAllBytes(dbFile.toPath());
-                long loadTime = System.currentTimeMillis() - startTime;
-
-                if (monitor != null) {
-                    String sizeMsg = String.format("Loaded %.2f MB in %d ms",
-                            fileContent.length / (1024.0 * 1024.0), loadTime);
-                    monitor.onTryingEncoding(sizeMsg);
-                }
-            } catch (IOException e) {
-                throw new RuntimeException("Failed to read database file into memory: " + e.getMessage(), e);
-            }
+            adapter = createMemoryAdapter(context, dbFile);
         }
 
-        DODatabaseEncoding[] encodingConfigs = getEncodingConfigs();
         Exception lastException = null;
         StringBuilder attemptLog = new StringBuilder();
 
-        for (DODatabaseEncoding encodingConfig : encodingConfigs) {
+        for (DODatabaseEncoding encodingConfig : DODatabaseEncoding.encodings) {
             if (monitor != null) {
-                monitor.onTryingEncoding(encodingConfig.getDescription());
+                monitor.onTryingEncoding(encodingConfig.description);
             }
 
-            ObjectContainer container = null;
             try {
-                Configuration config = createDatabaseConfiguration(encodingConfig);
-
-                if (useMemoryCache) {
-                    MemoryIoAdapter memoryAdapter = new MemoryIoAdapter();
-                    memoryAdapter.put(filePath, fileContent);
-                    config.io(memoryAdapter);
-                }
-
-                container = Db4o.openFile(config, filePath);
-
-                if (monitor != null) {
-                    monitor.onDatabaseOpened(
-                            useMemoryCache ? encodingConfig.getDescription() + " (in-memory)"
-                                    : encodingConfig.getDescription());
-                }
-
-                this.successfulEncoding = encodingConfig;
-                return container.ext();
+                return openWithEncoding(context, encodingConfig, adapter);
 
             } catch (Exception e) {
-                if (container != null) {
-                    try {
-                        container.close();
-                    } catch (Exception closeException) {
-                        // Ignore close exception, we're already handling an error
-                    }
-                }
-
                 if (isFileLockedError(e)) {
                     String errorMsg = "Database file is already open or locked by another process: " + e.getMessage();
                     if (monitor != null) {
@@ -125,11 +73,10 @@ public class DODatabaseOpener {
 
                 String errorType = e.getClass().getSimpleName();
                 if (monitor != null) {
-                    monitor.onEncodingFailed(encodingConfig.getDescription(),
-                            useMemoryCache ? e.getMessage() : errorType);
+                    monitor.onEncodingFailed(encodingConfig.description, useMemoryCache ? e.getMessage() : errorType);
                 }
 
-                attemptLog.append(encodingConfig.getDescription()).append(": ").append(errorType);
+                attemptLog.append(encodingConfig.description).append(": ").append(errorType);
                 if (e.getMessage() != null && !e.getMessage().isEmpty()) {
                     attemptLog.append(" - ").append(e.getMessage());
                 }
@@ -141,11 +88,9 @@ public class DODatabaseOpener {
 
         String errorMsg;
         if (useMemoryCache) {
-            errorMsg = "Could not open database from memory with any encoding configuration. Attempted encodings:\n"
-                    + attemptLog.toString().trim();
+            errorMsg = "Could not open database from memory with any encoding configuration. Attempted encodings:\n" + attemptLog.toString().trim();
         } else {
-            errorMsg = "Failed to open database with any encoding configuration. Attempted encodings:\n"
-                    + attemptLog.toString().trim();
+            errorMsg = "Failed to open database with any encoding configuration. Attempted encodings:\n" + attemptLog.toString().trim();
         }
 
         if (monitor != null) {
@@ -154,46 +99,56 @@ public class DODatabaseOpener {
         throw new RuntimeException(errorMsg, lastException);
     }
 
-    public DODatabaseEncoding getSuccessfulEncoding() {
-        return successfulEncoding;
-    }
+    private IoAdapter createMemoryAdapter(DODatabaseContext context, File dbFile) {
+        try {
+            if (monitor != null) {
+                monitor.onTryingEncoding("Loading database into memory...");
+            }
 
-    /**
-     * Creates a robust DB4O configuration based on the encoding settings.
-     * This configuration is proven to work with various DB4O database formats.
-     */
-    private Configuration createDatabaseConfiguration(DODatabaseEncoding encodingConfig) throws Exception {
-        Configuration config = Db4o.newConfiguration();
-        config.activationDepth(0);
-        config.updateDepth(10);
+            long startTime = System.currentTimeMillis();
+            byte[] fileContent = Files.readAllBytes(dbFile.toPath());
+            long loadTime = System.currentTimeMillis() - startTime;
 
-        if (encodingConfig.isDotnetSupportEnabled()) {
-            config.add(new DotnetSupport());
+            if (monitor != null) {
+                String sizeMsg = String.format("Loaded %.2f MB in %d ms", fileContent.length / (1024.0 * 1024.0), loadTime);
+                monitor.onTryingEncoding(sizeMsg);
+            }
+
+            MemoryIoAdapter memoryAdapter = new MemoryIoAdapter();
+            memoryAdapter.put(context.databaseFilePath, fileContent);
+            return memoryAdapter;
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to read database file into memory: " + e.getMessage(), e);
         }
-
-        config.add(new TransparentActivationSupport());
-
-        // Use standard JDK reflection without complex instrumentation
-        // This is more reliable and works with all DB4O database formats
-        config.reflectWith(new JdkReflector(DODatabaseOpener.class.getClassLoader()));
-        config.allowVersionUpdates(true);
-        config.callConstructors(true);
-        config.exceptionsOnNotStorable(false);
-        config.unicode(encodingConfig.isUnicodeEnabled());
-        config.internStrings(encodingConfig.isInternStringsEnabled());
-
-        return config;
     }
 
-    private DODatabaseEncoding[] getEncodingConfigs() {
-        return new DODatabaseEncoding[] {
-                new DODatabaseEncoding("UTF-8 (default)", true, true, true),
-                new DODatabaseEncoding("Latin-1 (legacy)", false, true, true),
-                new DODatabaseEncoding("UTF-8 no-intern", true, false, true),
-                new DODatabaseEncoding("Latin-1 no-intern", false, false, true),
-                new DODatabaseEncoding("UTF-8 no-dotnet", true, true, false),
-                new DODatabaseEncoding("Latin-1 no-dotnet", false, true, false)
-        };
+    private ExtObjectContainer openWithEncoding(DODatabaseContext context, DODatabaseEncoding encodingConfig, IoAdapter adapter) throws Exception {
+        ObjectContainer container = null;
+        try {
+            Configuration config = DODatabaseConfiguration.create(encodingConfig);
+
+            if (adapter != null) {
+                config.io(adapter);
+            }
+
+            container = Db4o.openFile(config, context.databaseFilePath);
+
+            if (monitor != null) {
+                monitor.onDatabaseOpened(encodingConfig.description);
+            }
+
+            context.encoding = encodingConfig;
+            return container.ext();
+        } catch (Exception e) {
+            if (container != null) {
+                try {
+                    container.close();
+                } catch (Exception closeException) {
+                    // Ignore close exception, we're already handling an error
+                }
+            }
+            throw e;
+        }
     }
 
     private boolean isFileLockedError(Exception e) {
@@ -203,10 +158,6 @@ public class DODatabaseOpener {
         }
 
         String lower = message.toLowerCase();
-        return message.contains("Another process is using the file")
-                || lower.contains("locked")
-                || lower.contains("in use")
-                || lower.contains("busy")
-                || lower.contains("cannot access the file");
+        return message.contains("Another process is using the file") || lower.contains("locked") || lower.contains("in use") || lower.contains("busy") || lower.contains("cannot access the file");
     }
 }

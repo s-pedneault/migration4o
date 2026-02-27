@@ -836,7 +836,7 @@ public class MigrationCoveragePanel extends JPanel {
 
                 try {
                     // Get the shared in-memory database container
-                    ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+                    ExtObjectContainer container = DODatabaseService.getInstance().context().container;
 
                     if (container == null || container.ext().isClosed()) {
                         throw new IllegalStateException("No database is currently open.");
@@ -1575,7 +1575,7 @@ public class MigrationCoveragePanel extends JPanel {
             @Override
             protected String doInBackground() throws Exception {
                 // Get database container
-                ExtObjectContainer container = DODatabaseService.getInstance().getContainer();
+                ExtObjectContainer container = DODatabaseService.getInstance().context().container;
                 if (container == null || container.ext().isClosed()) {
                     throw new IllegalStateException("No database is currently open.");
                 }

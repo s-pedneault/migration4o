@@ -14,44 +14,37 @@ import migration4o.models.schema.DOSchema;
  */
 public class DODatabaseContext {
 
-    /**
-     * Absolute path of currently opened database.
-     */
-    public String currentDatabasePath;
-
-    /**
-     * Cached schema read from active database.
-     */
+    public ExtObjectContainer container;
+    public DODatabaseEncoding encoding;
+    public String databaseFilePath;
+    public Map<String, StoredClass> storedClassMap;
     public DOSchema databaseSchema;
-
-    /**
-     * Shared opener instance used by DODatabaseService.
-     */
-    public DODatabaseOpener opener;
-
-    /**
-     * Optional monitor for database operations.
-     */
     public DODatabaseMonitor monitor;
 
-    /**
-     * The DB4O database container
-     */
-    public ExtObjectContainer container;
+    public DODatabaseContext(String databasePath, DODatabaseMonitor monitor) {
+        this.databaseFilePath = databasePath;
+        this.monitor = monitor;
+    }
 
-    /**
-     * Map of stored classes by their fully qualified name for quick lookup
-     */
-    public Map<String, StoredClass> storedClassMap;
+    public synchronized boolean isDatabaseOpen() {
+        return container != null && !container.ext().isClosed();
+    }
 
-    /**
-     * Creates a new database context.
-     * 
-     * @param container      The DB4O database container
-     * @param storedClassMap Map of stored classes by name
-     */
-    public DODatabaseContext(ExtObjectContainer container, Map<String, StoredClass> storedClassMap) {
-        this.container = container;
-        this.storedClassMap = storedClassMap;
+    public synchronized void closeDatabase() {
+        if (container != null && !container.ext().isClosed()) {
+            try {
+                container.close();
+                if (monitor != null) {
+                    monitor.onServiceDatabaseClosed(databaseFilePath);
+                }
+            } catch (Exception e) {
+                if (monitor != null) {
+                    monitor.onServiceDatabaseCloseFailed(databaseFilePath, e.getMessage());
+                }
+            }
+        }
+        container = null;
+        databaseFilePath = null;
+        databaseSchema = null;
     }
 }
