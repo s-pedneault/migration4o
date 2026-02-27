@@ -168,10 +168,9 @@ public class ObjectExporter {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             if (operation.statistics != null) {
                 operation.statistics.addError(objectId, className, errorMsg, e);
+                // Object was seen (activated) even though export failed — mark as reached
+                operation.statistics.recordReachedOnly(className, objectId);
             }
-            // Still write error marker in XML for debugging
-            // XMLErrorWriter.writeErrorMarker(xmlWriter, objectId, e,
-            // indentLevel);
         }
     }
 

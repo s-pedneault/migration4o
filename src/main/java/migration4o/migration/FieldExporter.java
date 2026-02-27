@@ -173,8 +173,9 @@ public class FieldExporter {
             // class
             StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
             for (StoredField field : fields) {
+                Object fieldValue = null;
                 try {
-                    Object fieldValue = field.get(obj);
+                    fieldValue = field.get(obj);
                     String sourceFieldName = field.getName();
 
                     // CRITICAL: Get destination field name from schema (search
@@ -185,6 +186,10 @@ public class FieldExporter {
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
                         recordRelationshipSkippedIfPersistent(parentObjectId, sourceClassName, sourceFieldName, fieldValue, "field disabled in reference schema (isExported=false)");
+                        // For disabled collection fields, still mark individual items as reached
+                        if (fieldValue != null) {
+                            markDisabledFieldDescendantsReached(container, fieldValue, schemaField);
+                        }
                         continue;
                     }
 
@@ -245,7 +250,17 @@ public class FieldExporter {
                         fieldsWritten++;
                     }
                 } catch (Exception e) {
-                    // Skip fields that cause errors during export
+                    // Field export failed — still mark the field value as reached if it's a persistent object
+                    if (fieldValue != null && operation.statistics != null) {
+                        try {
+                            long childId = operation.container.ext().getID(fieldValue);
+                            if (childId > 0) {
+                                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childId);
+                            }
+                        } catch (Exception ignored) {
+                            // Best-effort reach recording
+                        }
+                    }
                 }
             }
 
@@ -309,12 +324,26 @@ public class FieldExporter {
 
             for (Object item : items) {
                 if (item != null) {
-                    if (detection.shouldExportAsIDReferences) {
-                        // Export as ID reference
-                        IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter, xsdBuilder, indentLevel + 1, operation);
-                    } else {
-                        // Export normally
-                        exportFieldValue(container, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
+                    try {
+                        if (detection.shouldExportAsIDReferences) {
+                            // Export as ID reference
+                            IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter, xsdBuilder, indentLevel + 1, operation);
+                        } else {
+                            // Export normally
+                            exportFieldValue(container, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
+                        }
+                    } catch (Exception e) {
+                        // Item export failed — still mark as reached if persistent
+                        if (operation.statistics != null) {
+                            try {
+                                long itemId = container.ext().getID(item);
+                                if (itemId > 0) {
+                                    operation.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId);
+                                }
+                            } catch (Exception ignored) {
+                                // Best-effort reach recording
+                            }
+                        }
                     }
                 }
             }
@@ -1029,6 +1058,125 @@ public class FieldExporter {
             operation.statistics.recordRelationshipExported(parentObjectId, wrapperObjectId, parentSourceClassName, sourceFieldName, "collection wrapper encountered; contents exported from this object");
         } catch (Exception ignored) {
             // Best-effort diagnostics only
+        }
+    }
+
+    /**
+     * When a field has isExported=false, we skip its export but must still mark
+     * all descendant objects as reached. This handles two cases:
+     * 
+     * 1. Collection fields: extract items and mark each as reached
+     * 2. Persistent GenericObject fields: traverse one level and mark child
+     *    persistent objects as reached
+     * 
+     * Without this, objects only reachable through disabled fields would appear
+     * as "unreached" even though the engine encountered them.
+     */
+    private void markDisabledFieldDescendantsReached(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField) {
+        if (operation.statistics == null) {
+            return;
+        }
+
+        try {
+            // Case 1: Collection field — extract items and mark each as reached
+            boolean isCollectionLike = schemaField.isCollection || (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) || fieldValue.getClass().isArray();
+
+            if (isCollectionLike) {
+                Collection<?> items = null;
+
+                if (fieldValue instanceof Collection) {
+                    items = (Collection<?>) fieldValue;
+                } else if (fieldValue.getClass().isArray() && !(fieldValue instanceof byte[])) {
+                    items = ValueUtil.arrayToList(fieldValue);
+                } else {
+                    // GenericObject collection wrapper — use standard extraction
+                    items = RecipeCollectionItems.getItems(container, fieldValue);
+                }
+
+                if (items != null) {
+                    for (Object item : items) {
+                        if (item != null) {
+                            markObjectReachedRecursiveShallow(container, item, 2);
+                        }
+                    }
+                }
+                return;
+            }
+
+            // Case 2: Persistent GenericObject — mark its children as reached
+            if (fieldValue instanceof GenericObject) {
+                markObjectReachedRecursiveShallow(container, fieldValue, 2);
+            }
+        } catch (Exception ignored) {
+            // Best-effort reach recording
+        }
+    }
+
+    /**
+     * Recursively marks a persistent object and its immediate children as reached,
+     * without generating any XML output. Traverses up to maxDepth levels.
+     * 
+     * @param container DB4O container
+     * @param obj       The object to mark
+     * @param maxDepth  Maximum depth to traverse (0 = mark this object only)
+     */
+    private void markObjectReachedRecursiveShallow(ExtObjectContainer container, Object obj, int maxDepth) {
+        if (obj == null || operation.statistics == null) {
+            return;
+        }
+
+        try {
+            long objectId = container.ext().getID(obj);
+            if (objectId <= 0) {
+                return; // Not a persistent object
+            }
+
+            String className = ClassUtil.getClassName(obj);
+            operation.statistics.recordReachedOnly(className, objectId);
+
+            if (maxDepth <= 0) {
+                return;
+            }
+
+            // Traverse child fields of GenericObjects
+            if (obj instanceof GenericObject) {
+                StoredClass storedClass = container.ext().storedClass(obj);
+                if (storedClass == null) {
+                    return;
+                }
+
+                StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+                for (StoredField field : fields) {
+                    try {
+                        Object childValue = field.get(obj);
+                        if (childValue == null) {
+                            continue;
+                        }
+
+                        // Mark persistent child objects
+                        long childId = container.ext().getID(childValue);
+                        if (childId > 0) {
+                            markObjectReachedRecursiveShallow(container, childValue, maxDepth - 1);
+                        }
+
+                        // For collection children, mark items too
+                        if (childValue instanceof Collection) {
+                            for (Object item : (Collection<?>) childValue) {
+                                if (item != null) {
+                                    long itemId = container.ext().getID(item);
+                                    if (itemId > 0) {
+                                        markObjectReachedRecursiveShallow(container, item, maxDepth - 1);
+                                    }
+                                }
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        // Best-effort per-field
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Best-effort reach recording
         }
     }
 }

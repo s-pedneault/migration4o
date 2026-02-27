@@ -219,3 +219,11 @@ An object stays unreached if the export engine never encounters it via any of th
 6. **Collection field disabled** — if a collection field has `isExported=false`, the wrapper object is marked reached, but individual collection items are never extracted or visited
 
 Note: Objects that ARE reached but skipped (duplicate, filtered, empty) are still marked in `exportedObjectIdsSet` and therefore count as reached.
+
+## Safety Nets for Reach Recording on Errors
+
+Three safety nets ensure objects are marked reached even when errors occur during export:
+
+1. **ObjectExporter catch block**: If `exportObjectRecursively()` throws after activation, the object is still marked via `recordReachedOnly(className, objectId)` in the catch handler
+2. **FieldExporter per-field catch block**: If a field's export throws in `exportAllFields()`, the field value is checked for persistence and marked reached if it has a valid DB4O ID
+3. **Collection item catch block**: If an individual item in `exportCollectionLikeField()` throws during export, the item is marked reached if persistent, and processing continues with the remaining items

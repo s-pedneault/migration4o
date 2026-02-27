@@ -203,11 +203,13 @@ public class MigrationCoveragePanel extends JPanel {
             // Check if class is not set to migrate
             this.isNotSetToMigrate = refClass != null && !refClass.migrate;
 
-            // Categories are mutually exclusive:
+            // Categories are mutually exclusive for classes with objects > 0:
             // 1. Not migrated: class not set to migrate OR (objects > 0 AND reached == 0)
             // 2. 100% migrated: reached all unique AND all non-unique objects (reached >=
             // objects)
             // 3. Partially migrated: reached some objects but not all
+            // Classes with objects == 0 and set to migrate do not belong to a migration status
+            // category.
             this.is100Percent = !isNotSetToMigrate && objects > 0 && reached >= objects;
             this.isPartial = !isNotSetToMigrate && reached > 0 && reached < objects;
             this.isNotMigrated = isNotSetToMigrate || (objects > 0 && reached == 0);
@@ -402,6 +404,14 @@ public class MigrationCoveragePanel extends JPanel {
 
             // Calculate migration status using centralized logic
             MigrationStatus status = new MigrationStatus(refClass, unique, objects, reached);
+
+            boolean hasMigrationCategory = status.is100Percent || status.isPartial || status.isNotMigrated;
+
+            // Rows with no migration category (e.g. objects == 0 and class is migratable)
+            // are shown only when all status checkboxes are enabled.
+            if (!hasMigrationCategory && (!filter100Percent || !filterPartial || !filterNotMigrated)) {
+                continue;
+            }
 
             if (status.is100Percent && !filter100Percent)
                 continue;

@@ -102,6 +102,8 @@
                 <classRef sourceName="gest.secCiv.RessSecCiv"/>
                 <classRef sourceName="gest.secCiv.Sinistre"/>
                 <classRef sourceName="gest.secCiv.MesurePrev"/>
+                <classRef sourceName="gest.secCiv.Risque"/>
+                <classRef sourceName="gest.secCiv.PPI"/>
             </module>
         </module>
         <module name="Matériel" id="Matériel">
