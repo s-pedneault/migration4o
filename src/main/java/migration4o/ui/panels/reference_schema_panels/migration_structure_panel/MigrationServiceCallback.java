@@ -8,12 +8,11 @@ import java.util.List;
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
+import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportHistory;
 import migration4o.migration.MigrationExportService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
-import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.ui.main.MainWindow;
@@ -48,7 +47,7 @@ public class MigrationServiceCallback {
      * @return validation result with error message if invalid
      */
     public ValidationResult validateExportPrerequisites() {
-        return exportService.validateExportPrerequisites(migration4o.ui.main.MainWindow.getInstance().getCurrentContext());
+        return exportService.validateExportPrerequisites(MainWindow.getInstance().getCurrentContext());
     }
 
     // ==================== PUBLIC EXPORT METHODS ====================
@@ -57,14 +56,9 @@ public class MigrationServiceCallback {
      * Exports multiple modules to XML in the background.
      * 
      * @param modulesToExport     the list of modules to export
-     * @param maxObjectsPerClass  maximum objects per class (null for unlimited)
-     * @param exportNativeIds     whether to export DB4O object IDs as XML
-     *                            attributes
-     * @param selectedSkipOptions list of fields that user has chosen to skip
-     * @param outputPath          the output directory path
-     * @param outputFormat        selected structured writer format
+    * @param options             export options selected by user
      */
-    public void exportModulesAsync(migration4o.database.DODatabaseContext dbContext, List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass, boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputPath, String outputFormat) {
+    public void exportModulesAsync(DODatabaseContext dbContext, List<ModuleExportInfo> modulesToExport, ExportOptions options) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
@@ -91,11 +85,24 @@ public class MigrationServiceCallback {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
-                migration4o.database.DODatabaseContext context = dbContext;
+                DODatabaseContext context = dbContext;
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
-                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, outputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputFormat);
+                ExportStatistics result = exportService.exportModules(
+                    context,
+                    modules,
+                    modulePaths,
+                    options.getOutputPath(),
+                    monitor,
+                    options.getMaxObjectsPerClass(),
+                    options.isExportNativeIds(),
+                    options.getSelectedSkipOptions(),
+                    options.getOutputFormat(),
+                    options.isApplyUserSelectedFieldExclusions(),
+                    options.isApplySkipWhenConditions(),
+                    options.isApplyExportCriteriaFilters(),
+                    options.isSkipObjectsWithoutExportableFields());
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -106,7 +113,19 @@ public class MigrationServiceCallback {
                 // Save to history if successful
                 if (result.errors.isEmpty()) {
                     String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
-                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, outputPath, new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, maxObjectsPerClass, exportNativeIds, outputFormat);
+                    ExportHistory.saveExport(
+                            ExportHistory.ExportType.MODULE,
+                            targetName,
+                            options.getOutputPath(),
+                            new ArrayList<>(result.exportedClassCounts.keySet()),
+                            moduleNames,
+                            options.getMaxObjectsPerClass(),
+                            options.isExportNativeIds(),
+                            options.getOutputFormat(),
+                            options.isApplyUserSelectedFieldExclusions(),
+                            options.isApplySkipWhenConditions(),
+                            options.isApplyExportCriteriaFilters(),
+                            options.isSkipObjectsWithoutExportableFields());
                 }
 
                 return result;
@@ -129,7 +148,7 @@ public class MigrationServiceCallback {
     /**
      * Repeats the last export operation from history.
      */
-    public void repeatLastExportAsync(migration4o.database.DODatabaseContext dbContext) {
+    public void repeatLastExportAsync(DODatabaseContext dbContext) {
         // Check if history exists
         ExportHistory.ExportParams params = ExportHistory.loadLastExport();
 

@@ -54,6 +54,10 @@ public class ExportEngine {
         this.operation.maxObjectsPerClass = null;
         this.operation.exportNativeIds = false;
         this.operation.outputFormat = "XML";
+        this.operation.applyUserSelectedFieldExclusions = true;
+        this.operation.applySkipWhenConditions = true;
+        this.operation.applyExportCriteriaFilters = true;
+        this.operation.skipObjectsWithoutExportableFields = true;
         this.operation.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(schema);
         this.operation.selectedSkipUserOptions = new ArrayList<>();
         this.operation.exportedObjectIds = new HashSet<>();
@@ -99,6 +103,22 @@ public class ExportEngine {
         } else {
             this.operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
         }
+    }
+
+    public void setApplyUserSelectedFieldExclusions(boolean applyUserSelectedFieldExclusions) {
+        this.operation.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
+    }
+
+    public void setApplySkipWhenConditions(boolean applySkipWhenConditions) {
+        this.operation.applySkipWhenConditions = applySkipWhenConditions;
+    }
+
+    public void setApplyExportCriteriaFilters(boolean applyExportCriteriaFilters) {
+        this.operation.applyExportCriteriaFilters = applyExportCriteriaFilters;
+    }
+
+    public void setSkipObjectsWithoutExportableFields(boolean skipObjectsWithoutExportableFields) {
+        this.operation.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
     }
 
     /**

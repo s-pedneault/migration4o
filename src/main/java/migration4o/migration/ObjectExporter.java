@@ -1,6 +1,7 @@
 package migration4o.migration;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
@@ -114,8 +115,13 @@ public class ObjectExporter {
         try {
 
             // Apply export criteria filtering (only for top-level objects)
-            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, operation.statistics, operation.referenceSchema)) {
-                return;
+            boolean wouldBeFilteredByCriteria = false;
+            if (operation.applyExportCriteriaFilters) {
+                if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, operation.statistics, operation.referenceSchema)) {
+                    return;
+                }
+            } else {
+                wouldBeFilteredByCriteria = !ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, null, operation.referenceSchema);
             }
 
             // Get schema class and element name
@@ -130,20 +136,35 @@ public class ObjectExporter {
             // First, determine if there are any fields to export (dry run)
             int fieldsToExport = GenericObjectExporter.countFieldsToExport(container, obj, schemaClass, objectId, fieldExporter, operation.referenceSchema);
 
-            // Only write object tags if there are fields to export
-            if (fieldsToExport > 0) {
+            // Only write object tags when object-level exclusion allows it
+            boolean wouldBeSkippedWithoutExportableFields = !operation.skipObjectsWithoutExportableFields && fieldsToExport == 0;
+
+            if (!operation.skipObjectsWithoutExportableFields || fieldsToExport > 0) {
                 boolean openedStructure = false;
                 // Write start element with optional object ID at/tribute
                 try {
+                    Map<String, String> attributes = new java.util.LinkedHashMap<>();
                     if (operation.exportNativeIds) {
-                        xmlWriter.openStructure(elementName, Map.of("id", objectId + ""));
-                    } else {
-                        xmlWriter.openStructure(elementName);
+                        attributes.put("id", objectId + "");
                     }
+                    java.util.List<String> skippedBecauseReasons = new ArrayList<>();
+                    if (wouldBeFilteredByCriteria) {
+                        skippedBecauseReasons.add("export criteria filter");
+                    }
+                    if (wouldBeSkippedWithoutExportableFields) {
+                        skippedBecauseReasons.add("no exportable fields");
+                    }
+                    if (!skippedBecauseReasons.isEmpty()) {
+                        attributes.put("skippedBecause", String.join("; ", skippedBecauseReasons));
+                    }
+
+                    xmlWriter.openStructure(elementName, attributes.isEmpty() ? null : attributes);
                     openedStructure = true;
 
                     // Now actually export the fields
-                    GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
+                    if (fieldsToExport > 0) {
+                        GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
+                    }
                 } finally {
                     if (openedStructure) {
                         xmlWriter.closeStructure(elementName);

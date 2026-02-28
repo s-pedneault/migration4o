@@ -41,6 +41,8 @@
                     <classRef sourceName="gest.listePerso.ListePerso"/>
                     <classRef sourceName="gest.mobile.Mobile"/>
                     <classRef sourceName="gest.preference.Preference"/>
+                    <classRef sourceName="gest.graph.GraphLib"/>
+                    <classRef sourceName="gest.graph.TypeGraph"/>
                 </module>
             </module>
             <module name="Rapports" id="Rapports">
@@ -167,6 +169,7 @@
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
             <classRef sourceName="gest.histo.Histo" destinationFile="Actions" description="Traces d&apos;actions par des utilisateurs"/>
+            <classRef sourceName="gest.feuilleTemps.TempsPaye" description="Modifications de temps payé"/>
             <module name="Formation" id="Formation">
                 <classRef sourceName="gest.formation.Formation">
                     <unitCost priceList="" cost="1.0"/>

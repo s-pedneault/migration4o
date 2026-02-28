@@ -87,7 +87,7 @@ public class FieldExporter {
 
                     // Skip null fields if they meet skip conditions
                     if (fieldValue == null) {
-                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, schema, operation.selectedSkipUserOptions)) {
+                        if (shouldSkipField(fieldValue, schemaField, schema)) {
                             continue;
                         }
                         // Null field that will be exported
@@ -121,12 +121,12 @@ public class FieldExporter {
                                 className = str.startsWith("class ") ? str.substring(6) : str;
                             }
 
-                            if (!ValueUtil.shouldSkipField(className, schemaField, schema, operation.selectedSkipUserOptions)) {
+                            if (!shouldSkipField(className, schemaField, schema)) {
                                 count++;
                             }
                         } else {
                             // Regular object - check skip conditions
-                            if (!ValueUtil.shouldSkipField(fieldValue, schemaField, schema, operation.selectedSkipUserOptions)) {
+                            if (!shouldSkipField(fieldValue, schemaField, schema)) {
                                 count++;
                             }
                         }
@@ -200,10 +200,10 @@ public class FieldExporter {
 
                     if (fieldValue == null) {
                         // Skip this field if skip conditions are met
-                        if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+                        if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                             continue;
                         }
-                        xmlWriter.elementWithoutContent(fieldName);
+                        xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema));
                         fieldsWritten++;
                         continue;
                     }
@@ -303,20 +303,20 @@ public class FieldExporter {
 
         if (size == 0 || items == null) {
             // Check skip conditions
-            if (ValueUtil.shouldSkipField(itemsValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+            if (shouldSkipField(itemsValue, schemaField, operation.referenceSchema)) {
                 return false;
             }
             if (includeSizeMetadata) {
-                xmlWriter.elementWithoutContent(fieldName, Map.of("size", "0"));
+                xmlWriter.elementWithoutContent(fieldName, withSkippedBecauseAttribute(Map.of("size", "0"), itemsValue, schemaField, operation.referenceSchema));
             } else {
-                xmlWriter.elementWithoutContent(fieldName);
+                xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(itemsValue, schemaField, operation.referenceSchema));
             }
             return true;
         } else {
             if (includeSizeMetadata) {
-                xmlWriter.openStructure(fieldName, Map.of("size", size + ""));
+                xmlWriter.openStructure(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), itemsValue, schemaField, operation.referenceSchema));
             } else {
-                xmlWriter.openStructure(fieldName);
+                xmlWriter.openStructure(fieldName, skippedBecauseAttributes(itemsValue, schemaField, operation.referenceSchema));
             }
 
             // Check if we should export ID references instead of entities
@@ -413,15 +413,15 @@ public class FieldExporter {
 
         // Check skip conditions for empty byte arrays
         if (byteArray.length == 0) {
-            if (ValueUtil.shouldSkipField(byteArray, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+            if (shouldSkipField(byteArray, schemaField, operation.referenceSchema)) {
                 return;
             }
-            xmlWriter.elementWithoutContent(fieldName);
+            xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(byteArray, schemaField, operation.referenceSchema));
         } else {
             // Convert byte array to Base64 string
             String base64String = Base64.getEncoder().encodeToString(byteArray);
             base64String = ValueUtil.formatFieldValue(base64String, schemaField);
-            xmlWriter.elementWithContent(fieldName, null, base64String, false);
+            xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(byteArray, schemaField, operation.referenceSchema), base64String, false);
         }
     }
 
@@ -451,12 +451,12 @@ public class FieldExporter {
             }
 
             // Skip this field if skip conditions are met
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+            if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                 return;
             }
 
             className = ValueUtil.formatFieldValue(className, schemaField);
-            xmlWriter.elementWithContent(fieldName, null, className, false);
+            xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), className, false);
             return;
         }
 
@@ -467,7 +467,7 @@ public class FieldExporter {
 
             // Check if field should be skipped (includes IDEntite with mID ==
             // -1)
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+            if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                 if (operation.statistics != null) {
                     operation.statistics.recordReachedOnly(className, refId, operation.referenceSchema);
                     operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, buildSkipReason(schemaField));
@@ -482,7 +482,7 @@ public class FieldExporter {
             if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
                 // Check if this IDEntite will be skipped due to mID == -1
                 if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
-                    if (IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
+                    if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
                         if (operation.statistics != null && refId > 0) {
                             operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         }
@@ -510,7 +510,7 @@ public class FieldExporter {
                     Long mID = IDEntityHandler.extractMID(container, fieldValue);
                     if (mID != null) {
                         String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
-                        xmlWriter.elementWithContent(fieldName, formattedId, false);
+                        xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), formattedId, false);
                         return;
                     } else {
                         // mID is null - skip this field to avoid empty tags
@@ -524,13 +524,14 @@ public class FieldExporter {
             // fields to export
             // (reuse className and fieldClass from above)
 
+            Integer referencedFieldsToExport = null;
             // Count fields that will be exported from this object
             if (fieldValue instanceof GenericObject && fieldClass != null) {
-                int fieldsToExport = countFieldsToExport(container, (GenericObject) fieldValue, fieldClass, operation.referenceSchema);
+                referencedFieldsToExport = countFieldsToExport(container, (GenericObject) fieldValue, fieldClass, operation.referenceSchema);
 
-                // If no fields will be exported, skip this field wrapper
-                // entirely
-                if (fieldsToExport == 0) {
+                // If no fields will be exported, optionally skip this field
+                // wrapper entirely
+                if (operation.skipObjectsWithoutExportableFields && referencedFieldsToExport == 0) {
                     if (operation.statistics != null) {
                         operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "target object has no exportable fields after skip/criteria rules");
@@ -541,7 +542,9 @@ public class FieldExporter {
 
             // Write element and export recursively
             // TODO verify if we write tag twice
-            xmlWriter.openStructure(fieldName);
+            boolean bypassedNoExportableFieldsSkip = !operation.skipObjectsWithoutExportableFields && referencedFieldsToExport != null && referencedFieldsToExport == 0;
+            String extraReason = bypassedNoExportableFieldsSkip ? "no exportable fields" : null;
+            xmlWriter.openStructure(fieldName, mergeSkippedBecauseAttributes(skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), extraReason));
             exportFieldValue(container, fieldValue, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
             xmlWriter.closeStructure(fieldName);
         } else {
@@ -555,7 +558,7 @@ public class FieldExporter {
                 stringValue = fieldValue.toString();
             }
 
-            if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
+            if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                 return;
             }
 
@@ -563,7 +566,7 @@ public class FieldExporter {
             stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
             stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
 
-            xmlWriter.elementWithContent(fieldName, null, stringValue, true);
+            xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), stringValue, true);
         }
     }
 
@@ -1024,6 +1027,64 @@ public class FieldExporter {
         }
 
         return "field skipped by user/export rules";
+    }
+
+    private boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema) {
+        return ValueUtil.shouldSkipField(value, field, schema, operation.selectedSkipUserOptions, operation.applyUserSelectedFieldExclusions, operation.applySkipWhenConditions);
+    }
+
+    private Map<String, String> skippedBecauseAttributes(Object value, DOSchemaField field, DOSchema schema) {
+        String skippedBecause = getBypassedSkipReasons(value, field, schema);
+        if (skippedBecause == null || skippedBecause.isBlank()) {
+            return null;
+        }
+        return Map.of("skippedBecause", skippedBecause);
+    }
+
+    private Map<String, String> withSkippedBecauseAttribute(Map<String, String> baseAttributes, Object value, DOSchemaField field, DOSchema schema) {
+        return mergeSkippedBecauseAttributes(baseAttributes, getBypassedSkipReasons(value, field, schema));
+    }
+
+    private Map<String, String> mergeSkippedBecauseAttributes(Map<String, String> baseAttributes, String extraReason) {
+        if (extraReason == null || extraReason.isBlank()) {
+            return baseAttributes;
+        }
+
+        java.util.LinkedHashMap<String, String> merged = new java.util.LinkedHashMap<>();
+        if (baseAttributes != null && !baseAttributes.isEmpty()) {
+            merged.putAll(baseAttributes);
+        }
+        String existingReason = merged.get("skippedBecause");
+        if (existingReason == null || existingReason.isBlank()) {
+            merged.put("skippedBecause", extraReason);
+        } else if (!existingReason.contains(extraReason)) {
+            merged.put("skippedBecause", existingReason + "; " + extraReason);
+        }
+        return merged;
+    }
+
+    private String getBypassedSkipReasons(Object value, DOSchemaField field, DOSchema schema) {
+        if (field == null) {
+            return null;
+        }
+
+        java.util.List<String> reasons = new java.util.ArrayList<>();
+
+        boolean bypassedUserSelection = !operation.applyUserSelectedFieldExclusions && operation.selectedSkipUserOptions != null && operation.selectedSkipUserOptions.contains(field);
+        if (bypassedUserSelection) {
+            reasons.add("user-selected field exclusion");
+        }
+
+        boolean bypassedSkipWhen = !operation.applySkipWhenConditions && field.skipWhen != null && !field.skipWhen.trim().isEmpty() && ValueUtil.matchesSkipCondition(value, field.skipWhen, field, schema);
+        if (bypassedSkipWhen) {
+            reasons.add("skipWhen(" + field.skipWhen + ")");
+        }
+
+        if (reasons.isEmpty()) {
+            return null;
+        }
+
+        return String.join("; ", reasons);
     }
 
     private void recordRelationshipSkippedIfPersistent(long parentObjectId, String parentSourceClassName, String sourceFieldName, Object fieldValue, String reason) {

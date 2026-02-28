@@ -185,17 +185,21 @@ public class ValueUtil {
      * @return true if the field should be skipped, false otherwise
      */
     public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema, List<DOSchemaField> userSelectedSkipOptions) {
+        return shouldSkipField(value, field, schema, userSelectedSkipOptions, true, true);
+    }
+
+    public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema, List<DOSchemaField> userSelectedSkipOptions, boolean applyUserSelectedSkipOptions, boolean applySkipWhenConditions) {
         if (field == null) {
             return false;
         }
 
         // Check if user has selected this field to be skipped
-        if (userSelectedSkipOptions != null && userSelectedSkipOptions.contains(field)) {
+        if (applyUserSelectedSkipOptions && userSelectedSkipOptions != null && userSelectedSkipOptions.contains(field)) {
             return true;
         }
 
         // Check skipWhen conditions
-        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
+        if (applySkipWhenConditions && field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
             return matchesSkipCondition(value, field.skipWhen, field, schema);
         }
 

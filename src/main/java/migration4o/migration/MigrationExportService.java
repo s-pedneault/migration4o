@@ -34,7 +34,7 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat) throws Exception {
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = dbContext.databaseSchema;
         String databasePath = dbContext.databaseFilePath;
@@ -44,6 +44,10 @@ public class MigrationExportService {
         exporter.setExportNativeIds(exportNativeIds);
         exporter.setSelectedSkipOptions(selectedSkipOptions);
         exporter.setOutputFormat(outputFormat);
+        exporter.setApplyUserSelectedFieldExclusions(applyUserSelectedFieldExclusions);
+        exporter.setApplySkipWhenConditions(applySkipWhenConditions);
+        exporter.setApplyExportCriteriaFilters(applyExportCriteriaFilters);
+        exporter.setSkipObjectsWithoutExportableFields(skipObjectsWithoutExportableFields);
 
         // CRITICAL FIX: Always use shared tracking for module exports to avoid
         // generating
@@ -160,6 +164,6 @@ public class MigrationExportService {
             // Build full hierarchical path for the module
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat);
+        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat, params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields);
     }
 }

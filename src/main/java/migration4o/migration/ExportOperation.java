@@ -37,6 +37,10 @@ public class ExportOperation {
     // Export limits and options
     public Integer maxObjectsPerClass;
     public boolean exportNativeIds = false;
+    public boolean applyUserSelectedFieldExclusions = true;
+    public boolean applySkipWhenConditions = true;
+    public boolean applyExportCriteriaFilters = true;
+    public boolean skipObjectsWithoutExportableFields = true;
 
     // Module/Class targets (use lists for consistency)
     public List<MigrationModule> modules;

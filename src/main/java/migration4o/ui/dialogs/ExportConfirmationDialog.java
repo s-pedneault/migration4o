@@ -23,6 +23,10 @@ public class ExportConfirmationDialog extends JDialog {
     private String outputFormat = "XML";
     private List<DOSchemaField> availableSkipOptions;
     private List<DOSchemaField> selectedSkipOptions = new ArrayList<>();
+    private boolean applyUserSelectedFieldExclusions = true;
+    private boolean applySkipWhenConditions = true;
+    private boolean applyExportCriteriaFilters = true;
+    private boolean skipObjectsWithoutExportableFields = true;
 
     private JRadioButton allObjectsRadio;
     private JRadioButton limitObjectsRadio;
@@ -30,6 +34,10 @@ public class ExportConfirmationDialog extends JDialog {
     private JCheckBox exportNativeIdsCheckbox;
     private JComboBox<String> outputFormatCombo;
     private Map<DOSchemaField, JCheckBox> skipOptionCheckboxes = new HashMap<>();
+    private JCheckBox applyUserSelectedFieldExclusionsCheckbox;
+    private JCheckBox applySkipWhenConditionsCheckbox;
+    private JCheckBox applyExportCriteriaFiltersCheckbox;
+    private JCheckBox skipObjectsWithoutExportableFieldsCheckbox;
 
     /**
      * Creates a new export confirmation dialog.
@@ -132,23 +140,10 @@ public class ExportConfirmationDialog extends JDialog {
         exportNativeIdsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
         additionalPanel.add(exportNativeIdsCheckbox);
 
-        // Add skip options if any are available
-        if (availableSkipOptions != null && !availableSkipOptions.isEmpty()) {
-            additionalPanel.add(Box.createVerticalStrut(10));
-            additionalPanel.add(new JSeparator(JSeparator.HORIZONTAL));
-            additionalPanel.add(Box.createVerticalStrut(10));
-
-            for (DOSchemaField field : availableSkipOptions) {
-                String label = field.skipUserOption;
-
-                JCheckBox skipCheckbox = new JCheckBox(label);
-                skipCheckbox.setSelected(false);
-                skipCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
-                skipCheckbox.addActionListener(e -> updateSelectedSkipOptions());
-                additionalPanel.add(skipCheckbox);
-                skipOptionCheckboxes.put(field, skipCheckbox);
-            }
-        }
+        additionalPanel.add(Box.createVerticalStrut(8));
+        additionalPanel.add(createFieldExclusionsSection());
+        additionalPanel.add(Box.createVerticalStrut(8));
+        additionalPanel.add(createConditionalExclusionsSection());
 
         mainPanel.add(additionalPanel);
 
@@ -206,6 +201,11 @@ public class ExportConfirmationDialog extends JDialog {
 
             // Update selected skip options one last time
             updateSelectedSkipOptions();
+
+            applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusionsCheckbox.isSelected();
+            applySkipWhenConditions = applySkipWhenConditionsCheckbox.isSelected();
+            applyExportCriteriaFilters = applyExportCriteriaFiltersCheckbox.isSelected();
+            skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFieldsCheckbox.isSelected();
 
             // Read output format
             Object selected = outputFormatCombo.getSelectedItem();
@@ -277,6 +277,22 @@ public class ExportConfirmationDialog extends JDialog {
         return outputFormat;
     }
 
+    public boolean isApplyUserSelectedFieldExclusions() {
+        return applyUserSelectedFieldExclusions;
+    }
+
+    public boolean isApplySkipWhenConditions() {
+        return applySkipWhenConditions;
+    }
+
+    public boolean isApplyExportCriteriaFilters() {
+        return applyExportCriteriaFilters;
+    }
+
+    public boolean isSkipObjectsWithoutExportableFields() {
+        return skipObjectsWithoutExportableFields;
+    }
+
     private String resolveDefaultFormat(List<String> formatNames, String requestedFormat) {
         if (requestedFormat == null || requestedFormat.isBlank()) {
             return formatNames.get(0);
@@ -307,6 +323,150 @@ public class ExportConfirmationDialog extends JDialog {
                 selectedSkipOptions.add(entry.getKey());
             }
         }
+    }
+
+    private JPanel createFieldExclusionsSection() {
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel actions = createBulkActionsPanel(this::checkAllFieldExclusions, this::uncheckAllFieldExclusions);
+        content.add(actions);
+
+        if (availableSkipOptions != null && !availableSkipOptions.isEmpty()) {
+            for (DOSchemaField field : availableSkipOptions) {
+                String label = field.skipUserOption;
+                JCheckBox skipCheckbox = new JCheckBox(label);
+                skipCheckbox.setSelected(false);
+                skipCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+                skipCheckbox.addActionListener(e -> updateSelectedSkipOptions());
+                content.add(skipCheckbox);
+                skipOptionCheckboxes.put(field, skipCheckbox);
+            }
+        } else {
+            JLabel emptyLabel = new JLabel("No user-selectable field exclusions found.");
+            emptyLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            emptyLabel.setFont(emptyLabel.getFont().deriveFont(11f));
+            content.add(emptyLabel);
+        }
+
+        return createCollapsibleSection("Field exclusions", content, true);
+    }
+
+    private JPanel createConditionalExclusionsSection() {
+        JPanel content = new JPanel();
+        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
+        content.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel actions = createBulkActionsPanel(this::checkAllConditionalExclusions, this::uncheckAllConditionalExclusions);
+        content.add(actions);
+
+        applyUserSelectedFieldExclusionsCheckbox = new JCheckBox("Apply user-selected field exclusions");
+        applyUserSelectedFieldExclusionsCheckbox.setSelected(true);
+        applyUserSelectedFieldExclusionsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(applyUserSelectedFieldExclusionsCheckbox);
+
+        applySkipWhenConditionsCheckbox = new JCheckBox("Apply schema skipWhen conditions (NULL, ZERO, MINUS_ONE, EMPTY_*, FALSE, DEFAULT)");
+        applySkipWhenConditionsCheckbox.setSelected(true);
+        applySkipWhenConditionsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(applySkipWhenConditionsCheckbox);
+
+        applyExportCriteriaFiltersCheckbox = new JCheckBox("Apply class export criteria filters");
+        applyExportCriteriaFiltersCheckbox.setSelected(true);
+        applyExportCriteriaFiltersCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(applyExportCriteriaFiltersCheckbox);
+
+        skipObjectsWithoutExportableFieldsCheckbox = new JCheckBox("Skip objects with no exportable fields");
+        skipObjectsWithoutExportableFieldsCheckbox.setSelected(true);
+        skipObjectsWithoutExportableFieldsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        content.add(skipObjectsWithoutExportableFieldsCheckbox);
+
+        JLabel helpLabel = new JLabel("<html><i>Tip: Uncheck all to export with no conditional exclusions/filtering.</i></html>");
+        helpLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        helpLabel.setFont(helpLabel.getFont().deriveFont(11f));
+        content.add(Box.createVerticalStrut(4));
+        content.add(helpLabel);
+
+        return createCollapsibleSection("Conditional exclusions", content, true);
+    }
+
+    private JPanel createCollapsibleSection(String title, JPanel contentPanel, boolean collapsedByDefault) {
+        JPanel container = new JPanel();
+        container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
+        container.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JToggleButton toggle = new JToggleButton();
+        toggle.setAlignmentX(Component.LEFT_ALIGNMENT);
+        toggle.setFocusPainted(false);
+        toggle.setBorderPainted(false);
+        toggle.setContentAreaFilled(false);
+
+        contentPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        contentPanel.setBorder(BorderFactory.createEmptyBorder(2, 16, 4, 0));
+        contentPanel.setVisible(!collapsedByDefault);
+
+        toggle.setSelected(!collapsedByDefault);
+        updateCollapsibleTitle(toggle, title);
+        toggle.addActionListener(e -> {
+            contentPanel.setVisible(toggle.isSelected());
+            updateCollapsibleTitle(toggle, title);
+            pack();
+        });
+
+        container.add(toggle);
+        container.add(contentPanel);
+        return container;
+    }
+
+    private void updateCollapsibleTitle(AbstractButton button, String title) {
+        button.setText((button.isSelected() ? "▾ " : "▸ ") + title);
+    }
+
+    private JPanel createBulkActionsPanel(Runnable checkAllAction, Runnable uncheckAllAction) {
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        actions.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JButton checkAllButton = new JButton("Check all");
+        checkAllButton.setMargin(new Insets(1, 6, 1, 6));
+        checkAllButton.setFont(checkAllButton.getFont().deriveFont(11f));
+        checkAllButton.addActionListener(e -> checkAllAction.run());
+
+        JButton uncheckAllButton = new JButton("Uncheck all");
+        uncheckAllButton.setMargin(new Insets(1, 6, 1, 6));
+        uncheckAllButton.setFont(uncheckAllButton.getFont().deriveFont(11f));
+        uncheckAllButton.addActionListener(e -> uncheckAllAction.run());
+
+        actions.add(checkAllButton);
+        actions.add(uncheckAllButton);
+        return actions;
+    }
+
+    private void checkAllFieldExclusions() {
+        for (JCheckBox checkBox : skipOptionCheckboxes.values()) {
+            checkBox.setSelected(true);
+        }
+        updateSelectedSkipOptions();
+    }
+
+    private void uncheckAllFieldExclusions() {
+        for (JCheckBox checkBox : skipOptionCheckboxes.values()) {
+            checkBox.setSelected(false);
+        }
+        updateSelectedSkipOptions();
+    }
+
+    private void checkAllConditionalExclusions() {
+        applyUserSelectedFieldExclusionsCheckbox.setSelected(true);
+        applySkipWhenConditionsCheckbox.setSelected(true);
+        applyExportCriteriaFiltersCheckbox.setSelected(true);
+        skipObjectsWithoutExportableFieldsCheckbox.setSelected(true);
+    }
+
+    private void uncheckAllConditionalExclusions() {
+        applyUserSelectedFieldExclusionsCheckbox.setSelected(false);
+        applySkipWhenConditionsCheckbox.setSelected(false);
+        applyExportCriteriaFiltersCheckbox.setSelected(false);
+        skipObjectsWithoutExportableFieldsCheckbox.setSelected(false);
     }
 
     /**

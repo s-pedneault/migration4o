@@ -994,9 +994,10 @@ public class MigrationStructurePanel extends JPanel {
         java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = confirmDialog.getSelectedSkipOptions();
         String outputFormat = confirmDialog.getOutputFormat();
         String outputPath = "output";
+        ExportOptions exportOptions = new ExportOptions(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputFormat, confirmDialog.isApplyUserSelectedFieldExclusions(), confirmDialog.isApplySkipWhenConditions(), confirmDialog.isApplyExportCriteriaFilters(), confirmDialog.isSkipObjectsWithoutExportableFields());
 
         // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputFormat);
+        exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);
     }
 
     /**
