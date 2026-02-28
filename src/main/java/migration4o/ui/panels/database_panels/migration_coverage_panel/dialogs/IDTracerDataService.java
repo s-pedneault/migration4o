@@ -55,8 +55,8 @@ public class IDTracerDataService {
      * Loads or reloads the object IDs file if needed.
      * Returns true if data is ready, false if loading is in progress.
      */
-    public synchronized boolean ensureDataLoaded(Runnable onLoadComplete) {
-        String currentDatabase = DODatabaseService.getInstance().context().databaseFilePath;
+    public synchronized boolean ensureDataLoaded(Runnable onLoadComplete, migration4o.database.DODatabaseContext dbContext) {
+        String currentDatabase = dbContext != null ? dbContext.databaseFilePath : null;
 
         // Check if we need to reload (different database or not loaded yet)
         if (isLoaded && Objects.equals(currentDatabase, loadedForDatabase)) {
@@ -85,7 +85,7 @@ public class IDTracerDataService {
         // Start loading in background thread
         new Thread(() -> {
             try {
-                loadDataSync();
+                loadDataSync(dbContext);
                 synchronized (this) {
                     isLoaded = true;
                     isLoading = false;
@@ -115,7 +115,7 @@ public class IDTracerDataService {
         return false;
     }
 
-    private void loadDataSync() {
+    private void loadDataSync(migration4o.database.DODatabaseContext dbContext) {
         // Clear previous data
         synchronized (this) {
             objectContents.clear();
@@ -127,7 +127,7 @@ public class IDTracerDataService {
 
         // Determine database folder name from database path
         String dbFolder = "default";
-        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
+        String databasePath = dbContext != null ? dbContext.databaseFilePath : null;
         if (databasePath != null) {
             Path dbPath = Paths.get(databasePath);
             Path parent = dbPath.getParent();
@@ -222,7 +222,7 @@ public class IDTracerDataService {
             e.printStackTrace();
         }
 
-        enrichFromDatabaseSchema();
+        enrichFromDatabaseSchema(dbContext);
     }
 
     /**
@@ -230,8 +230,8 @@ public class IDTracerDataService {
      * This ensures type resolution is available even when an ID only appears as a
      * contained ID in all-object-ids.txt.
      */
-    private void enrichFromDatabaseSchema() {
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+    private void enrichFromDatabaseSchema(migration4o.database.DODatabaseContext dbContext) {
+        DOSchema databaseSchema = dbContext != null ? dbContext.databaseSchema : null;
         if (databaseSchema == null || databaseSchema.getClasses() == null) {
             return;
         }
@@ -275,8 +275,8 @@ public class IDTracerDataService {
         return allObjectIds.contains(objectId);
     }
 
-    public synchronized void setLatestExportDiagnostics(ExportStatistics statistics) {
-        refreshReachedFromSchema();
+    public synchronized void setLatestExportDiagnostics(ExportStatistics statistics, migration4o.database.DODatabaseContext dbContext) {
+        refreshReachedFromSchema(dbContext);
 
         objectDecisionNotes.clear();
         exportedRelationshipNotes.clear();
@@ -299,9 +299,9 @@ public class IDTracerDataService {
         }
     }
 
-    private void refreshReachedFromSchema() {
+    private void refreshReachedFromSchema(migration4o.database.DODatabaseContext dbContext) {
         reachedObjectIds.clear();
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+        DOSchema databaseSchema = dbContext != null ? dbContext.databaseSchema : null;
         if (databaseSchema == null || databaseSchema.getClasses() == null) {
             return;
         }

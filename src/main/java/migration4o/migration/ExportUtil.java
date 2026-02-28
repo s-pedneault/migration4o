@@ -16,6 +16,10 @@ import migration4o.schema.modules.DOModuleService;
 
 public class ExportUtil {
 
+    private static final int MAX_OBJECT_DECISION_OBJECTS = Integer.getInteger("migration4o.export.maxObjectDecisionObjects", 200_000);
+    private static final int MAX_RELATIONSHIP_EDGES = Integer.getInteger("migration4o.export.maxRelationshipEdges", 500_000);
+    private static final int MAX_NOTES_PER_RELATIONSHIP_EDGE = Integer.getInteger("migration4o.export.maxNotesPerRelationshipEdge", 8);
+
     public static ExportStatistics combineResults(List<ExportStatistics> results, String outputPath) {
         List<ExportStatistics.ExportError> allErrors = new ArrayList<>();
         List<ExportWarning> allWarnings = new ArrayList<>();
@@ -56,16 +60,73 @@ public class ExportUtil {
         result.exportedClassCounts.putAll(allClassCounts);
         result.exportedObjectIds.putAll(allObjectIds);
 
+        boolean objectDecisionNotesTruncated = false;
+        boolean exportedRelationshipNotesTruncated = false;
+        boolean skippedRelationshipNotesTruncated = false;
+
         for (ExportStatistics moduleResult : results) {
             for (Map.Entry<Long, Set<String>> entry : moduleResult.objectDecisionNotes.entrySet()) {
-                result.objectDecisionNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+                if (!result.objectDecisionNotes.containsKey(entry.getKey()) && result.objectDecisionNotes.size() >= MAX_OBJECT_DECISION_OBJECTS) {
+                    objectDecisionNotesTruncated = true;
+                    continue;
+                }
+
+                Set<String> targetNotes = result.objectDecisionNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>());
+                for (String note : entry.getValue()) {
+                    if (note == null) {
+                        continue;
+                    }
+                    targetNotes.add(note);
+                }
             }
+
             for (Map.Entry<String, Set<String>> entry : moduleResult.exportedRelationshipNotes.entrySet()) {
-                result.exportedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+                if (!result.exportedRelationshipNotes.containsKey(entry.getKey()) && result.exportedRelationshipNotes.size() >= MAX_RELATIONSHIP_EDGES) {
+                    exportedRelationshipNotesTruncated = true;
+                    continue;
+                }
+
+                Set<String> targetNotes = result.exportedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>());
+                for (String note : entry.getValue()) {
+                    if (note == null) {
+                        continue;
+                    }
+                    if (targetNotes.size() >= MAX_NOTES_PER_RELATIONSHIP_EDGE) {
+                        exportedRelationshipNotesTruncated = true;
+                        break;
+                    }
+                    targetNotes.add(note);
+                }
             }
+
             for (Map.Entry<String, Set<String>> entry : moduleResult.skippedRelationshipNotes.entrySet()) {
-                result.skippedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>()).addAll(entry.getValue());
+                if (!result.skippedRelationshipNotes.containsKey(entry.getKey()) && result.skippedRelationshipNotes.size() >= MAX_RELATIONSHIP_EDGES) {
+                    skippedRelationshipNotesTruncated = true;
+                    continue;
+                }
+
+                Set<String> targetNotes = result.skippedRelationshipNotes.computeIfAbsent(entry.getKey(), key -> new java.util.LinkedHashSet<>());
+                for (String note : entry.getValue()) {
+                    if (note == null) {
+                        continue;
+                    }
+                    if (targetNotes.size() >= MAX_NOTES_PER_RELATIONSHIP_EDGE) {
+                        skippedRelationshipNotesTruncated = true;
+                        break;
+                    }
+                    targetNotes.add(note);
+                }
             }
+        }
+
+        if (objectDecisionNotesTruncated) {
+            System.out.println("WARN: Export diagnostics truncated (objectDecisionNotes cap=" + MAX_OBJECT_DECISION_OBJECTS + ")");
+        }
+        if (exportedRelationshipNotesTruncated) {
+            System.out.println("WARN: Export diagnostics truncated (exportedRelationshipNotes edge cap=" + MAX_RELATIONSHIP_EDGES + ", per-edge cap=" + MAX_NOTES_PER_RELATIONSHIP_EDGE + ")");
+        }
+        if (skippedRelationshipNotesTruncated) {
+            System.out.println("WARN: Export diagnostics truncated (skippedRelationshipNotes edge cap=" + MAX_RELATIONSHIP_EDGES + ", per-edge cap=" + MAX_NOTES_PER_RELATIONSHIP_EDGE + ")");
         }
 
         return result;

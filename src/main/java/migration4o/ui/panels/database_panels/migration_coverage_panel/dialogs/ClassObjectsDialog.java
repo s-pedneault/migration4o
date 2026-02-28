@@ -53,12 +53,14 @@ public class ClassObjectsDialog extends JFrame {
     private long[] objectIds;
     private boolean showOnlyUnique = true;
     private boolean showOnlyUnreached = false;
+    private migration4o.database.DODatabaseContext dbContext;
 
-    public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass, DOSchema schema, String databasePath) {
+    public ClassObjectsDialog(java.awt.Frame parent, String className, DOSchemaClass schemaClass, DOSchema schema, String databasePath, migration4o.database.DODatabaseContext dbContext) {
         super("Objects: " + className);
         this.schemaClass = schemaClass;
         this.schema = schema;
         this.databasePath = databasePath;
+        this.dbContext = dbContext;
 
         initializeUI();
         loadObjectIds();
@@ -218,7 +220,7 @@ public class ClassObjectsDialog extends JFrame {
     private void loadObjectsFromDatabase(int startIdx, int endIdx) {
         try {
             // Get the shared in-memory database container
-            ExtObjectContainer container = DODatabaseService.getInstance().context().container;
+            ExtObjectContainer container = dbContext != null ? dbContext.container : null;
 
             if (container == null || container.ext().isClosed()) {
                 throw new IllegalStateException("No database is currently open.");
@@ -655,7 +657,6 @@ public class ClassObjectsDialog extends JFrame {
             } catch (Exception activateEx) {
                 // Activation failed - continue anyway, we'll try to get fields without full
                 // activation
-                System.out.println("DEBUG: Could not activate object, continuing without activation");
             }
 
             // Extract key fields for summary (prioritize common identifier fields)
@@ -697,7 +698,6 @@ public class ClassObjectsDialog extends JFrame {
                             }
                         } catch (Exception fieldEx) {
                             // Skip this field if we can't get its value
-                            System.out.println("DEBUG: Could not get field " + field.getName() + ": " + fieldEx.getMessage());
                         }
                     }
                 }
@@ -796,7 +796,7 @@ public class ClassObjectsDialog extends JFrame {
         }
 
         // Open ID Tracer with automatic search for this object
-        IDTracerDialog tracerDialog = new IDTracerDialog();
+        IDTracerDialog tracerDialog = new IDTracerDialog(dbContext);
         tracerDialog.setSearchId(selectedObjectId);
         tracerDialog.setVisible(true);
     }

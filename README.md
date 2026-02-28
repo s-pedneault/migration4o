@@ -130,9 +130,15 @@ Options:
 For large databases, you may need to adjust memory settings in `run.sh`:
 
 ```bash
-# Modify these lines in run.sh
-JAVA_MEM_OPTS=("-Xms1g" "-Xmx8g")  # Increase as needed
+# One-off higher heap (UI launcher)
+MIGRATION4O_XMX=12g ./run-ui.sh local/54060/BackupManuel.zip.nozip
+
+# Set initial and max heap for either launcher
+MIGRATION4O_XMS=2g MIGRATION4O_XMX=16g ./run-ui.sh
+MIGRATION4O_XMS=2g MIGRATION4O_XMX=16g ./run.sh
 ```
+
+Both launchers default to `-Xms1g -Xmx8g` if these environment variables are not set.
 
 ### Logging Configuration
 

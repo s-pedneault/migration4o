@@ -55,7 +55,8 @@ public class ClassNode {
         }
 
         // Calculate filtered count
-        ExtObjectContainer container = DODatabaseService.getInstance().context().container;
+        migration4o.database.DODatabaseContext dbContext = migration4o.ui.main.MainWindow.getInstance().getCurrentContext();
+        ExtObjectContainer container = dbContext != null ? dbContext.container : null;
         if (container != null && schemaClass.uniqueObjectIds != null) {
             filteredObjectCount = exportConfig.countMatchingObjects(container, schemaClass.uniqueObjectIds);
             return filteredObjectCount;

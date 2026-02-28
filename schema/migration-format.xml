@@ -155,10 +155,10 @@
             </module>
         </module>
         <module name="Personnel" id="Personnel">
-            <classRef sourceName="gest.employe.Employe">
+            <classRef sourceName="gest.employe.Employe" description="Profil des employés">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
-            <classRef sourceName="gest.equipe.Equipe">
+            <classRef sourceName="gest.equipe.Equipe" description="Compositon des équipes">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
             <classRef sourceName="gest.grade.Grade"/>
@@ -166,6 +166,7 @@
             <classRef sourceName="gest.utilGroupe.Utilisateur">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
+            <classRef sourceName="gest.histo.Histo" destinationFile="Actions" description="Traces d&apos;actions par des utilisateurs"/>
             <module name="Formation" id="Formation">
                 <classRef sourceName="gest.formation.Formation">
                     <unitCost priceList="" cost="1.0"/>

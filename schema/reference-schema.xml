@@ -846,6 +846,7 @@
         <reference class="gest.maintEquip.MaintEquipHisto" field="mVectChampPerso" />
         <reference class="gest.prevention.Prevention" field="mVectChampPerso" />
         <reference class="gest.dossPrev.DossPrev" field="mVectChampPerso" />
+        <reference class="gest.horaire.HorQuart" field="mVectChampPerso" />
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="object" />
         <field source="mIDTypeChampPerso" destinationName="idTypeChampPerso" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.champPerso.IDTypeChampPerso" />
     </class>
@@ -3237,7 +3238,7 @@
         <field source="mIDExport" destinationName="idExport" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" embedContents="true" />
         <field source="mIDLogoRAO" destinationName="idLogoRAO" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" />
     </class>
-    <class source="gest.intervention.RapportOfficier" destinationName="RapportOfficier" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.intervention.RapportOfficier" destinationName="RapportOfficier" isExported="true" schemaNotes="Unreached if mIDIntervention = -1 (orphan report)" parentClass="gest.gen.EntiteContientID">
         <field source="mID" definition="mID" />
         <field source="mCompteRendu" destinationName="compteRendu" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mDateCreation" definition="mDateCreation" />

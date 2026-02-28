@@ -175,9 +175,14 @@ public class ObjectExportTrackingIndex {
     }
 
     private Set<String> resolveClassesForObjectId(long objectId) {
+        Set<String> hierarchy = new LinkedHashSet<>();
+
         Set<String> classes = idToClasses.get(objectId);
         if (classes != null && !classes.isEmpty()) {
-            return classes;
+            for (String className : classes) {
+                addClassHierarchy(className, hierarchy);
+            }
+            return hierarchy;
         }
 
         String leafClass = idToLeafClass.get(objectId);
@@ -185,17 +190,22 @@ public class ObjectExportTrackingIndex {
             return Collections.emptySet();
         }
 
-        Set<String> hierarchy = new LinkedHashSet<>();
-        String current = leafClass;
+        addClassHierarchy(leafClass, hierarchy);
+        return hierarchy;
+    }
+
+    private void addClassHierarchy(String className, Set<String> hierarchy) {
+        String current = className;
         while (current != null && !current.isEmpty()) {
-            hierarchy.add(current);
+            if (!hierarchy.add(current)) {
+                break;
+            }
             DOSchemaClass schemaClass = classByName.get(current);
             if (schemaClass == null) {
                 break;
             }
             current = schemaClass.parentClassName;
         }
-        return hierarchy;
     }
 
     private void syncSchemaReachedArrays() {

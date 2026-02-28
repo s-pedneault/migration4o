@@ -11,9 +11,11 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
@@ -48,6 +50,7 @@ import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaCom
 import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDataService;
+import migration4o.ui.panels.database_panels.multi_database_comparison_panel.MultiDatabaseComparisonPanel;
 import migration4o.ui.panels.database_panels.reachability_analysis_panel.ReachabilityAnalysisPanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
@@ -64,8 +67,8 @@ public class MainWindow extends JFrame {
 
     private JTabbedPane tabbedPane;
     private JTabbedPane schemaTabPane; // Nested tabs for Schema section
-    private JTabbedPane databaseTabPane; // Nested tabs for Database section
-    private Component databaseTabContainer; // Reference to Database top-level tab
+    private JTabbedPane databaseTabPane; // Active nested tabs for selected Database section
+    private Component databaseTabContainer; // Active selected Database top-level tab
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
@@ -87,6 +90,31 @@ public class MainWindow extends JFrame {
     private migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel = null;
     private migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel migrationResultsPanel = null;
     private DOSchema currentDatabaseSchema = null;
+    private DODatabaseContext currentContext = null;
+    private final Map<String, DatabaseSession> databaseSessions = new LinkedHashMap<>();
+    private final Map<Component, String> databaseTabPathByContainer = new HashMap<>();
+    private final Map<String, ExportStatistics> latestExportByDatabasePath = new HashMap<>();
+    private final List<ExportCompletionListener> exportCompletionListeners = new ArrayList<>();
+
+    private static class DatabaseSession {
+        String databasePath;
+        String tabTitle;
+        DODatabaseContext context;
+        DOSchema databaseSchema;
+        JTabbedPane tabPane;
+        Component tabContainer;
+        Component databaseSchemaTab;
+        Component conformityAnalysisTab;
+        Component reachabilityAnalysisTab;
+        Component migrationCoverageTab;
+        Component costTab;
+        migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel;
+        migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel migrationResultsPanel;
+    }
+
+    public interface ExportCompletionListener {
+        void onExportCompleted(String databasePath, ExportStatistics result);
+    }
 
     // Services manage the actual database and schema
     private final DODatabaseService databaseService = DODatabaseService.getInstance();
@@ -226,31 +254,15 @@ public class MainWindow extends JFrame {
             }
         });
 
+        tabbedPane.addChangeListener(e -> syncActiveDatabaseSessionFromSelection());
+
         // Add tabs (for now just placeholder, will add schema editor next)
         addTabs();
 
         // Add global top toolbar
-        add(createMainToolbar(), BorderLayout.NORTH);
 
         // Add to frame
         add(tabbedPane, BorderLayout.CENTER);
-    }
-
-    private JToolBar createMainToolbar() {
-        JToolBar toolbar = new JToolBar();
-        toolbar.setFloatable(false);
-
-        JButton migrateButton = new JButton("Migrate");
-        migrateButton.setToolTipText("Export all modules from Migration structure");
-        migrateButton.addActionListener(e -> triggerMigrateAllModules());
-        toolbar.add(migrateButton);
-
-        JButton diagramButton = new JButton("Schema Diagrams");
-        diagramButton.setToolTipText("Generate one reference schema diagram per module (DOT/SVG)");
-        diagramButton.addActionListener(e -> generateReferenceSchemaDiagram());
-        toolbar.add(diagramButton);
-
-        return toolbar;
     }
 
     private void generateReferenceSchemaDiagram() {
@@ -303,20 +315,25 @@ public class MainWindow extends JFrame {
         moduleWorker.execute();
     }
 
-    private void triggerMigrateAllModules() {
+    public void triggerMigrateAllModules(migration4o.database.DODatabaseContext dbContext) {
         if (migrationStructurePanel == null) {
             JOptionPane.showMessageDialog(this, "Migration structure is not initialized yet.", "Migration Unavailable", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        migrationStructurePanel.triggerExportAllModules();
+        if (dbContext != null) {
+            selectDatabaseByPath(dbContext.databaseFilePath);
+        }
+
+        migrationStructurePanel.triggerExportAllModules(dbContext);
     }
 
     private void addTabs() {
         // Create and add dashboard panel as first tab
         welcomePanel = new WelcomePanel();
         welcomePanel.setOnOpenDatabase(() -> openDatabaseFile());
-        welcomePanel.setOnCloseDatabase(() -> closeDatabase());
+        welcomePanel.setOnCloseDatabase(path -> closeDatabase(path));
+        welcomePanel.setOnCompareSelected(paths -> compareSelectedDatabases(paths));
         tabbedPane.addTab("Dashboard", welcomePanel);
     }
 
@@ -373,12 +390,6 @@ public class MainWindow extends JFrame {
     }
 
     public void openDatabaseFile() {
-        // Don't open if a database is already open
-        if (currentDatabaseSchema != null) {
-            JOptionPane.showMessageDialog(this, "Please close the current database before opening a new one.", "Database Already Open", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setDialogTitle("Open DB4O Database");
         fileChooser.setFileFilter(new FileNameExtensionFilter("DB4O Database Files (*.dat, *.bak, *.nozip)", "dat", "bak", "nozip"));
@@ -394,9 +405,8 @@ public class MainWindow extends JFrame {
     }
 
     public void openDatabaseFile(String databasePath) {
-        // Don't open if a database is already open
-        if (currentDatabaseSchema != null) {
-            JOptionPane.showMessageDialog(this, "Please close the current database before opening a new one.", "Database Already Open", JOptionPane.INFORMATION_MESSAGE);
+        if (databaseSessions.containsKey(databasePath)) {
+            selectDatabaseByPath(databasePath);
             return;
         }
 
@@ -413,22 +423,20 @@ public class MainWindow extends JFrame {
         DatabaseProgressMonitor monitor = new DatabaseProgressMonitor(this, "Opening Database");
 
         // Process in background thread
-        SwingWorker<DOSchema, Void> worker = new SwingWorker<>() {
+        SwingWorker<DODatabaseContext, Void> worker = new SwingWorker<>() {
             private String errorMessage = null;
 
             @Override
-            protected DOSchema doInBackground() {
+            protected DODatabaseContext doInBackground() {
                 try {
                     // Show the progress dialog
                     monitor.show();
 
                     // Open database and read schema using the central service
-                    // All business logic is in DODatabaseService
                     DODatabaseContext context = new DODatabaseContext(selectedFile.getAbsolutePath(), monitor);
                     databaseService.openDatabase(context);
-                    DOSchema schema = databaseService.context().databaseSchema;
 
-                    return schema;
+                    return context;
 
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -446,9 +454,9 @@ public class MainWindow extends JFrame {
                 welcomePanel.hideLoading();
 
                 try {
-                    DOSchema inferredSchema = get();
+                    DODatabaseContext resultContext = get();
 
-                    if (inferredSchema == null || errorMessage != null) {
+                    if (resultContext == null || resultContext.databaseSchema == null || errorMessage != null) {
                         // Create detailed error message
                         String detailedError = errorMessage != null ? errorMessage : "Unknown error";
 
@@ -475,56 +483,8 @@ public class MainWindow extends JFrame {
                         return;
                     }
 
-                    // Store the database schema
-                    currentDatabaseSchema = inferredSchema;
-
-                    // Create Database nested tab pane
-                    databaseTabPane = new JTabbedPane();
-                    databaseTabPane.setFont(new Font("Arial", Font.PLAIN, 12));
-                    databaseTabContainer = databaseTabPane;
-                    tabbedPane.addTab("Database", databaseTabPane);
-
-                    // Create Overview tab (placeholder for now)
-                    JTextArea overviewText = new JTextArea();
-                    overviewText.setText("Database Overview\n\nDatabase: " + selectedFile.getName() + "\nPath: " + selectedFile.getAbsolutePath());
-                    overviewText.setEditable(false);
-                    overviewText.setMargin(new java.awt.Insets(10, 10, 10, 10));
-                    databaseTabPane.addTab("Overview", new JScrollPane(overviewText));
-
-                    // Create schema editor panel with inferred schema
-                    SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName());
-                    schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
-
-                    // Add database structure tab to Database section
-                    databaseSchemaTab = schemaEditor;
-                    addSchemaTabToDatabaseSection("Database structure", schemaEditor, inferredSchema, false);
-
-                    // Automatically create comparison with reference schema
-                    createComparisonWithReference(inferredSchema);
-
-                    // Create reachability analysis tab
-                    createReachabilityAnalysisTab(inferredSchema);
-
-                    // Create migration coverage tab
-                    createMigrationCoverageTab(inferredSchema);
-
-                    // Create cost tab (renamed to Processing costs)
-                    createCostTab(inferredSchema);
-
-                    // Create migration report tab (before warnings & errors)
-                    createMigrationReportTab();
-
-                    // Create migration results tab (renamed to Warnings & errors)
-                    createMigrationResultsTab();
-
-                    // Notify all tabs that a database has been opened
-                    notifyTabsDatabaseOpened(databaseService.context().databaseFilePath, inferredSchema);
-
-                    // Update welcome panel state
-                    welcomePanel.setDatabaseOpen(true);
-
-                    // Switch to the Database tab
-                    tabbedPane.setSelectedComponent(databaseTabContainer);
+                    DOSchema inferredSchema = resultContext.databaseSchema;
+                    createDatabaseSession(selectedFile, resultContext, inferredSchema);
 
                     // Trigger pending repeat export if requested
                     if (pendingRepeatExport) {
@@ -542,11 +502,130 @@ public class MainWindow extends JFrame {
         worker.execute();
     }
 
+    private void createDatabaseSession(File selectedFile, DODatabaseContext context, DOSchema inferredSchema) {
+        DatabaseSession session = new DatabaseSession();
+        session.databasePath = selectedFile.getAbsolutePath();
+        session.context = context;
+        session.databaseSchema = inferredSchema;
+
+        session.tabPane = new JTabbedPane();
+        session.tabPane.setFont(new Font("Arial", Font.PLAIN, 12));
+        session.tabContainer = session.tabPane;
+        session.tabTitle = buildDatabaseTabTitle(session.databasePath);
+
+        tabbedPane.addTab(session.tabTitle, session.tabContainer);
+        databaseTabPathByContainer.put(session.tabContainer, session.databasePath);
+
+        migration4o.ui.panels.database_panels.database_overview_panel.DatabaseOverviewPanel overviewPanel = new migration4o.ui.panels.database_panels.database_overview_panel.DatabaseOverviewPanel(session.databasePath, session.context);
+        session.tabPane.addTab("Overview", overviewPanel);
+
+        SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName(), session.context);
+        schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
+        session.databaseSchemaTab = schemaEditor;
+        addSchemaTabToDatabaseSection(session.tabPane, "Database structure", schemaEditor, inferredSchema, false);
+
+        createComparisonWithReference(session);
+        createReachabilityAnalysisTab(session);
+        createMigrationCoverageTab(session);
+        createCostTab(session);
+        createMigrationReportTab(session);
+        createMigrationResultsTab(session);
+
+        databaseSessions.put(session.databasePath, session);
+        setActiveDatabaseSession(session);
+        notifyTabsDatabaseOpened(session.context.databaseFilePath, inferredSchema);
+        welcomePanel.addOpenDatabase(session.databasePath);
+        tabbedPane.setSelectedComponent(session.tabContainer);
+    }
+
+    private String buildDatabaseTabTitle(String databasePath) {
+        File dbFile = new File(databasePath);
+        String base = dbFile.getParentFile() != null ? dbFile.getParentFile().getName() : dbFile.getName();
+        String title = base;
+        int suffix = 2;
+        while (isDatabaseTabTitleInUse(title)) {
+            title = base + " (" + suffix + ")";
+            suffix++;
+        }
+        return title;
+    }
+
+    private boolean isDatabaseTabTitleInUse(String title) {
+        for (DatabaseSession session : databaseSessions.values()) {
+            if (title.equals(session.tabTitle)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void selectDatabaseByPath(String databasePath) {
+        DatabaseSession session = databaseSessions.get(databasePath);
+        if (session == null) {
+            return;
+        }
+        setActiveDatabaseSession(session);
+        if (tabbedPane.indexOfComponent(session.tabContainer) >= 0) {
+            tabbedPane.setSelectedComponent(session.tabContainer);
+        }
+    }
+
+    private void syncActiveDatabaseSessionFromSelection() {
+        Component selected = tabbedPane.getSelectedComponent();
+        if (selected == null) {
+            return;
+        }
+        String path = databaseTabPathByContainer.get(selected);
+        if (path != null) {
+            DatabaseSession session = databaseSessions.get(path);
+            if (session != null) {
+                setActiveDatabaseSession(session);
+            }
+        }
+    }
+
+    private void setActiveDatabaseSession(DatabaseSession session) {
+        databaseTabPane = session.tabPane;
+        databaseTabContainer = session.tabContainer;
+        currentContext = session.context;
+        currentDatabaseSchema = session.databaseSchema;
+        databaseSchemaTab = session.databaseSchemaTab;
+        conformityAnalysisTab = session.conformityAnalysisTab;
+        reachabilityAnalysisTab = session.reachabilityAnalysisTab;
+        migrationCoverageTab = session.migrationCoverageTab;
+        costTab = session.costTab;
+        migrationReportPanel = session.migrationReportPanel;
+        migrationResultsPanel = session.migrationResultsPanel;
+    }
+
+    private void compareSelectedDatabases(List<String> selectedPaths) {
+        if (selectedPaths == null || selectedPaths.size() < 2) {
+            JOptionPane.showMessageDialog(this, "Please select at least two databases to compare.", "Compare Databases", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        List<DODatabaseContext> selectedContexts = selectedPaths.stream().map(path -> databaseSessions.get(path)).filter(session -> session != null && session.context != null).map(session -> session.context).collect(Collectors.toList());
+
+        if (selectedContexts.size() < 2) {
+            JOptionPane.showMessageDialog(this, "Selected databases are no longer available.", "Compare Databases", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        startMultiDatabaseComparison(selectedContexts);
+    }
+
+    private void startMultiDatabaseComparison(List<DODatabaseContext> contexts) {
+        MultiDatabaseComparisonPanel comparisonPanel = new MultiDatabaseComparisonPanel(contexts);
+        String tabTitle = "Database Comparison (" + contexts.size() + ")";
+        addTab(tabTitle, comparisonPanel);
+        tabbedPane.setSelectedComponent(comparisonPanel);
+    }
+
     /**
      * Automatically creates a comparison between the reference schema and a newly
      * loaded database schema.
      */
-    private void createComparisonWithReference(DOSchema databaseSchema) {
+    private void createComparisonWithReference(DatabaseSession session) {
         // Find the reference schema
         SchemaTabInfo referenceTab = null;
         for (SchemaTabInfo tabInfo : schemaTabs.values()) {
@@ -565,7 +644,7 @@ public class MainWindow extends JFrame {
         final SchemaTabInfo finalReferenceTab = referenceTab;
 
         // Create comparison - use live schema from editor in case it was reloaded
-        SchemaComparison comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, databaseSchema, "Database");
+        SchemaComparison comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, session.databaseSchema, "Database");
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
@@ -576,14 +655,14 @@ public class MainWindow extends JFrame {
         });
 
         // Store and add conformity analysis tab to Database section
-        conformityAnalysisTab = comparisonPanel;
-        databaseTabPane.addTab("Conformity analysis", comparisonPanel);
+        session.conformityAnalysisTab = comparisonPanel;
+        session.tabPane.addTab("Conformity analysis", comparisonPanel);
     }
 
     /**
      * Creates the reachability analysis tab.
      */
-    private void createReachabilityAnalysisTab(DOSchema databaseSchema) {
+    private void createReachabilityAnalysisTab(DatabaseSession session) {
         try {
             System.out.println("Creating reachability analysis tab...");
 
@@ -602,11 +681,11 @@ public class MainWindow extends JFrame {
             }
 
             // Create reachability analysis panel
-            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(databaseSchema, referenceTab.editorPanel.getSchema());
+            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(session.databaseSchema, referenceTab.editorPanel.getSchema());
 
             // Store and add reachability analysis tab to Database section
-            reachabilityAnalysisTab = reachabilityPanel;
-            databaseTabPane.addTab("Reachability", reachabilityPanel);
+            session.reachabilityAnalysisTab = reachabilityPanel;
+            session.tabPane.addTab("Reachability", reachabilityPanel);
 
             System.out.println("Reachability analysis tab created successfully");
         } catch (Exception e) {
@@ -619,7 +698,7 @@ public class MainWindow extends JFrame {
     /**
      * Creates the migration coverage tab.
      */
-    private void createMigrationCoverageTab(DOSchema databaseSchema) {
+    private void createMigrationCoverageTab(DatabaseSession session) {
         // Find the reference schema
         SchemaTabInfo referenceTab = null;
         for (SchemaTabInfo tabInfo : schemaTabs.values()) {
@@ -635,102 +714,120 @@ public class MainWindow extends JFrame {
         }
 
         // Create migration coverage panel
-        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), databaseSchema, databaseService.context().databaseFilePath);
+        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), session.databaseSchema, session.context.databaseFilePath, session.context);
 
         // Store and add migration coverage tab to Database section
-        migrationCoverageTab = coveragePanel;
-        databaseTabPane.addTab("Migration coverage", coveragePanel);
+        session.migrationCoverageTab = coveragePanel;
+        session.tabPane.addTab("Migration coverage", coveragePanel);
     }
 
     /**
      * Creates the cost analysis tab.
      */
-    private void createCostTab(DOSchema databaseSchema) {
+    private void createCostTab(DatabaseSession session) {
         // Create cost panel
-        CostPanel costPanel = new CostPanel(databaseSchema);
+        CostPanel costPanel = new CostPanel(session.databaseSchema);
 
         // Store and add processing costs tab to Database section
-        costTab = costPanel;
-        databaseTabPane.addTab("Processing costs", costPanel);
+        session.costTab = costPanel;
+        session.tabPane.addTab("Processing costs", costPanel);
     }
 
     /**
      * Creates the migration results tab.
      */
-    private void createMigrationResultsTab() {
+    private void createMigrationResultsTab(DatabaseSession session) {
         // Create migration results panel
-        migrationResultsPanel = new migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel();
+        session.migrationResultsPanel = new migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel();
 
         // Add to Database section with new name
-        databaseTabPane.addTab("Warnings & errors", migrationResultsPanel);
+        session.tabPane.addTab("Warnings & errors", session.migrationResultsPanel);
     }
 
     /**
      * Creates the migration report tab.
      */
-    private void createMigrationReportTab() {
+    private void createMigrationReportTab(DatabaseSession session) {
         // Create migration report panel
-        migrationReportPanel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
+        session.migrationReportPanel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
 
         // Add to Database section
-        databaseTabPane.addTab("Migration report", migrationReportPanel);
+        session.tabPane.addTab("Migration report", session.migrationReportPanel);
     }
 
     /**
      * Closes the database and removes all database-related tabs.
      */
     private void closeDatabase() {
-        // Close the database using the service
-        databaseService.context().closeDatabase();
+        if (currentContext != null) {
+            closeDatabase(currentContext.databaseFilePath);
+        }
+    }
 
-        // Remove entire Database tab container
-        if (databaseTabContainer != null) {
-            tabbedPane.remove(databaseTabContainer);
-            databaseTabContainer = null;
+    private void closeDatabase(String databasePath) {
+        DatabaseSession session = databaseSessions.remove(databasePath);
+        if (session == null) {
+            return;
+        }
+
+        if (session.context != null) {
+            session.context.closeDatabase();
+        }
+
+        if (session.databaseSchemaTab != null) {
+            schemaTabs.remove(session.databaseSchemaTab);
+        }
+        if (session.conformityAnalysisTab != null) {
+            comparisonTabs.remove(session.conformityAnalysisTab);
+        }
+
+        if (session.tabContainer != null) {
+            databaseTabPathByContainer.remove(session.tabContainer);
+            tabbedPane.remove(session.tabContainer);
+        }
+
+        welcomePanel.removeOpenDatabase(databasePath);
+
+        if (databaseSessions.isEmpty()) {
             databaseTabPane = null;
-        }
-
-        // Clear database-related tab references
-        if (databaseSchemaTab != null) {
-            schemaTabs.remove(databaseSchemaTab);
+            databaseTabContainer = null;
             databaseSchemaTab = null;
-        }
-
-        if (conformityAnalysisTab != null) {
-            comparisonTabs.remove(conformityAnalysisTab);
             conformityAnalysisTab = null;
-        }
-
-        if (reachabilityAnalysisTab != null) {
             reachabilityAnalysisTab = null;
-        }
-
-        if (migrationCoverageTab != null) {
             migrationCoverageTab = null;
-        }
-
-        if (costTab != null) {
-            tabbedPane.remove(costTab);
             costTab = null;
+            migrationReportPanel = null;
+            migrationResultsPanel = null;
+            currentContext = null;
+            currentDatabaseSchema = null;
+            tabbedPane.setSelectedIndex(0);
+            return;
         }
 
-        currentDatabaseSchema = null;
-
-        // Update welcome panel state
-        welcomePanel.setDatabaseOpen(false);
-
-        // Switch to welcome tab
-        tabbedPane.setSelectedIndex(0);
+        syncActiveDatabaseSessionFromSelection();
     }
 
     /**
-     * Gets the current in-memory database container from the service. This allows
+     * Gets the current in-memory database container from the context. This allows
      * reusing the same in-memory instance across all operations.
      * 
      * @return The database container, or null if no database is open
      */
     public com.db4o.ext.ExtObjectContainer getDatabaseContainer() {
-        return databaseService.context().container;
+        return currentContext != null ? currentContext.container : null;
+    }
+
+    /**
+     * Gets the current database context.
+     * 
+     * @return The current database context, or null if no database is open
+     */
+    public DODatabaseContext getCurrentContext() {
+        return currentContext;
+    }
+
+    public DOSchema getCurrentDatabaseSchema() {
+        return currentDatabaseSchema;
     }
 
     /**
@@ -739,6 +836,7 @@ public class MainWindow extends JFrame {
      */
     private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
         if (migrationStructurePanel != null) {
+            migrationStructurePanel.setActiveContext(currentContext);
             migrationStructurePanel.onDatabaseSchemaChanged();
         }
     }
@@ -758,11 +856,48 @@ public class MainWindow extends JFrame {
     }
 
     public void notifyExportCompleted(ExportStatistics result) {
+        notifyExportCompleted(result, currentContext);
+    }
+
+    public void notifyExportCompleted(ExportStatistics result, DODatabaseContext dbContext) {
         if (result == null) {
             return;
         }
+
+        String databasePath = dbContext != null ? dbContext.databaseFilePath : null;
+        if (databasePath != null) {
+            DatabaseSession session = databaseSessions.get(databasePath);
+            if (session != null) {
+                setActiveDatabaseSession(session);
+            }
+        }
+
         notifyExportCompleted(result.exportedClassCounts, result.exportedObjectIds);
-        IDTracerDataService.getInstance().setLatestExportDiagnostics(result);
+        IDTracerDataService.getInstance().setLatestExportDiagnostics(result, dbContext);
+
+        if (databasePath != null) {
+            latestExportByDatabasePath.put(databasePath, result);
+            for (ExportCompletionListener listener : new ArrayList<>(exportCompletionListeners)) {
+                listener.onExportCompleted(databasePath, result);
+            }
+        }
+    }
+
+    public ExportStatistics getLatestExportStatistics(String databasePath) {
+        return latestExportByDatabasePath.get(databasePath);
+    }
+
+    public void addExportCompletionListener(ExportCompletionListener listener) {
+        if (listener == null) {
+            return;
+        }
+        if (!exportCompletionListeners.contains(listener)) {
+            exportCompletionListeners.add(listener);
+        }
+    }
+
+    public void removeExportCompletionListener(ExportCompletionListener listener) {
+        exportCompletionListeners.remove(listener);
     }
 
     /**
@@ -839,8 +974,8 @@ public class MainWindow extends JFrame {
     /**
      * Add a schema tab to the Database nested section and track it for comparison.
      */
-    public void addSchemaTabToDatabaseSection(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
-        databaseTabPane.addTab(title, editor);
+    public void addSchemaTabToDatabaseSection(JTabbedPane targetPane, String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
+        targetPane.addTab(title, editor);
         schemaTabs.put(editor, new SchemaTabInfo(title, schema, editor, isReference));
 
         // Set up listener to refresh comparisons when this schema is reloaded

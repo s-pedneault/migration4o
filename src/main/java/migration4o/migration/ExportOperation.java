@@ -26,6 +26,7 @@ public class ExportOperation {
     public DOSchema referenceSchema;
     public DOSchema databaseSchema;
     public String databasePath;
+    public migration4o.database.DODatabaseContext dbContext;
     public ExtObjectContainer container;
 
     // Output configuration

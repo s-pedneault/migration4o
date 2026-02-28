@@ -89,9 +89,12 @@ public class SchemaEditorPanel extends JPanel {
     // Column definitions for the fields table
     private ColumnDefinition[] fieldColumns;
 
+    private migration4o.database.DODatabaseContext dbContext;
+
     public SchemaEditorPanel() {
         this.modified = false;
         this.isReadOnly = false; // Reference schema can be edited and saved
+        this.dbContext = null;
 
         initializeUI();
         loadSchema();
@@ -101,10 +104,11 @@ public class SchemaEditorPanel extends JPanel {
      * Constructor for viewing an inferred schema (not backed by a file). The
      * schema cannot be saved in this mode.
      */
-    public SchemaEditorPanel(DOSchema schema, String displayName) {
+    public SchemaEditorPanel(DOSchema schema, String displayName, migration4o.database.DODatabaseContext dbContext) {
         this.schema = schema;
         this.modified = false;
         this.isReadOnly = true; // Database structure panels are read-only
+        this.dbContext = dbContext;
 
         initializeUI();
         buildTree();
@@ -764,6 +768,11 @@ public class SchemaEditorPanel extends JPanel {
         }
         SchemaTreeNode classNode = new SchemaTreeNode(className, NodeType.CLASS, schemaClass);
 
+        if (schemaClass.isIDEntite(schema) && (schemaClass.pointsTo == null || schemaClass.pointsTo.isBlank())) {
+            SchemaTreeNode warningNode = new SchemaTreeNode("⚠ IDEntite missing pointsTo attribute", NodeType.FIELD, null);
+            classNode.add(warningNode);
+        }
+
         // Add field references that point to this class
         addFieldReferencesToClass(classNode, schemaClass);
 
@@ -827,12 +836,6 @@ public class SchemaEditorPanel extends JPanel {
                         String pointsTo = idEntiteClass.pointsTo;
                         if (pointsTo != null && (pointsTo.equals(targetShortName) || pointsTo.equals(targetAbsoluteName))) {
                             isReference = true;
-                        } else if (pointsTo == null) {
-                            // Fallback to name extraction if pointsTo not set
-                            String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
-                            if (expectedType != null && (expectedType.equals(targetShortName) || expectedType.equals(targetAbsoluteName))) {
-                                isReference = true;
-                            }
                         }
                     }
                 }
@@ -871,25 +874,6 @@ public class SchemaEditorPanel extends JPanel {
             }
         }
         return false;
-    }
-
-    /**
-     * Extract expected target type from an IDEntite field name.
-     */
-    private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
-        // If field name starts with "mID", extract the part after it
-        if (fieldName != null && fieldName.startsWith("mID")) {
-            return fieldName.substring(3); // Remove "mID" prefix
-        }
-        // Otherwise try to extract from the ID class name
-        // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
-        if (idClassName != null) {
-            String simpleClassName = idClassName.contains(".") ? idClassName.substring(idClassName.lastIndexOf('.') + 1) : idClassName;
-            if (simpleClassName.startsWith("ID")) {
-                return simpleClassName.substring(2); // Remove "ID" prefix
-            }
-        }
-        return null;
     }
 
     /**
@@ -1195,7 +1179,7 @@ public class SchemaEditorPanel extends JPanel {
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));
 
         // Add View Objects button if database is open
-        if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
+        if (dbContext != null && dbContext.isDatabaseOpen()) {
             JButton viewObjectsButton = new JButton("View Objects...");
             viewObjectsButton.addActionListener(e -> viewClassObjects(schemaClass));
             propertyPanel.addCustomField("", viewObjectsButton);
@@ -1210,7 +1194,7 @@ public class SchemaEditorPanel extends JPanel {
      */
     private void viewClassObjects(DOSchemaClass schemaClass) {
         // Get database schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+        DOSchema databaseSchema = dbContext.databaseSchema;
         if (databaseSchema == null) {
             JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
@@ -1231,8 +1215,8 @@ public class SchemaEditorPanel extends JPanel {
         }
 
         // Open dialog
-        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
-        ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath);
+        String databasePath = dbContext.databaseFilePath;
+        ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath, dbContext);
         dialog.setVisible(true);
     }
 

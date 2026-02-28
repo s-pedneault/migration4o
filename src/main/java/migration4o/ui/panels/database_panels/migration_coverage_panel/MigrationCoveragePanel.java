@@ -81,12 +81,15 @@ public class MigrationCoveragePanel extends JPanel {
     private boolean filterPartial = true;
     private boolean filterNotMigrated = true;
 
-    public MigrationCoveragePanel(DOSchema referenceSchema, DOSchema databaseSchema, String databasePath) {
+    private migration4o.database.DODatabaseContext dbContext;
+
+    public MigrationCoveragePanel(DOSchema referenceSchema, DOSchema databaseSchema, String databasePath, migration4o.database.DODatabaseContext dbContext) {
         setLayout(new BorderLayout());
 
         this.referenceSchema = referenceSchema;
         this.databaseSchema = databaseSchema;
         this.databasePath = databasePath;
+        this.dbContext = dbContext;
         this.trackingIndex = new ObjectExportTrackingIndex(databaseSchema);
 
         // Create table model
@@ -836,7 +839,7 @@ public class MigrationCoveragePanel extends JPanel {
 
                 try {
                     // Get the shared in-memory database container
-                    ExtObjectContainer container = DODatabaseService.getInstance().context().container;
+                    ExtObjectContainer container = dbContext != null ? dbContext.container : null;
 
                     if (container == null || container.ext().isClosed()) {
                         throw new IllegalStateException("No database is currently open.");
@@ -1575,7 +1578,7 @@ public class MigrationCoveragePanel extends JPanel {
             @Override
             protected String doInBackground() throws Exception {
                 // Get database container
-                ExtObjectContainer container = DODatabaseService.getInstance().context().container;
+                ExtObjectContainer container = dbContext != null ? dbContext.container : null;
                 if (container == null || container.ext().isClosed()) {
                     throw new IllegalStateException("No database is currently open.");
                 }
@@ -1796,7 +1799,7 @@ public class MigrationCoveragePanel extends JPanel {
         }
 
         // Open dialog
-        ClassObjectsDialog dialog = new ClassObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), className, schemaClass, databaseSchema, databasePath);
+        ClassObjectsDialog dialog = new ClassObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), className, schemaClass, databaseSchema, databasePath, dbContext);
         dialog.setVisible(true);
     }
 
@@ -1835,7 +1838,7 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     private void openUnreachedExplorer() {
-        UnreachedObjectsDialog dialog = new UnreachedObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), trackingIndex, databaseSchema);
+        UnreachedObjectsDialog dialog = new UnreachedObjectsDialog((java.awt.Frame) SwingUtilities.getWindowAncestor(this), trackingIndex, databaseSchema, dbContext);
         dialog.setVisible(true);
     }
 
@@ -1918,7 +1921,7 @@ public class MigrationCoveragePanel extends JPanel {
      * Opens the ID Tracer dialog for tracing object containment relationships.
      */
     private void openIdTracer() {
-        IDTracerDialog dialog = new IDTracerDialog();
+        IDTracerDialog dialog = new IDTracerDialog(dbContext);
         dialog.setVisible(true);
     }
 }

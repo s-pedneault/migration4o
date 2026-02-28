@@ -20,11 +20,10 @@ import migration4o.ui.common.DOExportMonitor;
  */
 public class MigrationExportService {
 
-    private final DODatabaseService databaseService = DODatabaseService.getInstance();
     private final DOSchemaService schemaService = DOSchemaService.getInstance();
 
-    public ValidationResult validateExportPrerequisites() {
-        if (!databaseService.context().isDatabaseOpen()) {
+    public ValidationResult validateExportPrerequisites(migration4o.database.DODatabaseContext dbContext) {
+        if (dbContext == null || !dbContext.isDatabaseOpen()) {
             return ValidationResult.error("No database is currently open. Please open a database first.", "No Database");
         }
 
@@ -35,12 +34,12 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat) throws Exception {
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
-        DOSchema databaseSchema = databaseService.context().databaseSchema;
-        String databasePath = databaseService.context().databaseFilePath;
+        DOSchema databaseSchema = dbContext.databaseSchema;
+        String databasePath = dbContext.databaseFilePath;
 
-        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, databasePath);
+        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, databasePath, dbContext);
         exporter.setMaxObjectsPerClass(maxObjectsPerClass);
         exporter.setExportNativeIds(exportNativeIds);
         exporter.setSelectedSkipOptions(selectedSkipOptions);
@@ -127,7 +126,7 @@ public class MigrationExportService {
         return ExportUtil.combineResults(results, baseOutputPath);
     }
 
-    public ExportStatistics repeatLastExport(DOExportMonitor monitor) throws Exception {
+    public ExportStatistics repeatLastExport(DOExportMonitor monitor, migration4o.database.DODatabaseContext dbContext) throws Exception {
         ExportHistory.ExportParams params = ExportHistory.loadLastExport();
         if (params == null) {
             return null;
@@ -161,6 +160,6 @@ public class MigrationExportService {
             // Build full hierarchical path for the module
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat);
+        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat);
     }
 }

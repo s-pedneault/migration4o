@@ -69,6 +69,7 @@ import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.d
  * pane shows available classes, right pane shows export structure with modules.
  */
 public class MigrationStructurePanel extends JPanel {
+    private migration4o.database.DODatabaseContext activeContext;
     private JTree availableTree;
     private JXTreeTable exportTreeTable;
     private ExportTreeTableModel exportTreeTableModel;
@@ -117,14 +118,11 @@ public class MigrationStructurePanel extends JPanel {
     private void setupExportStatisticsCallback() {
         exportOrchestrator.setResultCallback(new MigrationServiceCallback.ExportStatisticsCallback() {
             @Override
-            public void onExportCompleted(ExportStatistics result) {
-                // Update migration coverage with exported object counts
-                if (result.errors.isEmpty() && !result.exportedClassCounts.isEmpty()) {
-                    java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
-                    if (window instanceof MainWindow) {
-                        MainWindow mainWindow = (MainWindow) window;
-                        mainWindow.notifyExportCompleted(result);
-                    }
+            public void onExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext) {
+                java.awt.Window window = SwingUtilities.getWindowAncestor(MigrationStructurePanel.this);
+                if (window instanceof MainWindow) {
+                    MainWindow mainWindow = (MainWindow) window;
+                    mainWindow.notifyExportCompleted(result, dbContext);
                 }
             }
 
@@ -138,6 +136,10 @@ public class MigrationStructurePanel extends JPanel {
     /**
      * Called when database schema changes to refresh the UI.
      */
+    public void setActiveContext(migration4o.database.DODatabaseContext ctx) {
+        this.activeContext = ctx;
+    }
+
     public void onDatabaseSchemaChanged() {
         // Update root node name with database folder name
         updateRootNodeName();
@@ -151,13 +153,7 @@ public class MigrationStructurePanel extends JPanel {
      * Updates the root node name to show the database folder name.
      */
     private void updateRootNodeName() {
-        String databasePath = migration4o.database.DODatabaseService.getInstance().context().databaseFilePath;
-        if (databasePath != null && !databasePath.isEmpty()) {
-            java.io.File dbFile = new java.io.File(databasePath);
-            String folderName = dbFile.getParentFile() != null ? dbFile.getParentFile().getName() : "Database";
-            exportStructureRoot.setUserObject("Database \"" + folderName + "\"");
-            reloadExportModel();
-        }
+        // Nothing here anymore, since we disconnected the reference schema view from the specific database
     }
 
     private void initializeUI() {
@@ -286,20 +282,6 @@ public class MigrationStructurePanel extends JPanel {
         JButton removeClassButton = new JButton("← Remove Class");
         removeClassButton.addActionListener(e -> removeSelectedClassFromExport());
         toolbar.add(removeClassButton);
-
-        toolbar.addSeparator();
-
-        JButton exportSelectedButton = new JButton("Export Selected");
-        exportSelectedButton.setToolTipText("Export all selected modules");
-        exportSelectedButton.addActionListener(e -> exportSelectedModules());
-        toolbar.add(exportSelectedButton);
-
-        JButton exportAllButton = new JButton("Export All Modules");
-        exportAllButton.setToolTipText("Export all modules in the migration structure");
-        exportAllButton.addActionListener(e -> exportAllModules());
-        toolbar.add(exportAllButton);
-
-        toolbar.addSeparator();
 
         JButton saveButton = new JButton("Save");
         saveButton.addActionListener(e -> saveMigrationStructure());
@@ -535,11 +517,9 @@ public class MigrationStructurePanel extends JPanel {
         exportedParamsNode.removeAllChildren();
         exportedOthersNode.removeAllChildren();
 
-        // Use databaseSchema if available (has object counts), otherwise use reference
-        // schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+        // Just use reference schema, as migration mapping belongs to the reference schema
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema sourceSchema = (databaseSchema != null) ? databaseSchema : referenceSchema;
+        DOSchema sourceSchema = referenceSchema;
 
         // Categorize classes using util, filtering IDEntites if checkbox is unchecked
         boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
@@ -852,14 +832,7 @@ public class MigrationStructurePanel extends JPanel {
             addToExportItem.addActionListener(evt -> addSelectedClassToExport());
             contextMenu.add(addToExportItem);
 
-            // Add View Objects option if database is open
-            if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
-                contextMenu.addSeparator();
-                ClassNode classNode = (ClassNode) node.getUserObject();
-                JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
-                viewObjectsItem.addActionListener(evt -> viewClassObjects(classNode.getSchemaClass()));
-                contextMenu.add(viewObjectsItem);
-            }
+            // Severed database tie: removed "View Objects" menu item which used DODatabaseService.
         }
 
         if (contextMenu.getComponentCount() > 0) {
@@ -914,7 +887,7 @@ public class MigrationStructurePanel extends JPanel {
             // Always use the same export method - handles 1 or multiple modules
             String menuText = moduleCount > 1 ? "Export " + moduleCount + " Modules to XML..." : "Export Module to XML...";
             JMenuItem exportModuleItem = new JMenuItem(menuText);
-            exportModuleItem.addActionListener(evt -> exportSelectedModules());
+            exportModuleItem.addActionListener(evt -> exportSelectedModules(activeContext));
             contextMenu.add(exportModuleItem);
         }
         // Options for classes
@@ -944,13 +917,7 @@ public class MigrationStructurePanel extends JPanel {
             removeFromExportItem.addActionListener(evt -> removeSelectedClassesFromExport());
             contextMenu.add(removeFromExportItem);
 
-            // Add View Objects option if database is open
-            if (DODatabaseService.getInstance().context().isDatabaseOpen()) {
-                contextMenu.addSeparator();
-                JMenuItem viewObjectsItem = new JMenuItem("View Objects...");
-                viewObjectsItem.addActionListener(evt -> viewClassObjects(classNode.getSchemaClass()));
-                contextMenu.add(viewObjectsItem);
-            }
+            // Severed database tie: removed "View Objects" menu item which used DODatabaseService.
         }
 
         if (contextMenu.getComponentCount() > 0) {
@@ -959,40 +926,9 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Opens the ClassObjectsDialog to view objects of the given class
-     */
-    private void viewClassObjects(DOSchemaClass schemaClass) {
-        // Get database schema
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
-        if (databaseSchema == null) {
-            JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Find the class in the database schema
-        DOSchemaClass dbSchemaClass = null;
-        for (DOSchemaClass cls : databaseSchema.getClasses()) {
-            if (cls.source.equals(schemaClass.source)) {
-                dbSchemaClass = cls;
-                break;
-            }
-        }
-
-        if (dbSchemaClass == null) {
-            JOptionPane.showMessageDialog(this, "Class not found in database schema: " + schemaClass.source, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Open dialog
-        String databasePath = DODatabaseService.getInstance().context().databaseFilePath;
-        ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.source, dbSchemaClass, databaseSchema, databasePath);
-        dialog.setVisible(true);
-    }
-
-    /**
      * Exports all currently selected modules in the export tree.
      */
-    private void exportSelectedModules() {
+    private void exportSelectedModules(migration4o.database.DODatabaseContext dbContext) {
         TreePath[] selectedPaths = getSelectedTreePaths();
 
         if (selectedPaths == null || selectedPaths.length == 0) {
@@ -1060,13 +996,13 @@ public class MigrationStructurePanel extends JPanel {
         String outputPath = "output";
 
         // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputFormat);
+        exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputFormat);
     }
 
     /**
      * Exports all modules in the migration structure.
      */
-    private void exportAllModules() {
+    private void exportAllModules(migration4o.database.DODatabaseContext dbContext) {
         // Get the root node of the export tree
         DefaultMutableTreeNode root = getExportRoot();
 
@@ -1095,14 +1031,14 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Call the existing export selected modules method
-        exportSelectedModules();
+        exportSelectedModules(dbContext);
     }
 
     /**
      * Public entry point to trigger the same behavior as "Export All Modules".
      */
-    public void triggerExportAllModules() {
-        exportAllModules();
+    public void triggerExportAllModules(migration4o.database.DODatabaseContext dbContext) {
+        exportAllModules(dbContext);
     }
 
     private void loadMigrationStructure() {
@@ -1128,7 +1064,7 @@ public class MigrationStructurePanel extends JPanel {
 
     private void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module) {
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+        DOSchema databaseSchema = null;
         MigrationStructurePanelUtil.addModuleToTree(parentNode, module, referenceSchema, databaseSchema, exportedClasses);
     }
 
@@ -1138,7 +1074,7 @@ public class MigrationStructurePanel extends JPanel {
     private void reloadExportTree() {
         DefaultMutableTreeNode root = getExportRoot();
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+        DOSchema databaseSchema = null;
         MigrationStructurePanelUtil.updateNodeCounts(root, referenceSchema, databaseSchema);
         reloadExportModel();
     }
@@ -1170,7 +1106,7 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         // Use orchestrator to repeat last export
-        exportOrchestrator.repeatLastExportAsync();
+        exportOrchestrator.repeatLastExportAsync(activeContext);
     }
 
     /**

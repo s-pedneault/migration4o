@@ -29,7 +29,10 @@ public class XSDBuilder {
     private final Set<String> referencedTypes = new LinkedHashSet<>(); // Types used in fields
     // Value mappings are written inline with fields, not as separate types
 
-    public XSDBuilder() {
+    private migration4o.database.DODatabaseContext dbContext;
+
+    public XSDBuilder(migration4o.database.DODatabaseContext dbContext) {
+        this.dbContext = dbContext;
     }
 
     public void startExportRoot() {
@@ -305,7 +308,7 @@ public class XSDBuilder {
             } else {
                 // Check if childrenType is an IDEntite with embedContents=false
                 DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-                DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+                DOSchema databaseSchema = dbContext != null ? dbContext.databaseSchema : null;
                 DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
 
                 if (childClass == null) {
@@ -350,7 +353,7 @@ public class XSDBuilder {
         } else {
             // Check if this is a non-embedded IDEntite reference
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-            DOSchema databaseSchema = DODatabaseService.getInstance().context().databaseSchema;
+            DOSchema databaseSchema = dbContext != null ? dbContext.databaseSchema : null;
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && fieldClass.isIDEntite(databaseSchema) && !field.embedContents) {
                 // Non-embedded IDEntite references are exported as simple long values

@@ -255,7 +255,7 @@ public class FieldExporter {
                         try {
                             long childId = operation.container.ext().getID(fieldValue);
                             if (childId > 0) {
-                                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childId);
+                                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childId, operation.referenceSchema);
                             }
                         } catch (Exception ignored) {
                             // Best-effort reach recording
@@ -338,7 +338,7 @@ public class FieldExporter {
                             try {
                                 long itemId = container.ext().getID(item);
                                 if (itemId > 0) {
-                                    operation.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId);
+                                    operation.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId, operation.referenceSchema);
                                 }
                             } catch (Exception ignored) {
                                 // Best-effort reach recording
@@ -469,7 +469,7 @@ public class FieldExporter {
             // -1)
             if (ValueUtil.shouldSkipField(fieldValue, schemaField, operation.referenceSchema, operation.selectedSkipUserOptions)) {
                 if (operation.statistics != null) {
-                    operation.statistics.recordReachedOnly(className, refId);
+                    operation.statistics.recordReachedOnly(className, refId, operation.referenceSchema);
                     operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, buildSkipReason(schemaField));
                 }
                 return;
@@ -484,7 +484,7 @@ public class FieldExporter {
                 if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
                     if (IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
                         if (operation.statistics != null && refId > 0) {
-                            operation.statistics.recordReachedOnly(fieldClass, refId);
+                            operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         }
                         // This field will produce empty content, skip it
                         // entirely
@@ -502,7 +502,7 @@ public class FieldExporter {
                     if (operation.statistics != null) {
                         long idEntiteObjectId = container.ext().getID(fieldValue);
                         if (idEntiteObjectId > 0) {
-                            operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId);
+                            operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
                             operation.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
                         }
                     }
@@ -532,7 +532,7 @@ public class FieldExporter {
                 // entirely
                 if (fieldsToExport == 0) {
                     if (operation.statistics != null) {
-                        operation.statistics.recordReachedOnly(fieldClass, refId);
+                        operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "target object has no exportable fields after skip/criteria rules");
                     }
                     return;
@@ -945,7 +945,7 @@ public class FieldExporter {
             if (operation.statistics != null) {
                 long idEntiteObjectId = container.ext().getID(fieldValue);
                 if (idEntiteObjectId > 0) {
-                    operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId);
+                    operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
                 }
             }
 
@@ -1034,7 +1034,7 @@ public class FieldExporter {
         try {
             long childObjectId = operation.container.ext().getID(fieldValue);
             if (childObjectId > 0) {
-                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childObjectId);
+                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childObjectId, operation.referenceSchema);
                 operation.statistics.recordRelationshipSkipped(parentObjectId, childObjectId, parentSourceClassName, sourceFieldName, reason);
             }
         } catch (Exception ignored) {
@@ -1054,7 +1054,7 @@ public class FieldExporter {
             }
 
             String wrapperClassName = ClassUtil.getClassName(fieldValue);
-            operation.statistics.recordReachedOnly(wrapperClassName, wrapperObjectId);
+            operation.statistics.recordReachedOnly(wrapperClassName, wrapperObjectId, operation.referenceSchema);
             operation.statistics.recordRelationshipExported(parentObjectId, wrapperObjectId, parentSourceClassName, sourceFieldName, "collection wrapper encountered; contents exported from this object");
         } catch (Exception ignored) {
             // Best-effort diagnostics only
@@ -1132,7 +1132,7 @@ public class FieldExporter {
             }
 
             String className = ClassUtil.getClassName(obj);
-            operation.statistics.recordReachedOnly(className, objectId);
+            operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
 
             if (maxDepth <= 0) {
                 return;

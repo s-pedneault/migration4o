@@ -18,8 +18,13 @@ if [ ! -d "$BASE_DIR/lib" ]; then
     exit 1
 fi
 
-# Allocate 4GB of memory to the Java process
-JAVA_MEM_OPTS=("-Xms512m" "-Xmx4g")
+# Memory settings (override with environment variables)
+# Examples:
+#   MIGRATION4O_XMX=12g ./run.sh
+#   MIGRATION4O_XMS=2g MIGRATION4O_XMX=16g ./run.sh
+JAVA_XMS="${MIGRATION4O_XMS:-1g}"
+JAVA_XMX="${MIGRATION4O_XMX:-8g}"
+JAVA_MEM_OPTS=("-Xms${JAVA_XMS}" "-Xmx${JAVA_XMX}")
 
 # Java module opens needed for DB4O to work with Java 9+
 JVM_ARGS=(

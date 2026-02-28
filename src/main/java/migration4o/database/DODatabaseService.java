@@ -2,6 +2,10 @@ package migration4o.database;
 
 import java.io.IOException;
 
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
+import migration4o.schema.DOSchemaService;
+
 /**
  * Singleton service for managing the DB4O database connection.
  * Ensures only one in-memory database instance exists across the entire
@@ -12,14 +16,7 @@ public class DODatabaseService {
 
     private static DODatabaseService instance;
 
-    private DODatabaseContext context;
-
     private DODatabaseService() {
-        this.context = new DODatabaseContext(null, null);
-    }
-
-    public DODatabaseContext context() {
-        return context;
     }
 
     /**
@@ -34,41 +31,59 @@ public class DODatabaseService {
 
     /**
      * Open a database and load it into memory with progress monitoring.
-     * If a database is already open, it will be closed first.
      * 
-        * @param context Database open context (file path + monitor + runtime state)
+     * @param context Database open context (file path + monitor + runtime state)
      * @throws IOException If the database cannot be opened
      */
-    public synchronized void openDatabase(DODatabaseContext context) throws IOException {
+    public void openDatabase(DODatabaseContext context) throws IOException {
         if (context == null || context.databaseFilePath == null || context.databaseFilePath.trim().isEmpty()) {
             throw new IllegalArgumentException("Database context and file path are required");
         }
 
-        // Keep the requested path in case we are reusing the same context instance
-        // and closing an already-open container clears the path.
-        String requestedDatabasePath = context.databaseFilePath;
-
-        // Close existing database if any
-        if (this.context != null && this.context.isDatabaseOpen()) {
-            this.context.closeDatabase();
+        // Close existing database if any inside the passed context
+        if (context.isDatabaseOpen()) {
+            context.closeDatabase();
         }
 
-        // Store the new context in the singleton service so all callers share it.
-        this.context = context;
-        this.context.databaseFilePath = requestedDatabasePath;
-
         // Create and store opener for this open operation
-        DODatabaseOpener opener = new DODatabaseOpener(this.context.monitor);
+        DODatabaseOpener opener = new DODatabaseOpener(context.monitor);
 
         // Open new database in memory
-        this.context.container = opener.openDatabase(this.context, true);
+        context.container = opener.openDatabase(context, true);
 
         // Infer schema from database
-        DODatabaseReader reader = this.context.monitor != null ? new DODatabaseReader(this.context.monitor) : new DODatabaseReader();
-        this.context.databaseSchema = reader.readDatabaseAsSchema(this.context.container);
+        DODatabaseReader reader = context.monitor != null ? new DODatabaseReader(context.monitor) : new DODatabaseReader();
+        context.databaseSchema = reader.readDatabaseAsSchema(context.container);
+        enrichPointsToFromReferenceSchema(context.databaseSchema);
 
-        if (this.context.monitor != null) {
-            this.context.monitor.onServiceDatabaseOpened(this.context.databaseFilePath);
+        if (context.monitor != null) {
+            context.monitor.onServiceDatabaseOpened(context.databaseFilePath);
+        }
+    }
+
+    private void enrichPointsToFromReferenceSchema(DOSchema databaseSchema) {
+        if (databaseSchema == null || databaseSchema.getClasses() == null) {
+            return;
+        }
+
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        if (referenceSchema == null || referenceSchema.getClasses() == null) {
+            return;
+        }
+
+        for (DOSchemaClass dbClass : databaseSchema.getClasses()) {
+            if (dbClass == null || dbClass.pointsTo != null) {
+                continue;
+            }
+
+            DOSchemaClass referenceMatch = referenceSchema.findClassByName(dbClass.source);
+            if (referenceMatch == null && dbClass.destinationName != null) {
+                referenceMatch = referenceSchema.findClassByName(dbClass.destinationName);
+            }
+
+            if (referenceMatch != null && referenceMatch.isIDEntite(referenceSchema) && referenceMatch.pointsTo != null && !referenceMatch.pointsTo.isBlank()) {
+                dbClass.pointsTo = referenceMatch.pointsTo;
+            }
         }
     }
 

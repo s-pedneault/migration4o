@@ -48,7 +48,7 @@ public class MigrationServiceCallback {
      * @return validation result with error message if invalid
      */
     public ValidationResult validateExportPrerequisites() {
-        return exportService.validateExportPrerequisites();
+        return exportService.validateExportPrerequisites(migration4o.ui.main.MainWindow.getInstance().getCurrentContext());
     }
 
     // ==================== PUBLIC EXPORT METHODS ====================
@@ -64,7 +64,7 @@ public class MigrationServiceCallback {
      * @param outputPath          the output directory path
      * @param outputFormat        selected structured writer format
      */
-    public void exportModulesAsync(List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass, boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputPath, String outputFormat) {
+    public void exportModulesAsync(migration4o.database.DODatabaseContext dbContext, List<ModuleExportInfo> modulesToExport, Integer maxObjectsPerClass, boolean exportNativeIds, java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputPath, String outputFormat) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
@@ -91,7 +91,11 @@ public class MigrationServiceCallback {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
                 // Use exportModules which handles single or multiple modules automatically
-                ExportStatistics result = exportService.exportModules(modules, modulePaths, outputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputFormat);
+                migration4o.database.DODatabaseContext context = dbContext;
+                if (context == null)
+                    throw new IllegalStateException("No database is open");
+
+                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, outputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputFormat);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -112,7 +116,7 @@ public class MigrationServiceCallback {
             protected void done() {
                 try {
                     ExportStatistics result = get();
-                    handleExportCompleted(result);
+                    handleExportCompleted(result, dbContext);
                 } catch (Exception e) {
                     handleExportError(e);
                 }
@@ -125,7 +129,7 @@ public class MigrationServiceCallback {
     /**
      * Repeats the last export operation from history.
      */
-    public void repeatLastExportAsync() {
+    public void repeatLastExportAsync(migration4o.database.DODatabaseContext dbContext) {
         // Check if history exists
         ExportHistory.ExportParams params = ExportHistory.loadLastExport();
 
@@ -148,14 +152,14 @@ public class MigrationServiceCallback {
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
-                return exportService.repeatLastExport(monitor);
+                return exportService.repeatLastExport(monitor, dbContext);
             }
 
             @Override
             protected void done() {
                 try {
                     ExportStatistics result = get();
-                    handleExportCompleted(result);
+                    handleExportCompleted(result, dbContext);
                 } catch (Exception e) {
                     handleExportError(e);
                 }
@@ -184,7 +188,7 @@ public class MigrationServiceCallback {
     /**
      * Handles successful export completion.
      */
-    private void handleExportCompleted(ExportStatistics result) {
+    private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext) {
         // Show results in the Migration results tab instead of a dialog
         if (parentComponent != null) {
             java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
@@ -196,7 +200,7 @@ public class MigrationServiceCallback {
 
         // Notify external callback
         if (resultCallback != null) {
-            resultCallback.onExportCompleted(result);
+            resultCallback.onExportCompleted(result, dbContext);
         }
     }
 
@@ -259,7 +263,7 @@ public class MigrationServiceCallback {
          * 
          * @param result the export result
          */
-        void onExportCompleted(ExportStatistics result);
+        void onExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext);
 
         /**
          * Called when export fails with an error.

@@ -26,8 +26,11 @@ public class IDTracerDialog extends JFrame {
     private final JLabel statusLabel;
     private final IDTracerDataService dataService;
 
-    public IDTracerDialog() {
+    private final migration4o.database.DODatabaseContext dbContext;
+
+    public IDTracerDialog(migration4o.database.DODatabaseContext dbContext) {
         super("Object ID Tracer");
+        this.dbContext = dbContext;
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(800, 600);
         setLocationRelativeTo(null);
@@ -151,7 +154,7 @@ public class IDTracerDialog extends JFrame {
                 searchField.setEnabled(true);
                 searchField.requestFocusInWindow();
             });
-        });
+        }, dbContext);
 
         if (alreadyLoaded) {
             // Data was already loaded, update UI immediately
@@ -782,7 +785,7 @@ public class IDTracerDialog extends JFrame {
             SwingUtilities.invokeLater(() -> {
                 traceObjectId();
             });
-        });
+        }, dbContext);
     }
 
     private void handleTreeDoubleClick(JTree sourceTree) {

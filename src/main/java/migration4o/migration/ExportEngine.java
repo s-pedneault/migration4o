@@ -43,12 +43,14 @@ public class ExportEngine {
      * @param schema         The reference schema
      * @param databaseSchema The database schema
      * @param databasePath   The database file path (for naming output folders)
+     * @param dbContext      The database context
      */
-    public ExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath) {
+    public ExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath, migration4o.database.DODatabaseContext dbContext) {
         this.operation = new ExportOperation();
         this.operation.referenceSchema = schema;
         this.operation.databaseSchema = databaseSchema;
         this.operation.databasePath = databasePath;
+        this.operation.dbContext = dbContext;
         this.operation.maxObjectsPerClass = null;
         this.operation.exportNativeIds = false;
         this.operation.outputFormat = "XML";
@@ -59,11 +61,11 @@ public class ExportEngine {
         this.operation.sharedXSDBuilder = null;
         this.operation.exportedXMLFiles = null;
 
-        // Get the shared in-memory container from the service
-        this.operation.container = DODatabaseService.getInstance().context().container;
+        // Get the shared in-memory container from the context
+        this.operation.container = dbContext != null ? dbContext.container : null;
 
         if (operation.container == null) {
-            throw new IllegalStateException("No database is open. Please open a database first using DODatabaseService.");
+            throw new IllegalStateException("No database is open.");
         }
     }
 
@@ -132,7 +134,7 @@ public class ExportEngine {
     public void initializeSharedTracking() {
         operation.exportedObjectIds = new HashSet<>();
         operation.useSharedTracking = true;
-        operation.sharedXSDBuilder = new XSDBuilder();
+        operation.sharedXSDBuilder = new XSDBuilder(operation.dbContext);
         operation.sharedXSDBuilder.startExportRoot();
         operation.exportedXMLFiles = new HashSet<>();
     }
@@ -495,7 +497,7 @@ public class ExportEngine {
     private void exportClassToFile(DOSchemaClass schemaClass, DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath, migration4o.models.ui.ClassExportConfig config) throws Exception {
 
         // Use shared XSD builder if available, otherwise create a new one
-        operation.xsdBuilder = operation.sharedXSDBuilder != null ? operation.sharedXSDBuilder : new XSDBuilder();
+        operation.xsdBuilder = operation.sharedXSDBuilder != null ? operation.sharedXSDBuilder : new XSDBuilder(operation.dbContext);
         if (operation.sharedXSDBuilder == null) {
             operation.xsdBuilder.startExportRoot();
         }
@@ -754,7 +756,7 @@ public class ExportEngine {
         operation.classNames = classNames;
         operation.monitor = null;
         operation.statistics = new ExportStatistics();
-        operation.xsdBuilder = new XSDBuilder();
+        operation.xsdBuilder = new XSDBuilder(operation.dbContext);
         operation.xsdBuilder.startExportRoot();
         operation.referencedClassTracker = null;
 

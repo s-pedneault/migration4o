@@ -8,7 +8,9 @@ import java.util.Map;
 import java.util.Set;
 
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchema;
 import migration4o.ui.common.DOExportMonitor;
+import migration4o.util.SchemaUtil;
 
 /**
  * Tracks statistics and errors during export operations.
@@ -111,6 +113,10 @@ public class ExportStatistics {
     }
 
     public void recordClassExport(DOSchemaClass schemaClass, long objectId) {
+        recordClassExport(schemaClass, objectId, null);
+    }
+
+    public void recordClassExport(DOSchemaClass schemaClass, long objectId, DOSchema hierarchySchema) {
         if (schemaClass != null) {
             String className = schemaClass.source;
             Set<Long> objectIds = exportedObjectIdsSet.computeIfAbsent(className, k -> new HashSet<>());
@@ -121,6 +127,8 @@ public class ExportStatistics {
                     monitor.onObjectExported(className, objectId);
                 }
             }
+
+            recordReachedOnly(className, objectId, hierarchySchema);
         }
     }
 
@@ -131,18 +139,51 @@ public class ExportStatistics {
      * another resolved object may be exported instead.
      */
     public void recordReachedOnly(DOSchemaClass schemaClass, long objectId) {
+        recordReachedOnly(schemaClass, objectId, null);
+    }
+
+    public void recordReachedOnly(DOSchemaClass schemaClass, long objectId, DOSchema hierarchySchema) {
         if (schemaClass == null) {
             return;
         }
         String className = schemaClass.source;
-        recordReachedOnly(className, objectId);
+        recordReachedOnly(className, objectId, hierarchySchema);
     }
 
     public void recordReachedOnly(String className, long objectId) {
+        recordReachedOnly(className, objectId, null);
+    }
+
+    public void recordReachedOnly(String className, long objectId, DOSchema hierarchySchema) {
         if (className == null || className.isBlank() || objectId <= 0) {
             return;
         }
-        exportedObjectIdsSet.computeIfAbsent(className, k -> new HashSet<>()).add(objectId);
+
+        Set<String> hierarchy = new LinkedHashSet<>();
+        String currentClass = className;
+        while (currentClass != null && !currentClass.isBlank()) {
+            if (!hierarchy.add(currentClass)) {
+                break;
+            }
+
+            if (hierarchySchema == null) {
+                break;
+            }
+
+            DOSchemaClass currentSchemaClass = SchemaUtil.findClassByName(currentClass, hierarchySchema);
+            if (currentSchemaClass == null || currentSchemaClass.parentClassName == null || currentSchemaClass.parentClassName.isBlank()) {
+                break;
+            }
+            currentClass = currentSchemaClass.parentClassName;
+        }
+
+        if (hierarchy.isEmpty()) {
+            hierarchy.add(className);
+        }
+
+        for (String hierarchyClassName : hierarchy) {
+            exportedObjectIdsSet.computeIfAbsent(hierarchyClassName, k -> new HashSet<>()).add(objectId);
+        }
     }
 
     public void addError(long objectId, String className, String errorMessage, Exception exception) {

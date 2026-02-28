@@ -25,6 +25,13 @@ cd "$(dirname "$0")"
 echo "=== Migration4O UI ==="
 echo ""
 
+# Memory settings (override with environment variables)
+# Examples:
+#   MIGRATION4O_XMX=12g ./run-ui.sh
+#   MIGRATION4O_XMS=2g MIGRATION4O_XMX=16g ./run-ui.sh local/54060/BackupManuel.zip.nozip
+JAVA_XMS="${MIGRATION4O_XMS:-1g}"
+JAVA_XMX="${MIGRATION4O_XMX:-8g}"
+
 # Check if classes exist
 if [ ! -d "classes" ]; then
     echo "Error: Project not built. Please run ./build.sh first."
@@ -50,6 +57,8 @@ java --add-opens java.base/java.util=ALL-UNNAMED \
      --add-opens java.desktop/java.awt.image=ALL-UNNAMED \
      --add-opens java.desktop/javax.swing=ALL-UNNAMED \
      --add-opens java.sql/java.sql=ALL-UNNAMED \
+    -Xms"$JAVA_XMS" \
+    -Xmx"$JAVA_XMX" \
      -cp "classes:lib/*:$HOME/.m2/repository/org/swinglabs/swingx/swingx-all/1.6.5-1/swingx-all-1.6.5-1.jar" migration4o.ui.Migration4oUI "$@"
 
 echo ""

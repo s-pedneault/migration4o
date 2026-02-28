@@ -114,7 +114,7 @@ public class ObjectExporter {
         try {
 
             // Apply export criteria filtering (only for top-level objects)
-            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, operation.statistics)) {
+            if (!ExportCriteriaFilter.shouldExport(container, obj, className, isEmbedded, isRootObject, operation.exportConfig, operation.statistics, operation.referenceSchema)) {
                 return;
             }
 
@@ -159,9 +159,9 @@ public class ObjectExporter {
             if (operation.statistics != null) {
                 operation.statistics.incrementSucceeded();
                 if (schemaClass != null) {
-                    operation.statistics.recordClassExport(schemaClass, objectId);
+                    operation.statistics.recordClassExport(schemaClass, objectId, operation.referenceSchema);
                 } else {
-                    operation.statistics.recordReachedOnly(className, objectId);
+                    operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
                 }
             }
         } catch (Exception e) {
@@ -169,7 +169,7 @@ public class ObjectExporter {
             if (operation.statistics != null) {
                 operation.statistics.addError(objectId, className, errorMsg, e);
                 // Object was seen (activated) even though export failed — mark as reached
-                operation.statistics.recordReachedOnly(className, objectId);
+                operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
             }
         }
     }

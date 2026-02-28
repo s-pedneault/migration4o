@@ -52,11 +52,13 @@ public class UnreachedObjectsDialog extends JDialog {
 
     private String selectedLeafClass;
     private Long selectedObjectId;
+    private migration4o.database.DODatabaseContext dbContext;
 
-    public UnreachedObjectsDialog(Frame parent, ObjectExportTrackingIndex trackingIndex, DOSchema databaseSchema) {
+    public UnreachedObjectsDialog(Frame parent, ObjectExportTrackingIndex trackingIndex, DOSchema databaseSchema, migration4o.database.DODatabaseContext dbContext) {
         super(parent, "Unreached Objects Explorer", false);
         this.trackingIndex = trackingIndex;
         this.databaseSchema = databaseSchema;
+        this.dbContext = dbContext;
 
         setLayout(new BorderLayout(8, 8));
         setSize(1200, 700);
@@ -286,7 +288,7 @@ public class UnreachedObjectsDialog extends JDialog {
             JOptionPane.showMessageDialog(this, "Select an object ID first.", "No Selection", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
-        IDTracerDialog tracerDialog = new IDTracerDialog();
+        IDTracerDialog tracerDialog = new IDTracerDialog(dbContext);
         tracerDialog.setSearchId(selectedObjectId);
         tracerDialog.setVisible(true);
     }
