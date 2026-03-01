@@ -52,6 +52,7 @@ public class ExportOperation {
 
     // Shared export state (across multiple ObjectExporter instances)
     public Set<Long> exportedObjectIds = new HashSet<>();
+    public Set<Long> allowedObjectIds;
     public XSDBuilder sharedXSDBuilder;
     public Set<String> exportedXMLFiles;
     public StructuredWriter xmlWriter;

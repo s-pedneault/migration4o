@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
@@ -22,6 +23,7 @@ import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.SchemaUtil;
+import migration4o.util.XmlViewerHtmlGenerator;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
@@ -192,11 +194,32 @@ public class ExportEngine {
             throw new IllegalStateException("Shared XSD builder not initialized. Call initializeSharedTracking() first.");
         }
 
-        Path dbBasePath = getBaseOutputPath(baseOutputPath);
-        Files.createDirectories(dbBasePath);
-
-        Path xsdPath = dbBasePath.resolve("schema.xsd");
+        Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
+        Files.createDirectories(xsdPath.getParent());
         operation.sharedXSDBuilder.writeXSD(xsdPath.toString());
+    }
+
+    private Path getComprehensiveSchemaPath(String baseOutputPath) {
+        Path dbBasePath = getBaseOutputPath(baseOutputPath);
+        return dbBasePath.resolve("_Migration").resolve("Schema.xsd");
+    }
+
+    private String getSchemaLocationForXml(Path xmlPath) {
+        if (!isXMLFormat()) {
+            return null;
+        }
+
+        Path schemaPath = getComprehensiveSchemaPath(operation.baseOutputPath);
+        Path xmlDir = xmlPath.getParent();
+        if (xmlDir == null) {
+            return "_Migration/Schema.xsd";
+        }
+
+        try {
+            return xmlDir.relativize(schemaPath).toString().replace('\\', '/');
+        } catch (Exception e) {
+            return "_Migration/Schema.xsd";
+        }
     }
 
     /**
@@ -390,18 +413,18 @@ public class ExportEngine {
      * @param tracker        The shared reference tracker from bulk export
      * @throws Exception if export fails
      */
-    public void exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker tracker) throws Exception {
+    public ExportStatistics exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker tracker) throws Exception {
 
         operation.baseOutputPath = baseOutputPath;
         operation.monitor = monitor;
         operation.referencedClassTracker = tracker;
+        operation.statistics = new ExportStatistics(operation.monitor);
 
         Set<String> referencedClasses = tracker.getReferencedClasses();
         if (referencedClasses.isEmpty()) {
-            return;
+            operation.statistics.setExportInfo("Referenced", getBaseOutputPath(baseOutputPath).resolve("Referenced").toString());
+            return operation.statistics;
         }
-
-        operation.statistics = new ExportStatistics(operation.monitor);
 
         if (operation.monitor != null) {
             operation.monitor.onStatusMessage("Exporting " + referencedClasses.size() + " referenced classes");
@@ -411,12 +434,121 @@ public class ExportEngine {
             Path dbBasePath = getBaseOutputPath(baseOutputPath);
 
             exportReferencedClasses(referencedClasses, dbBasePath);
+            operation.statistics.schemaWarnings.clear();
+            operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
+            operation.statistics.setExportInfo("Referenced", dbBasePath.resolve("Referenced").toString());
+            return operation.statistics;
 
         } catch (Exception e) {
             if (operation.monitor != null) {
                 operation.monitor.onExportError("Referenced", e.getMessage());
             }
             throw e;
+        }
+    }
+
+    public ExportStatistics exportUnreachedObjects(String baseOutputPath, Set<Long> unreachedObjectIds, DOExportMonitor monitor) throws Exception {
+        operation.baseOutputPath = baseOutputPath;
+        operation.monitor = monitor;
+        operation.statistics = new ExportStatistics(operation.monitor);
+
+        Path dbBasePath = getBaseOutputPath(baseOutputPath);
+        Path migrationPath = dbBasePath.resolve("_Migration");
+        Files.createDirectories(migrationPath);
+
+        Path xmlPath = migrationPath.resolve("Extra" + getOutputFileExtension());
+        if (isXMLFormat() && operation.exportedXMLFiles != null) {
+            operation.exportedXMLFiles.add(xmlPath.toString());
+        }
+
+        if (operation.monitor != null) {
+            operation.monitor.onModuleStart("_Migration", unreachedObjectIds != null ? unreachedObjectIds.size() : 0, 0);
+        }
+
+        Writer outputWriter = null;
+        ClassExportConfig previousExportConfig = operation.exportConfig;
+        Set<Long> previousAllowedObjectIds = operation.allowedObjectIds;
+
+        try {
+            operation.xsdBuilder = operation.sharedXSDBuilder != null ? operation.sharedXSDBuilder : new XSDBuilder(operation.dbContext);
+            if (operation.sharedXSDBuilder == null) {
+                operation.xsdBuilder.startExportRoot();
+            }
+
+            outputWriter = new FileWriter(xmlPath.toFile());
+            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, xmlPath);
+
+            operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
+            if (!operation.useSharedTracking) {
+                operation.exportedObjectIds = new HashSet<>();
+            }
+
+            operation.exportConfig = null;
+            operation.allowedObjectIds = unreachedObjectIds != null ? new HashSet<>(unreachedObjectIds) : Collections.emptySet();
+
+            ObjectExporter objectExporter = new ObjectExporter(operation, operation.xmlWriter, operation.xsdBuilder);
+            objectExporter.reset();
+
+            if (isXMLFormat()) {
+                operation.xmlWriter.openRootStructure("export", getSchemaLocationForXml(xmlPath));
+            } else {
+                operation.xmlWriter.openStructure("export");
+            }
+            operation.xmlWriter.metadata(getMetadata("_Migration", "Extra", unreachedObjectIds != null ? unreachedObjectIds.size() : 0));
+            operation.xmlWriter.openStructure("objects");
+
+            if (unreachedObjectIds != null && !unreachedObjectIds.isEmpty()) {
+                List<Long> sortedIds = new ArrayList<>(unreachedObjectIds);
+                Collections.sort(sortedIds);
+                operation.statistics.setCurrentClass("_Migration.Extra", sortedIds.size());
+
+                for (Long objectId : sortedIds) {
+                    if (objectId == null || objectId <= 0) {
+                        continue;
+                    }
+                    if (operation.monitor != null && operation.monitor.isCancelled()) {
+                        break;
+                    }
+                    objectExporter.exportObjectRecursively(operation.container, objectId, 2);
+                }
+            }
+
+            operation.xmlWriter.closeStructure("objects");
+            operation.xmlWriter.closeStructure("export");
+
+            if (outputWriter != null) {
+                outputWriter.close();
+                outputWriter = null;
+            }
+            generateHtmlViewerIfNeeded(xmlPath);
+
+            if (isXMLFormat() && operation.sharedXSDBuilder == null) {
+                Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
+                Files.createDirectories(xsdPath.getParent());
+                operation.xsdBuilder.writeXSD(xsdPath.toString());
+            }
+
+            operation.statistics.schemaWarnings.clear();
+            operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
+            operation.statistics.setExportInfo("_Migration/Extra", xmlPath.toString());
+
+            if (operation.monitor != null) {
+                operation.monitor.onModuleComplete("_Migration");
+            }
+
+            return operation.statistics;
+
+        } finally {
+            operation.exportConfig = previousExportConfig;
+            operation.allowedObjectIds = previousAllowedObjectIds;
+
+            if (outputWriter != null) {
+                try {
+                    outputWriter.close();
+                } catch (IOException e) {
+                    // Ignore
+                }
+            }
         }
     }
 
@@ -547,32 +679,11 @@ public class ExportEngine {
                     operation.referencedClassTracker.registerReferencedClass(className);
                 }
             }
-            String module = xmlPath.getParent().toString();
+            String module = getModuleNameForXml(xmlPath);
 
             // Write XML header and metadata
             if (isXMLFormat() && operation.sharedXSDBuilder != null) {
-                // Using shared XSD - calculate relative path from XML file to
-                // schema.xsd
-                Path xmlDir = xmlPath.getParent();
-                Path baseDir = xmlPath.getRoot() != null ? xmlPath.getParent().getParent().getParent() : Paths.get(operation.baseOutputPath).resolve(getDatabaseFolderName());
-
-                // Calculate depth: count directories between XML file and
-                // database folder
-                int slashCount = 0;
-                Path current = xmlDir;
-                while (current != null && !current.equals(baseDir)) {
-                    slashCount++;
-                    current = current.getParent();
-                }
-
-                // Build relative path
-                StringBuilder pathBuilder = new StringBuilder();
-                for (int i = 0; i < slashCount; i++) {
-                    pathBuilder.append("../");
-                }
-                pathBuilder.append("schema.xsd");
-                String relativeSchemaPath = pathBuilder.toString();
-
+                String relativeSchemaPath = getSchemaLocationForXml(xmlPath);
                 operation.xmlWriter.openRootStructure("export", relativeSchemaPath);
                 operation.xmlWriter.metadata(schemaClass.getMetadata(module));
 
@@ -635,6 +746,12 @@ public class ExportEngine {
             operation.xmlWriter.closeStructure("objects");
             operation.xmlWriter.closeStructure("export");
 
+            if (outputWriter != null) {
+                outputWriter.close();
+                outputWriter = null;
+            }
+            generateHtmlViewerIfNeeded(xmlPath);
+
             // Only generate individual XSD if not using shared builder
             if (isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
                 if (operation.monitor != null) {
@@ -682,6 +799,83 @@ public class ExportEngine {
             return ".json";
         }
         return ".xml";
+    }
+
+    private static String sanitizeModuleName(String moduleName) {
+        if (moduleName == null) {
+            return "";
+        }
+
+        String normalized = moduleName.trim().replace('\\', '/');
+        while (normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        if (normalized.isEmpty()) {
+            return "";
+        }
+
+        boolean looksAbsolutePath = normalized.startsWith("/") || normalized.matches("^[A-Za-z]:/.*");
+        if (!looksAbsolutePath) {
+            return normalized;
+        }
+
+        String marker = "/output/";
+        int outputMarkerIndex = normalized.indexOf(marker);
+        if (outputMarkerIndex >= 0) {
+            String afterOutput = normalized.substring(outputMarkerIndex + marker.length());
+            int dbSeparatorIndex = afterOutput.indexOf('/');
+            if (dbSeparatorIndex >= 0 && dbSeparatorIndex + 1 < afterOutput.length()) {
+                return afterOutput.substring(dbSeparatorIndex + 1);
+            }
+        }
+
+        int lastSlash = normalized.lastIndexOf('/');
+        if (lastSlash >= 0 && lastSlash + 1 < normalized.length()) {
+            return normalized.substring(lastSlash + 1);
+        }
+
+        return normalized;
+    }
+
+    private String getModuleNameForXml(Path xmlPath) {
+        if (xmlPath == null) {
+            return "";
+        }
+
+        Path parent = xmlPath.getParent();
+        if (parent == null) {
+            return "";
+        }
+
+        try {
+            if (operation.baseOutputPath != null && !operation.baseOutputPath.isBlank()) {
+                Path dbBasePath = getBaseOutputPath(operation.baseOutputPath);
+                if (dbBasePath != null && parent.startsWith(dbBasePath)) {
+                    String relativeModule = dbBasePath.relativize(parent).toString().replace('\\', '/');
+                    if (!relativeModule.isBlank()) {
+                        return sanitizeModuleName(relativeModule);
+                    }
+                }
+            }
+        } catch (Exception ignored) {
+            // Fallback to path sanitization
+        }
+
+        return sanitizeModuleName(parent.toString());
+    }
+
+    private void generateHtmlViewerIfNeeded(Path xmlPath) {
+        if (!isXMLFormat() || xmlPath == null) {
+            return;
+        }
+
+        try {
+            XmlViewerHtmlGenerator.writeViewerForXml(xmlPath);
+        } catch (IOException e) {
+            if (operation.monitor != null) {
+                operation.monitor.onStatusMessage("Warning: Failed to generate HTML viewer for " + xmlPath.getFileName() + ": " + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -772,6 +966,8 @@ public class ExportEngine {
      */
     public ExportStatistics exportModule(List<String> classNames, String moduleName, String outputPath, String xsdOutputPath) throws Exception {
 
+        String safeModuleName = sanitizeModuleName(moduleName);
+
         // Initialize components
         operation.classNames = classNames;
         operation.monitor = null;
@@ -810,7 +1006,7 @@ public class ExportEngine {
             } else {
                 operation.xmlWriter.openStructure("export");
             }
-            operation.xmlWriter.metadata(getMetadata(moduleName, null, classNames.size()));
+            operation.xmlWriter.metadata(getMetadata(safeModuleName, null, classNames.size()));
             operation.xmlWriter.openStructure("objects");
 
             // Export all classes in the module
@@ -832,6 +1028,12 @@ public class ExportEngine {
             operation.xmlWriter.closeStructure("objects");
             operation.xmlWriter.closeStructure("export");
 
+            if (outputWriter != null) {
+                outputWriter.close();
+                outputWriter = null;
+            }
+            generateHtmlViewerIfNeeded(Paths.get(outputPath));
+
             // Generate XSD schema
             if (isXMLFormat()) {
                 String xsdPath = xsdOutputPath;
@@ -845,7 +1047,7 @@ public class ExportEngine {
             // Generate duplicate warnings and set export info
             operation.statistics.schemaWarnings.clear();
             operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
-            operation.statistics.setExportInfo(moduleName, outputPath);
+            operation.statistics.setExportInfo(safeModuleName, outputPath);
 
             return operation.statistics;
 
@@ -867,7 +1069,7 @@ public class ExportEngine {
         StructuredWriterMetadata metadata = new StructuredWriterMetadata();
         metadata.generator = "Migration4o";
         metadata.provider = "Gestion Technologies";
-        metadata.module = module;
+        metadata.module = sanitizeModuleName(module);
         metadata.type = type;
         metadata.objects = objects >= 0 ? String.valueOf(objects) : "";
         metadata.date = new SimpleDateFormat("yyyy-MM-dd").format(new Date());

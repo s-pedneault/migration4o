@@ -79,6 +79,7 @@ Migration4O/
 ### Migration Capabilities
 - **Schema Analysis**: Automatic detection of database structure
 - **Data Export**: Multiple output formats (XML, JSON, CSV)
+- **XML Companion Viewer**: Each exported XML file includes a sibling HTML viewer with search and tree/raw views
 - **Incremental Migration**: Support for large databases with chunked processing
 - **Validation**: Data integrity checks throughout the process
 

@@ -3,7 +3,9 @@ package migration4o.migration;
 import java.io.File;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
@@ -65,7 +67,18 @@ public class MigrationExportService {
             String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : module.getName();
             results.add(exporter.exportModuleStructured(module, modulePath, baseOutputPath, monitor, tracker));
         }
-        exporter.exportReferencedClasses(baseOutputPath, monitor, tracker);
+        results.add(exporter.exportReferencedClasses(baseOutputPath, monitor, tracker));
+
+        Set<Long> reachedObjectIds = collectReachedObjectIds(results);
+        Set<Long> unreachedObjectIds = collectUnreachedObjectIds(databaseSchema, reachedObjectIds);
+        if (!unreachedObjectIds.isEmpty()) {
+            if (monitor != null) {
+                monitor.onStatusMessage("Exporting " + unreachedObjectIds.size() + " unreached objects to _Migration/Extra.xml...");
+            }
+            results.add(exporter.exportUnreachedObjects(baseOutputPath, unreachedObjectIds, monitor));
+        } else if (monitor != null) {
+            monitor.onStatusMessage("No unreached objects detected.");
+        }
 
         // Write comprehensive XSD after all exports are complete
         try {
@@ -75,7 +88,7 @@ public class MigrationExportService {
                 }
                 exporter.writeComprehensiveXSD(baseOutputPath);
                 if (monitor != null) {
-                    monitor.onStatusMessage("Comprehensive XSD schema generated: migration-schema.xsd");
+                    monitor.onStatusMessage("Comprehensive XSD schema generated: _Migration/Schema.xsd");
                 }
             }
         } catch (Exception e) {
@@ -94,7 +107,7 @@ public class MigrationExportService {
                 }
 
                 Path dbBasePath = exporter.getBaseOutputPath(baseOutputPath);
-                Path xsdPath = dbBasePath.resolve("schema.xsd");
+                Path xsdPath = dbBasePath.resolve("_Migration").resolve("Schema.xsd");
 
                 migration4o.util.XMLValidator.ValidationResult validationResult = migration4o.util.XMLValidator.validateMultiple(new java.util.ArrayList<>(xmlFiles), xsdPath.toString());
 
@@ -165,5 +178,52 @@ public class MigrationExportService {
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
         return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat, params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields);
+    }
+
+    private Set<Long> collectReachedObjectIds(List<ExportStatistics> results) {
+        Set<Long> reached = new HashSet<>();
+        if (results == null || results.isEmpty()) {
+            return reached;
+        }
+
+        for (ExportStatistics result : results) {
+            if (result == null || result.exportedObjectIds == null || result.exportedObjectIds.isEmpty()) {
+                continue;
+            }
+
+            for (List<Long> ids : result.exportedObjectIds.values()) {
+                if (ids != null) {
+                    reached.addAll(ids);
+                }
+            }
+        }
+
+        return reached;
+    }
+
+    private Set<Long> collectUnreachedObjectIds(DOSchema databaseSchema, Set<Long> reachedObjectIds) {
+        Set<Long> allObjectIds = new HashSet<>();
+        if (databaseSchema == null || databaseSchema.getClasses() == null) {
+            return allObjectIds;
+        }
+
+        for (migration4o.models.schema.DOSchemaClass schemaClass : databaseSchema.getClasses()) {
+            long[] ids = (schemaClass.uniqueObjectIds != null && schemaClass.uniqueObjectIds.length > 0) ? schemaClass.uniqueObjectIds : schemaClass.objectIds;
+            if (ids == null) {
+                continue;
+            }
+
+            for (long id : ids) {
+                if (id > 0) {
+                    allObjectIds.add(id);
+                }
+            }
+        }
+
+        if (reachedObjectIds != null && !reachedObjectIds.isEmpty()) {
+            allObjectIds.removeAll(reachedObjectIds);
+        }
+
+        return allObjectIds;
     }
 }

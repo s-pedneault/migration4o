@@ -90,6 +90,14 @@ public class ObjectExporter {
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel, boolean isEmbedded, String fieldName, String containingClassName, String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId) throws IOException {
 
+        if (operation.allowedObjectIds != null && !operation.allowedObjectIds.contains(objectId)) {
+            if (operation.statistics != null) {
+                String effectiveClass = sourceContainingClassName != null ? sourceContainingClassName : "Unknown";
+                operation.statistics.recordObjectDecision(objectId, effectiveClass, "not exported (outside allowed object set)");
+            }
+            return;
+        }
+
         // Check if this object should be exported (handles duplicate tracking
         // and
         // statistics)
