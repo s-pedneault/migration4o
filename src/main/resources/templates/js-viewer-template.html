@@ -1,0 +1,1297 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>__TITLE__ — JS Data Viewer</title>
+    <style>
+        :root {
+            color-scheme: light;
+            --c-bg: #f4f6f9;
+            --c-surface: #ffffff;
+            --c-border: #e0e5ec;
+            --c-border-light: #edf0f5;
+            --c-text: #1b2532;
+            --c-text-secondary: #5a6678;
+            --c-text-muted: #8793a4;
+            --c-primary: #3b6cf5;
+            --c-primary-hover: #2a56d4;
+            --c-primary-light: #eaf0ff;
+            --c-danger: #ef4444;
+            --c-danger-light: #fef2f2;
+            --radius: 8px;
+            --radius-lg: 12px;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, .04);
+            --shadow: 0 1px 3px rgba(0, 0, 0, .06), 0 1px 2px rgba(0, 0, 0, .04);
+            --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            --font-mono: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--c-bg);
+            color: var(--c-text);
+            font-size: 14px;
+            line-height: 1.5;
+            min-height: 100vh;
+        }
+
+        .app {
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .app-header {
+            background: var(--c-surface);
+            border-bottom: 1px solid var(--c-border);
+            padding: 14px 24px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .app-header .logo {
+            width: 32px;
+            height: 32px;
+            background: var(--c-primary);
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .app-header h1 {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .app-header .file-badge {
+            margin-left: auto;
+            font-size: 12px;
+            color: var(--c-text-muted);
+            background: var(--c-bg);
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 1px solid var(--c-border);
+        }
+
+        .lang-select,
+        .columns-btn {
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            background: var(--c-surface);
+            color: var(--c-text-secondary);
+            font-size: 12px;
+            font-family: var(--font);
+        }
+
+        .app-body {
+            display: block;
+            flex: 1;
+            overflow: hidden;
+            padding: 0 16px 16px;
+        }
+
+        .panel-left {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            border-right: none;
+            background: var(--c-surface);
+            min-width: 0;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-lg);
+            margin-top: 14px;
+            overflow: hidden;
+        }
+
+        .search-section {
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .search-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .search-header h2 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            color: var(--c-text-secondary);
+        }
+
+        .search-tools {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .columns-menu-wrap {
+            position: relative;
+        }
+
+        .columns-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            width: 320px;
+            max-height: 280px;
+            overflow: auto;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            background: var(--c-surface);
+            box-shadow: var(--shadow);
+            padding: 8px;
+            z-index: 50;
+            display: none;
+        }
+
+        .columns-menu.open {
+            display: block;
+        }
+
+        .columns-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 6px;
+            border-radius: 6px;
+            font-size: 12px;
+        }
+
+        .columns-item:hover {
+            background: #f6f8fc;
+        }
+
+        .search-actions {
+            display: flex;
+            gap: 6px;
+        }
+
+        .search-condition {
+            margin-bottom: 8px;
+        }
+
+        .condition-main {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .search-condition .logic-label {
+            min-width: 34px;
+            text-align: center;
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--c-primary);
+            text-transform: uppercase;
+            cursor: pointer;
+            padding: 3px 5px;
+            border-radius: 4px;
+            background: var(--c-primary-light);
+            border: 1px solid transparent;
+            transition: all .15s;
+            user-select: none;
+        }
+
+        .search-condition .logic-label.first {
+            visibility: hidden;
+        }
+
+        .search-condition select,
+        .search-condition input[type="text"] {
+            height: 32px;
+            padding: 0 8px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            font-size: 13px;
+            font-family: var(--font);
+            background: var(--c-surface);
+            color: var(--c-text);
+        }
+
+        .condition-main .field-select {
+            flex: 2;
+            min-width: 130px;
+        }
+
+        .condition-main .operator-select {
+            flex: 1;
+            min-width: 90px;
+        }
+
+        .condition-main .value-input {
+            flex: 2;
+            min-width: 110px;
+        }
+
+        .search-condition .remove-btn {
+            width: 26px;
+            height: 26px;
+            border: none;
+            background: none;
+            font-size: 16px;
+            color: var(--c-text-muted);
+            cursor: pointer;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all .15s;
+            flex-shrink: 0;
+        }
+
+        .search-condition .remove-btn:hover {
+            background: var(--c-danger-light);
+            color: var(--c-danger);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            font-size: 12px;
+            font-weight: 600;
+            font-family: var(--font);
+            cursor: pointer;
+            background: var(--c-surface);
+            color: var(--c-text-secondary);
+            transition: all .15s;
+            white-space: nowrap;
+        }
+
+        .btn:hover {
+            background: var(--c-bg);
+            border-color: #ccd3dd;
+        }
+
+        .btn-primary {
+            background: var(--c-primary);
+            color: #fff;
+            border-color: var(--c-primary);
+        }
+
+        .btn-primary:hover {
+            background: var(--c-primary-hover);
+            border-color: var(--c-primary-hover);
+        }
+
+        .btn-sm {
+            padding: 4px 8px;
+            font-size: 11px;
+        }
+
+        .results-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .results-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            border-bottom: 1px solid var(--c-border-light);
+            font-size: 12px;
+            color: var(--c-text-secondary);
+            background: #fafbfd;
+        }
+
+        .results-count {
+            font-weight: 600;
+        }
+
+        .results-scroll {
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .results-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .results-table thead th {
+            position: sticky;
+            top: 0;
+            background: #fafbfd;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: var(--c-text-muted);
+            padding: 8px 14px;
+            border-bottom: 1px solid var(--c-border);
+            z-index: 2;
+            white-space: nowrap;
+        }
+
+        .results-table tbody td {
+            padding: 8px 14px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--c-border-light);
+            max-width: 280px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .results-table tbody tr {
+            cursor: pointer;
+            transition: background .1s;
+        }
+
+        .results-table tbody tr:hover {
+            background: #f5f8ff;
+        }
+
+        .results-table tbody tr.active {
+            background: var(--c-primary-light);
+            border-left: 3px solid var(--c-primary);
+        }
+
+        .results-empty,
+        .welcome {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 48px 24px;
+            color: var(--c-text-muted);
+            text-align: center;
+        }
+
+        .results-empty .icon,
+        .welcome .icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            opacity: .45;
+        }
+
+        .pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 8px 16px;
+            border-top: 1px solid var(--c-border);
+            background: #fafbfd;
+            font-size: 12px;
+            color: var(--c-text-secondary);
+        }
+
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .pagination button,
+        .pagination select {
+            height: 28px;
+            padding: 0 8px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            background: var(--c-surface);
+            font-size: 12px;
+            font-family: var(--font);
+            color: var(--c-text);
+            cursor: pointer;
+        }
+
+        .pagination button:disabled {
+            opacity: .4;
+            cursor: default;
+        }
+
+        .detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, .45);
+            display: none;
+            align-items: flex-end;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .detail-overlay.open {
+            display: flex;
+        }
+
+        .detail-sheet {
+            width: min(1280px, 100%);
+            height: min(90vh, 920px);
+            background: var(--c-bg);
+            border-radius: 16px 16px 0 0;
+            border: 1px solid var(--c-border);
+            border-bottom: none;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, .18);
+        }
+
+        .detail-sheet-top {
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 12px;
+            background: var(--c-surface);
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .detail-drag {
+            width: 42px;
+            height: 4px;
+            border-radius: 2px;
+            background: #c5cfdd;
+            margin: 0 auto;
+        }
+
+        .detail-close {
+            border: 1px solid var(--c-border);
+            background: var(--c-surface);
+            color: var(--c-text-secondary);
+            border-radius: 8px;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+        }
+
+        .detail-scroll {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px 20px 32px;
+        }
+
+        .detail-header {
+            padding: 16px 20px;
+            background: var(--c-surface);
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .detail-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .detail-header .detail-subtitle {
+            font-size: 12px;
+            color: var(--c-text-secondary);
+        }
+
+        .field-group {
+            background: var(--c-surface);
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius-lg);
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            overflow: hidden;
+        }
+
+        .field-group-title {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .4px;
+            color: var(--c-text-secondary);
+            padding: 10px 16px;
+            background: #f8fafc;
+            border-bottom: 1px solid var(--c-border-light);
+        }
+
+        .field-row {
+            display: flex;
+            border-bottom: 1px solid var(--c-border-light);
+            min-height: 34px;
+        }
+
+        .field-row:last-child {
+            border-bottom: none;
+        }
+
+        .field-label {
+            flex: 0 0 240px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--c-text-secondary);
+            background: #fcfcfe;
+            word-break: break-word;
+        }
+
+        .field-value {
+            flex: 1;
+            padding: 8px 16px;
+            font-size: 13px;
+            color: var(--c-text);
+            word-break: break-word;
+            min-width: 0;
+            white-space: pre-wrap;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .badge-id {
+            background: #fef3c7;
+            color: #92400e;
+            font-family: var(--font-mono);
+        }
+
+        .badge-number {
+            background: #e0e7ff;
+            color: #3730a3;
+            font-family: var(--font-mono);
+        }
+
+        .badge-true {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .badge-false {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .collection-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            font-size: 12px;
+        }
+
+        .collection-table th {
+            background: #f5f7fa;
+            font-size: 11px;
+            font-weight: 700;
+            text-align: left;
+            padding: 6px 10px;
+            border-bottom: 1px solid var(--c-border);
+            color: var(--c-text-secondary);
+        }
+
+        .collection-table td {
+            padding: 5px 10px;
+            border-bottom: 1px solid var(--c-border-light);
+            vertical-align: top;
+        }
+
+        .collection-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        @media (max-width: 640px) {
+            .condition-main {
+                flex-wrap: wrap;
+            }
+
+            .condition-main .field-select,
+            .condition-main .operator-select,
+            .condition-main .value-input {
+                min-width: 100%;
+            }
+
+            .field-label {
+                flex: 0 0 120px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="app">
+        <header class="app-header">
+            <div class="logo">M</div>
+            <h1>__ENTITY_NAME__</h1>
+            <select id="languageSelect" class="lang-select" aria-label="Language">
+                <option value="fr" selected>Français</option>
+                <option value="en">English</option>
+            </select>
+            <span class="file-badge">__TITLE__</span>
+        </header>
+        <div class="app-body">
+            <div class="panel-left">
+                <div class="search-section">
+                    <div class="search-header">
+                        <h2 id="searchTitle">Recherche</h2>
+                        <div class="search-tools">
+                            <div class="columns-menu-wrap">
+                                <button class="columns-btn" id="columnsBtn" type="button">Colonnes</button>
+                                <div class="columns-menu" id="columnsMenu"></div>
+                            </div>
+                            <div class="search-actions">
+                                <button class="btn btn-sm" id="addConditionBtn" type="button">+ Critère</button>
+                                <button class="btn btn-sm" id="clearSearchBtn" type="button">Effacer</button>
+                                <button class="btn btn-sm btn-primary" id="searchBtn" type="button">Appliquer</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="conditionsContainer"></div>
+                </div>
+                <div class="results-section">
+                    <div class="results-bar">
+                        <span class="results-count" id="resultsCount">Chargement...</span>
+                        <div class="pagination-controls">
+                            <label id="rowsLabel">Lignes :</label>
+                            <select id="pageSizeSelect">
+                                <option value="25">25</option>
+                                <option value="50" selected>50</option>
+                                <option value="100">100</option>
+                                <option value="200">200</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="results-scroll" id="resultsScroll">
+                        <table class="results-table">
+                            <thead id="resultsHead"></thead>
+                            <tbody id="resultsBody"></tbody>
+                        </table>
+                    </div>
+                    <div class="pagination">
+                        <div class="pagination-controls">
+                            <button id="prevBtn" type="button">&#8592; Préc.</button>
+                            <span id="pageInfo">Page 1 / 1</span>
+                            <button id="nextBtn" type="button">Suiv. &#8594;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="detail-overlay" id="detailOverlay" aria-hidden="true">
+        <div class="detail-sheet">
+            <div class="detail-sheet-top">
+                <div class="detail-drag"></div>
+                <button class="detail-close" id="detailCloseBtn" type="button" aria-label="Close">✕</button>
+            </div>
+            <div id="detailContainer" class="detail-scroll"></div>
+        </div>
+    </div>
+
+    <script>
+        __EMBEDDED_JS_DATA__
+    </script>
+    <script>
+        const entityName = '__ENTITY_NAME__';
+
+        let allRecords = [];
+        let filteredRecords = [];
+        let discoveredFields = [];
+        let currentPage = 1;
+        let selectedRecordKey = null;
+        let searchApplied = false;
+        let globalLogicOperator = 'AND';
+        let currentLanguage = 'fr';
+        let selectedColumns = ['__id', '__summary'];
+
+        const conditionsContainer = document.getElementById('conditionsContainer');
+        const addConditionBtn = document.getElementById('addConditionBtn');
+        const clearSearchBtn = document.getElementById('clearSearchBtn');
+        const searchBtn = document.getElementById('searchBtn');
+        const resultsCount = document.getElementById('resultsCount');
+        const resultsHead = document.getElementById('resultsHead');
+        const resultsBody = document.getElementById('resultsBody');
+        const pageInfo = document.getElementById('pageInfo');
+        const prevBtn = document.getElementById('prevBtn');
+        const nextBtn = document.getElementById('nextBtn');
+        const pageSizeSelect = document.getElementById('pageSizeSelect');
+        const detailContainer = document.getElementById('detailContainer');
+        const detailOverlay = document.getElementById('detailOverlay');
+        const detailCloseBtn = document.getElementById('detailCloseBtn');
+        const languageSelect = document.getElementById('languageSelect');
+        const columnsBtn = document.getElementById('columnsBtn');
+        const columnsMenu = document.getElementById('columnsMenu');
+        const searchTitle = document.getElementById('searchTitle');
+        const rowsLabel = document.getElementById('rowsLabel');
+
+        const I18N = {
+            fr: {
+                search: 'Recherche', columns: 'Colonnes', addCondition: '+ Critère', clear: 'Effacer', apply: 'Appliquer',
+                rows: 'Lignes :', prev: '\u2190 Préc.', next: 'Suiv. \u2192', loading: 'Chargement...',
+                noResults: 'Aucun enregistrement ne correspond à vos critères.', noResultsSub: 'Essayez d’ajuster vos critères ou effacez la recherche.',
+                resultsTotal: 'enregistrements au total', result: 'résultat', results: 'résultats', page: 'Page', record: 'Enregistrement',
+                detail: 'Détails', properties: 'Propriétés', rawData: 'Données JSON', close: 'Fermer', remove: 'Supprimer',
+                toggleLogic: 'Cliquer pour alterner ET/OU', allFields: 'Tous les champs', value: 'Valeur...',
+                colRow: '#', colId: 'ID', colSummary: 'Résumé', err: 'Erreur', noPayload: 'Aucune donnée JS trouvée (window.__m4o).'
+            },
+            en: {
+                search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
+                rows: 'Rows:', prev: '\u2190 Prev', next: 'Next \u2192', loading: 'Loading...',
+                noResults: 'No records match your criteria.', noResultsSub: 'Try adjusting your conditions or clear the search.',
+                resultsTotal: 'records total', result: 'result', results: 'results', page: 'Page', record: 'Record',
+                detail: 'Details', properties: 'Properties', rawData: 'Raw JSON', close: 'Close', remove: 'Remove',
+                toggleLogic: 'Click to toggle AND/OR', allFields: 'All fields', value: 'Value...',
+                colRow: '#', colId: 'ID', colSummary: 'Summary', err: 'Error', noPayload: 'No JS payload found (window.__m4o).'
+            }
+        };
+
+        const OPERATORS = {
+            string: [{ v: 'contains', l: 'Contains' }, { v: 'not_contains', l: 'Does not contain' }, { v: 'equals', l: 'Equals' }, { v: 'not_equals', l: 'Not equal to' }, { v: 'empty', l: 'Is empty' }, { v: 'not_empty', l: 'Is not empty' }],
+            _all: [{ v: 'contains', l: 'Contains' }, { v: 'not_contains', l: 'Does not contain' }, { v: 'empty', l: 'Is empty' }, { v: 'not_empty', l: 'Is not empty' }]
+        };
+        const NO_VALUE_OPS = new Set(['empty', 'not_empty']);
+
+        function t(key) { return (I18N[currentLanguage] && I18N[currentLanguage][key]) || key; }
+        function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+        function appendField(map, key, value) {
+            if (!key) return;
+            const text = String(value ?? '').trim();
+            if (text.length === 0) return;
+            if (map[key]) {
+                if (!map[key].includes(text)) map[key] += ' | ' + text;
+            } else {
+                map[key] = text;
+            }
+        }
+
+        function flattenValue(value, path, out) {
+            if (value === null || value === undefined) return;
+            if (Array.isArray(value)) {
+                value.forEach((item, index) => flattenValue(item, `${path}[${index + 1}]`, out));
+                return;
+            }
+            if (typeof value !== 'object') {
+                appendField(out, path, value);
+                return;
+            }
+
+            if (value['@attributes'] && typeof value['@attributes'] === 'object') {
+                Object.entries(value['@attributes']).forEach(([k, v]) => appendField(out, `${path}.@${k}`, v));
+            }
+            if (value['#text'] !== undefined) {
+                appendField(out, path, value['#text']);
+            }
+
+            Object.entries(value).forEach(([k, v]) => {
+                if (k === '@attributes' || k === '#text') return;
+                const nextPath = path ? `${path}.${k}` : k;
+                flattenValue(v, nextPath, out);
+            });
+        }
+
+        function pickBest(fields, candidates) {
+            const entries = Object.entries(fields);
+            for (const c of candidates) {
+                const exact = entries.find(([k]) => k.toLowerCase() === c);
+                if (exact && exact[1]) return exact[1];
+            }
+            for (const c of candidates) {
+                const partial = entries.find(([k]) => k.toLowerCase().includes(c));
+                if (partial && partial[1]) return partial[1];
+            }
+            return '';
+        }
+
+        function summarize(fields) {
+            const primary = pickBest(fields, ['name', 'nom', 'title', 'titre', 'label', 'libelle', 'description']);
+            if (primary) return primary;
+            const vals = Object.values(fields).filter(Boolean);
+            return vals.length > 0 ? vals.slice(0, 2).join(' • ') : '(no details)';
+        }
+
+        function buildRecord(entity, raw, pos) {
+            const fields = {};
+            const attrs = raw && raw['@attributes'] && typeof raw['@attributes'] === 'object' ? raw['@attributes'] : null;
+            if (attrs) Object.entries(attrs).forEach(([k, v]) => appendField(fields, `@${k}`, v));
+            if (raw && typeof raw === 'object') {
+                Object.entries(raw).forEach(([k, v]) => {
+                    if (k === '@attributes') return;
+                    flattenValue(v, k, fields);
+                });
+            }
+            const id = (attrs && attrs.id) || pickBest(fields, ['id', 'identifiant', 'numero', 'code']) || '';
+            return {
+                key: `${entity}#${pos}`,
+                pos,
+                entity,
+                id: String(id || ''),
+                fields,
+                raw,
+                summary: summarize(fields)
+            };
+        }
+
+        function collectFromNamedArray(entity, value, acc) {
+            if (Array.isArray(value)) {
+                value.forEach((item) => {
+                    if (item && typeof item === 'object') {
+                        acc.push(buildRecord(entity, item, acc.length + 1));
+                    }
+                });
+                return;
+            }
+            if (value && typeof value === 'object') {
+                acc.push(buildRecord(entity, value, acc.length + 1));
+            }
+        }
+
+        function getRootPayload() {
+            const raw = window.__m4o;
+            if (!raw || typeof raw !== 'object') return null;
+            if (raw.export && typeof raw.export === 'object') return raw.export;
+            return raw;
+        }
+
+        function parsePayload() {
+            const root = getRootPayload();
+            if (!root) {
+                throw new Error(t('noPayload'));
+            }
+
+            const acc = [];
+            if (Array.isArray(root.objects)) {
+                root.objects.forEach((entry) => {
+                    if (!entry || typeof entry !== 'object') return;
+                    Object.entries(entry).forEach(([entity, value]) => collectFromNamedArray(entity, value, acc));
+                });
+            }
+
+            if (acc.length === 0) {
+                Object.entries(root).forEach(([entity, value]) => {
+                    if (entity === 'metadata' || entity === 'objects') return;
+                    collectFromNamedArray(entity, value, acc);
+                });
+            }
+
+            allRecords = acc;
+            filteredRecords = allRecords.slice();
+        }
+
+        function guessType(path) {
+            const lo = String(path || '').toLowerCase();
+            if (lo.includes('date')) return 'date';
+            if (lo === 'id' || lo.endsWith('id') || lo.startsWith('id')) return 'number';
+            return 'string';
+        }
+
+        function buildDiscoveredFields() {
+            const set = new Set();
+            allRecords.forEach((rec) => Object.keys(rec.fields || {}).forEach((f) => set.add(f)));
+            discoveredFields = Array.from(set).sort().map((path) => ({ path, label: path, type: guessType(path) }));
+        }
+
+        function getFieldType(path) {
+            if (path === '__all') return '_all';
+            const found = discoveredFields.find((f) => f.path === path);
+            return found ? found.type : 'string';
+        }
+
+        function buildFieldOptions() {
+            let html = `<option value="__all">${esc(t('allFields'))}</option>`;
+            discoveredFields.forEach((f) => {
+                html += `<option value="${esc(f.path)}">${esc(f.label)}</option>`;
+            });
+            return html;
+        }
+
+        function buildOperatorOptions(fieldType) {
+            const ops = OPERATORS[fieldType] || OPERATORS.string;
+            return ops.map((o) => `<option value="${o.v}">${esc(o.l)}</option>`).join('');
+        }
+
+        function updateValueInput(opSel, valInput) {
+            if (NO_VALUE_OPS.has(opSel.value)) {
+                valInput.style.display = 'none';
+                valInput.value = '';
+            } else {
+                valInput.style.display = '';
+                valInput.placeholder = t('value');
+            }
+        }
+
+        function addCondition() {
+            const isFirst = conditionsContainer.children.length === 0;
+            const row = document.createElement('div');
+            row.className = 'search-condition';
+            row.innerHTML =
+                `<div class="condition-main">`
+                + `<span class="logic-label ${isFirst ? 'first' : ''}" title="${esc(t('toggleLogic'))}">${globalLogicOperator}</span>`
+                + `<select class="field-select">${buildFieldOptions()}</select>`
+                + `<select class="operator-select">${buildOperatorOptions('_all')}</select>`
+                + `<input class="value-input" type="text" placeholder="${esc(t('value'))}">`
+                + `<button class="remove-btn" type="button" title="${esc(t('remove'))}">×</button>`
+                + `</div>`;
+
+            conditionsContainer.appendChild(row);
+
+            const fieldSel = row.querySelector('.field-select');
+            const opSel = row.querySelector('.operator-select');
+            const valInput = row.querySelector('.value-input');
+            const removeBtn = row.querySelector('.remove-btn');
+            const logicLabel = row.querySelector('.logic-label');
+
+            fieldSel.addEventListener('change', () => {
+                opSel.innerHTML = buildOperatorOptions(getFieldType(fieldSel.value));
+                updateValueInput(opSel, valInput);
+            });
+            opSel.addEventListener('change', () => updateValueInput(opSel, valInput));
+            logicLabel.addEventListener('click', () => {
+                if (logicLabel.classList.contains('first')) return;
+                globalLogicOperator = globalLogicOperator === 'AND' ? 'OR' : 'AND';
+                document.querySelectorAll('.logic-label:not(.first)').forEach((lbl) => lbl.textContent = globalLogicOperator);
+            });
+            removeBtn.addEventListener('click', () => {
+                row.remove();
+                const first = conditionsContainer.querySelector('.search-condition .logic-label');
+                if (first) first.classList.add('first');
+            });
+            valInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    applySearch();
+                }
+            });
+
+            updateValueInput(opSel, valInput);
+        }
+
+        function getConditions() {
+            return Array.from(conditionsContainer.querySelectorAll('.search-condition')).map((row) => ({
+                field: row.querySelector('.field-select').value,
+                operator: row.querySelector('.operator-select').value,
+                value: row.querySelector('.value-input').value.trim()
+            }));
+        }
+
+        function matchCondition(rec, cond) {
+            let values;
+            if (cond.field === '__all') {
+                values = [rec.id, rec.summary].concat(Object.values(rec.fields || {})).filter(Boolean);
+            } else {
+                values = Object.entries(rec.fields || {})
+                    .filter(([k]) => k === cond.field)
+                    .map(([, v]) => v)
+                    .filter(Boolean);
+            }
+
+            const text = values.join(' ').toLowerCase();
+            const q = String(cond.value || '').toLowerCase();
+
+            if (cond.operator === 'contains') return text.includes(q);
+            if (cond.operator === 'not_contains') return !text.includes(q);
+            if (cond.operator === 'equals') return values.some((v) => String(v).toLowerCase() === q);
+            if (cond.operator === 'not_equals') return values.every((v) => String(v).toLowerCase() !== q);
+            if (cond.operator === 'empty') return values.length === 0 || values.every((v) => !String(v).trim());
+            if (cond.operator === 'not_empty') return values.some((v) => String(v).trim().length > 0);
+            return true;
+        }
+
+        function ensureSearchColumnsVisible(conditions) {
+            conditions.forEach((c) => {
+                if (!c || !c.field || c.field === '__all') return;
+                if (!selectedColumns.includes(c.field)) selectedColumns.push(c.field);
+            });
+        }
+
+        function applySearch() {
+            const conditions = getConditions();
+            ensureSearchColumnsVisible(conditions);
+            renderColumnsMenu();
+
+            const active = conditions.filter((c) => c.value.trim() || NO_VALUE_OPS.has(c.operator));
+            searchApplied = active.length > 0;
+
+            if (!searchApplied) {
+                filteredRecords = allRecords.slice();
+            } else if (globalLogicOperator === 'AND') {
+                filteredRecords = allRecords.filter((rec) => active.every((c) => matchCondition(rec, c)));
+            } else {
+                filteredRecords = allRecords.filter((rec) => active.some((c) => matchCondition(rec, c)));
+            }
+
+            currentPage = 1;
+            renderResults();
+        }
+
+        function getPageSize() { return parseInt(pageSizeSelect.value, 10) || 50; }
+
+        function getColumnLabel(col) {
+            if (col === '__id') return t('colId');
+            if (col === '__summary') return t('colSummary');
+            const f = discoveredFields.find((d) => d.path === col);
+            return f ? (f.label || f.path) : col;
+        }
+
+        function getColumnValue(rec, col) {
+            if (col === '__id') return rec.id || '—';
+            if (col === '__summary') return rec.summary || '—';
+            return rec.fields[col] || '—';
+        }
+
+        function getVisibleColumns() {
+            const seen = new Set();
+            const cols = [];
+            selectedColumns.forEach((c) => {
+                if (!c || seen.has(c)) return;
+                seen.add(c);
+                cols.push(c);
+            });
+            return cols;
+        }
+
+        function renderColumnsMenu() {
+            let html = '';
+            html += `<label class="columns-item"><input type="checkbox" data-col="__id" ${selectedColumns.includes('__id') ? 'checked' : ''}> ${esc(t('colId'))}</label>`;
+            html += `<label class="columns-item"><input type="checkbox" data-col="__summary" ${selectedColumns.includes('__summary') ? 'checked' : ''}> ${esc(t('colSummary'))}</label>`;
+            discoveredFields.forEach((f) => {
+                html += `<label class="columns-item"><input type="checkbox" data-col="${esc(f.path)}" ${selectedColumns.includes(f.path) ? 'checked' : ''}> ${esc(f.label || f.path)}</label>`;
+            });
+            columnsMenu.innerHTML = html;
+
+            columnsMenu.querySelectorAll('input[type="checkbox"]').forEach((chk) => {
+                chk.addEventListener('change', () => {
+                    const col = chk.getAttribute('data-col');
+                    if (chk.checked) {
+                        if (!selectedColumns.includes(col)) selectedColumns.push(col);
+                    } else {
+                        selectedColumns = selectedColumns.filter((c) => c !== col);
+                    }
+                    renderResults();
+                });
+            });
+        }
+
+        function renderResultsHead() {
+            const cols = getVisibleColumns();
+            let head = `<tr><th style="width:55px">${esc(t('colRow'))}</th>`;
+            cols.forEach((c) => head += `<th>${esc(getColumnLabel(c))}</th>`);
+            head += '</tr>';
+            resultsHead.innerHTML = head;
+        }
+
+        function renderResults() {
+            renderResultsHead();
+            const ps = getPageSize();
+            const total = filteredRecords.length;
+            const totalPages = Math.max(1, Math.ceil(total / ps));
+            if (currentPage > totalPages) currentPage = totalPages;
+
+            const start = (currentPage - 1) * ps;
+            const page = filteredRecords.slice(start, start + ps);
+            const cols = getVisibleColumns();
+            const totalCols = 1 + cols.length;
+
+            resultsBody.innerHTML = '';
+
+            if (page.length === 0) {
+                resultsBody.innerHTML = `<tr><td colspan="${totalCols}"><div class="results-empty"><div class="icon">🚫</div><p>${esc(t('noResults'))}</p><div class="sub">${esc(t('noResultsSub'))}</div></div></td></tr>`;
+            } else {
+                page.forEach((rec) => {
+                    const tr = document.createElement('tr');
+                    if (rec.key === selectedRecordKey) tr.classList.add('active');
+                    let row = `<td>${rec.pos}</td>`;
+                    cols.forEach((c) => row += `<td>${esc(getColumnValue(rec, c))}</td>`);
+                    tr.innerHTML = row;
+                    tr.addEventListener('click', () => selectRecord(rec));
+                    resultsBody.appendChild(tr);
+                });
+            }
+
+            resultsCount.textContent = total + ' ' + (total !== 1 ? t('results') : t('result'));
+            pageInfo.textContent = `${t('page')} ${currentPage} / ${totalPages}`;
+            prevBtn.disabled = currentPage <= 1;
+            nextBtn.disabled = currentPage >= totalPages;
+        }
+
+        function fmtValue(v, key) {
+            const val = String(v ?? '');
+            if (!val.trim()) return '<span style="color:var(--c-text-muted)">—</span>';
+            const lowerKey = String(key || '').toLowerCase();
+            if (val === 'true') return '<span class="badge badge-true">✓ True</span>';
+            if (val === 'false') return '<span class="badge badge-false">✗ False</span>';
+            if (lowerKey === 'id' || lowerKey.startsWith('id') || lowerKey.endsWith('id')) return `<span class="badge badge-id">${esc(val)}</span>`;
+            if (/^-?\d+(\.\d+)?$/.test(val)) return `<span class="badge badge-number">${esc(val)}</span>`;
+            return esc(val);
+        }
+
+        function renderObjectFields(fields) {
+            const entries = Object.entries(fields || {});
+            if (entries.length === 0) {
+                return `<div class="field-row"><div class="field-label">${esc(t('properties'))}</div><div class="field-value">—</div></div>`;
+            }
+            return entries
+                .sort((a, b) => a[0].localeCompare(b[0]))
+                .map(([k, v]) => `<div class="field-row"><div class="field-label">${esc(k)}</div><div class="field-value">${fmtValue(v, k)}</div></div>`)
+                .join('');
+        }
+
+        function renderArrayTable(arr) {
+            const objectRows = arr.filter((x) => x && typeof x === 'object' && !Array.isArray(x));
+            if (objectRows.length === 0) {
+                return `<div class="field-value">${esc(JSON.stringify(arr, null, 2))}</div>`;
+            }
+            const cols = new Set();
+            objectRows.forEach((o) => Object.keys(o).forEach((k) => { if (typeof o[k] !== 'object') cols.add(k); }));
+            const headers = Array.from(cols);
+            if (headers.length === 0) {
+                return `<div class="field-value">${esc(JSON.stringify(arr, null, 2))}</div>`;
+            }
+
+            let html = '<div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
+            headers.forEach((h) => html += `<th>${esc(h)}</th>`);
+            html += '</tr></thead><tbody>';
+            objectRows.forEach((o) => {
+                html += '<tr>';
+                headers.forEach((h) => html += `<td>${fmtValue(o[h], h)}</td>`);
+                html += '</tr>';
+            });
+            html += '</tbody></table></div>';
+            return html;
+        }
+
+        function renderRawSections(raw) {
+            if (!raw || typeof raw !== 'object') return '';
+            let html = '';
+            Object.entries(raw).forEach(([k, v]) => {
+                if (k === '@attributes') return;
+                if (Array.isArray(v)) {
+                    html += `<div class="field-group"><div class="field-group-title">${esc(k)} (${v.length})</div>${renderArrayTable(v)}</div>`;
+                } else if (v && typeof v === 'object') {
+                    const flat = {};
+                    flattenValue(v, '', flat);
+                    html += `<div class="field-group"><div class="field-group-title">${esc(k)}</div>${renderObjectFields(flat)}</div>`;
+                }
+            });
+            return html;
+        }
+
+        function openDetailOverlay() {
+            detailOverlay.classList.add('open');
+            detailOverlay.setAttribute('aria-hidden', 'false');
+        }
+
+        function closeDetailOverlay() {
+            detailOverlay.classList.remove('open');
+            detailOverlay.setAttribute('aria-hidden', 'true');
+        }
+
+        function selectRecord(rec) {
+            selectedRecordKey = rec.key;
+            renderResults();
+            renderDetail(rec);
+            openDetailOverlay();
+        }
+
+        function renderDetail(rec) {
+            if (!rec) {
+                detailContainer.innerHTML = `<div class="results-empty"><div class="icon">📋</div><p>${esc(t('detail'))}</p></div>`;
+                return;
+            }
+
+            let html = '';
+            html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '—')} • ${esc(t('record'))} #${rec.pos}</div></div>`;
+            html += '<div class="detail-scroll">';
+            html += `<div class="field-group"><div class="field-group-title">${esc(t('properties'))}</div>${renderObjectFields(rec.fields)}</div>`;
+            html += renderRawSections(rec.raw);
+            html += `<div class="field-group"><div class="field-group-title">${esc(t('rawData'))}</div><div class="field-row"><div class="field-value"><pre style="margin:0;white-space:pre-wrap;word-break:break-word">${esc(JSON.stringify(rec.raw, null, 2))}</pre></div></div></div>`;
+            html += '</div>';
+
+            detailContainer.innerHTML = html;
+        }
+
+        function applyLanguage() {
+            searchTitle.textContent = t('search');
+            columnsBtn.textContent = t('columns');
+            addConditionBtn.textContent = t('addCondition');
+            clearSearchBtn.textContent = t('clear');
+            searchBtn.textContent = t('apply');
+            rowsLabel.textContent = t('rows');
+            prevBtn.textContent = t('prev');
+            nextBtn.textContent = t('next');
+            detailCloseBtn.setAttribute('aria-label', t('close'));
+            renderColumnsMenu();
+            renderResults();
+        }
+
+        function initialize() {
+            try {
+                parsePayload();
+                buildDiscoveredFields();
+                renderColumnsMenu();
+                addCondition();
+                applyLanguage();
+                renderResults();
+                resultsCount.textContent = allRecords.length + ' ' + t('resultsTotal');
+            } catch (err) {
+                resultsCount.textContent = `${t('err')}: ${err.message || 'Unknown'}`;
+                resultsBody.innerHTML = `<tr><td colspan="3"><div class="results-empty"><p>${esc(err.message || t('noPayload'))}</p></div></td></tr>`;
+            }
+        }
+
+        addConditionBtn.addEventListener('click', addCondition);
+        clearSearchBtn.addEventListener('click', () => {
+            conditionsContainer.innerHTML = '';
+            searchApplied = false;
+            filteredRecords = allRecords.slice();
+            currentPage = 1;
+            addCondition();
+            renderResults();
+            selectedRecordKey = null;
+            closeDetailOverlay();
+        });
+        searchBtn.addEventListener('click', applySearch);
+        pageSizeSelect.addEventListener('change', () => { currentPage = 1; renderResults(); });
+        prevBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderResults(); } });
+        nextBtn.addEventListener('click', () => {
+            const totalPages = Math.max(1, Math.ceil(filteredRecords.length / getPageSize()));
+            if (currentPage < totalPages) { currentPage++; renderResults(); }
+        });
+        languageSelect.addEventListener('change', () => { currentLanguage = languageSelect.value === 'en' ? 'en' : 'fr'; applyLanguage(); });
+        columnsBtn.addEventListener('click', () => columnsMenu.classList.toggle('open'));
+        document.addEventListener('click', (e) => {
+            if (!columnsMenu.contains(e.target) && !columnsBtn.contains(e.target)) {
+                columnsMenu.classList.remove('open');
+            }
+        });
+        detailCloseBtn.addEventListener('click', closeDetailOverlay);
+        detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) closeDetailOverlay(); });
+        document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailOverlay(); });
+
+        initialize();
+    </script>
+</body>
+
+</html>

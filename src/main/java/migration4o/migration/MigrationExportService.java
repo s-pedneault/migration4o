@@ -36,7 +36,26 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
+        List<String> normalizedOptions = ExportOutputOption.normalize(outputOptions);
+        List<ExportStatistics> allFormatResults = new ArrayList<>();
+
+        for (String outputOption : normalizedOptions) {
+            String writerFormat = ExportOutputOption.toWriterFormat(outputOption);
+            boolean generateHtmlViewer = ExportOutputOption.generatesHtmlViewer(outputOption);
+            boolean generateXsd = ExportOutputOption.generatesXsd(outputOption);
+
+            if (monitor != null) {
+                monitor.onStatusMessage("Running export option: " + outputOption + " (writer=" + writerFormat + ")");
+            }
+
+            allFormatResults.add(exportModulesSingleFormat(dbContext, modules, modulePaths, baseOutputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, writerFormat, generateHtmlViewer, generateXsd, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields));
+        }
+
+        return ExportUtil.combineResults(allFormatResults, baseOutputPath);
+    }
+
+    private ExportStatistics exportModulesSingleFormat(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat, boolean generateHtmlViewer, boolean generateXsd, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = dbContext.databaseSchema;
         String databasePath = dbContext.databaseFilePath;
@@ -46,6 +65,7 @@ public class MigrationExportService {
         exporter.setExportNativeIds(exportNativeIds);
         exporter.setSelectedSkipOptions(selectedSkipOptions);
         exporter.setOutputFormat(outputFormat);
+        exporter.setGenerateHtmlViewer(generateHtmlViewer);
         exporter.setApplyUserSelectedFieldExclusions(applyUserSelectedFieldExclusions);
         exporter.setApplySkipWhenConditions(applySkipWhenConditions);
         exporter.setApplyExportCriteriaFilters(applyExportCriteriaFilters);
@@ -82,7 +102,7 @@ public class MigrationExportService {
 
         // Write comprehensive XSD after all exports are complete
         try {
-            if (exporter.isXMLFormat()) {
+            if (exporter.isXMLFormat() && generateXsd) {
                 if (monitor != null) {
                     monitor.onStatusMessage("Generating comprehensive XSD schema...");
                 }
@@ -101,7 +121,7 @@ public class MigrationExportService {
         // Validate exported XML files against the comprehensive XSD
         try {
             java.util.Set<String> xmlFiles = exporter.getExportedXMLFiles();
-            if (exporter.isXMLFormat() && xmlFiles != null && !xmlFiles.isEmpty()) {
+            if (exporter.isXMLFormat() && generateXsd && xmlFiles != null && !xmlFiles.isEmpty()) {
                 if (monitor != null) {
                     monitor.onStatusMessage("Validating " + xmlFiles.size() + " XML files against schema...");
                 }
@@ -177,7 +197,7 @@ public class MigrationExportService {
             // Build full hierarchical path for the module
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, params.outputFormat, params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields);
+        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, ExportOutputOption.parsePersistedOptions(params.outputFormat), params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields);
     }
 
     private Set<Long> collectReachedObjectIds(List<ExportStatistics> results) {

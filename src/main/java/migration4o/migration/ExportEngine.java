@@ -22,6 +22,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
+import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.SchemaUtil;
 import migration4o.util.XmlViewerHtmlGenerator;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -135,6 +136,10 @@ public class ExportEngine {
         } else {
             this.operation.outputFormat = outputFormat;
         }
+    }
+
+    public void setGenerateHtmlViewer(boolean generateHtmlViewer) {
+        this.operation.generateHtmlViewer = generateHtmlViewer;
     }
 
     public boolean isXMLFormat() {
@@ -867,21 +872,25 @@ public class ExportEngine {
         return sanitizeModuleName(parent.toString());
     }
 
-    private void generateHtmlViewerIfNeeded(Path xmlPath, DOSchemaClass schemaClass) {
-        if (!isXMLFormat() || xmlPath == null) {
+    private void generateHtmlViewerIfNeeded(Path outputPath, DOSchemaClass schemaClass) {
+        if (!operation.generateHtmlViewer || outputPath == null) {
             return;
         }
 
         try {
-            if (schemaClass != null) {
-                DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
-                XmlViewerHtmlGenerator.writeViewerForXml(xmlPath, schemaClass, refSchema);
+            if ("JS".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
+                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass);
             } else {
-                XmlViewerHtmlGenerator.writeViewerForXml(xmlPath);
+                if (schemaClass != null) {
+                    DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
+                    XmlViewerHtmlGenerator.writeViewerForXml(outputPath, schemaClass, refSchema);
+                } else {
+                    XmlViewerHtmlGenerator.writeViewerForXml(outputPath);
+                }
             }
         } catch (IOException e) {
             if (operation.monitor != null) {
-                operation.monitor.onStatusMessage("Warning: Failed to generate HTML viewer for " + xmlPath.getFileName() + ": " + e.getMessage());
+                operation.monitor.onStatusMessage("Warning: Failed to generate HTML viewer for " + outputPath.getFileName() + ": " + e.getMessage());
             }
         }
     }

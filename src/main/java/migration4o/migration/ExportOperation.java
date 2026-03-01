@@ -33,6 +33,8 @@ public class ExportOperation {
     public String baseOutputPath;
     public DOExportMonitor monitor;
     public String outputFormat = "XML";
+    public List<String> outputOptions = new ArrayList<>(List.of("XML + XSD"));
+    public boolean generateHtmlViewer = false;
 
     // Export limits and options
     public Integer maxObjectsPerClass;

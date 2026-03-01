@@ -7,9 +7,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import migration4o.migration.ExportOutputOption;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
-import migration4o.util.tools.structuredwriter.StructuredWriterProvider;
 
 /**
  * Dialog for confirming export operations with options for object limits.
@@ -20,7 +19,7 @@ public class ExportConfirmationDialog extends JDialog {
     private boolean confirmed = false;
     private Integer maxObjectsPerClass = null; // null = all objects
     private boolean exportNativeIds = false;
-    private String outputFormat = "XML";
+    private List<String> selectedOutputOptions = new ArrayList<>(List.of(ExportOutputOption.XML_XSD));
     private List<DOSchemaField> availableSkipOptions;
     private List<DOSchemaField> selectedSkipOptions = new ArrayList<>();
     private boolean applyUserSelectedFieldExclusions = true;
@@ -32,7 +31,7 @@ public class ExportConfirmationDialog extends JDialog {
     private JRadioButton limitObjectsRadio;
     private JSpinner limitSpinner;
     private JCheckBox exportNativeIdsCheckbox;
-    private JComboBox<String> outputFormatCombo;
+    private final Map<String, JCheckBox> outputOptionCheckboxes = new HashMap<>();
     private Map<DOSchemaField, JCheckBox> skipOptionCheckboxes = new HashMap<>();
     private JCheckBox applyUserSelectedFieldExclusionsCheckbox;
     private JCheckBox applySkipWhenConditionsCheckbox;
@@ -56,9 +55,7 @@ public class ExportConfirmationDialog extends JDialog {
         }
 
         this.availableSkipOptions = availableSkipOptions != null ? availableSkipOptions : new ArrayList<>();
-        if (defaultOutputFormat != null && !defaultOutputFormat.isBlank()) {
-            this.outputFormat = defaultOutputFormat;
-        }
+        this.selectedOutputOptions = ExportOutputOption.parsePersistedOptions(defaultOutputFormat);
 
         initComponents(moduleCount, defaultLimit);
         pack();
@@ -149,25 +146,19 @@ public class ExportConfirmationDialog extends JDialog {
 
         mainPanel.add(Box.createVerticalStrut(10));
 
-        JPanel formatPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        JPanel formatPanel = new JPanel();
+        formatPanel.setLayout(new BoxLayout(formatPanel, BoxLayout.Y_AXIS));
         formatPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-        formatPanel.add(new JLabel("Output format:"));
+        formatPanel.add(new JLabel("Output options:"));
+        formatPanel.add(Box.createVerticalStrut(4));
 
-        List<StructuredWriterAPI> formats = StructuredWriterProvider.listFormats();
-        java.util.List<String> formatNames = new java.util.ArrayList<>();
-        for (StructuredWriterAPI format : formats) {
-            if (format != null && format.getName() != null && !format.getName().isBlank()) {
-                formatNames.add(format.getName());
-            }
+        for (String option : ExportOutputOption.allOptions()) {
+            JCheckBox optionCheckbox = new JCheckBox(option);
+            optionCheckbox.setSelected(selectedOutputOptions.stream().anyMatch(selected -> selected.equalsIgnoreCase(option)));
+            optionCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+            outputOptionCheckboxes.put(option, optionCheckbox);
+            formatPanel.add(optionCheckbox);
         }
-        if (formatNames.isEmpty()) {
-            formatNames.add("XML");
-        }
-
-        outputFormatCombo = new JComboBox<>(formatNames.toArray(new String[0]));
-        outputFormatCombo.setPreferredSize(new Dimension(180, 25));
-        outputFormatCombo.setSelectedItem(resolveDefaultFormat(formatNames, outputFormat));
-        formatPanel.add(outputFormatCombo);
 
         mainPanel.add(formatPanel);
 
@@ -207,9 +198,19 @@ public class ExportConfirmationDialog extends JDialog {
             applyExportCriteriaFilters = applyExportCriteriaFiltersCheckbox.isSelected();
             skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFieldsCheckbox.isSelected();
 
-            // Read output format
-            Object selected = outputFormatCombo.getSelectedItem();
-            outputFormat = selected != null ? selected.toString() : "XML";
+            selectedOutputOptions = new ArrayList<>();
+            for (Map.Entry<String, JCheckBox> entry : outputOptionCheckboxes.entrySet()) {
+                if (entry.getValue().isSelected()) {
+                    selectedOutputOptions.add(entry.getKey());
+                }
+            }
+
+            if (selectedOutputOptions.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Please select at least one output option.", "Output Options", JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            selectedOutputOptions = ExportOutputOption.normalize(selectedOutputOptions);
 
             dispose();
         });
@@ -273,8 +274,12 @@ public class ExportConfirmationDialog extends JDialog {
         return selectedSkipOptions;
     }
 
+    public List<String> getSelectedOutputOptions() {
+        return selectedOutputOptions;
+    }
+
     public String getOutputFormat() {
-        return outputFormat;
+        return ExportOutputOption.toWriterFormat(selectedOutputOptions.get(0));
     }
 
     public boolean isApplyUserSelectedFieldExclusions() {
@@ -291,26 +296,6 @@ public class ExportConfirmationDialog extends JDialog {
 
     public boolean isSkipObjectsWithoutExportableFields() {
         return skipObjectsWithoutExportableFields;
-    }
-
-    private String resolveDefaultFormat(List<String> formatNames, String requestedFormat) {
-        if (requestedFormat == null || requestedFormat.isBlank()) {
-            return formatNames.get(0);
-        }
-
-        for (String formatName : formatNames) {
-            if (formatName.equalsIgnoreCase(requestedFormat)) {
-                return formatName;
-            }
-        }
-
-        for (String formatName : formatNames) {
-            if ("XML".equalsIgnoreCase(formatName)) {
-                return formatName;
-            }
-        }
-
-        return formatNames.get(0);
     }
 
     /**

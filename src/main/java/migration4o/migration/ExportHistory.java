@@ -33,21 +33,21 @@ public class ExportHistory {
      * Saves export parameters for later replay.
      */
     public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames) {
-        saveExport(type, targetName, outputPath, classNames, null, null, false, "XML");
+        saveExport(type, targetName, outputPath, classNames, null, null, false, ExportOutputOption.XML_XSD);
     }
 
     /**
      * Saves export parameters for bulk module export.
      */
     public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames) {
-        saveExport(type, targetName, outputPath, classNames, moduleNames, null, false, "XML");
+        saveExport(type, targetName, outputPath, classNames, moduleNames, null, false, ExportOutputOption.XML_XSD);
     }
 
     /**
      * Saves export parameters with object limit for bulk module export.
      */
     public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass, boolean exportNativeIds) {
-        saveExport(type, targetName, outputPath, classNames, moduleNames, maxObjectsPerClass, exportNativeIds, "XML");
+        saveExport(type, targetName, outputPath, classNames, moduleNames, maxObjectsPerClass, exportNativeIds, ExportOutputOption.XML_XSD);
     }
 
     /**
@@ -81,7 +81,7 @@ public class ExportHistory {
         }
 
         props.setProperty(PROP_EXPORT_NATIVE_IDS, String.valueOf(exportNativeIds));
-        props.setProperty(PROP_OUTPUT_FORMAT, (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : "XML");
+        props.setProperty(PROP_OUTPUT_FORMAT, (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : ExportOutputOption.XML_XSD);
         props.setProperty(PROP_APPLY_USER_SELECTED_FIELD_EXCLUSIONS, String.valueOf(applyUserSelectedFieldExclusions));
         props.setProperty(PROP_APPLY_SKIP_WHEN_CONDITIONS, String.valueOf(applySkipWhenConditions));
         props.setProperty(PROP_APPLY_EXPORT_CRITERIA_FILTERS, String.valueOf(applyExportCriteriaFilters));
@@ -114,7 +114,7 @@ public class ExportHistory {
             List<String> classNames = null;
             List<String> moduleNames = null;
             Integer maxObjectsPerClass = null;
-            String outputFormat = props.getProperty(PROP_OUTPUT_FORMAT, "XML");
+            String outputFormat = props.getProperty(PROP_OUTPUT_FORMAT, ExportOutputOption.XML_XSD);
             boolean applyUserSelectedFieldExclusions = Boolean.parseBoolean(props.getProperty(PROP_APPLY_USER_SELECTED_FIELD_EXCLUSIONS, "true"));
             boolean applySkipWhenConditions = Boolean.parseBoolean(props.getProperty(PROP_APPLY_SKIP_WHEN_CONDITIONS, "true"));
             boolean applyExportCriteriaFilters = Boolean.parseBoolean(props.getProperty(PROP_APPLY_EXPORT_CRITERIA_FILTERS, "true"));
@@ -184,7 +184,7 @@ public class ExportHistory {
             this.timestamp = timestamp;
             this.maxObjectsPerClass = maxObjectsPerClass;
             this.exportNativeIds = exportNativeIds;
-            this.outputFormat = (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : "XML";
+            this.outputFormat = (outputFormat != null && !outputFormat.isBlank()) ? outputFormat : ExportOutputOption.XML_XSD;
             this.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
             this.applySkipWhenConditions = applySkipWhenConditions;
             this.applyExportCriteriaFilters = applyExportCriteriaFilters;

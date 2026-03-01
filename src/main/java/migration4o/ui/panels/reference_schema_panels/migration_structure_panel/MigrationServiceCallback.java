@@ -10,6 +10,7 @@ import javax.swing.SwingWorker;
 
 import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportHistory;
+import migration4o.migration.ExportOutputOption;
 import migration4o.migration.MigrationExportService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
@@ -89,20 +90,7 @@ public class MigrationServiceCallback {
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
-                ExportStatistics result = exportService.exportModules(
-                    context,
-                    modules,
-                    modulePaths,
-                    options.getOutputPath(),
-                    monitor,
-                    options.getMaxObjectsPerClass(),
-                    options.isExportNativeIds(),
-                    options.getSelectedSkipOptions(),
-                    options.getOutputFormat(),
-                    options.isApplyUserSelectedFieldExclusions(),
-                    options.isApplySkipWhenConditions(),
-                    options.isApplyExportCriteriaFilters(),
-                    options.isSkipObjectsWithoutExportableFields());
+                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields());
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -113,19 +101,7 @@ public class MigrationServiceCallback {
                 // Save to history if successful
                 if (result.errors.isEmpty()) {
                     String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
-                    ExportHistory.saveExport(
-                            ExportHistory.ExportType.MODULE,
-                            targetName,
-                            options.getOutputPath(),
-                            new ArrayList<>(result.exportedClassCounts.keySet()),
-                            moduleNames,
-                            options.getMaxObjectsPerClass(),
-                            options.isExportNativeIds(),
-                            options.getOutputFormat(),
-                            options.isApplyUserSelectedFieldExclusions(),
-                            options.isApplySkipWhenConditions(),
-                            options.isApplyExportCriteriaFilters(),
-                            options.isSkipObjectsWithoutExportableFields());
+                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, options.getOutputPath(), new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, options.getMaxObjectsPerClass(), options.isExportNativeIds(), ExportOutputOption.toPersistedOptions(options.getOutputOptions()), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields());
                 }
 
                 return result;

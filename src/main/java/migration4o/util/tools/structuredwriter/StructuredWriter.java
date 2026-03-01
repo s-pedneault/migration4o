@@ -62,7 +62,7 @@ public class StructuredWriter {
             if (value != null)
                 api.addContent(element, value);
 
-            if (skipIfEmpty && element.content.isEmpty())
+            if (skipIfEmpty && element.prefix.isEmpty() && element.content.isEmpty() && element.suffix.isEmpty())
                 return this;
 
             writer.write(element.prefix.toString());
