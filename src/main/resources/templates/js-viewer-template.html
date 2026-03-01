@@ -240,6 +240,12 @@
             min-width: 130px;
         }
 
+        .condition-main .field-filter {
+            flex: 0 0 120px;
+            min-width: 90px;
+            max-width: 140px;
+        }
+
         .condition-main .operator-select {
             flex: 1;
             min-width: 90px;
@@ -656,10 +662,6 @@
                     <div class="search-header">
                         <h2 id="searchTitle">Recherche</h2>
                         <div class="search-tools">
-                            <div class="columns-menu-wrap">
-                                <button class="columns-btn" id="columnsBtn" type="button">Colonnes</button>
-                                <div class="columns-menu" id="columnsMenu"></div>
-                            </div>
                             <div class="search-actions">
                                 <button class="btn btn-sm" id="addConditionBtn" type="button">+ Critère</button>
                                 <button class="btn btn-sm" id="clearSearchBtn" type="button">Effacer</button>
@@ -680,6 +682,10 @@
                                 <option value="100">100</option>
                                 <option value="200">200</option>
                             </select>
+                            <div class="columns-menu-wrap">
+                                <button class="columns-btn" id="columnsBtn" type="button">Colonnes</button>
+                                <div class="columns-menu" id="columnsMenu"></div>
+                            </div>
                         </div>
                     </div>
                     <div class="results-scroll" id="resultsScroll">
@@ -751,25 +757,45 @@
                 search: 'Recherche', columns: 'Colonnes', addCondition: '+ Critère', clear: 'Effacer', apply: 'Appliquer',
                 rows: 'Lignes :', prev: '\u2190 Préc.', next: 'Suiv. \u2192', loading: 'Chargement...',
                 noResults: 'Aucun enregistrement ne correspond à vos critères.', noResultsSub: 'Essayez d’ajuster vos critères ou effacez la recherche.',
+                browse: 'Parcourir tout', welcome: 'enregistrements', welcomeHint: 'Ajoutez des critères ci-dessus pour filtrer, ou parcourez tous les enregistrements.',
                 resultsTotal: 'enregistrements au total', result: 'résultat', results: 'résultats', page: 'Page', record: 'Enregistrement',
                 detail: 'Détails', properties: 'Propriétés', rawData: 'Données JSON', close: 'Fermer', remove: 'Supprimer',
-                toggleLogic: 'Cliquer pour alterner ET/OU', allFields: 'Tous les champs', value: 'Valeur...',
+                toggleLogic: 'Cliquer pour alterner ET/OU', allFields: 'Tous les champs', value: 'Valeur...', fieldFilter: 'Champ...',
                 colRow: '#', colId: 'ID', colSummary: 'Résumé', err: 'Erreur', noPayload: 'Aucune donnée JS trouvée (window.__m4o).'
             },
             en: {
                 search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
                 rows: 'Rows:', prev: '\u2190 Prev', next: 'Next \u2192', loading: 'Loading...',
                 noResults: 'No records match your criteria.', noResultsSub: 'Try adjusting your conditions or clear the search.',
+                browse: 'Browse all', welcome: 'records', welcomeHint: 'Add conditions above to filter, or browse all records.',
                 resultsTotal: 'records total', result: 'result', results: 'results', page: 'Page', record: 'Record',
                 detail: 'Details', properties: 'Properties', rawData: 'Raw JSON', close: 'Close', remove: 'Remove',
-                toggleLogic: 'Click to toggle AND/OR', allFields: 'All fields', value: 'Value...',
+                toggleLogic: 'Click to toggle AND/OR', allFields: 'All fields', value: 'Value...', fieldFilter: 'Field...',
                 colRow: '#', colId: 'ID', colSummary: 'Summary', err: 'Error', noPayload: 'No JS payload found (window.__m4o).'
             }
         };
 
         const OPERATORS = {
-            string: [{ v: 'contains', l: 'Contains' }, { v: 'not_contains', l: 'Does not contain' }, { v: 'equals', l: 'Equals' }, { v: 'not_equals', l: 'Not equal to' }, { v: 'empty', l: 'Is empty' }, { v: 'not_empty', l: 'Is not empty' }],
-            _all: [{ v: 'contains', l: 'Contains' }, { v: 'not_contains', l: 'Does not contain' }, { v: 'empty', l: 'Is empty' }, { v: 'not_empty', l: 'Is not empty' }]
+            string: [{ v: 'contains' }, { v: 'not_contains' }, { v: 'equals' }, { v: 'not_equals' }, { v: 'empty' }, { v: 'not_empty' }],
+            _all: [{ v: 'contains' }, { v: 'not_contains' }, { v: 'empty' }, { v: 'not_empty' }]
+        };
+        const OPERATOR_LABELS = {
+            fr: {
+                contains: 'Contient',
+                not_contains: 'Ne contient pas',
+                equals: 'Égale',
+                not_equals: 'Différent de',
+                empty: 'Est vide',
+                not_empty: 'N’est pas vide'
+            },
+            en: {
+                contains: 'Contains',
+                not_contains: 'Does not contain',
+                equals: 'Equals',
+                not_equals: 'Not equal to',
+                empty: 'Is empty',
+                not_empty: 'Is not empty'
+            }
         };
         const NO_VALUE_OPS = new Set(['empty', 'not_empty']);
 
@@ -778,13 +804,50 @@
 
         function appendField(map, key, value) {
             if (!key) return;
+            const normalizedKey = normalizeFieldPath(key);
+            if (!normalizedKey) return;
             const text = String(value ?? '').trim();
             if (text.length === 0) return;
-            if (map[key]) {
-                if (!map[key].includes(text)) map[key] += ' | ' + text;
+            if (map[normalizedKey]) {
+                if (!map[normalizedKey].includes(text)) map[normalizedKey] += ' | ' + text;
             } else {
-                map[key] = text;
+                map[normalizedKey] = text;
             }
+        }
+
+        function normalizeFieldPath(path) {
+            let clean = String(path || '').replace(/\[\d+\]/g, '');
+            clean = clean.replace(/\.{2,}/g, '.').replace(/^\./, '').replace(/\.$/, '');
+            if (!clean) return '';
+
+            const segments = clean.split('.').filter(Boolean).map((segment) => {
+                const withoutAt = segment.startsWith('@') ? segment.substring(1) : segment;
+                return withoutAt.trim();
+            }).filter(Boolean);
+
+            const out = [];
+            for (const seg of segments) {
+                if (out.length === 0) {
+                    out.push(seg);
+                    continue;
+                }
+
+                const prev = out[out.length - 1];
+                const prevLo = prev.toLowerCase();
+                const segLo = seg.toLowerCase();
+
+                if (prevLo === segLo) {
+                    continue;
+                }
+
+                if (prevLo.replace(/^liste/, '') === segLo || segLo.replace(/^liste/, '') === prevLo) {
+                    continue;
+                }
+
+                out.push(seg);
+            }
+
+            return out.join('.');
         }
 
         function flattenValue(value, path, out) {
@@ -799,7 +862,7 @@
             }
 
             if (value['@attributes'] && typeof value['@attributes'] === 'object') {
-                Object.entries(value['@attributes']).forEach(([k, v]) => appendField(out, `${path}.@${k}`, v));
+                Object.entries(value['@attributes']).forEach(([k, v]) => appendField(out, `${path}.${k}`, v));
             }
             if (value['#text'] !== undefined) {
                 appendField(out, path, value['#text']);
@@ -835,7 +898,7 @@
         function buildRecord(entity, raw, pos) {
             const fields = {};
             const attrs = raw && raw['@attributes'] && typeof raw['@attributes'] === 'object' ? raw['@attributes'] : null;
-            if (attrs) Object.entries(attrs).forEach(([k, v]) => appendField(fields, `@${k}`, v));
+            if (attrs) Object.entries(attrs).forEach(([k, v]) => appendField(fields, `${k}`, v));
             if (raw && typeof raw === 'object') {
                 Object.entries(raw).forEach(([k, v]) => {
                     if (k === '@attributes') return;
@@ -929,7 +992,8 @@
 
         function buildOperatorOptions(fieldType) {
             const ops = OPERATORS[fieldType] || OPERATORS.string;
-            return ops.map((o) => `<option value="${o.v}">${esc(o.l)}</option>`).join('');
+            const labels = OPERATOR_LABELS[currentLanguage] || OPERATOR_LABELS.en;
+            return ops.map((o) => `<option value="${o.v}">${esc(labels[o.v] || o.v)}</option>`).join('');
         }
 
         function updateValueInput(opSel, valInput) {
@@ -949,6 +1013,7 @@
             row.innerHTML =
                 `<div class="condition-main">`
                 + `<span class="logic-label ${isFirst ? 'first' : ''}" title="${esc(t('toggleLogic'))}">${globalLogicOperator}</span>`
+                + `<input class="field-filter" type="text" placeholder="${esc(t('fieldFilter'))}" aria-label="Field filter">`
                 + `<select class="field-select">${buildFieldOptions()}</select>`
                 + `<select class="operator-select">${buildOperatorOptions('_all')}</select>`
                 + `<input class="value-input" type="text" placeholder="${esc(t('value'))}">`
@@ -958,15 +1023,43 @@
             conditionsContainer.appendChild(row);
 
             const fieldSel = row.querySelector('.field-select');
+            const fieldFilter = row.querySelector('.field-filter');
             const opSel = row.querySelector('.operator-select');
             const valInput = row.querySelector('.value-input');
             const removeBtn = row.querySelector('.remove-btn');
             const logicLabel = row.querySelector('.logic-label');
 
+            function refreshFieldOptions(filterText, keepValue) {
+                const term = String(filterText || '').trim().toLowerCase();
+                const pool = term
+                    ? discoveredFields.filter((f) => (f.label || f.path).toLowerCase().includes(term) || f.path.toLowerCase().includes(term))
+                    : discoveredFields.slice();
+
+                let html = `<option value="__all">${esc(t('allFields'))}</option>`;
+                pool.forEach((f) => {
+                    html += `<option value="${esc(f.path)}">${esc(f.label)}</option>`;
+                });
+
+                const previous = keepValue ? fieldSel.value : null;
+                fieldSel.innerHTML = html;
+
+                if (previous && Array.from(fieldSel.options).some((opt) => opt.value === previous)) {
+                    fieldSel.value = previous;
+                } else if (term && pool.length > 0) {
+                    fieldSel.value = pool[0].path;
+                } else {
+                    fieldSel.value = '__all';
+                }
+
+                opSel.innerHTML = buildOperatorOptions(getFieldType(fieldSel.value));
+                updateValueInput(opSel, valInput);
+            }
+
             fieldSel.addEventListener('change', () => {
                 opSel.innerHTML = buildOperatorOptions(getFieldType(fieldSel.value));
                 updateValueInput(opSel, valInput);
             });
+            fieldFilter.addEventListener('input', () => refreshFieldOptions(fieldFilter.value, false));
             opSel.addEventListener('change', () => updateValueInput(opSel, valInput));
             logicLabel.addEventListener('click', () => {
                 if (logicLabel.classList.contains('first')) return;
@@ -985,6 +1078,7 @@
                 }
             });
 
+            refreshFieldOptions('', true);
             updateValueInput(opSel, valInput);
         }
 
@@ -1108,6 +1202,16 @@
             const total = filteredRecords.length;
             const totalPages = Math.max(1, Math.ceil(total / ps));
             if (currentPage > totalPages) currentPage = totalPages;
+
+            if (!searchApplied && total > ps) {
+                const totalCols = 1 + getVisibleColumns().length;
+                resultsBody.innerHTML = `<tr><td colspan="${totalCols}"><div class="welcome"><div class="icon">🔎</div><p><strong>${total}</strong> ${esc(entityName)} ${esc(t('welcome'))}</p><div class="sub">${esc(t('welcomeHint'))}</div></div></td></tr>`;
+                resultsCount.textContent = total + ' ' + t('resultsTotal');
+                pageInfo.textContent = `${t('page')} 1 / ${totalPages}`;
+                prevBtn.disabled = true;
+                nextBtn.disabled = true;
+                return;
+            }
 
             const start = (currentPage - 1) * ps;
             const page = filteredRecords.slice(start, start + ps);
@@ -1242,6 +1346,54 @@
             prevBtn.textContent = t('prev');
             nextBtn.textContent = t('next');
             detailCloseBtn.setAttribute('aria-label', t('close'));
+
+            document.querySelectorAll('.search-condition').forEach((row) => {
+                const fieldSel = row.querySelector('.field-select');
+                const fieldFilter = row.querySelector('.field-filter');
+                const opSel = row.querySelector('.operator-select');
+                const valInput = row.querySelector('.value-input');
+                const removeBtn = row.querySelector('.remove-btn');
+                const logicLabel = row.querySelector('.logic-label');
+
+                if (fieldFilter) {
+                    fieldFilter.placeholder = t('fieldFilter');
+                    const current = fieldSel ? fieldSel.value : '__all';
+                    const term = fieldFilter.value || '';
+
+                    const pool = term.trim()
+                        ? discoveredFields.filter((f) => (f.label || f.path).toLowerCase().includes(term.toLowerCase()) || f.path.toLowerCase().includes(term.toLowerCase()))
+                        : discoveredFields.slice();
+
+                    let html = `<option value="__all">${esc(t('allFields'))}</option>`;
+                    pool.forEach((f) => {
+                        html += `<option value="${esc(f.path)}">${esc(f.label)}</option>`;
+                    });
+                    if (fieldSel) {
+                        fieldSel.innerHTML = html;
+                        if (Array.from(fieldSel.options).some((opt) => opt.value === current)) {
+                            fieldSel.value = current;
+                        }
+                    }
+                }
+
+                if (opSel) {
+                    const selected = opSel.value;
+                    const fieldType = getFieldType(fieldSel ? fieldSel.value : '__all');
+                    opSel.innerHTML = buildOperatorOptions(fieldType);
+                    if (selected && Array.from(opSel.options).some((opt) => opt.value === selected)) {
+                        opSel.value = selected;
+                    }
+                }
+
+                if (valInput) {
+                    valInput.placeholder = t('value');
+                    updateValueInput(opSel, valInput);
+                }
+
+                if (logicLabel) logicLabel.title = t('toggleLogic');
+                if (removeBtn) removeBtn.title = t('remove');
+            });
+
             renderColumnsMenu();
             renderResults();
         }
