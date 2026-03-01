@@ -795,6 +795,9 @@ public class ExportEngine {
         if ("EXCEL".equalsIgnoreCase(formatName)) {
             return ".xlsx";
         }
+        if ("JS".equalsIgnoreCase(formatName)) {
+            return ".js";
+        }
         if ("JSON".equalsIgnoreCase(formatName)) {
             return ".json";
         }
