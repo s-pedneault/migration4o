@@ -249,14 +249,17 @@ public class XSDBuilder {
         if (schemaClass.title != null && schemaClass.title.length() > 0) {
             xsdWriter.write("  <!-- " + schemaClass.title + " -->\n");
         }
-        if (schemaClass.description != null && schemaClass.description.length() > 0) {
-            xsdWriter.write("  <xs:documentation xml:lang=\"fr\">" + schemaClass.description + "</xs:documentation>\n");
-        }
+        String classDescription = schemaClass.description != null ? schemaClass.description.trim() : "";
 
         // Write the complexType definition if needed (or if we need both element and
         // type)
         if (writeType || (writeElement && writeType)) {
             xsdWriter.write("  <xs:complexType name=\"" + destClassName + "\">\n");
+            if (!classDescription.isEmpty()) {
+                xsdWriter.write("    <xs:annotation>\n");
+                xsdWriter.write("      <xs:documentation xml:lang=\"fr\">" + escapeXml(classDescription) + "</xs:documentation>\n");
+                xsdWriter.write("    </xs:annotation>\n");
+            }
             xsdWriter.write("    <xs:sequence>\n");
             for (DOSchemaField field : fields.values()) {
                 writeFieldElement(xsdWriter, field, "      ");
@@ -273,6 +276,11 @@ public class XSDBuilder {
             } else {
                 // Write element with inline anonymous complexType
                 xsdWriter.write("  <xs:element name=\"" + destClassName + "\">\n");
+                if (!classDescription.isEmpty()) {
+                    xsdWriter.write("    <xs:annotation>\n");
+                    xsdWriter.write("      <xs:documentation xml:lang=\"fr\">" + escapeXml(classDescription) + "</xs:documentation>\n");
+                    xsdWriter.write("    </xs:annotation>\n");
+                }
                 xsdWriter.write("    <xs:complexType>\n");
                 xsdWriter.write("      <xs:sequence>\n");
                 for (DOSchemaField field : fields.values()) {

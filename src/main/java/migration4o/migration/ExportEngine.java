@@ -520,7 +520,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(xmlPath);
+            generateHtmlViewerIfNeeded(xmlPath, null);
 
             if (isXMLFormat() && operation.sharedXSDBuilder == null) {
                 Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
@@ -750,7 +750,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(xmlPath);
+            generateHtmlViewerIfNeeded(xmlPath, schemaClass);
 
             // Only generate individual XSD if not using shared builder
             if (isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
@@ -864,13 +864,18 @@ public class ExportEngine {
         return sanitizeModuleName(parent.toString());
     }
 
-    private void generateHtmlViewerIfNeeded(Path xmlPath) {
+    private void generateHtmlViewerIfNeeded(Path xmlPath, DOSchemaClass schemaClass) {
         if (!isXMLFormat() || xmlPath == null) {
             return;
         }
 
         try {
-            XmlViewerHtmlGenerator.writeViewerForXml(xmlPath);
+            if (schemaClass != null) {
+                DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
+                XmlViewerHtmlGenerator.writeViewerForXml(xmlPath, schemaClass, refSchema);
+            } else {
+                XmlViewerHtmlGenerator.writeViewerForXml(xmlPath);
+            }
         } catch (IOException e) {
             if (operation.monitor != null) {
                 operation.monitor.onStatusMessage("Warning: Failed to generate HTML viewer for " + xmlPath.getFileName() + ": " + e.getMessage());
@@ -1032,7 +1037,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(Paths.get(outputPath));
+            generateHtmlViewerIfNeeded(Paths.get(outputPath), null);
 
             // Generate XSD schema
             if (isXMLFormat()) {
