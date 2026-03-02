@@ -512,7 +512,7 @@ public class FieldExporter {
                         Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
                         // For JS exports: resolve to a human-readable label and strip the "id"/"ID" prefix from the column
                         if ("JS".equalsIgnoreCase(operation.outputFormat) && fieldClass != null) {
-                            String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, fieldValue, fieldClass, operation.referenceSchema, operation.databaseSchema);
+                            String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, fieldValue, fieldClass, operation.referenceSchema, operation.databaseSchema, operation.idEntiteTargetCache, operation.idEntiteSummaryCache);
                             if (refLabel != null && !refLabel.isBlank()) {
                                 xmlWriter.elementWithContent(stripIdPrefix(fieldName), attrs, refLabel, false);
                                 return;

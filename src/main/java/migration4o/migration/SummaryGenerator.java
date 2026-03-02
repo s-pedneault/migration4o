@@ -1,5 +1,6 @@
 package migration4o.migration;
 
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -147,7 +148,33 @@ public class SummaryGenerator {
      * @return the summary of the referenced entity, or {@code null} if the entity
      *         cannot be resolved or has no summary template
      */
+    /**
+     * Resolves a human-readable label for an IDEntite reference (no caching).
+     * Delegates to the caching overload with {@code null} cache maps.
+     */
     public static String resolveIDEntiteLabel(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema) {
+        return resolveIDEntiteLabel(container, idEntiteObj, idEntiteClass, referenceSchema, databaseSchema, null, null);
+    }
+
+    /**
+     * Resolves a human-readable label for an IDEntite reference with optional
+     * caching.
+     *
+     * <p>Two cache levels are supported:
+     * <ol>
+     *   <li>{@code targetCache} — maps {@code "<mID>:<expectedType>"} to the
+     *       resolved target entity's DB4O object ID, skipping the O(n) mID scan
+     *       for subsequent references to the same entity.</li>
+     *   <li>{@code summaryCache} — maps the target entity's DB4O object ID to its
+     *       generated summary string, skipping re-generation when the same entity
+     *       is referenced from multiple records.</li>
+     * </ol>
+     * Pass {@code null} for either map to disable that cache level.
+     *
+     * @param targetCache  mID+type key → targetObjectId  (may be {@code null})
+     * @param summaryCache targetObjectId → label string   (may be {@code null})
+     */
+    public static String resolveIDEntiteLabel(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
         if (container == null || idEntiteObj == null || idEntiteClass == null) {
             return null;
         }
@@ -155,14 +182,35 @@ public class SummaryGenerator {
             // Determine the expected target type
             String expectedType = idEntiteClass.pointsTo;
             if (expectedType == null || expectedType.isEmpty()) {
-                // Try inferring from the class source name (e.g. IDPersonne → Personne)
                 expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.source);
             }
 
-            // Resolve the target object's DB4O ID via mID matching
-            Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, idEntiteObj, expectedType, databaseSchema);
+            // ── Level 1: skip the O(n) mID scan if we already resolved this mID ──
+            // Activate the IDEntite wrapper to read its mID
+            long idEntiteObjId = container.ext().getID(idEntiteObj);
+            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteObjId);
+            Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
+            if (mID == null) {
+                return null;
+            }
+            String cacheKey = mID + ":" + (expectedType != null ? expectedType : "");
+
+            Long targetObjectId;
+            if (targetCache != null && targetCache.containsKey(cacheKey)) {
+                targetObjectId = targetCache.get(cacheKey);
+            } else {
+                targetObjectId = ReferenceUtil.findObjectByMID(container, mID, expectedType, databaseSchema);
+                if (targetCache != null) {
+                    targetCache.put(cacheKey, targetObjectId); // cache null too (unresolvable)
+                }
+            }
             if (targetObjectId == null) {
                 return null;
+            }
+
+            // ── Level 2: skip summary generation if we already labelled this target ──
+            if (summaryCache != null && summaryCache.containsKey(targetObjectId)) {
+                return summaryCache.get(targetObjectId);
             }
 
             // Activate and retrieve the target object
@@ -176,9 +224,16 @@ public class SummaryGenerator {
             String targetClassName = ClassUtil.getClassName(targetObj);
             DOSchemaClass targetSchemaClass = SchemaUtil.findClassByName(targetClassName, referenceSchema);
             if (targetSchemaClass == null || targetSchemaClass.summary == null || targetSchemaClass.summary.isEmpty()) {
+                if (summaryCache != null) {
+                    summaryCache.put(targetObjectId, null); // cache the miss too
+                }
                 return null;
             }
-            return generate(container, targetObj, targetSchemaClass, referenceSchema);
+            String label = generate(container, targetObj, targetSchemaClass, referenceSchema);
+            if (summaryCache != null) {
+                summaryCache.put(targetObjectId, label);
+            }
+            return label;
         } catch (Exception e) {
             return null;
         }

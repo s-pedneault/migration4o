@@ -272,7 +272,7 @@ public class ExportEngine {
             if (depth == 0 || (depth == 1 && rel.getName(0).toString().isEmpty()))
                 return "./";
             StringBuilder bh = new StringBuilder();
-            for (int i = 0; i < depth; i++)
+            for (int i = 0; i < depth + 1; i++)
                 bh.append("../");
             return bh.toString();
         } catch (Exception e) {

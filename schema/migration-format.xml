@@ -186,7 +186,6 @@
                 <classRef sourceName="gest.horaire.ModeleHorQuart"/>
                 <classRef sourceName="gest.horaire.ModeleHoraire"/>
                 <classRef sourceName="gest.horaire.InfoEmployeQuart"/>
-                <classRef sourceName="gest.horaire.ListeEmployesParCaserne"/>
                 <classRef sourceName="gest.horaire.TypeActivHoraire"/>
             </module>
         </module>

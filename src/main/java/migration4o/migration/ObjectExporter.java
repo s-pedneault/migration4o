@@ -177,7 +177,7 @@ public class ObjectExporter {
                     // nested object with a flat human-readable label, stripping the "ID" prefix
                     // from the element name so the column reads as the entity name, not the ID class.
                     if ("JS".equalsIgnoreCase(operation.outputFormat) && schemaClass != null && schemaClass.isIDEntite(operation.databaseSchema)) {
-                        String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, obj, schemaClass, operation.referenceSchema, operation.databaseSchema);
+                        String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, obj, schemaClass, operation.referenceSchema, operation.databaseSchema, operation.idEntiteTargetCache, operation.idEntiteSummaryCache);
                         if (refLabel != null && !refLabel.isBlank()) {
                             String displayName = stripIdPrefix(elementName);
                             xmlWriter.elementWithContent(displayName, attributes.isEmpty() ? null : attributes, refLabel, false);

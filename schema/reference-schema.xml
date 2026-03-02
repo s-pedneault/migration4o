@@ -1334,7 +1334,7 @@
         <field source="mPropNombre" destinationName="propaneNombre" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mPropQuant" destinationName="propaneQuantite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" />
     </class>
-    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="HistoImportDossPrev" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="HistoImportDossPrev" summary="[nomFichier] ([dateImport])" parentClass="gest.gen.EntiteContientID">
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mDateImport" destinationName="dateImport" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -1469,7 +1469,7 @@
         <field source="mTelJour" destinationName="telephoneJour" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mTelSoir" destinationName="telephoneSoir" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
-    <class source="gest.employe.Employe" destinationName="Employe" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.employe.Employe" destinationName="Employe" isExported="true" summary="[prenom] [nom] ([matricule])" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.equipe.Equipe" field="mVectIDEmploye" />
         <reference class="gest.horaire.HorQuart" field="mVectEmployeDispo" />
         <reference class="gest.horaire.ListeEmployesParCaserne" field="mVectIDEmploye" />
@@ -2569,7 +2569,7 @@
         <field source="mVectIDGraphLib" destinationName="listeIDGraphLib" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.graph.IDGraphLib" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.histo.Histo" destinationName="Histo" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.histo.Histo" destinationName="Histo" isExported="true" summary="[detail]" parentClass="gest.gen.EntiteContientID">
         <field source="mID" definition="mID" />
         <field source="mAction" destinationName="action" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mDate" destinationName="date" isExported="true" skipWhen="DEFAULT" type="date" />
@@ -4944,7 +4944,7 @@
         <reference class="gest.secCiv.RessSecCiv" field="mIDUtilisateur" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.utilGroupe.Utilisateur" destinationName="Utilisateur" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.utilGroupe.Utilisateur" destinationName="Utilisateur" isExported="true" summary="[codeUtilisateur]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.employe.Employe" field="mIDUtilisateur" />
         <reference class="gest.secCiv.RessSecCiv" field="mIDUtilisateur" />
         <field source="mID" definition="mID" />

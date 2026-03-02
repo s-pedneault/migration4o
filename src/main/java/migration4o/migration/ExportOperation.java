@@ -1,8 +1,10 @@
 package migration4o.migration;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
@@ -66,4 +68,18 @@ public class ExportOperation {
 
     public ArrayList<DOSchemaField> availableSkipUserOptions;
     public ArrayList<DOSchemaField> selectedSkipUserOptions;
+
+    // ── IDEntite label resolution caches (JS export only) ────────────────────
+    /**
+     * Maps a composite key {@code "<mID>:<expectedType>"} to the resolved target
+     * entity's DB4O object ID. Populated lazily; avoids repeating the O(n) mID
+     * scan when multiple fields reference the same entity type with the same mID.
+     */
+    public Map<String, Long> idEntiteTargetCache = new HashMap<>();
+    /**
+     * Maps a resolved target entity's DB4O object ID to its generated
+     * human-readable summary label. Populated lazily; avoids regenerating the
+     * same summary when the same entity is referenced from multiple records.
+     */
+    public Map<Long, String> idEntiteSummaryCache = new HashMap<>();
 }

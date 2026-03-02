@@ -122,8 +122,6 @@ Placed **before** the main viewer `<script>`, so `NAV_ITEMS` is a global when th
 
 This feature enriches the HTML viewer with **human-readable record summaries** and **resolved reference labels**, replacing raw numeric IDs with meaningful text. It is active only during JS-format exports.
 
-**⚠️ Performance bottleneck** — see notes below.
-
 ### What it does
 
 1. **Record summary** (`_summary` attribute): When a `DOSchemaClass` has a `summary` template (e.g. `"[prenom] [nom] (dossier [numeroDossier])"`), `SummaryGenerator.generate()` evaluates it against each exported object and stores the result in the `_summary` attribute of that record's XML element. The HTML viewer picks it up in `buildRecord()` and stores it as `rec.summary`, displaying it in the **Summary** column (default visible) and as hover text in record detail.
@@ -155,28 +153,24 @@ ObjectExporter (root record or embedded IDEntite structure)
   └─ SummaryGenerator.resolveIDEntiteLabel()  → flat label element (IDEntite structure)
 ```
 
-### Performance bottleneck — `ReferenceUtil.findObjectByMID()`
+### Performance — IDEntite resolution caches
 
-`findObjectByMID()` resolves an IDEntite reference by scanning **all objects of the expected entity type** in the database, activating each one and comparing its `mID` field:
+`findObjectByMID()` resolves an IDEntite reference by scanning **all objects of the expected entity type** in the database, activating each one and comparing its `mID` field — O(n) per unique resolved target. With large tables and many fields per record this compounds heavily.
 
-```java
-for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-    if (!schemaClass.isEntite(databaseSchema)) continue;
-    for (long objectId : schemaClass.objectIds) {
-        Object obj = container.ext().getByID(objectId);
-        activateObjectShallow(container, obj, objectId);
-        Long objMID = extractMIDField(container, obj);
-        if (mID.equals(objMID)) return objectId;
-    }
-}
-```
+Two cache maps on `ExportOperation` are populated lazily during a JS export run and discarded afterward:
 
-**Cost per IDEntite reference field**: O(n) object activations, where n = number of objects in the target entity class. With large tables and many fields per record this compounds heavily.
+| Field | Key | Value | Skips |
+|---|---|---|---|
+| `idEntiteTargetCache` | `"<mID>:<expectedType>"` | target entity's DB4O `objectId` | the O(n) `findObjectByMID` scan |
+| `idEntiteSummaryCache` | target entity's DB4O `objectId` | generated summary string | summary template evaluation |
 
-**Known improvement opportunities**:
-- **Build a `mID → objectId` index** once per entity class (e.g. `Map<Long, Long>` keyed by mID), populated on first resolution for that class, reused for all subsequent lookups.
-- **Cache resolved labels** by `(idEntiteObjectId → label)` so the same IDEntite value encountered in multiple records is only resolved once.
-- The index and label cache could be held in `ExportEngine` for the lifetime of a single export run, then discarded.
+**Example** — 100 `ChampPerso` records each holding an `IDTypeChampPerso` reference pointing to one of 5 `TypeChampPerso` entities:
+- Without caches: 100 mID scans + 100 summary generations
+- With caches: 5 mID scans (first hit per unique key) + 5 summary generations (first hit per target); all 95 subsequent calls are map lookups
+
+`SummaryGenerator.resolveIDEntiteLabel` has two overloads:
+- `(container, obj, cls, refSchema, dbSchema)` — existing callers, no caching
+- `(container, obj, cls, refSchema, dbSchema, targetCache, summaryCache)` — pass `null` for either map to disable that cache level; used by `ObjectExporter` and `FieldExporter` with the operation's cache maps
 
 ### UI — Summary Editor
 
@@ -245,6 +239,6 @@ HTML files replace the `.js` export files (JS is embedded then deleted). The nav
 | `migration4o/migration/MigrationExportService.java` | Calls `setModuleNavData()` before export loop; no post-processing step |
 | `migration4o/util/HtmlNavPostProcessor.java` | Legacy post-processor — no longer called for JS viewer flow |
 | `migration4o/migration/SummaryGenerator.java` | Generates `_summary` strings from template; resolves IDEntite labels |
-| `migration4o/util/ReferenceUtil.java` | `resolveIDEntiteReference()` / `findObjectByMID()` — mID linear scan (performance bottleneck) |
+| `migration4o/util/ReferenceUtil.java` | `resolveIDEntiteReference()` / `findObjectByMID()` — O(n) mID scan, mitigated by `ExportOperation.idEntiteTargetCache` |
 | `migration4o/migration/ObjectExporter.java` | Embeds `_summary` attribute and resolves IDEntite structures during JS export |
 | `migration4o/migration/FieldExporter.java` | Resolves IDEntite scalar fields to human-readable labels during JS export |
