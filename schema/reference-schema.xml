@@ -3177,7 +3177,7 @@
         <field source="mVectMemoFactDetail" destinationName="listeMemoFacturationDetail" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.MemoFactDetail" />
         <field source="mIDIntervention" destinationName="idIntervention" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.intervention.IDIntervention" />
     </class>
-    <class source="gest.intervention.ParamCarteAppel" destinationName="ParamCarteAppel" isExported="true" title="Paramètres des cartes d&apos;appel" parentClass="gest.gen.EntiteParam">
+    <class source="gest.intervention.ParamCarteAppel" destinationName="ParamCarteAppel" isExported="true" title="Paramètres des cartes d&apos;appel" summary="[idCaserne]" parentClass="gest.gen.EntiteParam">
         <field source="mActif" definition="mActif" />
         <field source="mChampDeduitPremInterv" destinationName="champDeduitPremierIntervenant" isExported="true" skipWhen="DEFAULT" type="int" />
         <field source="mCodeService" destinationName="codeService" isExported="true" skipWhen="DEFAULT" type="string" />

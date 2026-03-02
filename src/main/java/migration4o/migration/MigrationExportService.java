@@ -15,6 +15,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.ui.MigrationModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.DOExportMonitor;
+import migration4o.util.HtmlNavPostProcessor;
 
 /**
  * Service for coordinating XML export operations. Handles validation, export
@@ -70,6 +71,9 @@ public class MigrationExportService {
         exporter.setApplySkipWhenConditions(applySkipWhenConditions);
         exporter.setApplyExportCriteriaFilters(applyExportCriteriaFilters);
         exporter.setSkipObjectsWithoutExportableFields(skipObjectsWithoutExportableFields);
+        if (generateHtmlViewer) {
+            exporter.setModuleNavData(modules, modulePaths, baseOutputPath);
+        }
 
         // CRITICAL FIX: Always use shared tracking for module exports to avoid
         // generating
@@ -157,6 +161,8 @@ public class MigrationExportService {
                 monitor.onStatusMessage("Warning: XML validation failed: " + e.getMessage());
             }
         }
+
+        // Navigation sidebar is embedded per-file at generation time via setModuleNavData()
 
         exporter.resetSharedTracking();
 

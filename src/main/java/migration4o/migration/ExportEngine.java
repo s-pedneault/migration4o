@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
@@ -39,6 +40,26 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
  */
 public class ExportEngine {
     private final ExportOperation operation;
+
+    // ── Module nav tree (built before export, used per-file) ──────────────
+    private static final class NavNode {
+        final String label;
+        /** Non-null for class leaf nodes; null for group nodes. */
+        final Path absoluteHtmlPath;
+        final List<NavNode> children = new ArrayList<>();
+
+        NavNode(String label, Path absoluteHtmlPath) {
+            this.label = label;
+            this.absoluteHtmlPath = absoluteHtmlPath;
+        }
+
+        boolean isLeaf() {
+            return absoluteHtmlPath != null;
+        }
+    }
+
+    /** Top-level nav tree built from the module list. */
+    private final List<NavNode> navTree = new ArrayList<>();
 
     /**
      * Creates export engine using the shared in-memory database from DODatabaseService.
@@ -140,6 +161,133 @@ public class ExportEngine {
 
     public void setGenerateHtmlViewer(boolean generateHtmlViewer) {
         this.operation.generateHtmlViewer = generateHtmlViewer;
+    }
+
+    /**
+     * Pre-builds the hierarchical nav tree for the HTML viewer sidebar.
+     * Must be called before export starts. The tree mirrors the module structure:
+     *   path-prefix groups → module groups → class leaves (recursively).
+     */
+    public void setModuleNavData(List<MigrationModule> modules, List<String> modulePaths, String baseOutputDir) {
+        navTree.clear();
+        if (modules == null || modules.isEmpty())
+            return;
+        Path base = getBaseOutputPath(baseOutputDir);
+
+        // Group top-level modules by their first path segment.
+        // Modules with a single-segment path go directly into navTree.
+        // Modules with a multi-segment path are grouped under the first segment.
+        LinkedHashMap<String, NavNode> prefixGroups = new LinkedHashMap<>();
+
+        for (int i = 0; i < modules.size(); i++) {
+            MigrationModule m = modules.get(i);
+            String mp = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : m.getName();
+            String[] parts = mp.split("/");
+
+            // Compute the module's output folder path
+            Path moduleFolderPath = base;
+            for (String part : parts) {
+                moduleFolderPath = moduleFolderPath.resolve(part);
+            }
+            // exportModuleRecursive creates: currentBasePath.resolve(module.getName())
+            // where currentBasePath = fullModulePath.getParent()
+            // So actual folder = parent(fullModulePath).resolve(module.getName())
+            // which equals fullModulePath when module.getName() == last path part.
+            // Using module.getName() directly is safer for mismatch cases:
+            Path actualModuleFolder = moduleFolderPath.getParent() != null ? moduleFolderPath.getParent().resolve(m.getName()) : base.resolve(m.getName());
+
+            NavNode moduleNode = new NavNode(m.getName(), null);
+            buildModuleNavChildren(moduleNode, m, actualModuleFolder);
+
+            if (parts.length > 1) {
+                NavNode group = prefixGroups.computeIfAbsent(parts[0], k -> {
+                    NavNode g = new NavNode(k, null);
+                    navTree.add(g);
+                    return g;
+                });
+                group.children.add(moduleNode);
+            } else {
+                navTree.add(moduleNode);
+            }
+        }
+    }
+
+    /**
+     * Recursively adds class leaves and child module groups to a nav node.
+     *
+     * @param node       The nav node representing this module
+     * @param module     The migration module
+     * @param folderPath The absolute output folder for this module
+     */
+    private void buildModuleNavChildren(NavNode node, MigrationModule module, Path folderPath) {
+        // Add class leaves
+        for (ClassExportConfig config : module.getClassConfigs()) {
+            String destName = config.getDestinationFileName();
+            Path htmlPath = folderPath.resolve(destName + ".html");
+            node.children.add(new NavNode(destName, htmlPath));
+        }
+        // Add child module groups recursively
+        for (MigrationModule child : module.getChildModules()) {
+            Path childFolder = folderPath.resolve(child.getName());
+            NavNode childNode = new NavNode(child.getName(), null);
+            buildModuleNavChildren(childNode, child, childFolder);
+            node.children.add(childNode);
+        }
+    }
+
+    private String buildNavJsonForFile(Path currentFile) {
+        if (navTree.isEmpty())
+            return "[]";
+        // Normalise currentFile to .html extension for "current" detection
+        Path currentHtml = toHtmlPath(currentFile);
+        StringBuilder sb = new StringBuilder();
+        appendNavNodes(sb, navTree, currentHtml);
+        return sb.toString();
+    }
+
+    private void appendNavNodes(StringBuilder sb, List<NavNode> nodes, Path currentHtml) {
+        sb.append('[');
+        for (int i = 0; i < nodes.size(); i++) {
+            if (i > 0)
+                sb.append(',');
+            appendNavNode(sb, nodes.get(i), currentHtml);
+        }
+        sb.append(']');
+    }
+
+    private void appendNavNode(StringBuilder sb, NavNode node, Path currentHtml) {
+        sb.append("{\"label\":\"").append(escNavJson(node.label)).append('"');
+        if (node.isLeaf()) {
+            // Compute relative href from the current file's directory to the leaf
+            try {
+                Path rel = currentHtml.getParent().relativize(node.absoluteHtmlPath);
+                sb.append(",\"href\":\"").append(escNavJson(rel.toString().replace('\\', '/'))).append('"');
+            } catch (Exception ignored) {
+            }
+            if (node.absoluteHtmlPath.equals(currentHtml)) {
+                sb.append(",\"current\":true");
+            }
+        } else {
+            sb.append(",\"children\":");
+            appendNavNodes(sb, node.children, currentHtml);
+        }
+        sb.append('}');
+    }
+
+    private static Path toHtmlPath(Path p) {
+        if (p == null)
+            return p;
+        String s = p.toString();
+        int dot = s.lastIndexOf('.');
+        if (dot >= 0)
+            s = s.substring(0, dot) + ".html";
+        return p.getFileSystem().getPath(s);
+    }
+
+    private static String escNavJson(String v) {
+        if (v == null)
+            return "";
+        return v.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     public boolean isXMLFormat() {
@@ -879,7 +1027,8 @@ public class ExportEngine {
 
         try {
             if ("JS".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
-                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass);
+                String navJson = buildNavJsonForFile(outputPath);
+                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass, navJson);
             } else {
                 if (schemaClass != null) {
                     DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();

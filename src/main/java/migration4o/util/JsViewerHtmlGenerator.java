@@ -20,6 +20,10 @@ public final class JsViewerHtmlGenerator {
     }
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass) throws IOException {
+        return writeViewerForJs(jsPath, schemaClass, "[]");
+    }
+
+    public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass, String navItemsJson) throws IOException {
         if (jsPath == null) {
             throw new IllegalArgumentException("jsPath must not be null");
         }
@@ -36,9 +40,10 @@ public final class JsViewerHtmlGenerator {
 
         String title = baseName;
         String entityName = (schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName;
+        String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__NAV_ITEMS__", nav).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
