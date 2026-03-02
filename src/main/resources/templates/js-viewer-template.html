@@ -445,9 +445,10 @@
             inset: 0;
             background: rgba(15, 23, 42, .45);
             display: none;
-            align-items: flex-end;
+            align-items: center;
             justify-content: center;
             z-index: 200;
+            padding: 24px;
         }
 
         .detail-overlay.open {
@@ -455,16 +456,15 @@
         }
 
         .detail-sheet {
-            width: min(1280px, 100%);
-            height: min(90vh, 920px);
+            width: min(1500px, calc(100vw - 48px));
+            height: min(94vh, calc(100vh - 56px));
             background: var(--c-bg);
-            border-radius: 16px 16px 0 0;
+            border-radius: 16px;
             border: 1px solid var(--c-border);
-            border-bottom: none;
             overflow: hidden;
             display: flex;
             flex-direction: column;
-            box-shadow: 0 -8px 24px rgba(0, 0, 0, .18);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, .24);
         }
 
         .detail-sheet-top {
@@ -548,6 +548,24 @@
             border-bottom: none;
         }
 
+        .field-pair {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            border-bottom: 1px solid var(--c-border-light);
+        }
+
+        .field-pair:last-child {
+            border-bottom: none;
+        }
+
+        .field-pair .field-row {
+            border-bottom: none;
+        }
+
+        .field-pair .field-row:first-child {
+            border-right: 1px solid var(--c-border-light);
+        }
+
         .field-label {
             flex: 0 0 240px;
             padding: 8px 16px;
@@ -627,6 +645,101 @@
             border-bottom: none;
         }
 
+        .detail-section {
+            margin-bottom: 10px;
+            border: 1px solid var(--c-border);
+            border-radius: var(--radius);
+            background: var(--c-surface);
+            overflow: hidden;
+        }
+
+        .detail-section summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 9px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .35px;
+            color: var(--c-text-secondary);
+            background: #f8fafc;
+            border-bottom: 1px solid var(--c-border-light);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .detail-section summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .detail-section summary::before {
+            content: '▸';
+            font-size: 12px;
+            margin-right: 6px;
+            color: var(--c-text-muted);
+        }
+
+        .detail-section[open] summary::before {
+            content: '▾';
+        }
+
+        .detail-section summary .summary-title {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+        }
+
+        .detail-section summary .summary-meta {
+            font-size: 11px;
+            color: var(--c-text-muted);
+            font-weight: 600;
+            text-transform: none;
+            letter-spacing: 0;
+            white-space: nowrap;
+        }
+
+        .section-body {
+            padding: 0;
+        }
+
+        .collection-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--c-border-light);
+            background: #fbfcff;
+            font-size: 12px;
+            color: var(--c-text-secondary);
+        }
+
+        .collection-pager {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .collection-pager button {
+            height: 24px;
+            min-width: 24px;
+            border: 1px solid var(--c-border);
+            border-radius: 6px;
+            background: #fff;
+            color: var(--c-text-secondary);
+            cursor: pointer;
+            padding: 0 6px;
+            font-size: 12px;
+        }
+
+        .collection-pager button:disabled {
+            opacity: .45;
+            cursor: default;
+        }
+
         @media (max-width: 640px) {
             .condition-main {
                 flex-wrap: wrap;
@@ -640,6 +753,15 @@
 
             .field-label {
                 flex: 0 0 120px;
+            }
+
+            .field-pair {
+                grid-template-columns: 1fr;
+            }
+
+            .field-pair .field-row:first-child {
+                border-right: none;
+                border-bottom: 1px solid var(--c-border-light);
             }
         }
     </style>
@@ -731,6 +853,8 @@
         let globalLogicOperator = 'AND';
         let currentLanguage = 'fr';
         let selectedColumns = ['__id', '__summary'];
+        let collectionViewState = {};
+        let collectionIdCounter = 1;
 
         const conditionsContainer = document.getElementById('conditionsContainer');
         const addConditionBtn = document.getElementById('addConditionBtn');
@@ -759,9 +883,11 @@
                 noResults: 'Aucun enregistrement ne correspond à vos critères.', noResultsSub: 'Essayez d’ajuster vos critères ou effacez la recherche.',
                 browse: 'Parcourir tout', welcome: 'enregistrements', welcomeHint: 'Ajoutez des critères ci-dessus pour filtrer, ou parcourez tous les enregistrements.',
                 resultsTotal: 'enregistrements au total', result: 'résultat', results: 'résultats', page: 'Page', record: 'Enregistrement',
-                detail: 'Détails', properties: 'Propriétés', rawData: 'Données JSON', close: 'Fermer', remove: 'Supprimer',
+                detail: 'Détails', properties: 'Propriétés', close: 'Fermer', remove: 'Supprimer',
                 toggleLogic: 'Cliquer pour alterner ET/OU', allFields: 'Tous les champs', value: 'Valeur...', fieldFilter: 'Champ...',
-                colRow: '#', colId: 'ID', colSummary: 'Résumé', err: 'Erreur', noPayload: 'Aucune donnée JS trouvée (window.__m4o).'
+                colRow: '#', colId: 'ID', colSummary: 'Résumé', err: 'Erreur', noPayload: 'Aucune donnée JS trouvée (window.__m4o).',
+                object: 'Objet', collection: 'Collection', elements: 'éléments', noItems: 'Aucun élément',
+                prev: 'Préc.', next: 'Suiv.'
             },
             en: {
                 search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -769,9 +895,11 @@
                 noResults: 'No records match your criteria.', noResultsSub: 'Try adjusting your conditions or clear the search.',
                 browse: 'Browse all', welcome: 'records', welcomeHint: 'Add conditions above to filter, or browse all records.',
                 resultsTotal: 'records total', result: 'result', results: 'results', page: 'Page', record: 'Record',
-                detail: 'Details', properties: 'Properties', rawData: 'Raw JSON', close: 'Close', remove: 'Remove',
+                detail: 'Details', properties: 'Properties', close: 'Close', remove: 'Remove',
                 toggleLogic: 'Click to toggle AND/OR', allFields: 'All fields', value: 'Value...', fieldFilter: 'Field...',
-                colRow: '#', colId: 'ID', colSummary: 'Summary', err: 'Error', noPayload: 'No JS payload found (window.__m4o).'
+                colRow: '#', colId: 'ID', colSummary: 'Summary', err: 'Error', noPayload: 'No JS payload found (window.__m4o).',
+                object: 'Object', collection: 'Collection', elements: 'items', noItems: 'No items',
+                prev: 'Prev', next: 'Next'
             }
         };
 
@@ -1251,54 +1379,395 @@
             return esc(val);
         }
 
-        function renderObjectFields(fields) {
-            const entries = Object.entries(fields || {});
-            if (entries.length === 0) {
-                return `<div class="field-row"><div class="field-label">${esc(t('properties'))}</div><div class="field-value">—</div></div>`;
-            }
-            return entries
-                .sort((a, b) => a[0].localeCompare(b[0]))
-                .map(([k, v]) => `<div class="field-row"><div class="field-label">${esc(k)}</div><div class="field-value">${fmtValue(v, k)}</div></div>`)
-                .join('');
+        function isNarrowField(label, value) {
+            const text = String(value ?? '').trim();
+            const name = String(label || '').toLowerCase();
+            if (!text) return true;
+            if (text === 'true' || text === 'false') return true;
+            if (/^-?\d+(\.\d+)?$/.test(text)) return true;
+            if (name === 'id' || name.endsWith('.id') || name.startsWith('id')) return text.length <= 24;
+            if (/^\d{4}-\d{2}-\d{2}/.test(text)) return true;
+            return name.length <= 24 && text.length <= 26;
         }
 
-        function renderArrayTable(arr) {
-            const objectRows = arr.filter((x) => x && typeof x === 'object' && !Array.isArray(x));
-            if (objectRows.length === 0) {
-                return `<div class="field-value">${esc(JSON.stringify(arr, null, 2))}</div>`;
+        function mergeAttributes(target, attrs) {
+            if (!attrs || typeof attrs !== 'object' || !target || typeof target !== 'object' || Array.isArray(target)) {
+                return;
             }
-            const cols = new Set();
-            objectRows.forEach((o) => Object.keys(o).forEach((k) => { if (typeof o[k] !== 'object') cols.add(k); }));
-            const headers = Array.from(cols);
-            if (headers.length === 0) {
-                return `<div class="field-value">${esc(JSON.stringify(arr, null, 2))}</div>`;
+            const next = target['@attributes'] && typeof target['@attributes'] === 'object' ? target['@attributes'] : {};
+            Object.entries(attrs).forEach(([k, v]) => {
+                if (next[k] === undefined) next[k] = v;
+            });
+            if (Object.keys(next).length > 0) target['@attributes'] = next;
+        }
+
+        function isLikelyCollectionField(fieldName, arrayValue) {
+            if (!Array.isArray(arrayValue)) return false;
+            if (arrayValue.length > 1) return true;
+            const name = String(fieldName || '').toLowerCase();
+            return name.startsWith('liste') || name.startsWith('table') || name.startsWith('set') || name.includes('collection');
+        }
+
+        function unwrapEmbeddedValue(fieldName, value) {
+            let current = value;
+            let guard = 0;
+            while (current && typeof current === 'object' && !Array.isArray(current) && guard < 8) {
+                const keys = Object.keys(current).filter((k) => k !== '@attributes' && k !== '#text');
+                if (keys.length !== 1) break;
+
+                const childKey = keys[0];
+                const childValue = current[childKey];
+                const parentLo = String(fieldName || '').toLowerCase();
+                const childLo = String(childKey || '').toLowerCase();
+                const parentNoList = parentLo.replace(/^liste/, '');
+                const childNoList = childLo.replace(/^liste/, '');
+                const looksWrapper = childLo === parentLo
+                    || childNoList === parentNoList
+                    || /^[A-Z]/.test(childKey);
+
+                if (!looksWrapper) break;
+
+                const currentAttrs = current['@attributes'];
+                if (Array.isArray(childValue) && childValue.length === 1 && childValue[0] && typeof childValue[0] === 'object') {
+                    current = childValue[0];
+                    mergeAttributes(current, currentAttrs);
+                    guard++;
+                    continue;
+                }
+                if (childValue && typeof childValue === 'object' && !Array.isArray(childValue)) {
+                    current = childValue;
+                    mergeAttributes(current, currentAttrs);
+                    guard++;
+                    continue;
+                }
+                break;
+            }
+            return current;
+        }
+
+        function classifyFieldEntry(key, value) {
+            if (value === null || value === undefined) {
+                return { key, type: 'primitive', value: '' };
             }
 
-            let html = '<div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
-            headers.forEach((h) => html += `<th>${esc(h)}</th>`);
-            html += '</tr></thead><tbody>';
-            objectRows.forEach((o) => {
-                html += '<tr>';
-                headers.forEach((h) => html += `<td>${fmtValue(o[h], h)}</td>`);
-                html += '</tr>';
+            if (Array.isArray(value)) {
+                if (isLikelyCollectionField(key, value)) {
+                    return { key, type: 'collection', value };
+                }
+
+                if (value.length === 0) {
+                    return { key, type: 'primitive', value: '' };
+                }
+
+                if (value.length === 1) {
+                    const single = value[0];
+                    if (single === null || single === undefined) {
+                        return { key, type: 'primitive', value: '' };
+                    }
+                    if (typeof single !== 'object') {
+                        return { key, type: 'primitive', value: single };
+                    }
+                    return { key, type: 'object', value: unwrapEmbeddedValue(key, single) };
+                }
+
+                const allPrimitive = value.every((item) => item === null || item === undefined || typeof item !== 'object');
+                if (allPrimitive) {
+                    return { key, type: 'primitive', value: value.map((item) => String(item ?? '')).join(' | ') };
+                }
+
+                return { key, type: 'collection', value };
+            }
+
+            if (typeof value === 'object') {
+                return { key, type: 'object', value: unwrapEmbeddedValue(key, value) };
+            }
+
+            return { key, type: 'primitive', value };
+        }
+
+        function getObjectEntries(value) {
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
+            const entries = [];
+            const attrs = value['@attributes'];
+            if (attrs && typeof attrs === 'object') {
+                Object.entries(attrs).forEach(([k, v]) => {
+                    entries.push({ key: k, value: v, type: 'primitive' });
+                });
+            }
+            if (value['#text'] !== undefined) {
+                entries.push({ key: '#text', value: value['#text'], type: 'primitive' });
+            }
+
+            Object.entries(value).forEach(([k, v]) => {
+                if (k === '@attributes' || k === '#text') return;
+                entries.push(classifyFieldEntry(k, v));
             });
-            html += '</tbody></table></div>';
+
+            return entries;
+        }
+
+        function humanizeFieldName(name) {
+            const raw = String(name || '')
+                .replace(/^@/, '')
+                .replace(/\[\d+\]/g, '')
+                .trim();
+            if (!raw) return '';
+
+            return raw
+                .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+                .replace(/[_-]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .toLowerCase()
+                .replace(/^./, (c) => c.toUpperCase());
+        }
+
+        function formatSectionTitle(name) {
+            return humanizeFieldName(name);
+        }
+
+        function displayFieldLabel(path) {
+            const normalized = normalizeFieldPath(path || '');
+            if (!normalized) return '';
+            const parts = normalized.split('.').filter(Boolean);
+            const last = parts.length > 0 ? parts[parts.length - 1] : normalized;
+            return humanizeFieldName(last);
+        }
+
+        function renderPrimitiveGroup(entries) {
+            if (!entries || entries.length === 0) return '';
+            let html = '<div class="field-group">';
+
+            let index = 0;
+            while (index < entries.length) {
+                const current = entries[index];
+                const next = entries[index + 1];
+                const currentNarrow = isNarrowField(current.key, current.value);
+                const nextNarrow = next ? isNarrowField(next.key, next.value) : false;
+
+                if (next && currentNarrow && nextNarrow) {
+                    html += '<div class="field-pair">';
+                    html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(current.key)) + '</div><div class="field-value">' + fmtValue(current.value, current.key) + '</div></div>';
+                    html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(next.key)) + '</div><div class="field-value">' + fmtValue(next.value, next.key) + '</div></div>';
+                    html += '</div>';
+                    index += 2;
+                    continue;
+                }
+
+                html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(current.key)) + '</div><div class="field-value">' + fmtValue(current.value, current.key) + '</div></div>';
+                index += 1;
+            }
+
+            html += '</div>';
             return html;
         }
 
-        function renderRawSections(raw) {
-            if (!raw || typeof raw !== 'object') return '';
-            let html = '';
-            Object.entries(raw).forEach(([k, v]) => {
-                if (k === '@attributes') return;
-                if (Array.isArray(v)) {
-                    html += `<div class="field-group"><div class="field-group-title">${esc(k)} (${v.length})</div>${renderArrayTable(v)}</div>`;
-                } else if (v && typeof v === 'object') {
-                    const flat = {};
-                    flattenValue(v, '', flat);
-                    html += `<div class="field-group"><div class="field-group-title">${esc(k)}</div>${renderObjectFields(flat)}</div>`;
+        function appendRowValue(out, path, value) {
+            const normalized = normalizeFieldPath(path || 'value');
+            const text = String(value ?? '').trim();
+            if (!normalized) return;
+            if (!text) {
+                if (out[normalized] === undefined) out[normalized] = '';
+                return;
+            }
+            if (out[normalized]) {
+                if (!out[normalized].includes(text)) out[normalized] += ' | ' + text;
+            } else {
+                out[normalized] = text;
+            }
+        }
+
+        function flattenRow(value, path, out) {
+            if (value === null || value === undefined) return;
+            if (Array.isArray(value)) {
+                if (value.length === 0) {
+                    appendRowValue(out, path || 'value', '');
+                    return;
+                }
+                const allPrimitive = value.every((item) => item === null || item === undefined || typeof item !== 'object');
+                if (allPrimitive) {
+                    appendRowValue(out, path || 'value', value.map((item) => String(item ?? '')).filter((item) => item.length > 0).join(' | '));
+                    return;
+                }
+                value.forEach((item) => {
+                    flattenRow(item, path, out);
+                });
+                return;
+            }
+            if (typeof value !== 'object') {
+                appendRowValue(out, path || 'value', value);
+                return;
+            }
+
+            const attrs = value['@attributes'];
+            if (attrs && typeof attrs === 'object') {
+                Object.entries(attrs).forEach(([k, v]) => {
+                    appendRowValue(out, path ? `${path}.${k}` : k, v);
+                });
+            }
+            if (value['#text'] !== undefined) {
+                appendRowValue(out, path || 'value', value['#text']);
+            }
+
+            Object.entries(value).forEach(([k, v]) => {
+                if (k === '@attributes' || k === '#text') return;
+                flattenRow(v, path ? `${path}.${k}` : k, out);
+            });
+        }
+
+        function computeCollectionTable(items) {
+            const normalizedItems = expandWrapperCollectionItems(items);
+            const rows = [];
+            const columnsSet = new Set();
+
+            normalizedItems.forEach((item) => {
+                if (item && typeof item === 'object') {
+                    const row = {};
+                    flattenRow(item, '', row);
+                    Object.keys(row).forEach((col) => columnsSet.add(col));
+                    rows.push(row);
+                } else {
+                    const row = { value: String(item ?? '') };
+                    columnsSet.add('value');
+                    rows.push(row);
                 }
             });
+
+            const columns = Array.from(columnsSet).sort((a, b) => a.localeCompare(b));
+            return { columns, rows };
+        }
+
+        function expandWrapperCollectionItems(items) {
+            if (!Array.isArray(items)) return [];
+
+            const expanded = [];
+            items.forEach((item) => {
+                if (!item || typeof item !== 'object' || Array.isArray(item)) {
+                    expanded.push(item);
+                    return;
+                }
+
+                const wrapperKeys = Object.keys(item).filter((k) => k !== '@attributes' && k !== '#text');
+                if (wrapperKeys.length !== 1) {
+                    expanded.push(item);
+                    return;
+                }
+
+                const wrapperKey = wrapperKeys[0];
+                const inner = item[wrapperKey];
+                if (!Array.isArray(inner) || inner.length === 0) {
+                    expanded.push(item);
+                    return;
+                }
+
+                const isObjectArray = inner.every((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
+                if (!isObjectArray) {
+                    expanded.push(item);
+                    return;
+                }
+
+                const wrapperAttrs = item['@attributes'];
+                inner.forEach((entry) => {
+                    if (wrapperAttrs && typeof wrapperAttrs === 'object') {
+                        const copy = JSON.parse(JSON.stringify(entry));
+                        mergeAttributes(copy, wrapperAttrs);
+                        expanded.push(copy);
+                    } else {
+                        expanded.push(entry);
+                    }
+                });
+            });
+
+            return expanded;
+        }
+
+        function renderCollectionTableBody(view) {
+            const start = (view.page - 1) * view.pageSize;
+            const pageRows = view.rows.slice(start, start + view.pageSize);
+            if (pageRows.length === 0) {
+                return `<tr><td colspan="${Math.max(1, view.columns.length)}">${esc(t('noItems'))}</td></tr>`;
+            }
+
+            let html = '';
+            pageRows.forEach((row) => {
+                html += '<tr>';
+                view.columns.forEach((col) => {
+                    html += '<td>' + fmtValue(row[col] ?? '', col) + '</td>';
+                });
+                html += '</tr>';
+            });
+            return html;
+        }
+
+        function renderCollectionSection(label, items, level) {
+            const collectionId = `c${collectionIdCounter++}`;
+            const table = computeCollectionTable(items);
+            const pageSize = 25;
+            const totalPages = Math.max(1, Math.ceil(table.rows.length / pageSize));
+
+            collectionViewState[collectionId] = {
+                columns: table.columns,
+                rows: table.rows,
+                page: 1,
+                pageSize
+            };
+
+            const openAttr = level <= 1 ? ' open' : '';
+            let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${items.length} ${esc(t('elements'))}</span></summary><div class="section-body">`;
+
+            html += `<div class="collection-toolbar"><span>${items.length} ${esc(t('elements'))}</span><span class="collection-pager">`
+                + `<button type="button" data-collection-action="prev" data-collection-id="${collectionId}" disabled>${esc(t('prev'))}</button>`
+                + `<span id="collection-page-${collectionId}">1 / ${totalPages}</span>`
+                + `<button type="button" data-collection-action="next" data-collection-id="${collectionId}" ${totalPages <= 1 ? 'disabled' : ''}>${esc(t('next'))}</button>`
+                + `</span></div>`;
+
+            html += '<div style="padding:8px 12px;overflow-x:auto;">';
+            html += `<table class="collection-table"><thead><tr>`;
+            if (table.columns.length === 0) {
+                html += `<th>${esc(t('collection'))}</th>`;
+            } else {
+                table.columns.forEach((col) => {
+                    html += `<th>${esc(displayFieldLabel(col))}</th>`;
+                });
+            }
+            html += `</tr></thead><tbody id="collection-body-${collectionId}">${renderCollectionTableBody(collectionViewState[collectionId])}</tbody></table>`;
+            html += '</div>';
+
+            html += '</div></details>';
+            return html;
+        }
+
+        function renderNodeSection(label, value, level = 0) {
+            if (value === null || value === undefined) {
+                return '';
+            }
+
+            if (Array.isArray(value)) {
+                return renderCollectionSection(label, value, level);
+            }
+
+            if (typeof value !== 'object') {
+                return renderPrimitiveGroup([{ key: label, value, type: 'primitive' }]);
+            }
+
+            const entries = getObjectEntries(value);
+            const primitiveEntries = entries.filter((entry) => entry.type === 'primitive');
+            const objectEntries = entries.filter((entry) => entry.type === 'object');
+            const collectionEntries = entries.filter((entry) => entry.type === 'collection');
+
+            const openAttr = level <= 1 ? ' open' : '';
+            let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
+
+            html += renderPrimitiveGroup(primitiveEntries);
+
+            objectEntries.forEach((entry) => {
+                html += renderNodeSection(entry.key, entry.value, level + 1);
+            });
+
+            collectionEntries.forEach((entry) => {
+                html += renderCollectionSection(entry.key, entry.value, level + 1);
+            });
+
+            html += '</div></details>';
             return html;
         }
 
@@ -1325,12 +1794,13 @@
                 return;
             }
 
+            collectionViewState = {};
+            collectionIdCounter = 1;
+
             let html = '';
             html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '—')} • ${esc(t('record'))} #${rec.pos}</div></div>`;
             html += '<div class="detail-scroll">';
-            html += `<div class="field-group"><div class="field-group-title">${esc(t('properties'))}</div>${renderObjectFields(rec.fields)}</div>`;
-            html += renderRawSections(rec.raw);
-            html += `<div class="field-group"><div class="field-group-title">${esc(t('rawData'))}</div><div class="field-row"><div class="field-value"><pre style="margin:0;white-space:pre-wrap;word-break:break-word">${esc(JSON.stringify(rec.raw, null, 2))}</pre></div></div></div>`;
+            html += renderNodeSection(rec.entity, rec.raw, 0);
             html += '</div>';
 
             detailContainer.innerHTML = html;
@@ -1440,6 +1910,34 @@
         });
         detailCloseBtn.addEventListener('click', closeDetailOverlay);
         detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) closeDetailOverlay(); });
+        detailContainer.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-collection-action]');
+            if (!btn) return;
+
+            const action = btn.getAttribute('data-collection-action');
+            const collectionId = btn.getAttribute('data-collection-id');
+            const state = collectionViewState[collectionId];
+            if (!state) return;
+
+            const totalPages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
+
+            if (action === 'prev' && state.page > 1) {
+                state.page -= 1;
+            }
+            if (action === 'next' && state.page < totalPages) {
+                state.page += 1;
+            }
+
+            const body = detailContainer.querySelector(`#collection-body-${collectionId}`);
+            const pageInfo = detailContainer.querySelector(`#collection-page-${collectionId}`);
+            const prevButton = detailContainer.querySelector(`button[data-collection-action="prev"][data-collection-id="${collectionId}"]`);
+            const nextButton = detailContainer.querySelector(`button[data-collection-action="next"][data-collection-id="${collectionId}"]`);
+
+            if (body) body.innerHTML = renderCollectionTableBody(state);
+            if (pageInfo) pageInfo.textContent = `${state.page} / ${totalPages}`;
+            if (prevButton) prevButton.disabled = state.page <= 1;
+            if (nextButton) nextButton.disabled = state.page >= totalPages;
+        });
         document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailOverlay(); });
 
         initialize();
