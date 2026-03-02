@@ -3,6 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
+    <base href="__BASE_HREF__">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>__TITLE__ — JS Data Viewer</title>
     <style>
@@ -2096,8 +2097,13 @@
                 return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             }
 
+            function isCurrentPage(href) {
+                if (!href) return false;
+                try { return new URL(href, document.baseURI).href === location.href; } catch (e) { return false; }
+            }
+
             function hasCurrentDescendant(item) {
-                if (item.current) return true;
+                if (item.href && isCurrentPage(item.href)) return true;
                 if (item.children) return item.children.some(hasCurrentDescendant);
                 return false;
             }
@@ -2105,8 +2111,9 @@
             function renderNavItem(item, depth) {
                 var hasCh = item.children && item.children.length > 0;
                 if (!hasCh) {
+                    var isCurrent = isCurrentPage(item.href);
                     var a = document.createElement('a');
-                    a.className = 'nav-item-link' + (item.current ? ' nav-current' : '');
+                    a.className = 'nav-item-link' + (isCurrent ? ' nav-current' : '');
                     a.href = item.href || '#';
                     a.title = item.label || '';
                     a.textContent = item.label || '';
