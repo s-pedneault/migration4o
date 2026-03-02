@@ -418,7 +418,7 @@
         </field>
         <field source="mUtiliserCouleurEquipe" destinationName="utiliserCouleurEquipe" isExported="true" skipWhen="DEFAULT" type="boolean" />
     </class>
-    <class source="gest.activite.TypeActivite" destinationName="TypeActivite" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.activite.TypeActivite" destinationName="TypeActivite" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.activite.Acte" field="mVectIDTypeActivite" />
         <reference class="gest.activite.ActionCondition" field="mVectIDTypeActivite" />
         <reference class="gest.activite.ActionCondition" field="mVectIDTypeActivitePreseance" />
@@ -693,7 +693,7 @@
     </class>
     <class source="gest.borne.TypeActivMaintBorne" destinationName="TypeActiviteMaintenanceBorne" isExported="true" parentClass="gest.activite.TypeActivite">
     </class>
-    <class source="gest.borne.TypeMaintBorne" destinationName="TypeMaintenanceBorne" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.borne.TypeMaintBorne" destinationName="TypeMaintenanceBorne" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.BornePer" field="mIDTypeMaintBorne" />
         <reference class="gest.borne.MaintBorne" field="mIDTypeMaint" />
         <field source="mID" definition="mID" />
@@ -703,7 +703,7 @@
         <field source="mIDFormulaire" destinationName="idFormulaire" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.borne.TypeValve" destinationName="TypeValve" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.borne.TypeValve" destinationName="TypeValve" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.borne.BorneIncendie" field="mIDTypeValve" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
@@ -737,7 +737,7 @@
         <field source="mCodeUtilisateur" destinationName="codeUtilisateur" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mMotDePasse" destinationName="motDePasse" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>
-    <class source="gest.caserne.Caserne" destinationName="Caserne" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.caserne.Caserne" destinationName="Caserne" isExported="true" summary="[nom] ([adresse.ville])" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.maintenance.Maintenance" field="mVectIDCaserne" />
         <reference class="gest.employe.Employe" field="mIDCaserne" />
         <reference class="gest.equipement.SituationEquipement" field="mIDCaserne" />
@@ -861,7 +861,7 @@
         <reference class="gest.prevention.ParamPrevention" field="mVectIDTypeChampPersoCol" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.champPerso.TypeChampPerso" destinationName="TypeChampPerso" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.champPerso.TypeChampPerso" destinationName="TypeChampPerso" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.prevention.ParamPrevention" field="mVectIDTypeChampPersoCol" />
         <reference class="gest.equipement.TypeEquipement" field="mVectTypeChampPerso" />
         <reference class="gest.horaire.ModeleHoraire" field="mVectTypeChampPerso" />
@@ -1191,7 +1191,7 @@
         <field source="mIDTypeChauffage" destinationName="idTypeChauffage" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeChauffage.IDTypeChauffage" />
         <field source="mIDTypeCheminee" destinationName="idTypeCheminee" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeCheminee.IDTypeCheminee" />
     </class>
-    <class source="gest.dossPrev.DossPrev" destinationName="DossierAdresse" isExported="true" parentClass="gest.gen.EntiteContientID" title="Dossier adresse" description="Dossier lié à une adresse">
+    <class source="gest.dossPrev.DossPrev" destinationName="DossierAdresse" isExported="true" title="Dossier adresse" description="Dossier lié à une adresse" summary="[adresse.numeroCivique] [adresse.rue], [adresse.ville]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.gen.VoieCircul" field="mVectTempIDDossPrevAssoc" />
         <reference class="gest.borne.Borne" field="mIDDossPrev" />
         <reference class="gest.dossPrev.DossPrev" field="mIDDossPrevAssoc" />
@@ -1811,7 +1811,7 @@
         <field source="mIDEquipExistAssemble" destinationName="idEquipementAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.vehicule.IDVehicule" />
     </class>
-    <class source="gest.equipement.TypeEquipement" destinationName="TypeEquipement" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.equipement.TypeEquipement" destinationName="TypeEquipement" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.maintenance.Maintenance" field="mVectIDTypeEquipement" />
         <reference class="gest.equipement.EquipExist" field="mIDTypeEquipement" />
         <reference class="gest.equipement.QteRequise" field="mIDTypeEquipement" />
@@ -3522,7 +3522,7 @@
         <field source="mPeriodiciteActif" destinationName="periodiciteActive" isExported="true" skipWhen="DEFAULT" type="boolean" />
         <field source="mVectIDEquipement" destinationName="listeIDEquipementAncien" isExported="false" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="gest.equipement.IDEquipExist" />
     </class>
-    <class source="gest.maintenance.TypeMaint" destinationName="TypeMaintenance" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.maintenance.TypeMaint" destinationName="TypeMaintenance" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.maintEquip.EtatEquipement" field="mIDTypeMaintenanceSurNouvelleMaintenance" />
         <reference class="gest.maintEquip.MaintEquip" field="mIDTypeMaintenance" />
         <reference class="gest.equipement.PeriodiciteEquip" field="mIDTypeMaintenance" />
@@ -4787,7 +4787,7 @@
         <reference class="gest.typePrev.TypePrev" field="mVectIDTypeAnom" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeAnom.TypeAnom" destinationName="TypeAnomalie" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeAnom.TypeAnom" destinationName="TypeAnomalie" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.formElec.Section" field="mVectIDTypeAnom" />
         <reference class="gest.typePrev.TypePrev" field="mVectIDTypeAnom" />
         <reference class="gest.typePrev.TypePrev" field="mVectTypeAnom" />
@@ -4810,7 +4810,7 @@
         <reference class="gest.typeAssistanceParticuliere.AssistanceParticuliere" field="mIDTypeAssistanceParticuliere" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere" destinationName="TypeAssistanceParticuliere" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeAssistanceParticuliere.TypeAssistanceParticuliere" destinationName="TypeAssistanceParticuliere" isExported="true" summary="[titre]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.typeAssistanceParticuliere.AssistanceParticuliere" field="mIDTypeAssistanceParticuliere" />
         <field source="mID" definition="mID" />
         <field source="mActif" definition="mActif" />
@@ -4824,7 +4824,7 @@
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeBatiment" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeBatiment.TypeBatiment" destinationName="TypeBatiment" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeBatiment.TypeBatiment" destinationName="TypeBatiment" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeBatiment" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
@@ -4834,7 +4834,7 @@
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeChauffage" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeChauffage.TypeChauffage" destinationName="TypeChauffage" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeChauffage.TypeChauffage" destinationName="TypeChauffage" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeChauffage" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
@@ -4847,7 +4847,7 @@
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeCheminee" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeCheminee.TypeCheminee" destinationName="TypeCheminee" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeCheminee.TypeCheminee" destinationName="TypeCheminee" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.Chauffage" field="mIDTypeCheminee" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
@@ -4861,7 +4861,7 @@
         <reference class="gest.prevention.ParamPrevention$NCompteurParTypePrev" field="mVectIDGroupe" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typePrev.TypePrev" destinationName="TypePrevention" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typePrev.TypePrev" destinationName="TypePrevention" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.PeriodiciteDossPrev" field="mIDTypePrevention" />
         <reference class="gest.prevention.Prevention" field="mIDTypePrev" />
         <reference class="gest.prevention.ParamPrevention$NCompteurParTypePrev" field="mVectIDGroupe" />
@@ -4902,7 +4902,7 @@
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeToit" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.typeToit.TypeToit" destinationName="TypeToit" isExported="true" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.typeToit.TypeToit" destinationName="TypeToit" isExported="true" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeToit" />
         <field source="mID" definition="mID" />
         <field source="mNom" definition="mNom" />
@@ -5704,7 +5704,7 @@
         <field source="mDesc" destinationName="desc" isExported="true" skipWhen="DEFAULT" type="string" />
         <field source="mVectTypeChampPerso" destinationName="listeTypeChampPerso" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.champPerso.TypeChampPerso" />
     </class>
-    <class source="gest.typePrev.TypePrev$NSignature" destinationName="Signature" isExported="true">
+    <class source="gest.typePrev.TypePrev$NSignature" destinationName="Signature" isExported="true" summary="[nomSignature]">
         <reference class="gest.typePrev.TypePrev" field="mVectSignature" />
         <field source="iNomSignature" destinationName="nomSignature" isExported="true" skipWhen="DEFAULT" type="string" />
     </class>

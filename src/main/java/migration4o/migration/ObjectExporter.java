@@ -15,6 +15,7 @@ import migration4o.migration.recipes.SchemaElementMapper;
 import migration4o.migration.recipes.XMLErrorWriter;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
+import migration4o.migration.SummaryGenerator;
 
 /**
  * Orchestrates recursive object traversal and export to XML. Now delegates to
@@ -165,13 +166,37 @@ public class ObjectExporter {
                     if (!skippedBecauseReasons.isEmpty()) {
                         attributes.put("skippedBecause", String.join("; ", skippedBecauseReasons));
                     }
+                    // For JS exports: embed a server-side summary when the schema class has a summary template
+                    if ("JS".equalsIgnoreCase(operation.outputFormat) && schemaClass != null && schemaClass.summary != null && !schemaClass.summary.isEmpty()) {
+                        String summaryValue = SummaryGenerator.generate(container, obj, schemaClass, operation.referenceSchema);
+                        if (summaryValue != null && !summaryValue.isBlank()) {
+                            attributes.put("_summary", summaryValue);
+                        }
+                    }
+                    // For JS exports: when exporting an IDEntite as a structure, replace the
+                    // nested object with a flat human-readable label, stripping the "ID" prefix
+                    // from the element name so the column reads as the entity name, not the ID class.
+                    if ("JS".equalsIgnoreCase(operation.outputFormat) && schemaClass != null && schemaClass.isIDEntite(operation.databaseSchema)) {
+                        String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, obj, schemaClass, operation.referenceSchema, operation.databaseSchema);
+                        if (refLabel != null && !refLabel.isBlank()) {
+                            String displayName = stripIdPrefix(elementName);
+                            xmlWriter.elementWithContent(displayName, attributes.isEmpty() ? null : attributes, refLabel, false);
+                            // Written as flat content — skip the structure open/field export/close below
+                        } else {
+                            xmlWriter.openStructure(elementName, attributes.isEmpty() ? null : attributes);
+                            openedStructure = true;
+                            if (fieldsToExport > 0) {
+                                GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
+                            }
+                        }
+                    } else {
+                        xmlWriter.openStructure(elementName, attributes.isEmpty() ? null : attributes);
+                        openedStructure = true;
 
-                    xmlWriter.openStructure(elementName, attributes.isEmpty() ? null : attributes);
-                    openedStructure = true;
-
-                    // Now actually export the fields
-                    if (fieldsToExport > 0) {
-                        GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
+                        // Now actually export the fields
+                        if (fieldsToExport > 0) {
+                            GenericObjectExporter.exportIfGenericObject(container, obj, schemaClass, objectId, fieldExporter, indentLevel);
+                        }
                     }
                 } finally {
                     if (openedStructure) {
@@ -201,6 +226,20 @@ public class ObjectExporter {
                 operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
             }
         }
+    }
+
+    /**
+     * Strips a leading "id" or "ID" prefix (optionally followed by a space) from an
+     * element name, lowercasing the new first character if it was uppercase.
+     * E.g. "IDTypeChampPerso" → "typeChampPerso",  "id type" → "type".
+     */
+    private static String stripIdPrefix(String name) {
+        if (name == null || name.isEmpty())
+            return name;
+        String stripped = name.replaceFirst("(?i)^id\\s*", "");
+        if (stripped.isEmpty() || stripped.equals(name))
+            return name;
+        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 
 }

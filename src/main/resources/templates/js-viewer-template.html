@@ -1026,7 +1026,9 @@
         function buildRecord(entity, raw, pos) {
             const fields = {};
             const attrs = raw && raw['@attributes'] && typeof raw['@attributes'] === 'object' ? raw['@attributes'] : null;
-            if (attrs) Object.entries(attrs).forEach(([k, v]) => appendField(fields, `${k}`, v));
+            // Extract the server-side summary (written by SummaryGenerator) before populating fields
+            const serverSummary = attrs && attrs._summary ? attrs._summary : null;
+            if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k !== '_summary') appendField(fields, `${k}`, v); });
             if (raw && typeof raw === 'object') {
                 Object.entries(raw).forEach(([k, v]) => {
                     if (k === '@attributes') return;
@@ -1041,7 +1043,7 @@
                 id: String(id || ''),
                 fields,
                 raw,
-                summary: summarize(fields)
+                summary: serverSummary || summarize(fields)
             };
         }
 

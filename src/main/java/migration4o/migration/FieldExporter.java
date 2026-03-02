@@ -509,8 +509,17 @@ public class FieldExporter {
 
                     Long mID = IDEntityHandler.extractMID(container, fieldValue);
                     if (mID != null) {
+                        Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
+                        // For JS exports: resolve to a human-readable label and strip the "id"/"ID" prefix from the column
+                        if ("JS".equalsIgnoreCase(operation.outputFormat) && fieldClass != null) {
+                            String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, fieldValue, fieldClass, operation.referenceSchema, operation.databaseSchema);
+                            if (refLabel != null && !refLabel.isBlank()) {
+                                xmlWriter.elementWithContent(stripIdPrefix(fieldName), attrs, refLabel, false);
+                                return;
+                            }
+                        }
                         String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
-                        xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), formattedId, false);
+                        xmlWriter.elementWithContent(fieldName, attrs, formattedId, false);
                         return;
                     } else {
                         // mID is null - skip this field to avoid empty tags
@@ -802,39 +811,7 @@ public class FieldExporter {
      * @return The value at the end of the path, or null if any step fails
      */
     private Object getFieldValueByPath(ExtObjectContainer container, Object obj, String fieldPath, boolean debug) {
-        if (obj == null || fieldPath == null || fieldPath.isEmpty()) {
-            return null;
-        }
-
-        // Split the path by dots
-        String[] pathSegments = fieldPath.split("\\.");
-        Object currentValue = obj;
-
-        for (int i = 0; i < pathSegments.length; i++) {
-            String fieldName = pathSegments[i];
-            if (currentValue == null) {
-                return null;
-            }
-
-            // Get the field from the current object
-            if (currentValue instanceof GenericObject) {
-                StoredClass storedClass = container.ext().storedClass(currentValue);
-                if (storedClass == null) {
-                    return null;
-                }
-
-                StoredField field = storedClass.storedField(fieldName, null);
-                if (field == null) {
-                    return null;
-                }
-
-                currentValue = field.get(currentValue);
-            } else {
-                // For non-GenericObject (shouldn't normally happen in DB4O)
-                return null;
-            }
-        }
-        return currentValue;
+        return DatabaseUtil.getFieldValueByPath(container, obj, fieldPath);
     }
 
     /**
@@ -1239,5 +1216,19 @@ public class FieldExporter {
         } catch (Exception ignored) {
             // Best-effort reach recording
         }
+    }
+
+    /**
+     * Strips a leading "id" or "ID" prefix (optionally followed by a space) from a
+     * field or element name, lowercasing the new first character if it became
+     * uppercase. E.g. "IDTypeChampPerso" → "typeChampPerso", "id type" → "type".
+     */
+    private static String stripIdPrefix(String name) {
+        if (name == null || name.isEmpty())
+            return name;
+        String stripped = name.replaceFirst("(?i)^id\\s*", "");
+        if (stripped.isEmpty() || stripped.equals(name))
+            return name;
+        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 }

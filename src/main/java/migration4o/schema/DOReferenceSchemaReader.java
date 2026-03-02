@@ -126,6 +126,7 @@ public class DOReferenceSchemaReader {
         String description = classElement.getAttribute("description");
         String title = classElement.getAttribute("title");
         String schemaNotes = classElement.getAttribute("schemaNotes");
+        String summary = classElement.getAttribute("summary");
         String isExportedAttr = classElement.getAttribute("isExported");
         String pointsTo = classElement.getAttribute("pointsTo");
 
@@ -177,6 +178,7 @@ public class DOReferenceSchemaReader {
         newClass.description = description;
         newClass.title = title;
         newClass.schemaNotes = schemaNotes != null && !schemaNotes.trim().isEmpty() ? schemaNotes : null;
+        newClass.summary = summary != null && !summary.trim().isEmpty() ? summary : null;
         newClass.parentClassName = parentClassName;
         newClass.setFields(fields);
         newClass.schemaReferences = references;

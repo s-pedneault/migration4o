@@ -14,6 +14,7 @@ public class DOSchemaClass {
     public String schemaNotes;
     public String title;
     public String description;
+    public String summary;
     public DOSchemaField[] fields;
     public DOSchemaReference[] schemaReferences;
     public long[] objectIds; // Object IDs from database

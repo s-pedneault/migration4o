@@ -53,6 +53,7 @@ import migration4o.ui.common.renderers.SchemaTypeRenderer;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
+import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.SummaryEditorDialog;
 import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
 
@@ -1174,6 +1175,29 @@ public class SchemaEditorPanel extends JPanel {
         // Always show Description field (editable)
         String description = schemaClass.description != null ? schemaClass.description : "";
         propertyPanel.addTextField("Description", description).addActionListener(e -> markModified());
+
+        // Summary row: read-only display + Edit button
+        JPanel summaryPanel = new JPanel(new BorderLayout(5, 0));
+        JTextField summaryDisplayField = new JTextField(schemaClass.summary != null ? schemaClass.summary : "");
+        summaryDisplayField.setEditable(false);
+        summaryDisplayField.setBackground(UIManager.getColor("TextField.inactiveBackground"));
+        summaryDisplayField.setForeground(new Color(60, 80, 140));
+        summaryDisplayField.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.LIGHT_GRAY), BorderFactory.createEmptyBorder(2, 4, 2, 4)));
+        JButton editSummaryButton = new JButton("Edit...");
+        editSummaryButton.setToolTipText("Edit the summary template for this class");
+        editSummaryButton.addActionListener(e -> {
+            Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
+            String edited = SummaryEditorDialog.showDialog(owner, schemaClass, schema);
+            // null → user cancelled; any String (including "") → user confirmed OK
+            if (edited != null) {
+                schemaClass.summary = edited.isEmpty() ? null : edited;
+                summaryDisplayField.setText(schemaClass.summary != null ? schemaClass.summary : "");
+                markModified();
+            }
+        });
+        summaryPanel.add(summaryDisplayField, BorderLayout.CENTER);
+        summaryPanel.add(editSummaryButton, BorderLayout.EAST);
+        propertyPanel.addCustomField("Summary", summaryPanel);
 
         int fieldCount = schemaClass.fields != null ? schemaClass.fields.length : 0;
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));

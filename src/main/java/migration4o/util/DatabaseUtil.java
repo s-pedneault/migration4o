@@ -1,6 +1,9 @@
 package migration4o.util;
 
+import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -79,8 +82,7 @@ public class DatabaseUtil {
      * @param schema      the schema containing all class definitions
      * @return the schema field definition, or null if not found
      */
-    public static DOSchemaField findSchemaFieldByNameIncludingAncestors(DOSchemaClass schemaClass, String fieldName,
-            DOSchema schema) {
+    public static DOSchemaField findSchemaFieldByNameIncludingAncestors(DOSchemaClass schemaClass, String fieldName, DOSchema schema) {
         if (schemaClass == null || fieldName == null) {
             return null;
         }
@@ -100,6 +102,62 @@ public class DatabaseUtil {
         }
 
         return null;
+    }
+
+    /**
+     * Finds a schema field by its <em>destination name</em> within a schema
+     * class and all its ancestor classes.
+     *
+     * @param schemaClass the class to start from
+     * @param destName    the {@code destinationName} to look for
+     * @param schema      schema for ancestor resolution
+     * @return the matching field, or {@code null} if not found
+     */
+    public static DOSchemaField findSchemaFieldByDestinationNameIncludingAncestors(DOSchemaClass schemaClass, String destName, DOSchema schema) {
+        if (schemaClass == null || destName == null) {
+            return null;
+        }
+        if (schemaClass.fields != null) {
+            for (DOSchemaField field : schemaClass.fields) {
+                if (field != null && destName.equals(field.destinationName)) {
+                    return field;
+                }
+            }
+        }
+        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty() && schema != null) {
+            DOSchemaClass parent = SchemaUtil.findClassByName(schemaClass.parentClassName, schema);
+            if (parent != null) {
+                return findSchemaFieldByDestinationNameIncludingAncestors(parent, destName, schema);
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Returns all fields declared on {@code schemaClass} and every ancestor
+     * class, in declaration order (most-derived class first). Fields with the
+     * same {@code destinationName} are deduplicated (the most-derived
+     * definition wins).
+     *
+     * @param schemaClass starting class
+     * @param schema      schema for ancestor resolution
+     * @return ordered, deduplicated list of all fields
+     */
+    public static java.util.List<DOSchemaField> getAllSchemaFieldsIncludingAncestors(DOSchemaClass schemaClass, DOSchema schema) {
+        java.util.List<DOSchemaField> result = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.LinkedHashSet<>();
+        DOSchemaClass current = schemaClass;
+        while (current != null) {
+            if (current.fields != null) {
+                for (DOSchemaField field : current.fields) {
+                    if (field != null && field.destinationName != null && !field.destinationName.isEmpty() && seen.add(field.destinationName)) {
+                        result.add(field);
+                    }
+                }
+            }
+            current = (current.parentClassName != null && !current.parentClassName.isEmpty() && schema != null) ? SchemaUtil.findClassByName(current.parentClassName, schema) : null;
+        }
+        return result;
     }
 
     /**
@@ -308,6 +366,52 @@ public class DatabaseUtil {
     // return new DODatabaseField[0];
     // }
     // }
+
+    /**
+     * Reads a single stored field value from a DB4O {@link GenericObject} by
+     * source field name. Returns {@code null} if the field is not found or the
+     * object is not a {@link GenericObject}.
+     */
+    public static Object getStoredFieldValue(ExtObjectContainer container, Object obj, String fieldName) {
+        if (!(obj instanceof GenericObject)) {
+            return null;
+        }
+        StoredClass storedClass = container.ext().storedClass(obj);
+        if (storedClass == null) {
+            return null;
+        }
+        StoredField field = storedClass.storedField(fieldName, null);
+        if (field == null) {
+            return null;
+        }
+        return field.get(obj);
+    }
+
+    /**
+     * Traverses a dotted <em>source</em> field path (e.g. {@code "mAdresse.mRue"})
+     * through a chain of DB4O {@link GenericObject}s and returns the leaf value,
+     * or {@code null} if any step fails. Each path segment must be the raw DB4O
+     * field name (i.e. the {@code source} attribute in the schema, not the
+     * {@code destinationName}).
+     *
+     * @param container DB4O container
+     * @param obj       starting object
+     * @param fieldPath dot-separated source field path
+     * @return value at the end of the path, or {@code null} on any failure
+     */
+    public static Object getFieldValueByPath(ExtObjectContainer container, Object obj, String fieldPath) {
+        if (obj == null || fieldPath == null || fieldPath.isEmpty()) {
+            return null;
+        }
+        String[] segments = fieldPath.split("\\.");
+        Object current = obj;
+        for (String segment : segments) {
+            if (current == null)
+                return null;
+            current = getStoredFieldValue(container, current, segment);
+        }
+        return current;
+    }
 
     /**
      * Checks if a stored class should be included in database analysis.
