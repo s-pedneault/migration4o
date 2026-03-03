@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <base href="./">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Migration4O — __DB_NAME__</title>
+    <style>
+        __SIDEBAR_CSS__
+    </style>
+</head>
+
+<body class="welcome-page">
+    <div class="app">
+        <nav class="nav-sidebar" id="navSidebar" aria-label="Module navigation">
+            <div class="sidebar-head">
+                <a class="sidebar-brand" href="./" title="Accueil">
+                    <div class="sidebar-logo">M</div>
+                    <span class="sidebar-name">Migration4O</span>
+                </a>
+                <button class="sidebar-toggle" id="navToggleBtn" type="button" title="Réduire / Agrandir" aria-label="Toggle navigation"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M3 12h18" />
+                        <path d="M3 6h18" />
+                        <path d="M3 18h18" />
+                    </svg></button>
+            </div>
+            <div class="sidebar-nav" id="navSidebarScroll"></div>
+            <div class="sidebar-foot">
+                <div class="sidebar-foot-row">
+                    <span class="sidebar-foot-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <ellipse cx="12" cy="5" rx="9" ry="3" />
+                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
+                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                        </svg></span>
+                    <span class="sidebar-badge-text" title="__DB_NAME__">__DB_NAME__</span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="app-main">
+            <div class="welcome-header">
+                <h1>__DB_NAME__</h1>
+                <div class="subtitle">Export Migration4O — __EXPORT_DATE__</div>
+            </div>
+
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="card-label">Modules</div>
+                    <div class="card-value">__MODULE_COUNT__</div>
+                    <div class="card-detail">modules exportés</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">Classes</div>
+                    <div class="card-value">__CLASS_COUNT__</div>
+                    <div class="card-detail">types de données</div>
+                </div>
+                <div class="info-card">
+                    <div class="card-label">Date d'export</div>
+                    <div class="card-value" style="font-size:15px;letter-spacing:0">__EXPORT_DATE__</div>
+                    <div class="card-detail">dernière génération</div>
+                </div>
+            </div>
+
+            <div class="welcome-section">
+                <h2>À propos de cet export</h2>
+                <p class="placeholder-text">
+                    [Placeholder] Cette section décrira le contenu de la base de données exportée,
+                    les modules disponibles et les instructions de navigation.
+                </p>
+            </div>
+
+            <div class="welcome-section">
+                <h2>Navigation</h2>
+                <p>
+                    Utilisez le menu de gauche pour naviguer entre les modules et les classes exportées.
+                    Chaque classe contient un tableau interactif avec des filtres de recherche.
+                    Cliquez sur une entrée pour afficher le détail complet de l'enregistrement.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const NAV_ITEMS = __NAV_ITEMS__;
+    </script>
+    <script>
+        __SIDEBAR_NAV_JS__
+    </script>
+</body>
+
+</html>

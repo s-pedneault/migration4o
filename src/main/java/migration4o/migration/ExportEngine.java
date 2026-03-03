@@ -209,6 +209,17 @@ public class ExportEngine {
 
         // Serialize once — all files share the same root-relative hrefs
         cachedNavJson = serializeNavTree();
+
+        // Generate welcome / index page at the db root
+        if (operation.generateHtmlViewer) {
+            try {
+                int modCount = modules.size();
+                int classCount = modules.stream().mapToInt(this::countTotalClasses).sum();
+                JsViewerHtmlGenerator.writeWelcomePage(base, getDatabaseFolderName(), cachedNavJson, modCount, classCount);
+            } catch (Exception e) {
+                System.err.println("Warning: failed to generate welcome page: " + e.getMessage());
+            }
+        }
     }
 
     /**
