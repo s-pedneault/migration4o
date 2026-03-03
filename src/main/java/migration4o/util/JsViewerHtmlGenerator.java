@@ -52,14 +52,7 @@ public final class JsViewerHtmlGenerator {
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate()
-                .replace("__SIDEBAR_CSS__", loadSidebarCss())
-                .replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs())
-                .replace("__BASE_HREF__", base)
-                .replace("__NAV_ITEMS__", nav)
-                .replace("__TITLE__", escapeHtml(title))
-                .replace("__ENTITY_NAME__", escapeHtml(entityName))
-                .replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -87,14 +80,7 @@ public final class JsViewerHtmlGenerator {
         String name = (dbName != null && !dbName.isBlank()) ? dbName : "Export";
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
 
-        String html = loadWelcomeTemplate()
-                .replace("__SIDEBAR_CSS__", loadSidebarCss())
-                .replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs())
-                .replace("__NAV_ITEMS__", nav)
-                .replace("__DB_NAME__", escapeHtml(name))
-                .replace("__EXPORT_DATE__", escapeHtml(date))
-                .replace("__MODULE_COUNT__", String.valueOf(moduleCount))
-                .replace("__CLASS_COUNT__", String.valueOf(classCount));
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount));
 
         Files.createDirectories(dbRoot);
         Path welcomePath = dbRoot.resolve("index.html");
