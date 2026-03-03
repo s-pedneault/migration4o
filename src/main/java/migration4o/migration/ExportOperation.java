@@ -1,6 +1,8 @@
 package migration4o.migration;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -9,8 +11,6 @@ import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
 
-import migration4o.util.tools.structuredwriter.StructuredWriter;
-
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
@@ -18,6 +18,7 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
+import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
  * Encapsulates all context and configuration for an export operation.
@@ -47,7 +48,7 @@ public class ExportOperation {
     public boolean skipObjectsWithoutExportableFields = true;
 
     // Module/Class targets (use lists for consistency)
-    public List<MigrationModule> modules;
+    // public List<MigrationModule> modules;
     public List<String> classNames;
 
     // Export configuration flags
@@ -68,6 +69,14 @@ public class ExportOperation {
 
     public ArrayList<DOSchemaField> availableSkipUserOptions;
     public ArrayList<DOSchemaField> selectedSkipUserOptions;
+
+    // ── Module stack tracking the current branch being exported ───────────────
+    /**
+     * Stack of modules currently being exported. The top of the stack is the
+     * innermost active module. Push on entry to exportModuleRecursive, pop on
+     * exit. {@code size()} gives the current nesting depth.
+     */
+    public Deque<MigrationModule> moduleStack = new ArrayDeque<>();
 
     // ── IDEntite label resolution caches (JS export only) ────────────────────
     /**

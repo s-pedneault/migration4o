@@ -18,6 +18,7 @@
             --c-text-muted: #8793a4;
             --c-primary: #3b6cf5;
             --c-primary-hover: #2a56d4;
+            --c-primary-selected: #19417c;
             --c-primary-light: #eaf0ff;
             --c-danger: #ef4444;
             --c-danger-light: #fef2f2;
@@ -887,6 +888,24 @@
             color: var(--c-primary);
         }
 
+
+        .nav-group-toggle_1 {
+            font-size: x-large;
+            background: var(--c-primary);
+            color: #fff;
+        }
+
+        .nav-group-toggle_1:hover {
+            background: rgba(0, 0, 0, .8);
+        }
+
+        .nav-group-toggle_1.open {
+            background: var(--c-primary-selected);
+            color: #fff;
+        }
+
+
+
         .nav-group-icon {
             font-size: 18px;
             flex-shrink: 0;
@@ -990,7 +1009,7 @@
         </header>
         <div class="app-layout">
             <nav class="nav-sidebar" id="navSidebar" aria-label="Module navigation">
-                <div class="nav-sidebar-header">Modules</div>
+                <!-- <div class="nav-sidebar-header">Modules</div> -->
                 <div class="nav-sidebar-scroll" id="navSidebarScroll"></div>
             </nav>
             <div class="app-body">
@@ -2203,7 +2222,7 @@
                 var div = document.createElement('div');
                 var btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'nav-group-toggle'
+                btn.className = 'nav-group-toggle' + " nav-group-toggle_" + (depth + 1)
                     + (hasCurrent ? ' open' : '')
                     + (depth === 0 ? ' nav-group-top' : '');
                 btn.style.paddingLeft = (12 + depth * 16) + 'px';

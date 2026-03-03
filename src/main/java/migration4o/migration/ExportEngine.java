@@ -262,22 +262,16 @@ public class ExportEngine {
      * file's directory back to the db export root (e.g. "../../" for depth 2).
      */
     private String computeBaseHref(Path outputPath) {
-        try {
-            Path dbBase = getBaseOutputPath(operation.baseOutputPath);
-            Path fileDir = outputPath.getParent();
-            if (fileDir == null)
-                return "./";
-            Path rel = dbBase.relativize(fileDir);
-            int depth = rel.getNameCount();
-            if (depth == 0 || (depth == 1 && rel.getName(0).toString().isEmpty()))
-                return "./";
-            StringBuilder bh = new StringBuilder();
-            for (int i = 0; i < depth + 1; i++)
-                bh.append("../");
-            return bh.toString();
-        } catch (Exception e) {
+        // moduleStack.size() is the number of nested module folders the file sits in
+        // (e.g. Organisation/ = 1, Organisation/Configuration/ = 2, ...)
+        // Each level needs one "../" to get back to the db root.
+        int levels = operation.moduleStack.size();
+        if (levels == 0)
             return "./";
-        }
+        StringBuilder bh = new StringBuilder();
+        for (int i = 0; i < levels; i++)
+            bh.append("../");
+        return bh.toString();
     }
 
     private static String escNavJson(String v) {
@@ -717,75 +711,80 @@ public class ExportEngine {
      */
     private void exportModuleRecursive(MigrationModule module, Path currentBasePath, int depth) throws Exception {
 
-        if (operation.monitor != null) {
-            operation.monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
-        }
-
-        // Create folder for this module (use module name to preserve proper
-        // casing)
-        Path modulePath = currentBasePath.resolve(module.getName());
-        Files.createDirectories(modulePath);
-
-        // Export each class configuration in this module
-        // System.out.println("DEBUG exportModuleRecursive: Module '" +
-        // module.getName()
-        // + "' has "
-        // + module.getClassConfigs().size() + " class configs");
-        for (ClassExportConfig config : module.getClassConfigs()) {
-            if (operation.monitor != null && operation.monitor.isCancelled()) {
-                break;
+        operation.moduleStack.push(module);
+        try {
+            if (operation.monitor != null) {
+                operation.monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
             }
 
-            String className = config.getClassName();
-            // System.out.println("DEBUG exportModuleRecursive: Processing class
-            // " +
-            // className + ", hasCriteria="
-            // + config.hasCriteria() + ", criteria count=" +
-            // config.getCriteria().size());
+            // Create folder for this module (use module name to preserve proper
+            // casing)
+            Path modulePath = currentBasePath.resolve(module.getName());
+            Files.createDirectories(modulePath);
 
-            // DEBUG: Log if this class has criteria
-            if (config.hasCriteria()) {
-                System.out.println("DEBUG: Exporting " + className + " with " + config.getCriteria().size() + " criteria: " + config.getCriteria());
+            // Export each class configuration in this module
+            // System.out.println("DEBUG exportModuleRecursive: Module '" +
+            // module.getName()
+            // + "' has "
+            // + module.getClassConfigs().size() + " class configs");
+            for (ClassExportConfig config : module.getClassConfigs()) {
+                if (operation.monitor != null && operation.monitor.isCancelled()) {
+                    break;
+                }
+
+                String className = config.getClassName();
+                // System.out.println("DEBUG exportModuleRecursive: Processing class
+                // " +
+                // className + ", hasCriteria="
+                // + config.hasCriteria() + ", criteria count=" +
+                // config.getCriteria().size());
+
+                // DEBUG: Log if this class has criteria
+                if (config.hasCriteria()) {
+                    System.out.println("DEBUG: Exporting " + className + " with " + config.getCriteria().size() + " criteria: " + config.getCriteria());
+                }
+
+                DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
+                if (schemaClass == null) {
+                    continue; // Skip missing classes silently - errors tracked via
+                              // monitor
+                }
+
+                DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
+                if (dbSchemaClass == null) {
+                    continue; // Skip missing classes silently - errors tracked via
+                              // monitor
+                }
+
+                // Use the destination file name from config (defaults to class name
+                // if not set)
+                String fileName = config.getDestinationFileName() + getOutputFileExtension();
+                String xsdFileName = config.getDestinationFileName() + ".xsd";
+                Path xmlPath = modulePath.resolve(fileName);
+                Path xsdPath = isXMLFormat() ? modulePath.resolve(xsdFileName) : null;
+
+                // Track XML file for validation if using shared tracking
+                if (isXMLFormat() && operation.exportedXMLFiles != null) {
+                    operation.exportedXMLFiles.add(xmlPath.toString());
+                }
+
+                // Export this class with criteria filtering
+                exportClassToFile(schemaClass, dbSchemaClass, xmlPath, xsdPath, config);
             }
 
-            DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
-            if (schemaClass == null) {
-                continue; // Skip missing classes silently - errors tracked via
-                          // monitor
+            // Recursively export child modules
+            for (MigrationModule childModule : module.getChildModules()) {
+                if (operation.monitor != null && operation.monitor.isCancelled()) {
+                    break;
+                }
+                exportModuleRecursive(childModule, modulePath, depth + 1);
             }
 
-            DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
-            if (dbSchemaClass == null) {
-                continue; // Skip missing classes silently - errors tracked via
-                          // monitor
+            if (operation.monitor != null) {
+                operation.monitor.onModuleComplete(module.getName());
             }
-
-            // Use the destination file name from config (defaults to class name
-            // if not set)
-            String fileName = config.getDestinationFileName() + getOutputFileExtension();
-            String xsdFileName = config.getDestinationFileName() + ".xsd";
-            Path xmlPath = modulePath.resolve(fileName);
-            Path xsdPath = isXMLFormat() ? modulePath.resolve(xsdFileName) : null;
-
-            // Track XML file for validation if using shared tracking
-            if (isXMLFormat() && operation.exportedXMLFiles != null) {
-                operation.exportedXMLFiles.add(xmlPath.toString());
-            }
-
-            // Export this class with criteria filtering
-            exportClassToFile(schemaClass, dbSchemaClass, xmlPath, xsdPath, config);
-        }
-
-        // Recursively export child modules
-        for (MigrationModule childModule : module.getChildModules()) {
-            if (operation.monitor != null && operation.monitor.isCancelled()) {
-                break;
-            }
-            exportModuleRecursive(childModule, modulePath, depth + 1);
-        }
-
-        if (operation.monitor != null) {
-            operation.monitor.onModuleComplete(module.getName());
+        } finally {
+            operation.moduleStack.pop();
         }
     }
 
