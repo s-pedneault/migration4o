@@ -213,7 +213,7 @@
     var conditionsContainer = document.getElementById('conditionsContainer');
     if (!conditionsContainer) return;
 
-    // entityName is set globally in the template via <script>var entityName = '...';</script>
+    // entityName is set globally in the template via a separate script tag
     var _entityName = (typeof entityName !== 'undefined') ? entityName : '';
 
     let allRecords = [];
