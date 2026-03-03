@@ -22,7 +22,7 @@
 # Set working directory to project root
 cd "$(dirname "$0")"
 
-echo "=== Migration4O UI ==="
+echo "=== Migration4o UI ==="
 echo ""
 
 # Memory settings (override with environment variables)

@@ -10,7 +10,7 @@
     <version>1.0.0</version>
     <packaging>jar</packaging>
     
-    <name>Migration4O</name>
+    <name>Migration4o</name>
     <description>DB4O Database Migration Assistant - A comprehensive tool for migrating DB4O databases to modern formats</description>
     
     <properties>

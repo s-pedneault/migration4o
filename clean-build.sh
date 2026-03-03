@@ -8,7 +8,7 @@ echo ""
 # Check if app is running
 if pgrep -f "migration4o.ui.Migration4oUI" > /dev/null; then
     echo "ERROR: Application is currently running!"
-    echo "Please close all instances of Migration4O before building."
+    echo "Please close all instances of Migration4o before building."
     echo ""
     echo "Running processes:"
     pgrep -f -l "migration4o.ui.Migration4oUI"

@@ -1,7 +1,7 @@
-# Copilot Instructions for Migration4O
+# Copilot Instructions for Migration4o
 
 ## Project Overview
-**Migration4O** is a Java Swing desktop application for migrating DB4O object databases to XML format. It features interactive schema management, export configuration, and reachability analysis.
+**Migration4o** is a Java Swing desktop application for migrating DB4O object databases to XML format. It features interactive schema management, export configuration, and reachability analysis.
 
 ## Architecture
 

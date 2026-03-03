@@ -1,10 +1,10 @@
-# Migration4O - DB4O Database Migration Assistant
+# Migration4o - DB4O Database Migration Assistant
 
 A comprehensive tool for migrating DB4O databases to modern formats. This project provides an interactive assistant that guides you through the entire migration process.
 
 ## Overview
 
-Migration4O is a specialized tool designed to help developers migrate from the legacy DB4O database format to modern alternatives. The tool provides:
+Migration4o is a specialized tool designed to help developers migrate from the legacy DB4O database format to modern alternatives. The tool provides:
 
 - **Interactive Migration Assistant**: Step-by-step guidance through the migration process
 - **Database Analysis**: Comprehensive schema discovery and data structure analysis
@@ -25,7 +25,7 @@ Migration4O is a specialized tool designed to help developers migrate from the l
 1. **Clone/Download the project**
    ```bash
    git clone <repository-url>
-   cd Migration4O
+   cd Migration4o
    ```
 
 2. **Build the project**
@@ -53,7 +53,7 @@ Migration4O is a specialized tool designed to help developers migrate from the l
 ## Project Structure
 
 ```
-Migration4O/
+Migration4o/
 ├── src/main/java/          # Java source code
 │   ├── dataobjects/        # Data model classes
 │   ├── service/           # Business logic and migration services
