@@ -2,10 +2,8 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel.
 
 import java.awt.*;
 import java.awt.datatransfer.*;
+import java.awt.dnd.*;
 import java.awt.event.*;
-import java.io.*;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
 import java.util.*;
 import java.util.List;
 import javax.swing.*;
@@ -21,7 +19,7 @@ import migration4o.util.DatabaseUtil;
 
 /**
  * Designer for record detail view layouts.
- * Tree-based layout builder with field palette, property panel, and HTML preview.
+ * Tree-based layout builder with field palette, property panel, and live HTML preview.
  */
 public class DetailLayoutDesigner extends JFrame {
 
@@ -30,12 +28,17 @@ public class DetailLayoutDesigner extends JFrame {
     private final DOSchema refSchema;
 
     private JTree fieldPalette;
+    private DefaultTreeModel fieldPaletteModel;
     private JTree layoutTree;
     private DefaultTreeModel layoutModel;
     private JPanel propertyPanel;
     private JEditorPane previewPane;
 
     private DefaultMutableTreeNode selectedLayoutNode;
+
+    // DnD flavors
+    private static final DataFlavor FIELD_FLAVOR = new DataFlavor(FieldPaletteItem.class, "FieldPaletteItem");
+    private static final DataFlavor LAYOUT_NODE_FLAVOR = new DataFlavor(DefaultMutableTreeNode.class, "LayoutTreeNode");
 
     public DetailLayoutDesigner(ClassExportConfig config, DOSchemaClass schemaClass, DOSchema refSchema) {
         super("Detail Layout Designer — " + schemaClass.destinationName);
@@ -51,18 +54,14 @@ public class DetailLayoutDesigner extends JFrame {
 
     private void buildUI() {
         setLayout(new BorderLayout());
-
-        // Toolbar
         add(buildToolbar(), BorderLayout.NORTH);
 
-        // Main split: [palette | layout tree | properties]
         JSplitPane leftSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, buildFieldPalette(), buildLayoutTreePanel());
         leftSplit.setDividerLocation(250);
 
         JSplitPane rightSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT, leftSplit, buildPropertyPanel());
         rightSplit.setDividerLocation(650);
 
-        // Top/bottom split: [editor | preview]
         JSplitPane mainSplit = new JSplitPane(JSplitPane.VERTICAL_SPLIT, rightSplit, buildPreviewPanel());
         mainSplit.setDividerLocation(450);
 
@@ -84,10 +83,6 @@ public class DetailLayoutDesigner extends JFrame {
         bar.addSeparator();
         bar.add(makeBtn("Auto Layout", e -> autoLayout()));
         bar.addSeparator();
-        bar.add(makeBtn("\u2191 Up", e -> moveNode(-1)));
-        bar.add(makeBtn("\u2193 Down", e -> moveNode(1)));
-        bar.add(makeBtn("\u2190 Outdent", e -> outdentNode()));
-        bar.add(makeBtn("\u2192 Indent", e -> indentNode()));
         bar.add(makeBtn("\u2717 Delete", e -> deleteNode()));
         bar.addSeparator();
         JButton saveBtn = makeBtn("Save", e -> save());
@@ -108,6 +103,36 @@ public class DetailLayoutDesigner extends JFrame {
 
     private JScrollPane buildFieldPalette() {
         DefaultMutableTreeNode root = new DefaultMutableTreeNode("Fields");
+        fieldPaletteModel = new DefaultTreeModel(root);
+        populateFieldPalette(root);
+
+        fieldPalette = new JTree(fieldPaletteModel);
+        fieldPalette.setRootVisible(false);
+        fieldPalette.setShowsRootHandles(true);
+
+        // Double-click to add field to layout
+        fieldPalette.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                if (e.getClickCount() == 2)
+                    addFieldFromPalette();
+            }
+        });
+
+        // DnD from palette
+        fieldPalette.setDragEnabled(true);
+        fieldPalette.setTransferHandler(new FieldPaletteDragHandler());
+
+        expandAllNodes(fieldPalette, 0, fieldPalette.getRowCount());
+
+        JScrollPane sp = new JScrollPane(fieldPalette);
+        sp.setBorder(BorderFactory.createTitledBorder("Available Fields"));
+        sp.setPreferredSize(new Dimension(250, 400));
+        return sp;
+    }
+
+    private void populateFieldPalette(DefaultMutableTreeNode root) {
+        Set<String> usedRefs = collectUsedFieldRefs();
         List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema);
 
         DefaultMutableTreeNode directNode = new DefaultMutableTreeNode("Direct Fields");
@@ -123,20 +148,24 @@ public class DetailLayoutDesigner extends JFrame {
                 continue;
 
             if (field.isCollection) {
-                DefaultMutableTreeNode collNode = new DefaultMutableTreeNode(new FieldPaletteItem(dest, dest, true));
-                // Add sub-fields if embedded collection
-                if (field.embedContents) {
-                    addEmbeddedSubFields(collNode, field.childrenType, dest);
+                if (!usedRefs.contains(dest)) {
+                    DefaultMutableTreeNode collNode = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, true));
+                    if (field.embedContents)
+                        addEmbeddedSubFields(collNode, field.childrenType, dest, usedRefs);
+                    collectionsNode.add(collNode);
                 }
-                collectionsNode.add(collNode);
             } else if (field.embedContents && !isPrimitiveType(field.type)) {
-                DefaultMutableTreeNode embNode = new DefaultMutableTreeNode(new FieldPaletteItem(dest, dest, false));
-                addEmbeddedSubFields(embNode, field.type, dest);
-                embeddedNode.add(embNode);
+                // Embedded entity — show if it or any sub-field is not yet used
+                DefaultMutableTreeNode embNode = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, false));
+                addEmbeddedSubFields(embNode, field.type, dest, usedRefs);
+                if (!usedRefs.contains(dest) || embNode.getChildCount() > 0)
+                    embeddedNode.add(embNode);
             } else if (isIDEntiteType(field)) {
-                refsNode.add(new DefaultMutableTreeNode(new FieldPaletteItem(dest, dest, false)));
+                if (!usedRefs.contains(dest))
+                    refsNode.add(new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, false)));
             } else {
-                directNode.add(new DefaultMutableTreeNode(new FieldPaletteItem(dest, dest, false)));
+                if (!usedRefs.contains(dest))
+                    directNode.add(new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, false)));
             }
         }
 
@@ -148,34 +177,39 @@ public class DetailLayoutDesigner extends JFrame {
             root.add(collectionsNode);
         if (refsNode.getChildCount() > 0)
             root.add(refsNode);
-
-        fieldPalette = new JTree(root);
-        fieldPalette.setRootVisible(false);
-        fieldPalette.setShowsRootHandles(true);
-        fieldPalette.expandRow(0);
-        fieldPalette.expandRow(1);
-
-        // Double-click to add field to layout
-        fieldPalette.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mouseClicked(MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    addFieldFromPalette();
-                }
-            }
-        });
-
-        // DnD from palette
-        fieldPalette.setDragEnabled(true);
-        fieldPalette.setTransferHandler(new FieldPaletteDragHandler());
-
-        JScrollPane sp = new JScrollPane(fieldPalette);
-        sp.setBorder(BorderFactory.createTitledBorder("Available Fields"));
-        sp.setPreferredSize(new Dimension(250, 400));
-        return sp;
     }
 
-    private void addEmbeddedSubFields(DefaultMutableTreeNode parentNode, String typeName, String parentPath) {
+    private Set<String> collectUsedFieldRefs() {
+        Set<String> refs = new HashSet<>();
+        DefaultMutableTreeNode root = (layoutModel != null) ? (DefaultMutableTreeNode) layoutModel.getRoot() : null;
+        if (root != null)
+            collectUsedFieldRefsRecursive(root, refs);
+        return refs;
+    }
+
+    private void collectUsedFieldRefsRecursive(DefaultMutableTreeNode treeNode, Set<String> refs) {
+        LayoutNode node = getLayoutNodeFromTreeNode(treeNode);
+        if (node != null) {
+            if (node.type == LayoutNodeType.FIELD || node.type == LayoutNodeType.TABLE) {
+                String ref = node.prop("ref");
+                if (ref != null)
+                    refs.add(ref);
+            }
+        }
+        for (int i = 0; i < treeNode.getChildCount(); i++) {
+            collectUsedFieldRefsRecursive((DefaultMutableTreeNode) treeNode.getChildAt(i), refs);
+        }
+    }
+
+    private void refreshFieldPalette() {
+        DefaultMutableTreeNode root = (DefaultMutableTreeNode) fieldPaletteModel.getRoot();
+        root.removeAllChildren();
+        populateFieldPalette(root);
+        fieldPaletteModel.reload();
+        expandAllNodes(fieldPalette, 0, fieldPalette.getRowCount());
+    }
+
+    private void addEmbeddedSubFields(DefaultMutableTreeNode parentNode, String typeName, String parentPath, Set<String> usedRefs) {
         if (typeName == null)
             return;
         DOSchemaClass embeddedClass = findClassByType(typeName);
@@ -187,10 +221,11 @@ public class DetailLayoutDesigner extends JFrame {
             if (!sf.isExported || sf.destinationName == null)
                 continue;
             String dotPath = parentPath + "." + sf.destinationName;
-            DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FieldPaletteItem(sf.destinationName, dotPath, sf.isCollection));
-            // One level of recursion for nested embedded entities
+            if (usedRefs.contains(dotPath))
+                continue;
+            DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(sf), dotPath, sf.isCollection));
             if (sf.embedContents && !isPrimitiveType(sf.type) && !sf.isCollection) {
-                addEmbeddedSubFields(child, sf.type, dotPath);
+                addEmbeddedSubFields(child, sf.type, dotPath, usedRefs);
             }
             parentNode.add(child);
         }
@@ -199,11 +234,9 @@ public class DetailLayoutDesigner extends JFrame {
     private DOSchemaClass findClassByType(String typeName) {
         if (typeName == null || refSchema == null)
             return null;
-        // Try finding by source name
         DOSchemaClass cls = refSchema.findClassByName(typeName);
         if (cls != null)
             return cls;
-        // Try short name match
         String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
         for (DOSchemaClass c : refSchema.getClasses()) {
             if (c.source != null && c.source.endsWith("." + shortName))
@@ -240,17 +273,14 @@ public class DetailLayoutDesigner extends JFrame {
 
         layoutTree.addTreeSelectionListener(e -> {
             TreePath path = e.getNewLeadSelectionPath();
-            if (path != null) {
-                selectedLayoutNode = (DefaultMutableTreeNode) path.getLastPathComponent();
-            } else {
-                selectedLayoutNode = null;
-            }
+            selectedLayoutNode = (path != null) ? (DefaultMutableTreeNode) path.getLastPathComponent() : null;
             updatePropertyPanel();
         });
 
-        // Accept drops
-        layoutTree.setTransferHandler(new LayoutTreeDropHandler());
+        // Enable DnD — both palette drops and internal rearrangement
+        layoutTree.setDragEnabled(true);
         layoutTree.setDropMode(DropMode.ON_OR_INSERT);
+        layoutTree.setTransferHandler(new LayoutTreeDnDHandler());
 
         JScrollPane sp = new JScrollPane(layoutTree);
         sp.setBorder(BorderFactory.createTitledBorder("Layout Structure"));
@@ -266,7 +296,7 @@ public class DetailLayoutDesigner extends JFrame {
 
         JScrollPane sp = new JScrollPane(propertyPanel);
         sp.setBorder(BorderFactory.createTitledBorder("Properties"));
-        sp.setPreferredSize(new Dimension(280, 400));
+        sp.setPreferredSize(new Dimension(300, 400));
         return sp;
     }
 
@@ -296,7 +326,6 @@ public class DetailLayoutDesigner extends JFrame {
         case SECTION:
             addPropField("Title", node, "title");
             addPropCheckbox("Collapsible", node, "collapsible");
-            addPropField("Title Color", node, "titleColor");
             break;
         case COLUMNS:
             addPropField("Count", node, "count");
@@ -308,9 +337,7 @@ public class DetailLayoutDesigner extends JFrame {
             addFormatEditor(node);
             break;
         case TABLE:
-            addPropReadOnly("Ref", node.prop("ref", ""));
-            addPropField("Columns", node, "columns");
-            addPropField("Widths (%)", node, "widths");
+            addTableEditor(node);
             break;
         case TABBED_SECTION:
             addPropField("Title", node, "title");
@@ -323,6 +350,9 @@ public class DetailLayoutDesigner extends JFrame {
             addPropReadOnly("Type", node.type.name());
             break;
         }
+
+        // Style editing for all node types
+        addStyleEditor(node);
 
         propertyPanel.add(Box.createVerticalGlue());
         propertyPanel.revalidate();
@@ -337,17 +367,16 @@ public class DetailLayoutDesigner extends JFrame {
         lbl.setFont(lbl.getFont().deriveFont(Font.BOLD));
         lbl.setPreferredSize(new Dimension(100, 25));
         JTextField tf = new JTextField(node.prop(propKey, ""), 15);
-        tf.addActionListener(e -> {
+        Runnable updater = () -> {
             node.setProp(propKey, tf.getText().trim());
             layoutModel.nodeChanged(selectedLayoutNode);
             updatePreview();
-        });
+        };
+        tf.addActionListener(e -> updater.run());
         tf.addFocusListener(new FocusAdapter() {
             @Override
             public void focusLost(FocusEvent e) {
-                node.setProp(propKey, tf.getText().trim());
-                layoutModel.nodeChanged(selectedLayoutNode);
-                updatePreview();
+                updater.run();
             }
         });
         row.add(lbl, BorderLayout.WEST);
@@ -391,12 +420,12 @@ public class DetailLayoutDesigner extends JFrame {
         propertyPanel.add(Box.createRigidArea(new Dimension(0, 4)));
     }
 
+    // ── Format Editor ──────────────────────────────────────────────
+
     private void addFormatEditor(LayoutNode node) {
         String ref = node.prop("ref", "");
         DOSchemaField field = resolveFieldByRef(ref);
-        String fieldType = (field != null) ? field.type : "string";
-        if (fieldType == null)
-            fieldType = "string";
+        String fieldType = (field != null && field.type != null) ? field.type : "string";
 
         String currentFormat = node.prop("format", "");
 
@@ -411,7 +440,6 @@ public class DetailLayoutDesigner extends JFrame {
         } else if (fieldType.equals("boolean")) {
             addBoolFormatEditor(formatPanel, node, currentFormat);
         } else if (fieldType.equals("long") || fieldType.equals("java.lang.Long")) {
-            // Long can be a number or a date
             JPanel radioPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
             boolean isLongDate = currentFormat.startsWith("longdate:");
             JRadioButton numRadio = new JRadioButton("Number", !isLongDate);
@@ -426,22 +454,20 @@ public class DetailLayoutDesigner extends JFrame {
 
             JPanel patternRow = new JPanel(new BorderLayout(5, 0));
             patternRow.setAlignmentX(Component.LEFT_ALIGNMENT);
-            JLabel patLbl = new JLabel("Pattern:");
             String initPattern = isLongDate ? currentFormat.substring(9) : (currentFormat.startsWith("num:") ? currentFormat.substring(4) : "");
             JTextField patField = new JTextField(initPattern, 15);
-            patternRow.add(patLbl, BorderLayout.WEST);
+            patternRow.add(new JLabel("Pattern:"), BorderLayout.WEST);
             patternRow.add(patField, BorderLayout.CENTER);
             formatPanel.add(patternRow);
 
             Runnable updater = () -> {
                 String pat = patField.getText().trim();
-                if (dateRadio.isSelected() && !pat.isEmpty()) {
+                if (dateRadio.isSelected() && !pat.isEmpty())
                     node.setProp("format", "longdate:" + pat);
-                } else if (numRadio.isSelected() && !pat.isEmpty()) {
+                else if (numRadio.isSelected() && !pat.isEmpty())
                     node.setProp("format", "num:" + pat);
-                } else {
+                else
                     node.setProp("format", "");
-                }
                 updatePreview();
             };
             patField.addActionListener(e -> updater.run());
@@ -456,7 +482,7 @@ public class DetailLayoutDesigner extends JFrame {
         } else if (fieldType.equals("int") || fieldType.equals("float") || fieldType.equals("double") || fieldType.equals("short") || fieldType.equals("byte") || fieldType.equals("java.lang.Integer") || fieldType.equals("java.lang.Float") || fieldType.equals("java.lang.Double")) {
             addNumFormatEditor(formatPanel, node, currentFormat);
         } else {
-            JLabel noFmt = new JLabel("No format options for this field type (" + fieldType + ")");
+            JLabel noFmt = new JLabel("No format options for type: " + fieldType);
             noFmt.setForeground(Color.GRAY);
             noFmt.setAlignmentX(Component.LEFT_ALIGNMENT);
             formatPanel.add(noFmt);
@@ -469,7 +495,6 @@ public class DetailLayoutDesigner extends JFrame {
     private void addDateFormatEditor(JPanel panel, LayoutNode node, String currentFormat, String prefix) {
         JPanel row = new JPanel(new BorderLayout(5, 0));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lbl = new JLabel("Pattern:");
         String initVal = currentFormat.startsWith(prefix + ":") ? currentFormat.substring(prefix.length() + 1) : "";
         JComboBox<String> combo = new JComboBox<>(new String[] { "", "yyyy-MM-dd", "dd/MM/yyyy", "yyyy-MM-dd HH:mm", "dd/MM/yyyy HH:mm:ss", "MMMM dd, yyyy" });
         combo.setEditable(true);
@@ -479,7 +504,7 @@ public class DetailLayoutDesigner extends JFrame {
             node.setProp("format", (pat != null && !pat.isEmpty()) ? prefix + ":" + pat : "");
             updatePreview();
         });
-        row.add(lbl, BorderLayout.WEST);
+        row.add(new JLabel("Pattern:"), BorderLayout.WEST);
         row.add(combo, BorderLayout.CENTER);
         panel.add(row);
     }
@@ -491,38 +516,32 @@ public class DetailLayoutDesigner extends JFrame {
             trueVal = parts[0];
             falseVal = parts.length > 1 ? parts[1] : "";
         }
-        JPanel trueRow = new JPanel(new BorderLayout(5, 0));
-        trueRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JTextField trueField = new JTextField(trueVal, 10);
-        trueRow.add(new JLabel("True label:"), BorderLayout.WEST);
-        trueRow.add(trueField, BorderLayout.CENTER);
-
-        JPanel falseRow = new JPanel(new BorderLayout(5, 0));
-        falseRow.setAlignmentX(Component.LEFT_ALIGNMENT);
         JTextField falseField = new JTextField(falseVal, 10);
-        falseRow.add(new JLabel("False label:"), BorderLayout.WEST);
-        falseRow.add(falseField, BorderLayout.CENTER);
 
         Runnable updater = () -> {
             String t = trueField.getText().trim(), f = falseField.getText().trim();
             node.setProp("format", (!t.isEmpty() || !f.isEmpty()) ? "bool:" + t + "," + f : "");
             updatePreview();
         };
-        trueField.addActionListener(e -> updater.run());
-        trueField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                updater.run();
-            }
-        });
-        falseField.addActionListener(e -> updater.run());
-        falseField.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusLost(FocusEvent e) {
-                updater.run();
-            }
-        });
+        for (JTextField tf : new JTextField[] { trueField, falseField }) {
+            tf.addActionListener(e -> updater.run());
+            tf.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    updater.run();
+                }
+            });
+        }
 
+        JPanel trueRow = new JPanel(new BorderLayout(5, 0));
+        trueRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        trueRow.add(new JLabel("True label:"), BorderLayout.WEST);
+        trueRow.add(trueField, BorderLayout.CENTER);
+        JPanel falseRow = new JPanel(new BorderLayout(5, 0));
+        falseRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        falseRow.add(new JLabel("False label:"), BorderLayout.WEST);
+        falseRow.add(falseField, BorderLayout.CENTER);
         panel.add(trueRow);
         panel.add(falseRow);
     }
@@ -531,7 +550,6 @@ public class DetailLayoutDesigner extends JFrame {
         String initVal = currentFormat.startsWith("num:") ? currentFormat.substring(4) : "";
         JPanel row = new JPanel(new BorderLayout(5, 0));
         row.setAlignmentX(Component.LEFT_ALIGNMENT);
-        JLabel lbl = new JLabel("Pattern:");
         JTextField tf = new JTextField(initVal, 15);
         JLabel hint = new JLabel("<html><i>e.g. #,##0.0 Km</i></html>");
         hint.setForeground(Color.GRAY);
@@ -549,11 +567,400 @@ public class DetailLayoutDesigner extends JFrame {
             }
         });
 
-        row.add(lbl, BorderLayout.WEST);
+        row.add(new JLabel("Pattern:"), BorderLayout.WEST);
         row.add(tf, BorderLayout.CENTER);
         panel.add(row);
         hint.setAlignmentX(Component.LEFT_ALIGNMENT);
         panel.add(hint);
+    }
+
+    // ── Style Editor ───────────────────────────────────────────────
+
+    private void addStyleEditor(LayoutNode node) {
+        JPanel stylePanel = new JPanel();
+        stylePanel.setLayout(new BoxLayout(stylePanel, BoxLayout.Y_AXIS));
+        stylePanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        stylePanel.setBorder(BorderFactory.createTitledBorder("Style"));
+        stylePanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 160));
+
+        // Style combo
+        JPanel styleRow = new JPanel(new BorderLayout(5, 0));
+        styleRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        styleRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+        JLabel styleLbl = new JLabel("Style:");
+        styleLbl.setPreferredSize(new Dimension(80, 25));
+        String[] styles = { "Normal", "Header 1", "Header 2", "Header 3", "Header 4", "Small", "Caption" };
+        String[] styleValues = { "", "h1", "h2", "h3", "h4", "small", "caption" };
+        JComboBox<String> styleCombo = new JComboBox<>(styles);
+        String currentStyle = node.prop("style", "");
+        for (int i = 0; i < styleValues.length; i++) {
+            if (styleValues[i].equals(currentStyle)) {
+                styleCombo.setSelectedIndex(i);
+                break;
+            }
+        }
+        styleCombo.addActionListener(e -> {
+            int idx = styleCombo.getSelectedIndex();
+            node.setProp("style", idx >= 0 ? styleValues[idx] : "");
+            layoutModel.nodeChanged(selectedLayoutNode);
+            updatePreview();
+        });
+        styleRow.add(styleLbl, BorderLayout.WEST);
+        styleRow.add(styleCombo, BorderLayout.CENTER);
+        stylePanel.add(styleRow);
+        stylePanel.add(Box.createRigidArea(new Dimension(0, 4)));
+
+        // Text color
+        addColorButton(stylePanel, "Text Color:", node, "color");
+        stylePanel.add(Box.createRigidArea(new Dimension(0, 4)));
+
+        // Highlight color
+        addColorButton(stylePanel, "Highlight:", node, "hilite");
+
+        propertyPanel.add(Box.createRigidArea(new Dimension(0, 8)));
+        propertyPanel.add(stylePanel);
+    }
+
+    private void addColorButton(JPanel parent, String label, LayoutNode node, String propKey) {
+        JPanel row = new JPanel(new BorderLayout(5, 0));
+        row.setAlignmentX(Component.LEFT_ALIGNMENT);
+        row.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+
+        JLabel lbl = new JLabel(label);
+        lbl.setPreferredSize(new Dimension(80, 25));
+
+        JPanel colorPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        String currentColor = node.prop(propKey, "");
+
+        // Color swatch
+        JPanel swatch = new JPanel() {
+            @Override
+            public Dimension getPreferredSize() {
+                return new Dimension(22, 22);
+            }
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                String c = node.prop(propKey, "");
+                if (!c.isEmpty()) {
+                    try {
+                        g.setColor(Color.decode(c));
+                        g.fillRect(0, 0, getWidth(), getHeight());
+                        g.setColor(Color.GRAY);
+                        g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+                    } catch (NumberFormatException ex) {
+                        /* ignore bad color */ }
+                } else {
+                    g.setColor(Color.LIGHT_GRAY);
+                    g.drawRect(0, 0, getWidth() - 1, getHeight() - 1);
+                    g.drawLine(0, 0, getWidth() - 1, getHeight() - 1);
+                }
+            }
+        };
+
+        JButton chooseBtn = new JButton("Choose...");
+        chooseBtn.setMargin(new Insets(1, 6, 1, 6));
+        chooseBtn.addActionListener(e -> {
+            Color initial = null;
+            try {
+                if (!currentColor.isEmpty())
+                    initial = Color.decode(currentColor);
+            } catch (NumberFormatException ex) {
+                /* ignore */ }
+            Color chosen = JColorChooser.showDialog(this, "Choose " + label.replace(":", ""), initial);
+            if (chosen != null) {
+                String hex = String.format("#%02x%02x%02x", chosen.getRed(), chosen.getGreen(), chosen.getBlue());
+                node.setProp(propKey, hex);
+                swatch.repaint();
+                layoutModel.nodeChanged(selectedLayoutNode);
+                updatePreview();
+            }
+        });
+
+        JButton clearBtn = new JButton("\u2717");
+        clearBtn.setMargin(new Insets(1, 4, 1, 4));
+        clearBtn.setToolTipText("Clear " + label.replace(":", ""));
+        clearBtn.addActionListener(e -> {
+            node.setProp(propKey, "");
+            swatch.repaint();
+            layoutModel.nodeChanged(selectedLayoutNode);
+            updatePreview();
+        });
+
+        colorPanel.add(swatch);
+        colorPanel.add(chooseBtn);
+        colorPanel.add(clearBtn);
+
+        row.add(lbl, BorderLayout.WEST);
+        row.add(colorPanel, BorderLayout.CENTER);
+        parent.add(row);
+    }
+
+    // ── Table Editor ───────────────────────────────────────────────
+
+    private void addTableEditor(LayoutNode node) {
+        // Collection field selector
+        JPanel refRow = new JPanel(new BorderLayout(5, 0));
+        refRow.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        refRow.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JLabel refLbl = new JLabel("Collection:");
+        refLbl.setFont(refLbl.getFont().deriveFont(Font.BOLD));
+        refLbl.setPreferredSize(new Dimension(100, 25));
+
+        // Build combo of collection fields
+        List<String> collectionRefs = new ArrayList<>();
+        collectionRefs.add(""); // allow empty
+        List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema);
+        for (DOSchemaField f : allFields) {
+            if (f.isExported && f.isCollection && f.destinationName != null)
+                collectionRefs.add(f.destinationName);
+        }
+        // Also check embedded entities for nested collections
+        for (DOSchemaField f : allFields) {
+            if (f.isExported && f.embedContents && !isPrimitiveType(f.type) && !f.isCollection) {
+                DOSchemaClass embClass = findClassByType(f.type);
+                if (embClass != null) {
+                    for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embClass, refSchema)) {
+                        if (sf.isExported && sf.isCollection && sf.destinationName != null)
+                            collectionRefs.add(f.destinationName + "." + sf.destinationName);
+                    }
+                }
+            }
+        }
+
+        JComboBox<String> refCombo = new JComboBox<>(collectionRefs.toArray(new String[0]));
+        refCombo.setSelectedItem(node.prop("ref", ""));
+        refRow.add(refLbl, BorderLayout.WEST);
+        refRow.add(refCombo, BorderLayout.CENTER);
+        propertyPanel.add(refRow);
+        propertyPanel.add(Box.createRigidArea(new Dimension(0, 6)));
+
+        // Column configuration panel
+        JPanel colsPanel = new JPanel();
+        colsPanel.setLayout(new BoxLayout(colsPanel, BoxLayout.Y_AXIS));
+        colsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        colsPanel.setBorder(BorderFactory.createTitledBorder("Columns"));
+
+        Runnable rebuildColumns = () -> buildTableColumnsUI(colsPanel, node);
+        rebuildColumns.run();
+
+        refCombo.addActionListener(e -> {
+            String newRef = (String) refCombo.getSelectedItem();
+            node.setProp("ref", newRef != null ? newRef : "");
+            layoutModel.nodeChanged(selectedLayoutNode);
+            rebuildColumns.run();
+            updatePreview();
+        });
+
+        propertyPanel.add(colsPanel);
+    }
+
+    private void buildTableColumnsUI(JPanel container, LayoutNode node) {
+        container.removeAll();
+
+        String ref = node.prop("ref", "");
+        if (ref.isEmpty()) {
+            container.add(new JLabel("Select a collection field first"));
+            container.revalidate();
+            container.repaint();
+            return;
+        }
+
+        // Resolve the child type's fields
+        DOSchemaField collField = resolveFieldByRef(ref);
+        if (collField == null || collField.childrenType == null) {
+            container.add(new JLabel("Cannot resolve children type"));
+            container.revalidate();
+            container.repaint();
+            return;
+        }
+
+        DOSchemaClass childClass = findClassByType(collField.childrenType);
+        if (childClass == null) {
+            container.add(new JLabel("Unknown child class: " + collField.childrenType));
+            container.revalidate();
+            container.repaint();
+            return;
+        }
+
+        List<DOSchemaField> childFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema);
+        List<DOSchemaField> availableFields = new ArrayList<>();
+        for (DOSchemaField sf : childFields) {
+            if (!sf.isExported || sf.destinationName == null)
+                continue;
+            if (sf.isCollection || (sf.embedContents && !isPrimitiveType(sf.type)))
+                continue;
+            availableFields.add(sf);
+        }
+
+        // Parse current columns, titles, widths
+        String[] currentCols = node.prop("columns", "").isEmpty() ? new String[0] : node.prop("columns").split(",");
+        String[] currentTitles = node.prop("columnTitles", "").isEmpty() ? new String[0] : node.prop("columnTitles").split(",", -1);
+        String[] currentWidths = node.prop("widths", "").isEmpty() ? new String[0] : node.prop("widths").split(",", -1);
+
+        Set<String> enabledCols = new LinkedHashSet<>(Arrays.asList(currentCols));
+        for (String c : currentCols)
+            enabledCols.add(c.trim());
+
+        // Build ordered list: enabled columns first (in their order), then remaining fields
+        List<String> orderedNames = new ArrayList<>();
+        for (String c : currentCols) {
+            String name = c.trim();
+            if (!name.isEmpty())
+                orderedNames.add(name);
+        }
+        for (DOSchemaField sf : availableFields) {
+            if (!orderedNames.contains(sf.destinationName))
+                orderedNames.add(sf.destinationName);
+        }
+
+        Map<String, String> labelsByFieldName = new HashMap<>();
+        for (DOSchemaField sf : availableFields) {
+            labelsByFieldName.put(sf.destinationName, getFieldLabel(sf));
+        }
+
+        // Column rows — each is a panel with: [grip] [checkbox] [name] [title field] [width field]
+        List<JPanel> rowPanels = new ArrayList<>();
+        List<JCheckBox> checkboxes = new ArrayList<>();
+        List<JTextField> titleFields = new ArrayList<>();
+        List<JTextField> widthFields = new ArrayList<>();
+        List<String> fieldNames = new ArrayList<>(orderedNames);
+
+        for (int i = 0; i < orderedNames.size(); i++) {
+            String fname = orderedNames.get(i);
+            boolean enabled = enabledCols.contains(fname);
+            int colIdx = Arrays.asList(currentCols).indexOf(fname);
+
+            JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
+            rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            // Grip handle for DnD
+            JLabel grip = new JLabel("\u2807");
+            grip.setForeground(Color.GRAY);
+            grip.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            grip.setToolTipText("Drag to reorder");
+
+            JCheckBox cb = new JCheckBox("", enabled);
+            JLabel nameLbl = new JLabel(labelsByFieldName.getOrDefault(fname, humanize(fname)));
+            nameLbl.setPreferredSize(new Dimension(110, 20));
+            nameLbl.setToolTipText(fname);
+
+            String titleVal = (colIdx >= 0 && colIdx < currentTitles.length) ? currentTitles[colIdx].trim() : labelsByFieldName.getOrDefault(fname, "");
+            JTextField titleTf = new JTextField(titleVal, 8);
+            titleTf.setToolTipText("Column title override");
+
+            String widthVal = (colIdx >= 0 && colIdx < currentWidths.length) ? currentWidths[colIdx].trim() : "";
+            JTextField widthTf = new JTextField(widthVal, 3);
+            widthTf.setToolTipText("Column width %");
+
+            rowPanel.add(grip);
+            rowPanel.add(cb);
+            rowPanel.add(nameLbl);
+            rowPanel.add(new JLabel("Title:"));
+            rowPanel.add(titleTf);
+            rowPanel.add(new JLabel("W:"));
+            rowPanel.add(widthTf);
+
+            rowPanels.add(rowPanel);
+            checkboxes.add(cb);
+            titleFields.add(titleTf);
+            widthFields.add(widthTf);
+
+            container.add(rowPanel);
+
+            // Drag reorder via mouse listeners on the grip
+            final int rowIdx = i;
+            grip.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    grip.putClientProperty("dragStart", rowIdx);
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    Object startObj = grip.getClientProperty("dragStart");
+                    if (startObj == null)
+                        return;
+                    int startIdx = (int) startObj;
+                    // Find which row the mouse is over
+                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), container);
+                    int targetIdx = -1;
+                    for (int r = 0; r < rowPanels.size(); r++) {
+                        Rectangle bounds = rowPanels.get(r).getBounds();
+                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                            targetIdx = r;
+                            break;
+                        }
+                    }
+                    if (targetIdx >= 0 && targetIdx != startIdx) {
+                        // Swap in all parallel lists
+                        Collections.swap(fieldNames, startIdx, targetIdx);
+                        Collections.swap(rowPanels, startIdx, targetIdx);
+                        Collections.swap(checkboxes, startIdx, targetIdx);
+                        Collections.swap(titleFields, startIdx, targetIdx);
+                        Collections.swap(widthFields, startIdx, targetIdx);
+                        // Rebuild UI
+                        container.removeAll();
+                        for (JPanel rp : rowPanels)
+                            container.add(rp);
+                        container.revalidate();
+                        container.repaint();
+                        serializeTableColumns(node, fieldNames, checkboxes, titleFields, widthFields);
+                    }
+                    grip.putClientProperty("dragStart", null);
+                }
+            });
+
+            // Update on checkbox/field changes
+            Runnable serialize = () -> serializeTableColumns(node, fieldNames, checkboxes, titleFields, widthFields);
+            cb.addActionListener(e -> serialize.run());
+            titleTf.addActionListener(e -> serialize.run());
+            titleTf.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    serialize.run();
+                }
+            });
+            widthTf.addActionListener(e -> serialize.run());
+            widthTf.addFocusListener(new FocusAdapter() {
+                @Override
+                public void focusLost(FocusEvent e) {
+                    serialize.run();
+                }
+            });
+        }
+
+        container.revalidate();
+        container.repaint();
+    }
+
+    private void serializeTableColumns(LayoutNode node, List<String> fieldNames, List<JCheckBox> checkboxes, List<JTextField> titleFields, List<JTextField> widthFields) {
+        StringBuilder cols = new StringBuilder();
+        StringBuilder titles = new StringBuilder();
+        StringBuilder widths = new StringBuilder();
+        boolean firstCol = true;
+
+        for (int i = 0; i < fieldNames.size(); i++) {
+            if (!checkboxes.get(i).isSelected())
+                continue;
+            if (!firstCol) {
+                cols.append(',');
+                titles.append(',');
+                widths.append(',');
+            }
+            firstCol = false;
+            cols.append(fieldNames.get(i));
+            titles.append(titleFields.get(i).getText().trim());
+            widths.append(widthFields.get(i).getText().trim());
+        }
+
+        node.setProp("columns", cols.toString());
+        node.setProp("columnTitles", titles.toString());
+        node.setProp("widths", widths.toString());
+        layoutModel.nodeChanged(selectedLayoutNode);
+        updatePreview();
     }
 
     private DOSchemaField resolveFieldByRef(String ref) {
@@ -566,9 +973,9 @@ public class DetailLayoutDesigner extends JFrame {
             field = DatabaseUtil.findSchemaFieldByDestinationNameIncludingAncestors(current, parts[i], refSchema);
             if (field == null)
                 return null;
-            // Navigate into embedded type for intermediate segments
             if (i < parts.length - 1) {
-                current = findClassByType(field.type);
+                String nextType = field.isCollection && field.childrenType != null ? field.childrenType : field.type;
+                current = findClassByType(nextType);
                 if (current == null)
                     return null;
             }
@@ -580,18 +987,12 @@ public class DetailLayoutDesigner extends JFrame {
 
     private JPanel buildPreviewPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBorder(BorderFactory.createTitledBorder("Preview"));
+        panel.setBorder(BorderFactory.createTitledBorder("Live Preview"));
 
         previewPane = new JEditorPane();
         previewPane.setContentType("text/html");
         previewPane.setEditable(false);
         panel.add(new JScrollPane(previewPane), BorderLayout.CENTER);
-
-        JButton previewBtn = new JButton("Preview in Browser");
-        previewBtn.addActionListener(e -> openBrowserPreview());
-        JPanel btnPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
-        btnPanel.add(previewBtn);
-        panel.add(btnPanel, BorderLayout.SOUTH);
 
         updatePreview();
         return panel;
@@ -608,11 +1009,26 @@ public class DetailLayoutDesigner extends JFrame {
         StringBuilder html = new StringBuilder();
         html.append("<html><head><style>");
         html.append("body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:13px;margin:0;padding:12px;color:#1e293b;}");
-        html.append(".field-row{padding:4px 12px;border-bottom:1px solid #f1f5f9;}");
-        html.append(".field-label{font-weight:bold;color:#64748b;font-size:12px;}");
-        html.append(".field-value{color:#1e293b;}");
-        html.append("hr.layout-divider{border:none;border-top:1px solid #cbd5e1;margin:12px 0;}");
-        html.append("table{border-collapse:collapse;width:100%;font-size:12px;} th{text-align:left;background:#f8fafc;padding:4px 8px;border-bottom:2px solid #e2e8f0;} td{padding:4px 8px;border-bottom:1px solid #f1f5f9;}");
+        html.append(".section{margin:6px 0;border:1px solid #e2e8f0;border-radius:8px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.06);}");
+        html.append(".section-title{font-weight:bold;padding:8px 14px;background:linear-gradient(to bottom,#f8fafc,#f1f5f9);border-bottom:1px solid #e2e8f0;border-radius:8px 8px 0 0;font-size:13px;}");
+        html.append(".section-body{padding:0;}");
+        html.append(".field-row{display:flex;padding:5px 14px;border-bottom:1px solid #f1f5f9;align-items:baseline;}");
+        html.append(".field-row:nth-child(even){background:#fafbfc;}");
+        html.append(".field-label{font-weight:600;color:#64748b;font-size:12px;min-width:140px;flex:0 0 140px;}");
+        html.append(".field-value{color:#1e293b;flex:1;}");
+        html.append("hr.layout-divider{border:none;border-top:2px solid #cbd5e1;margin:14px 8px;}");
+        html.append(".columns{display:flex;gap:0;} .column{flex:1;padding:0 6px;border-right:1px solid #f1f5f9;} .column:last-child{border-right:none;}");
+        html.append("table{border-collapse:collapse;width:100%;font-size:12px;margin:4px 0;} th{text-align:left;background:linear-gradient(to bottom,#f8fafc,#eef2f7);padding:6px 10px;border-bottom:2px solid #d1d9e6;font-weight:700;font-size:11px;text-transform:uppercase;letter-spacing:0.03em;color:#475569;} td{padding:5px 10px;border-bottom:1px solid #f1f5f9;}");
+        html.append(".tab-bar{display:flex;border-bottom:2px solid #e2e8f0;padding:0 8px;background:#fafbfc;}");
+        html.append(".tab-bar span{padding:7px 16px;font-size:12px;cursor:pointer;} .tab-bar span.active{color:#3b82f6;font-weight:bold;border-bottom:2px solid #3b82f6;margin-bottom:-2px;}");
+        html.append(".tab-bar span.inactive{color:#94a3b8;}");
+        // Style classes
+        html.append(".style-h1 .field-value{font-size:22px;font-weight:700;} .style-h1 .field-label{font-size:14px;}");
+        html.append(".style-h2 .field-value{font-size:18px;font-weight:600;} .style-h2 .field-label{font-size:13px;}");
+        html.append(".style-h3 .field-value{font-size:15px;font-weight:600;}");
+        html.append(".style-h4 .field-value{font-size:13px;font-weight:600;}");
+        html.append(".style-small .field-value{font-size:11px;} .style-small .field-label{font-size:10px;}");
+        html.append(".style-caption .field-value{font-size:11px;font-style:italic;color:#64748b;} .style-caption .field-label{font-size:10px;font-style:italic;}");
         html.append("</style></head><body>");
         renderPreviewNodes(html, layout.nodes);
         html.append("</body></html>");
@@ -621,62 +1037,93 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     private void renderPreviewNodes(StringBuilder html, List<LayoutNode> nodes) {
-        for (LayoutNode node : nodes)
-            renderPreviewNode(html, node);
+        for (LayoutNode n : nodes)
+            renderPreviewNode(html, n);
     }
 
     private void renderPreviewNode(StringBuilder html, LayoutNode node) {
+        String style = node.prop("style", "");
+        String color = node.prop("color", "");
+        String hilite = node.prop("hilite", "");
+        String inlineStyle = buildInlineStyle(color, hilite);
+        String styleCls = style.isEmpty() ? "" : " style-" + style;
+
         switch (node.type) {
         case SECTION: {
-            String titleColor = node.prop("titleColor");
-            String color = titleColor != null ? "color:" + escHtml(titleColor) + ";" : "";
-            html.append("<div style='margin:4px 0;'>");
-            if (node.prop("title") != null)
-                html.append("<div style='font-weight:bold;padding:6px 12px;background:#f8fafc;border-bottom:1px solid #e2e8f0;").append(color).append("'>").append(escHtml(node.prop("title"))).append("</div>");
+            html.append("<div class='section'>");
+            if (node.prop("title") != null) {
+                String titleStyle = buildInlineStyle(color.isEmpty() ? node.prop("titleColor", "") : color, hilite);
+                html.append("<div class='section-title'").append(styleCls.isEmpty() ? "" : " style='" + getStyleFontCss(style) + titleStyle + "'").append(">");
+                html.append(escHtml(node.prop("title")));
+                html.append("</div>");
+            }
+            html.append("<div class='section-body'>");
             renderPreviewNodes(html, node.children);
-            html.append("</div>");
+            html.append("</div></div>");
             break;
         }
         case COLUMNS:
-            html.append("<table width='100%' cellpadding='0' cellspacing='0'><tr>");
+            html.append("<div class='columns'>");
             for (LayoutNode child : node.children) {
-                html.append("<td valign='top' style='padding:0 4px;border-right:1px solid #f1f5f9;'>");
+                html.append("<div class='column'>");
                 renderPreviewNodes(html, child.children);
-                html.append("</td>");
+                html.append("</div>");
             }
-            html.append("</tr></table>");
+            html.append("</div>");
             break;
         case COLUMN:
             renderPreviewNodes(html, node.children);
             break;
         case FIELD:
-            html.append("<div class='field-row'><span class='field-label'>").append(escHtml(node.prop("label", humanize(node.prop("ref", "?"))))).append(":</span> <span class='field-value'>sample</span></div>");
+            html.append("<div class='field-row").append(styleCls).append("'").append(inlineStyle.isEmpty() ? "" : " style='" + inlineStyle + "'").append(">");
+            html.append("<span class='field-label'>").append(escHtml(node.prop("label", labelForRef(node.prop("ref", "?"))))).append(":</span> ");
+            html.append("<span class='field-value'>sample</span></div>");
             break;
-        case DIVIDER:
-            html.append("<hr class='layout-divider'/>");
+        case DIVIDER: {
+            String divStyle = "";
+            if (!color.isEmpty())
+                divStyle = "border-top-color:" + escHtml(color) + ";";
+            if (!style.isEmpty()) {
+                if (style.equals("h1"))
+                    divStyle += "border-top-width:4px;margin:20px 8px;";
+                else if (style.equals("h2"))
+                    divStyle += "border-top-width:3px;margin:16px 8px;";
+                else if (style.equals("small"))
+                    divStyle += "border-top-width:1px;margin:8px 8px;";
+            }
+            html.append("<hr class='layout-divider'").append(divStyle.isEmpty() ? "" : " style='" + divStyle + "'").append("/>");
             break;
+        }
         case TABLE: {
-            html.append("<div style='margin:4px 0;padding:6px 12px;font-weight:bold;background:#f8fafc;border-bottom:1px solid #e2e8f0;'>").append(escHtml(humanize(node.prop("ref", "Table")))).append(" (3 items)</div>");
+            String tableTitle = labelForRef(node.prop("ref", "Table"));
+            html.append("<div class='section'><div class='section-title'").append(inlineStyle.isEmpty() ? "" : " style='" + inlineStyle + "'").append(">");
+            html.append(escHtml(tableTitle)).append(" (3 items)</div>");
             String cols = node.prop("columns", "");
+            String colTitles = node.prop("columnTitles", "");
             if (!cols.isEmpty()) {
+                String[] colArr = cols.split(",");
+                String[] titleArr = colTitles.isEmpty() ? new String[0] : colTitles.split(",", -1);
                 html.append("<table><tr>");
-                for (String col : cols.split(","))
-                    html.append("<th>").append(escHtml(humanize(col.trim()))).append("</th>");
+                for (int i = 0; i < colArr.length; i++) {
+                    String th = (i < titleArr.length && !titleArr[i].trim().isEmpty()) ? titleArr[i].trim() : labelForRef(node.prop("ref", "") + "." + colArr[i].trim());
+                    html.append("<th>").append(escHtml(th)).append("</th>");
+                }
                 html.append("</tr><tr>");
-                for (String col : cols.split(","))
+                for (int i = 0; i < colArr.length; i++)
                     html.append("<td>\u2014</td>");
                 html.append("</tr></table>");
             }
+            html.append("</div>");
             break;
         }
         case TABBED_SECTION: {
             if (node.prop("title") != null)
-                html.append("<div style='font-weight:bold;padding:6px 12px;color:#64748b;'>").append(escHtml(node.prop("title"))).append("</div>");
-            html.append("<div style='border-bottom:2px solid #e2e8f0;padding:4px 8px;'>");
+                html.append("<div style='font-weight:bold;padding:6px 12px;color:#64748b;font-size:13px;'>").append(escHtml(node.prop("title"))).append("</div>");
+            html.append("<div class='tab-bar'>");
             for (int i = 0; i < node.children.size(); i++) {
                 LayoutNode tab = node.children.get(i);
-                String style = i == 0 ? "color:#3b82f6;font-weight:bold;border-bottom:2px solid #3b82f6;" : "color:#94a3b8;";
-                html.append("<span style='padding:6px 14px;font-size:12px;").append(style).append("'>").append(escHtml(tab.prop("title", "Tab " + (i + 1)))).append("</span>");
+                String cls = i == 0 ? "active" : "inactive";
+                html.append("<span class='").append(cls).append("'>").append(escHtml(tab.prop("title", "Tab " + (i + 1)))).append("</span>");
             }
             html.append("</div>");
             if (!node.children.isEmpty() && !node.children.get(0).children.isEmpty())
@@ -689,308 +1136,32 @@ public class DetailLayoutDesigner extends JFrame {
         }
     }
 
-    private void openBrowserPreview() {
-        DetailLayout layout = buildLayoutFromTree();
-        if (layout == null || layout.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Add some layout elements first.", "Empty Layout", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        try {
-            String css = loadResource("/templates/sidebar.css");
-            String js = loadResource("/templates/sidebar-nav.js");
-            String layoutJson = layout.toJson();
-            String mockData = buildMockData(layout);
-
-            StringBuilder html = new StringBuilder();
-            html.append("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n");
-            html.append("<title>Layout Preview — ").append(escHtml(schemaClass.destinationName)).append("</title>\n");
-            html.append("<style>\n").append(css).append("\n</style>\n");
-            html.append("<style>\n");
-            html.append("body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 0; background: #f8fafc; color: #1e293b; }\n");
-            html.append(".preview-wrapper { max-width: 800px; margin: 20px auto; background: #fff; border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); overflow: hidden; }\n");
-            html.append(".detail-header { padding: 16px 20px; border-bottom: 1px solid #e2e8f0; }\n");
-            html.append(".detail-header h2 { margin: 0; font-size: 18px; color: #1e293b; }\n");
-            html.append(".detail-subtitle { font-size: 13px; color: #64748b; margin-top: 4px; }\n");
-            html.append(".detail-scroll { padding: 0; }\n");
-            html.append("</style>\n</head>\n<body>\n");
-            html.append("<div class=\"preview-wrapper\">\n");
-            html.append("  <div class=\"detail-header\"><h2>").append(escHtml(schemaClass.destinationName)).append("</h2>");
-            html.append("<div class=\"detail-subtitle\">Layout Preview — sample data</div></div>\n");
-            html.append("  <div class=\"detail-scroll\" id=\"detailContainer\"></div>\n");
-            html.append("</div>\n");
-
-            // Provide globals the JS expects
-            html.append("<script>\n");
-            html.append("var DETAIL_LAYOUT = ").append(layoutJson).append(";\n");
-            html.append("var MOCK_DATA = ").append(mockData).append(";\n");
-            html.append("</script>\n");
-
-            // Extract only the layout rendering functions from sidebar-nav.js
-            // and run them in a standalone context
-            html.append("<script>\n");
-            html.append(extractLayoutFunctions(js));
-            html.append("\n\n// Render the preview\n");
-            html.append("(function() {\n");
-            html.append("  var container = document.getElementById('detailContainer');\n");
-            html.append("  container.innerHTML = renderLayoutDetail(MOCK_DATA, DETAIL_LAYOUT);\n");
-            html.append("  bindTabEvents();\n");
-            html.append("})();\n");
-            html.append("</script>\n");
-            html.append("</body>\n</html>");
-
-            File tempFile = File.createTempFile("layout-preview-", ".html");
-            tempFile.deleteOnExit();
-            Files.write(tempFile.toPath(), html.toString().getBytes(StandardCharsets.UTF_8));
-            Desktop.getDesktop().browse(tempFile.toURI());
-
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Failed to open preview: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
-            ex.printStackTrace();
-        }
-    }
-
-    private String loadResource(String path) throws IOException {
-        try (InputStream is = getClass().getResourceAsStream(path)) {
-            if (is == null)
-                throw new IOException("Resource not found: " + path);
-            byte[] bytes = readAllBytes(is);
-            return new String(bytes, StandardCharsets.UTF_8);
-        }
-    }
-
-    private static byte[] readAllBytes(InputStream is) throws IOException {
-        ByteArrayOutputStream buf = new ByteArrayOutputStream();
-        byte[] tmp = new byte[8192];
-        int n;
-        while ((n = is.read(tmp)) != -1)
-            buf.write(tmp, 0, n);
-        return buf.toByteArray();
-    }
-
-    /**
-     * Extract the layout rendering functions from sidebar-nav.js so they can run standalone.
-     * We need: resolveFieldValue, formatDatePattern, fmtValueWithFormat, fmtValue, esc,
-     * renderLayoutDetail, renderLayoutNode, renderLayoutChildren, bindTabEvents,
-     * and the collection/table helpers.
-     */
-    private String extractLayoutFunctions(String js) {
+    private String buildInlineStyle(String color, String hilite) {
         StringBuilder sb = new StringBuilder();
-
-        // Provide globals the layout renderer depends on
-        sb.append("var collectionViewState = {};\n");
-        sb.append("var collectionIdCounter = 1;\n");
-        sb.append("var currentLanguage = 'fr';\n");
-
-        // I18N (just the keys the layout renderer uses)
-        sb.append("var I18N = {fr:{elements:'éléments',noItems:'Aucun élément'},en:{elements:'items',noItems:'No items'}};\n");
-
-        String[] functions = { "function t(", "function esc(", "function normalizeFieldPath(", "function humanizeFieldName(", "function formatSectionTitle(", "function displayFieldLabel(", "function fmtValue(", "function resolveFieldValue(", "function formatDatePattern(", "function fmtValueWithFormat(", "function renderLayoutDetail(", "function renderLayoutNode(", "function renderLayoutChildren(", "function renderCollectionTableBody(", "function bindTabEvents(" };
-        for (String sig : functions) {
-            appendFunctionBlock(sb, js, sig);
-        }
-
+        if (!color.isEmpty())
+            sb.append("color:").append(escHtml(color)).append(';');
+        if (!hilite.isEmpty())
+            sb.append("background-color:").append(escHtml(hilite)).append(';');
         return sb.toString();
     }
 
-    /**
-     * Find a function in the JS source by its signature (ignoring leading whitespace)
-     * and extract the full function body (brace-matching). Appends as a top-level function.
-     */
-    private void appendFunctionBlock(StringBuilder sb, String js, String signature) {
-        // Search ignoring leading whitespace
-        int start = -1;
-        int searchFrom = 0;
-        while (searchFrom < js.length()) {
-            int idx = js.indexOf(signature, searchFrom);
-            if (idx < 0)
-                break;
-            // Accept if it's at the start or preceded by whitespace/newline
-            if (idx == 0 || Character.isWhitespace(js.charAt(idx - 1))) {
-                start = idx;
-                break;
-            }
-            searchFrom = idx + 1;
+    private String getStyleFontCss(String style) {
+        switch (style) {
+        case "h1":
+            return "font-size:20px;font-weight:700;";
+        case "h2":
+            return "font-size:17px;font-weight:600;";
+        case "h3":
+            return "font-size:14px;font-weight:600;";
+        case "h4":
+            return "font-size:13px;font-weight:600;";
+        case "small":
+            return "font-size:11px;";
+        case "caption":
+            return "font-size:11px;font-style:italic;";
+        default:
+            return "";
         }
-        if (start < 0)
-            return;
-
-        // Find the opening brace
-        int braceStart = js.indexOf('{', start);
-        if (braceStart < 0)
-            return;
-
-        // Match braces to find the end, ignoring braces inside strings and template literals
-        int depth = 0;
-        int end = braceStart;
-        boolean inSingleQuote = false, inDoubleQuote = false, inTemplate = false;
-        for (int i = braceStart; i < js.length(); i++) {
-            char c = js.charAt(i);
-            char prev = i > 0 ? js.charAt(i - 1) : 0;
-            if (prev == '\\')
-                continue; // skip escaped chars
-
-            if (!inDoubleQuote && !inTemplate && c == '\'')
-                inSingleQuote = !inSingleQuote;
-            else if (!inSingleQuote && !inTemplate && c == '"')
-                inDoubleQuote = !inDoubleQuote;
-            else if (!inSingleQuote && !inDoubleQuote && c == '`')
-                inTemplate = !inTemplate;
-            else if (!inSingleQuote && !inDoubleQuote && !inTemplate) {
-                if (c == '{')
-                    depth++;
-                else if (c == '}') {
-                    depth--;
-                    if (depth == 0) {
-                        end = i + 1;
-                        break;
-                    }
-                }
-            }
-        }
-
-        sb.append(js, start, end).append('\n');
-    }
-
-    /**
-     * Build a JSON object with mock/sample data for the fields used in the layout.
-     */
-    private String buildMockData(DetailLayout layout) {
-        Map<String, String> mockFields = new LinkedHashMap<>();
-        collectFieldRefs(layout.nodes, mockFields);
-        return buildNestedJson(mockFields);
-    }
-
-    private void collectFieldRefs(List<LayoutNode> nodes, Map<String, String> mockFields) {
-        for (LayoutNode node : nodes) {
-            if (node.type == LayoutNodeType.FIELD) {
-                String ref = node.prop("ref", "");
-                if (!ref.isEmpty()) {
-                    buildNestedMockValue(ref, node, mockFields);
-                }
-            } else if (node.type == LayoutNodeType.TABLE) {
-                String ref = node.prop("ref", "");
-                if (!ref.isEmpty()) {
-                    // Build a sample array with 3 rows
-                    String columns = node.prop("columns", "");
-                    StringBuilder row = new StringBuilder("{");
-                    if (!columns.isEmpty()) {
-                        boolean f = true;
-                        for (String col : columns.split(",")) {
-                            if (!f)
-                                row.append(",");
-                            f = false;
-                            row.append("\"").append(escJsonKey(col.trim())).append("\":\"sample\"");
-                        }
-                    } else {
-                        row.append("\"id\":\"1\",\"value\":\"sample\"");
-                    }
-                    row.append("}");
-                    mockFields.put(ref, "[" + row + "," + row + "," + row + "]");
-                }
-            }
-            collectFieldRefs(node.children, mockFields);
-        }
-    }
-
-    private void buildNestedMockValue(String ref, LayoutNode node, Map<String, String> mockFields) {
-        if (!ref.contains(".")) {
-            // Simple field — produce a sample value based on format
-            mockFields.put(ref, generateSampleValue(ref, node));
-            return;
-        }
-        // Dot-path: build nested object structure
-        // e.g. "adresse.ville" → { "adresse": { "ville": "sample" } }
-        String[] parts = ref.split("\\.", 2);
-        String topKey = parts[0];
-        String rest = parts[1];
-        // For simplicity, put the full path in a flat map — the JS resolveFieldValue handles dot-paths
-        mockFields.put(ref, generateSampleValue(ref, node));
-        // Also ensure the parent object exists
-        if (!mockFields.containsKey(topKey)) {
-            // Will be built as a nested JSON by the toNestedJson conversion
-        }
-    }
-
-    private String generateSampleValue(String ref, LayoutNode node) {
-        String format = node != null ? node.prop("format", "") : "";
-
-        if (format.startsWith("date:") || format.startsWith("longdate:")) {
-            return "\"2025-06-15T10:30:00\"";
-        }
-        if (format.startsWith("bool:")) {
-            return "true";
-        }
-        if (format.startsWith("num:")) {
-            return "42.5";
-        }
-
-        // Infer from field schema if possible
-        DOSchemaField field = resolveFieldByRef(ref);
-        if (field != null) {
-            String type = field.type;
-            if (type != null) {
-                if (type.contains("Date") || type.equals("date"))
-                    return "\"2025-06-15T10:30:00\"";
-                if (type.equals("boolean"))
-                    return "true";
-                if (type.equals("int") || type.equals("short") || type.equals("byte"))
-                    return "42";
-                if (type.equals("long") || type.equals("java.lang.Long"))
-                    return "1718445000000";
-                if (type.equals("float") || type.equals("double"))
-                    return "3.14";
-            }
-        }
-        return "\"Sample " + humanize(ref) + "\"";
-    }
-
-    /**
-     * Override buildMockData to produce proper nested JSON from dot-path fields.
-     */
-    @SuppressWarnings("unchecked")
-    private String buildNestedJson(Map<String, String> flatMap) {
-        // Build a tree of maps for nested paths
-        Map<String, Object> root = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : flatMap.entrySet()) {
-            String[] path = entry.getKey().split("\\.");
-            Map<String, Object> current = root;
-            for (int i = 0; i < path.length - 1; i++) {
-                Object existing = current.get(path[i]);
-                if (existing instanceof Map) {
-                    current = (Map<String, Object>) existing;
-                } else {
-                    Map<String, Object> child = new LinkedHashMap<>();
-                    current.put(path[i], child);
-                    current = child;
-                }
-            }
-            current.put(path[path.length - 1], entry.getValue()); // raw JSON value
-        }
-        return mapToJson(root);
-    }
-
-    @SuppressWarnings("unchecked")
-    private String mapToJson(Map<String, Object> map) {
-        StringBuilder sb = new StringBuilder("{");
-        boolean first = true;
-        for (Map.Entry<String, Object> entry : map.entrySet()) {
-            if (!first)
-                sb.append(",");
-            first = false;
-            sb.append("\"").append(escJsonKey(entry.getKey())).append("\":");
-            if (entry.getValue() instanceof Map) {
-                sb.append(mapToJson((Map<String, Object>) entry.getValue()));
-            } else {
-                sb.append(entry.getValue()); // already raw JSON
-            }
-        }
-        sb.append("}");
-        return sb.toString();
-    }
-
-    private static String escJsonKey(String s) {
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
     private static String escHtml(String s) {
@@ -1002,11 +1173,9 @@ public class DetailLayoutDesigner extends JFrame {
     private static String humanize(String s) {
         if (s == null || s.isEmpty())
             return "";
-        // Take last segment of dot-path
         int dot = s.lastIndexOf('.');
         if (dot >= 0)
             s = s.substring(dot + 1);
-        // camelCase to "Camel Case"
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < s.length(); i++) {
             char c = s.charAt(i);
@@ -1017,6 +1186,28 @@ public class DetailLayoutDesigner extends JFrame {
         return sb.toString();
     }
 
+    private String getFieldLabel(DOSchemaField field) {
+        if (field == null)
+            return "";
+        if (field.title != null && !field.title.trim().isEmpty())
+            return field.title.trim();
+        if (field.destinationName != null && !field.destinationName.trim().isEmpty())
+            return humanize(field.destinationName.trim());
+        if (field.source != null && !field.source.trim().isEmpty())
+            return humanize(field.source.trim());
+        return "";
+    }
+
+    private String labelForRef(String ref) {
+        DOSchemaField field = resolveFieldByRef(ref);
+        if (field != null) {
+            String label = getFieldLabel(field);
+            if (!label.isEmpty())
+                return label;
+        }
+        return humanize(ref);
+    }
+
     // ── Auto Layout ────────────────────────────────────────────────
 
     private void autoLayout() {
@@ -1025,13 +1216,11 @@ public class DetailLayoutDesigner extends JFrame {
             int choice = JOptionPane.showConfirmDialog(this, "This will replace the current layout. Continue?", "Auto Layout", JOptionPane.OK_CANCEL_OPTION);
             if (choice != JOptionPane.OK_OPTION)
                 return;
-            // Clear existing
             root.removeAllChildren();
             layoutModel.reload();
         }
 
         List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema);
-
         List<DOSchemaField> primitives = new ArrayList<>();
         List<DOSchemaField> embedded = new ArrayList<>();
         List<DOSchemaField> collections = new ArrayList<>();
@@ -1041,17 +1230,14 @@ public class DetailLayoutDesigner extends JFrame {
                 continue;
             if (field.destinationName == null || field.destinationName.isEmpty())
                 continue;
-
-            if (field.isCollection) {
+            if (field.isCollection)
                 collections.add(field);
-            } else if (field.embedContents && !isPrimitiveType(field.type)) {
+            else if (field.embedContents && !isPrimitiveType(field.type))
                 embedded.add(field);
-            } else {
+            else
                 primitives.add(field);
-            }
         }
 
-        // 1. Add all primitive fields at top level
         for (DOSchemaField field : primitives) {
             LayoutNode node = new LayoutNode(LayoutNodeType.FIELD);
             node.setProp("ref", field.destinationName);
@@ -1059,16 +1245,13 @@ public class DetailLayoutDesigner extends JFrame {
             root.add(buildTreeNode(node));
         }
 
-        // 2. Add embedded entities as collapsible sections
         for (DOSchemaField field : embedded) {
             LayoutNode section = new LayoutNode(LayoutNodeType.SECTION);
-            section.setProp("title", humanize(field.destinationName));
+            section.setProp("title", getFieldLabel(field));
             section.setProp("collapsible", "true");
-
             DOSchemaClass embeddedClass = findClassByType(field.type);
             if (embeddedClass != null) {
-                List<DOSchemaField> subFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema);
-                for (DOSchemaField sf : subFields) {
+                for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema)) {
                     if (!sf.isExported || sf.destinationName == null)
                         continue;
                     if (sf.isCollection) {
@@ -1087,12 +1270,10 @@ public class DetailLayoutDesigner extends JFrame {
             root.add(buildTreeNode(section));
         }
 
-        // 3. Add divider before collections (if we have both primitives/embedded and collections)
         if (!collections.isEmpty() && (!primitives.isEmpty() || !embedded.isEmpty())) {
             root.add(buildTreeNode(new LayoutNode(LayoutNodeType.DIVIDER)));
         }
 
-        // 4. Add collections as tables
         for (DOSchemaField field : collections) {
             LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
             table.setProp("ref", field.destinationName);
@@ -1102,6 +1283,7 @@ public class DetailLayoutDesigner extends JFrame {
 
         layoutModel.reload();
         expandAllNodes(layoutTree, 0, layoutTree.getRowCount());
+        refreshFieldPalette();
         updatePreview();
     }
 
@@ -1120,11 +1302,9 @@ public class DetailLayoutDesigner extends JFrame {
             break;
         case "long":
         case "java.lang.Long":
-            // Long fields named with date-like names are timestamps
             String name = field.destinationName.toLowerCase();
-            if (name.contains("date") || name.contains("modification") || name.contains("creation") || name.contains("debut") || name.contains("fin") || name.contains("echeance")) {
+            if (name.contains("date") || name.contains("modification") || name.contains("creation") || name.contains("debut") || name.contains("fin") || name.contains("echeance"))
                 node.setProp("format", "longdate:yyyy-MM-dd HH:mm");
-            }
             break;
         }
     }
@@ -1137,23 +1317,21 @@ public class DetailLayoutDesigner extends JFrame {
         if (childClass == null)
             return;
 
-        List<DOSchemaField> subFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema);
         List<String> colNames = new ArrayList<>();
-        for (DOSchemaField sf : subFields) {
+        List<String> colTitles = new ArrayList<>();
+        for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.isExported || sf.destinationName == null)
                 continue;
             if (sf.isCollection || (sf.embedContents && !isPrimitiveType(sf.type)))
                 continue;
             colNames.add(sf.destinationName);
+            colTitles.add(sf.title != null ? sf.title : "");
         }
         if (!colNames.isEmpty()) {
-            StringBuilder cols = new StringBuilder();
-            for (int i = 0; i < colNames.size(); i++) {
-                if (i > 0)
-                    cols.append(',');
-                cols.append(colNames.get(i));
+            table.setProp("columns", String.join(",", colNames));
+            if (colTitles.stream().anyMatch(t -> t != null && !t.isBlank())) {
+                table.setProp("columnTitles", String.join(",", colTitles));
             }
-            table.setProp("columns", cols.toString());
         }
     }
 
@@ -1161,9 +1339,8 @@ public class DetailLayoutDesigner extends JFrame {
 
     private void addNode(LayoutNodeType type, String... propsKV) {
         LayoutNode node = new LayoutNode(type);
-        for (int i = 0; i + 1 < propsKV.length; i += 2) {
+        for (int i = 0; i + 1 < propsKV.length; i += 2)
             node.setProp(propsKV[i], propsKV[i + 1]);
-        }
         insertNodeIntoTree(node);
     }
 
@@ -1185,18 +1362,14 @@ public class DetailLayoutDesigner extends JFrame {
         String[] sizes = new String[count];
         int each = 100 / count;
         Arrays.fill(sizes, String.valueOf(each));
-        // Adjust last to make 100%
         sizes[count - 1] = String.valueOf(100 - each * (count - 1));
         cols.setProp("sizes", String.join(",", sizes));
-
-        for (int i = 0; i < count; i++) {
+        for (int i = 0; i < count; i++)
             cols.children.add(new LayoutNode(LayoutNodeType.COLUMN));
-        }
         insertNodeIntoTree(cols);
     }
 
     private void addTableNode() {
-        // Pick a collection field from palette
         TreePath path = fieldPalette.getSelectionPath();
         if (path != null) {
             DefaultMutableTreeNode palNode = (DefaultMutableTreeNode) path.getLastPathComponent();
@@ -1221,7 +1394,6 @@ public class DetailLayoutDesigner extends JFrame {
     private void addTabbedSectionNode() {
         LayoutNode tabs = new LayoutNode(LayoutNodeType.TABBED_SECTION);
         tabs.setProp("title", "Tabs");
-        // Start with 2 tabs
         LayoutNode tab1 = new LayoutNode(LayoutNodeType.TAB);
         tab1.setProp("title", "Tab 1");
         LayoutNode tab2 = new LayoutNode(LayoutNodeType.TAB);
@@ -1235,9 +1407,7 @@ public class DetailLayoutDesigner extends JFrame {
         if (selectedLayoutNode == null)
             return;
         LayoutNode parentObj = getLayoutNodeFromTreeNode(selectedLayoutNode);
-        // Must be inside a TABBED_SECTION
         if (parentObj == null || parentObj.type != LayoutNodeType.TABBED_SECTION) {
-            // Try parent
             if (selectedLayoutNode.getParent() != null) {
                 DefaultMutableTreeNode parentTreeNode = (DefaultMutableTreeNode) selectedLayoutNode.getParent();
                 parentObj = getLayoutNodeFromTreeNode(parentTreeNode);
@@ -1291,23 +1461,21 @@ public class DetailLayoutDesigner extends JFrame {
                 layoutModel.insertNodeInto(treeNode, selectedLayoutNode, selectedLayoutNode.getChildCount());
                 layoutTree.expandPath(new TreePath(selectedLayoutNode.getPath()));
             } else {
-                // Add as sibling after selected
                 DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedLayoutNode.getParent();
                 if (parent == null)
                     parent = root;
                 LayoutNode parentLayoutNode = getLayoutNodeFromTreeNode(parent);
                 int idx = parent.getIndex(selectedLayoutNode) + 1;
-                if (parentLayoutNode != null) {
+                if (parentLayoutNode != null)
                     parentLayoutNode.children.add(Math.min(idx, parentLayoutNode.children.size()), node);
-                }
                 layoutModel.insertNodeInto(treeNode, parent, idx);
             }
         } else {
-            // Add to root - store in a virtual root layout
             layoutModel.insertNodeInto(treeNode, root, root.getChildCount());
         }
 
         layoutTree.setSelectionPath(new TreePath(treeNode.getPath()));
+        refreshFieldPalette();
         updatePreview();
     }
 
@@ -1316,7 +1484,7 @@ public class DetailLayoutDesigner extends JFrame {
         case SECTION:
         case COLUMN:
         case TAB:
-            return true; // Can contain anything
+            return true;
         case COLUMNS:
             return child == LayoutNodeType.COLUMN;
         case TABBED_SECTION:
@@ -1324,93 +1492,6 @@ public class DetailLayoutDesigner extends JFrame {
         default:
             return false;
         }
-    }
-
-    private void moveNode(int direction) {
-        if (selectedLayoutNode == null)
-            return;
-        DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedLayoutNode.getParent();
-        if (parent == null)
-            return;
-
-        int idx = parent.getIndex(selectedLayoutNode);
-        int newIdx = idx + direction;
-        if (newIdx < 0 || newIdx >= parent.getChildCount())
-            return;
-
-        LayoutNode parentObj = getLayoutNodeFromTreeNode(parent);
-        if (parentObj != null && idx < parentObj.children.size() && newIdx < parentObj.children.size()) {
-            Collections.swap(parentObj.children, idx, newIdx);
-        }
-
-        DefaultMutableTreeNode movedNode = selectedLayoutNode;
-        layoutModel.removeNodeFromParent(movedNode);
-        layoutModel.insertNodeInto(movedNode, parent, newIdx);
-        layoutTree.setSelectionPath(new TreePath(movedNode.getPath()));
-        updatePreview();
-    }
-
-    private void outdentNode() {
-        if (selectedLayoutNode == null)
-            return;
-        DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedLayoutNode.getParent();
-        if (parent == null)
-            return;
-        DefaultMutableTreeNode grandparent = (DefaultMutableTreeNode) parent.getParent();
-        if (grandparent == null)
-            return; // already at top level
-
-        // Remove from current parent's model children
-        LayoutNode parentObj = getLayoutNodeFromTreeNode(parent);
-        LayoutNode nodeObj = getLayoutNodeFromTreeNode(selectedLayoutNode);
-        if (parentObj != null && nodeObj != null) {
-            parentObj.children.remove(nodeObj);
-        }
-
-        // Insert after the parent in grandparent
-        int parentIdx = grandparent.getIndex(parent);
-        LayoutNode grandparentObj = getLayoutNodeFromTreeNode(grandparent);
-        if (grandparentObj != null) {
-            grandparentObj.children.add(Math.min(parentIdx + 1, grandparentObj.children.size()), nodeObj);
-        }
-
-        DefaultMutableTreeNode movedNode = selectedLayoutNode;
-        layoutModel.removeNodeFromParent(movedNode);
-        layoutModel.insertNodeInto(movedNode, grandparent, parentIdx + 1);
-        layoutTree.setSelectionPath(new TreePath(movedNode.getPath()));
-        updatePreview();
-    }
-
-    private void indentNode() {
-        if (selectedLayoutNode == null)
-            return;
-        DefaultMutableTreeNode parent = (DefaultMutableTreeNode) selectedLayoutNode.getParent();
-        if (parent == null)
-            return;
-
-        int idx = parent.getIndex(selectedLayoutNode);
-        if (idx <= 0)
-            return; // no previous sibling to indent into
-
-        DefaultMutableTreeNode prevSibling = (DefaultMutableTreeNode) parent.getChildAt(idx - 1);
-        LayoutNode prevObj = getLayoutNodeFromTreeNode(prevSibling);
-        if (prevObj == null || !canContainChild(prevObj.type, getLayoutNodeFromTreeNode(selectedLayoutNode).type))
-            return;
-
-        // Remove from current parent's model children
-        LayoutNode parentObj = getLayoutNodeFromTreeNode(parent);
-        LayoutNode nodeObj = getLayoutNodeFromTreeNode(selectedLayoutNode);
-        if (parentObj != null && nodeObj != null) {
-            parentObj.children.remove(nodeObj);
-        }
-        prevObj.children.add(nodeObj);
-
-        DefaultMutableTreeNode movedNode = selectedLayoutNode;
-        layoutModel.removeNodeFromParent(movedNode);
-        layoutModel.insertNodeInto(movedNode, prevSibling, prevSibling.getChildCount());
-        layoutTree.expandPath(new TreePath(prevSibling.getPath()));
-        layoutTree.setSelectionPath(new TreePath(movedNode.getPath()));
-        updatePreview();
     }
 
     private void deleteNode() {
@@ -1422,21 +1503,20 @@ public class DetailLayoutDesigner extends JFrame {
 
         LayoutNode parentObj = getLayoutNodeFromTreeNode(parent);
         LayoutNode nodeObj = getLayoutNodeFromTreeNode(selectedLayoutNode);
-        if (parentObj != null && nodeObj != null) {
+        if (parentObj != null && nodeObj != null)
             parentObj.children.remove(nodeObj);
-        }
 
         layoutModel.removeNodeFromParent(selectedLayoutNode);
         selectedLayoutNode = null;
         showEmptyProperties();
+        refreshFieldPalette();
         updatePreview();
     }
 
     private DefaultMutableTreeNode buildTreeNode(LayoutNode node) {
         DefaultMutableTreeNode treeNode = new DefaultMutableTreeNode(node);
-        for (LayoutNode child : node.children) {
+        for (LayoutNode child : node.children)
             treeNode.add(buildTreeNode(child));
-        }
         return treeNode;
     }
 
@@ -1455,21 +1535,19 @@ public class DetailLayoutDesigner extends JFrame {
             return;
 
         DefaultMutableTreeNode root = (DefaultMutableTreeNode) layoutModel.getRoot();
-        for (LayoutNode node : layout.nodes) {
+        for (LayoutNode node : layout.nodes)
             root.add(buildTreeNode(node));
-        }
         layoutModel.reload();
         expandAllNodes(layoutTree, 0, layoutTree.getRowCount());
+        refreshFieldPalette();
         updatePreview();
     }
 
     private void expandAllNodes(JTree tree, int startRow, int rowCount) {
-        for (int i = startRow; i < rowCount; i++) {
+        for (int i = startRow; i < rowCount; i++)
             tree.expandRow(i);
-        }
-        if (tree.getRowCount() != rowCount) {
+        if (tree.getRowCount() != rowCount)
             expandAllNodes(tree, rowCount, tree.getRowCount());
-        }
     }
 
     private DetailLayout buildLayoutFromTree() {
@@ -1499,8 +1577,7 @@ public class DetailLayoutDesigner extends JFrame {
 
     // ── DnD Handlers ───────────────────────────────────────────────
 
-    private static final DataFlavor FIELD_FLAVOR = new DataFlavor(FieldPaletteItem.class, "FieldPaletteItem");
-
+    /** Drag handler for the field palette — creates COPY transfers of FieldPaletteItem. */
     private class FieldPaletteDragHandler extends TransferHandler {
         @Override
         protected Transferable createTransferable(JComponent c) {
@@ -1510,8 +1587,7 @@ public class DetailLayoutDesigner extends JFrame {
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
             if (!(node.getUserObject() instanceof FieldPaletteItem))
                 return null;
-            FieldPaletteItem item = (FieldPaletteItem) node.getUserObject();
-            return new FieldTransferable(item);
+            return new FieldTransferable((FieldPaletteItem) node.getUserObject());
         }
 
         @Override
@@ -1520,32 +1596,200 @@ public class DetailLayoutDesigner extends JFrame {
         }
     }
 
-    private class LayoutTreeDropHandler extends TransferHandler {
+    /**
+     * Unified DnD handler for the layout tree.
+     * Supports:
+     *   - Drops from field palette (creates new FIELD/TABLE nodes)
+     *   - Internal tree rearrangement (move nodes via drag & drop)
+     */
+    private class LayoutTreeDnDHandler extends TransferHandler {
+
+        @Override
+        protected Transferable createTransferable(JComponent c) {
+            TreePath path = layoutTree.getSelectionPath();
+            if (path == null)
+                return null;
+            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
+            if (!(node.getUserObject() instanceof LayoutNode))
+                return null;
+            return new LayoutNodeTransferable(node);
+        }
+
+        @Override
+        public int getSourceActions(JComponent c) {
+            return MOVE;
+        }
+
         @Override
         public boolean canImport(TransferSupport support) {
-            return support.isDataFlavorSupported(FIELD_FLAVOR) || support.isDataFlavorSupported(DataFlavor.stringFlavor);
+            if (support.isDataFlavorSupported(FIELD_FLAVOR))
+                return true;
+            if (support.isDataFlavorSupported(LAYOUT_NODE_FLAVOR)) {
+                // Validate target
+                if (support.isDrop()) {
+                    JTree.DropLocation dl = (JTree.DropLocation) support.getDropLocation();
+                    TreePath destPath = dl.getPath();
+                    if (destPath == null)
+                        return false;
+                    DefaultMutableTreeNode destNode = (DefaultMutableTreeNode) destPath.getLastPathComponent();
+
+                    try {
+                        DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) support.getTransferable().getTransferData(LAYOUT_NODE_FLAVOR);
+                        // Don't allow dropping onto self or descendants
+                        if (sourceNode == destNode)
+                            return false;
+                        TreeNode[] sourcePath = sourceNode.getPath();
+                        TreeNode[] targetPath = destNode.getPath();
+                        for (TreeNode tp : targetPath) {
+                            if (tp == sourceNode)
+                                return false;
+                        }
+                    } catch (Exception e) {
+                        return false;
+                    }
+
+                    // Check parent compatibility if dropping ON a node
+                    if (dl.getChildIndex() == -1) {
+                        LayoutNode destObj = getLayoutNodeFromTreeNode(destNode);
+                        if (destObj == null)
+                            return true; // root
+                        try {
+                            DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) support.getTransferable().getTransferData(LAYOUT_NODE_FLAVOR);
+                            LayoutNode sourceObj = getLayoutNodeFromTreeNode(sourceNode);
+                            if (sourceObj != null)
+                                return canContainChild(destObj.type, sourceObj.type);
+                        } catch (Exception e) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+            return false;
         }
 
         @Override
         public boolean importData(TransferSupport support) {
             try {
                 if (support.isDataFlavorSupported(FIELD_FLAVOR)) {
-                    FieldPaletteItem item = (FieldPaletteItem) support.getTransferable().getTransferData(FIELD_FLAVOR);
-                    LayoutNode node;
-                    if (item.isCollection) {
-                        node = new LayoutNode(LayoutNodeType.TABLE);
-                        node.setProp("ref", item.dotPath);
-                    } else {
-                        node = new LayoutNode(LayoutNodeType.FIELD);
-                        node.setProp("ref", item.dotPath);
-                    }
-                    insertNodeIntoTree(node);
-                    return true;
+                    return importPaletteField(support);
+                }
+                if (support.isDataFlavorSupported(LAYOUT_NODE_FLAVOR)) {
+                    return importLayoutNode(support);
                 }
             } catch (Exception e) {
                 e.printStackTrace();
             }
             return false;
+        }
+
+        private boolean importPaletteField(TransferSupport support) throws Exception {
+            FieldPaletteItem item = (FieldPaletteItem) support.getTransferable().getTransferData(FIELD_FLAVOR);
+            LayoutNode node;
+            if (item.isCollection) {
+                node = new LayoutNode(LayoutNodeType.TABLE);
+                node.setProp("ref", item.dotPath);
+            } else {
+                node = new LayoutNode(LayoutNodeType.FIELD);
+                node.setProp("ref", item.dotPath);
+            }
+
+            if (support.isDrop()) {
+                JTree.DropLocation dl = (JTree.DropLocation) support.getDropLocation();
+                insertNodeAtDropLocation(node, dl);
+            } else {
+                insertNodeIntoTree(node);
+            }
+            return true;
+        }
+
+        private boolean importLayoutNode(TransferSupport support) throws Exception {
+            DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) support.getTransferable().getTransferData(LAYOUT_NODE_FLAVOR);
+            LayoutNode sourceObj = getLayoutNodeFromTreeNode(sourceNode);
+            if (sourceObj == null)
+                return false;
+
+            JTree.DropLocation dl = (JTree.DropLocation) support.getDropLocation();
+            TreePath destPath = dl.getPath();
+            if (destPath == null)
+                return false;
+            DefaultMutableTreeNode destNode = (DefaultMutableTreeNode) destPath.getLastPathComponent();
+            int childIndex = dl.getChildIndex();
+
+            // Remove from old parent
+            DefaultMutableTreeNode oldParent = (DefaultMutableTreeNode) sourceNode.getParent();
+            LayoutNode oldParentObj = getLayoutNodeFromTreeNode(oldParent);
+            if (oldParentObj != null)
+                oldParentObj.children.remove(sourceObj);
+
+            // Save reference before removal
+            DefaultMutableTreeNode movedNode = sourceNode;
+            layoutModel.removeNodeFromParent(movedNode);
+
+            // Insert at new location
+            LayoutNode destObj = getLayoutNodeFromTreeNode(destNode);
+            if (childIndex == -1) {
+                // Drop ON the node — add as last child
+                if (destObj != null) {
+                    destObj.children.add(sourceObj);
+                }
+                layoutModel.insertNodeInto(movedNode, destNode, destNode.getChildCount());
+            } else {
+                // Drop BETWEEN nodes
+                if (destObj != null) {
+                    int insertIdx = Math.min(childIndex, destObj.children.size());
+                    destObj.children.add(insertIdx, sourceObj);
+                }
+                int treeIdx = Math.min(childIndex, destNode.getChildCount());
+                layoutModel.insertNodeInto(movedNode, destNode, treeIdx);
+            }
+
+            layoutTree.setSelectionPath(new TreePath(movedNode.getPath()));
+            refreshFieldPalette();
+            updatePreview();
+            return true;
+        }
+
+        private void insertNodeAtDropLocation(LayoutNode node, JTree.DropLocation dl) {
+            DefaultMutableTreeNode treeNode = buildTreeNode(node);
+            TreePath destPath = dl.getPath();
+            DefaultMutableTreeNode destNode = (DefaultMutableTreeNode) destPath.getLastPathComponent();
+            int childIndex = dl.getChildIndex();
+
+            LayoutNode destObj = getLayoutNodeFromTreeNode(destNode);
+            if (childIndex == -1) {
+                // Dropping ON a node
+                if (destObj != null && canContainChild(destObj.type, node.type)) {
+                    destObj.children.add(node);
+                    layoutModel.insertNodeInto(treeNode, destNode, destNode.getChildCount());
+                } else {
+                    // Add as sibling
+                    DefaultMutableTreeNode parent = (DefaultMutableTreeNode) destNode.getParent();
+                    if (parent == null)
+                        parent = (DefaultMutableTreeNode) layoutModel.getRoot();
+                    LayoutNode parentObj = getLayoutNodeFromTreeNode(parent);
+                    int idx = parent.getIndex(destNode) + 1;
+                    if (parentObj != null)
+                        parentObj.children.add(Math.min(idx, parentObj.children.size()), node);
+                    layoutModel.insertNodeInto(treeNode, parent, Math.min(idx, parent.getChildCount()));
+                }
+            } else {
+                // Dropping BETWEEN nodes
+                if (destObj != null) {
+                    int insertIdx = Math.min(childIndex, destObj.children.size());
+                    destObj.children.add(insertIdx, node);
+                }
+                layoutModel.insertNodeInto(treeNode, destNode, Math.min(childIndex, destNode.getChildCount()));
+            }
+
+            layoutTree.setSelectionPath(new TreePath(treeNode.getPath()));
+            refreshFieldPalette();
+            updatePreview();
+        }
+
+        @Override
+        protected void exportDone(JComponent source, Transferable data, int action) {
+            // Cleanup is handled in importData for MOVE operations
         }
     }
 
@@ -1588,6 +1832,29 @@ public class DetailLayoutDesigner extends JFrame {
         @Override
         public Object getTransferData(DataFlavor flavor) {
             return item;
+        }
+    }
+
+    static class LayoutNodeTransferable implements Transferable {
+        private final DefaultMutableTreeNode node;
+
+        LayoutNodeTransferable(DefaultMutableTreeNode node) {
+            this.node = node;
+        }
+
+        @Override
+        public DataFlavor[] getTransferDataFlavors() {
+            return new DataFlavor[] { LAYOUT_NODE_FLAVOR };
+        }
+
+        @Override
+        public boolean isDataFlavorSupported(DataFlavor flavor) {
+            return LAYOUT_NODE_FLAVOR.equals(flavor);
+        }
+
+        @Override
+        public Object getTransferData(DataFlavor flavor) {
+            return node;
         }
     }
 

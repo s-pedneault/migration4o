@@ -7,8 +7,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashSet;
+import java.util.Set;
 
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 
 /**
  * Generates lightweight HTML viewers for JS exports produced by StructuredWriterJS.
@@ -51,13 +54,14 @@ public final class JsViewerHtmlGenerator {
         }
 
         String title = baseName;
-        String entityName = (schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName;
+        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
+        String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -162,5 +166,110 @@ public final class JsViewerHtmlGenerator {
         if (value == null)
             return "";
         return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&#39;");
+    }
+
+    private static String buildFieldMetadataJson(DOSchemaClass schemaClass) {
+        if (schemaClass == null || schemaClass.fields == null) {
+            return "[]";
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append('[');
+        boolean first = true;
+        Set<String> seen = new HashSet<>();
+
+        for (DOSchemaField field : schemaClass.fields) {
+            if (!field.isExported) {
+                continue;
+            }
+            String name = field.destinationName != null ? field.destinationName : field.source;
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            if (!seen.add(name)) {
+                continue;
+            }
+
+            if (!first) {
+                sb.append(',');
+            }
+            first = false;
+            appendFieldJson(sb, field, name, 0);
+        }
+
+        sb.append(']');
+        return sb.toString();
+    }
+
+    private static void appendFieldJson(StringBuilder sb, DOSchemaField field, String path, int depth) {
+        String name = field.destinationName != null ? field.destinationName : field.source;
+        sb.append('{');
+        sb.append("\"name\":\"").append(escapeJson(name != null ? name : path)).append("\",");
+        sb.append("\"path\":\"").append(escapeJson(path)).append("\",");
+        sb.append("\"type\":\"").append(categorizeFieldType(field)).append("\",");
+        sb.append("\"collection\":").append(field.isCollection);
+
+        if (field.title != null && !field.title.isBlank()) {
+            sb.append(",\"title\":\"").append(escapeJson(field.title)).append('"');
+        }
+
+        if (depth < 2 && field.childrenSchemaClass != null && field.childrenSchemaClass.fields != null) {
+            sb.append(",\"children\":[");
+            boolean childFirst = true;
+            Set<String> childSeen = new HashSet<>();
+            for (DOSchemaField cf : field.childrenSchemaClass.fields) {
+                if (!cf.isExported) {
+                    continue;
+                }
+                String cn = cf.destinationName != null ? cf.destinationName : cf.source;
+                if (cn == null || cn.isBlank() || !childSeen.add(cn)) {
+                    continue;
+                }
+                if (!childFirst) {
+                    sb.append(',');
+                }
+                childFirst = false;
+                appendFieldJson(sb, cf, path + "." + cn, depth + 1);
+            }
+            sb.append(']');
+        }
+
+        sb.append('}');
+    }
+
+    private static String categorizeFieldType(DOSchemaField field) {
+        if (field.isCollection) {
+            return "collection";
+        }
+        String type = field.type;
+        if (type == null || type.isEmpty()) {
+            return "string";
+        }
+        String lower = type.toLowerCase().replaceAll("\\[\\]", "").trim();
+
+        if (lower.equals("int") || lower.equals("long") || lower.equals("short") || lower.equals("float") || lower.equals("double") || lower.equals("byte") || lower.equals("java.lang.integer") || lower.equals("java.lang.long") || lower.equals("java.lang.double") || lower.equals("java.lang.float") || lower.equals("java.lang.short") || lower.equals("java.lang.byte") || lower.equals("java.math.bigdecimal") || lower.equals("java.math.biginteger")) {
+            return "number";
+        }
+
+        if (lower.equals("date") || lower.equals("java.util.date") || lower.equals("java.sql.date") || lower.equals("java.sql.timestamp") || lower.equals("java.time.localdate") || lower.equals("java.time.localdatetime") || lower.equals("java.time.zoneddatetime")) {
+            return "date";
+        }
+
+        if (lower.equals("boolean") || lower.equals("java.lang.boolean")) {
+            return "boolean";
+        }
+
+        if (lower.equals("string") || lower.equals("java.lang.string") || lower.equals("java.lang.character") || lower.equals("char") || lower.equals("object") || lower.equals("java.lang.object")) {
+            return "string";
+        }
+
+        return "reference";
+    }
+
+    private static String escapeJson(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
     }
 }

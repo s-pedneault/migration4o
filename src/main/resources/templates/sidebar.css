@@ -1364,13 +1364,168 @@ body {
 
 .layout-divider {
     border: none;
-    border-top: 1px solid var(--c-border);
+    border-top: 2px solid var(--c-border);
     margin: 16px 0;
 }
 
 .layout-section-title {
     font-weight: 600;
     font-size: 0.95rem;
+}
+
+/* ── Field Style Classes ─────────────────────────────────────────── */
+
+.field-h1 .field-label {
+    font-size: 14px;
+}
+
+.field-h1 .field-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.field-h2 .field-label {
+    font-size: 13px;
+}
+
+.field-h2 .field-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.field-h3 .field-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.field-h4 .field-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+}
+
+.field-small .field-label {
+    font-size: 10px;
+}
+
+.field-small .field-value {
+    font-size: 0.75rem;
+}
+
+.field-caption .field-label {
+    font-size: 10px;
+    font-style: italic;
+}
+
+.field-caption .field-value {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: var(--c-text-muted);
+}
+
+/* ── Enhanced Visual Depth ───────────────────────────────────────── */
+
+.detail-section {
+    margin-bottom: 10px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    background: var(--c-surface);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.detail-section[open] {
+    border-left: 3px solid var(--c-primary);
+}
+
+.detail-section summary {
+    list-style: none;
+    padding: 9px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    border-bottom: 1px solid var(--c-border-light);
+    background: linear-gradient(to bottom, var(--c-surface), rgba(0, 0, 0, 0.01));
+}
+
+.detail-section summary:hover {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.field-row {
+    display: flex;
+    border-bottom: 1px solid var(--c-border-light);
+    min-height: 34px;
+    align-items: baseline;
+}
+
+.field-row:nth-child(even) {
+    background: rgba(248, 250, 252, 0.5);
+}
+
+.field-label {
+    flex: 0 0 240px;
+    padding: 8px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-text-secondary);
+    background: rgba(252, 252, 254, 0.8);
+}
+
+.field-value {
+    flex: 1;
+    padding: 8px 16px;
+    font-size: 13px;
+    word-break: break-word;
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.collection-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.collection-table thead th {
+    text-align: left;
+    background: linear-gradient(to bottom, #f8fafc, #eef2f7);
+    padding: 8px 12px;
+    border-bottom: 2px solid var(--c-border);
+    font-weight: 700;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: var(--c-text-secondary);
+}
+
+.collection-table tbody td {
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--c-border-light);
+}
+
+.collection-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.04);
+}
+
+/* Detail sheet enhanced header */
+.detail-header {
+    padding: 16px 20px;
+    background: linear-gradient(to bottom, var(--c-surface), rgba(248, 250, 252, 1));
+    border-bottom: 2px solid var(--c-border);
+}
+
+.detail-header h2 {
+    margin: 0;
+    font-size: 18px;
 }
 
 /* Tabs */
@@ -1390,6 +1545,7 @@ body {
     gap: 0;
     border-bottom: 2px solid var(--c-border);
     padding: 0 8px;
+    background: rgba(248, 250, 252, 0.5);
 }
 
 .tab-bar button {
@@ -1413,6 +1569,7 @@ body {
     color: var(--c-primary);
     border-bottom-color: var(--c-primary);
     font-weight: 600;
+    box-shadow: 0 2px 4px -2px var(--c-primary);
 }
 
 .tab-panel {

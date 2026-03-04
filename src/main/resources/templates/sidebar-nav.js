@@ -227,6 +227,9 @@
     let selectedColumns = ['__id', '__summary'];
     let collectionViewState = {};
     let collectionIdCounter = 1;
+    const schemaFields = (typeof SCHEMA_FIELDS !== 'undefined' && Array.isArray(SCHEMA_FIELDS)) ? SCHEMA_FIELDS : [];
+    const schemaTitleByPath = {};
+    const schemaTitleByName = {};
 
     const addConditionBtn = document.getElementById('addConditionBtn');
     const clearSearchBtn = document.getElementById('clearSearchBtn');
@@ -300,6 +303,38 @@
 
     function t(key) { return (I18N[currentLanguage] && I18N[currentLanguage][key]) || key; }
     function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+    function normalizeSchemaPath(path) {
+        return String(path || '').replace(/\[\d+\]/g, '').replace(/\.{2,}/g, '.').replace(/^\./, '').replace(/\.$/, '').trim();
+    }
+
+    function indexSchemaFields(fields) {
+        if (!Array.isArray(fields)) return;
+        fields.forEach((field) => {
+            if (!field || typeof field !== 'object') return;
+            const p = normalizeSchemaPath(field.path || field.name || '');
+            const n = normalizeSchemaPath(field.name || '');
+            const title = String(field.title || '').trim();
+            if (title) {
+                if (p && !schemaTitleByPath[p]) schemaTitleByPath[p] = title;
+                if (n && !schemaTitleByName[n]) schemaTitleByName[n] = title;
+            }
+            if (Array.isArray(field.children) && field.children.length > 0) {
+                indexSchemaFields(field.children);
+            }
+        });
+    }
+
+    function schemaTitleForPath(path) {
+        const normalized = normalizeSchemaPath(path);
+        if (!normalized) return '';
+        if (schemaTitleByPath[normalized]) return schemaTitleByPath[normalized];
+        const parts = normalized.split('.').filter(Boolean);
+        const last = parts.length > 0 ? parts[parts.length - 1] : normalized;
+        return schemaTitleByName[last] || '';
+    }
+
+    indexSchemaFields(schemaFields);
 
     function appendField(map, key, value) {
         if (!key) return;
@@ -473,7 +508,11 @@
     function buildDiscoveredFields() {
         const set = new Set();
         allRecords.forEach((rec) => Object.keys(rec.fields || {}).forEach((f) => set.add(f)));
-        discoveredFields = Array.from(set).sort().map((path) => ({ path, label: path, type: guessType(path) }));
+        discoveredFields = Array.from(set).sort().map((path) => ({
+            path,
+            label: schemaTitleForPath(path) || humanizeFieldName(path),
+            type: guessType(path)
+        }));
     }
 
     function getFieldType(path) {
@@ -894,15 +933,17 @@
     }
 
     function formatSectionTitle(name) {
-        return humanizeFieldName(name);
+        return schemaTitleForPath(name) || humanizeFieldName(name);
     }
 
     function displayFieldLabel(path) {
         const normalized = normalizeFieldPath(path || '');
         if (!normalized) return '';
+        const titled = schemaTitleForPath(normalized);
+        if (titled) return titled;
         const parts = normalized.split('.').filter(Boolean);
         const last = parts.length > 0 ? parts[parts.length - 1] : normalized;
-        return humanizeFieldName(last);
+        return schemaTitleForPath(last) || humanizeFieldName(last);
     }
 
     function renderPrimitiveGroup(entries) {
@@ -1259,18 +1300,28 @@
     function renderLayoutNode(data, node) {
         var p = node.props || {};
         var children = node.children || [];
+        var styleCls = p.style ? ' field-' + p.style : '';
+        var inlineStyle = '';
+        if (p.color) inlineStyle += 'color:' + esc(p.color) + ';';
+        if (p.hilite) inlineStyle += 'background-color:' + esc(p.hilite) + ';';
+        var styleAttr = inlineStyle ? ' style="' + inlineStyle + '"' : '';
 
         switch (node.type) {
             case 'section': {
                 var collapsible = p.collapsible === 'true';
-                var titleStyle = p.titleColor ? ' style="color:' + esc(p.titleColor) + '"' : '';
+                var titleInline = '';
+                var tc = p.color || p.titleColor;
+                if (tc) titleInline += 'color:' + esc(tc) + ';';
+                if (p.hilite) titleInline += 'background-color:' + esc(p.hilite) + ';';
+                if (p.style) titleInline += layoutStyleFont(p.style);
+                var titleAttr = titleInline ? ' style="' + titleInline + '"' : '';
                 if (collapsible) {
-                    return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleStyle + '>'
+                    return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
                         + esc(p.title || '') + '</span></summary><div class="section-body">'
                         + renderLayoutChildren(data, children) + '</div></details>';
                 }
                 return '<div class="detail-section"><div class="section-body">'
-                    + (p.title ? '<div class="layout-section-title"' + titleStyle + ' style="padding:8px 12px;' + (p.titleColor ? 'color:' + esc(p.titleColor) : '') + '">' + esc(p.title) + '</div>' : '')
+                    + (p.title ? '<div class="layout-section-title" style="padding:8px 12px;' + titleInline + '">' + esc(p.title) + '</div>' : '')
                     + renderLayoutChildren(data, children) + '</div></div>';
             }
             case 'columns': {
@@ -1286,12 +1337,17 @@
                 var val = resolveFieldValue(data, p.ref);
                 var label = p.label || displayFieldLabel(p.ref);
                 var formatted = fmtValueWithFormat(val, p.format, p.ref);
-                return '<div class="field-row"><div class="field-label">' + esc(label)
+                return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label">' + esc(label)
                     + '</div><div class="field-value">' + formatted + '</div></div>';
             }
-            case 'divider':
-                return '<hr class="layout-divider"/>';
-
+            case 'divider': {
+                var divStyle = '';
+                if (p.color) divStyle += 'border-top-color:' + esc(p.color) + ';';
+                if (p.style === 'h1') divStyle += 'border-top-width:4px;margin:20px 0;';
+                else if (p.style === 'h2') divStyle += 'border-top-width:3px;margin:16px 0;';
+                else if (p.style === 'small') divStyle += 'border-top-width:1px;margin:8px 0;';
+                return '<hr class="layout-divider"' + (divStyle ? ' style="' + divStyle + '"' : '') + '/>';
+            }
             case 'table': {
                 var items = resolveFieldValue(data, p.ref);
                 if (!Array.isArray(items) || items.length === 0) {
@@ -1300,17 +1356,21 @@
                 }
                 var cols = (p.columns || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                 var widths = (p.widths || '').split(',').map(function (s) { return s.trim(); });
+                var colTitles = (p.columnTitles || '').split(',').map(function (s) { return s.trim(); });
                 if (cols.length === 0) {
-                    // Auto-detect columns from first item
                     var first = items[0];
                     if (first && typeof first === 'object') cols = Object.keys(first);
                 }
-                var thtml = '<details class="detail-section" open><summary><span class="summary-title">'
+                var headerStyle = '';
+                if (p.color) headerStyle += 'color:' + esc(p.color) + ';';
+                if (p.hilite) headerStyle += 'background-color:' + esc(p.hilite) + ';';
+                var thtml = '<details class="detail-section" open><summary' + (headerStyle ? ' style="' + headerStyle + '"' : '') + '><span class="summary-title">'
                     + esc(displayFieldLabel(p.ref)) + '</span><span class="summary-meta">' + items.length + ' ' + esc(t('elements'))
                     + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
                 cols.forEach(function (col, idx) {
                     var w = widths[idx] ? ' style="width:' + esc(widths[idx]) + '%"' : '';
-                    thtml += '<th' + w + '>' + esc(displayFieldLabel(col)) + '</th>';
+                    var thText = (colTitles[idx] && colTitles[idx].length > 0) ? colTitles[idx] : displayFieldLabel(col);
+                    thtml += '<th' + w + '>' + esc(thText) + '</th>';
                 });
                 thtml += '</tr></thead><tbody>';
                 items.forEach(function (item) {
@@ -1347,6 +1407,18 @@
 
             default:
                 return '';
+        }
+    }
+
+    function layoutStyleFont(style) {
+        switch (style) {
+            case 'h1': return 'font-size:1.5rem;font-weight:700;';
+            case 'h2': return 'font-size:1.25rem;font-weight:600;';
+            case 'h3': return 'font-size:1.1rem;font-weight:600;';
+            case 'h4': return 'font-size:0.95rem;font-weight:600;';
+            case 'small': return 'font-size:0.75rem;';
+            case 'caption': return 'font-size:0.75rem;font-style:italic;';
+            default: return '';
         }
     }
 

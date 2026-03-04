@@ -92,25 +92,53 @@ public class LayoutNode {
 
     @Override
     public String toString() {
+        String base;
         switch (type) {
         case SECTION:
-            return "Section: " + prop("title", "(untitled)");
+            base = "Section: " + prop("title", "(untitled)");
+            break;
         case COLUMNS:
-            return "Columns (" + prop("count", "2") + ")";
+            base = "Columns (" + prop("count", "2") + ")";
+            break;
         case COLUMN:
-            return "Column";
+            base = "Column";
+            break;
         case FIELD:
-            return "Field: " + prop("ref", "?");
+            base = "Field: " + prop("ref", "?");
+            break;
         case DIVIDER:
-            return "── Divider ──";
+            base = "── Divider ──";
+            break;
         case TABLE:
-            return "Table: " + prop("ref", "?");
+            base = "Table: " + prop("ref", "?");
+            break;
         case TABBED_SECTION:
-            return "Tabs: " + prop("title", "(tabs)");
+            base = "Tabs: " + prop("title", "(tabs)");
+            break;
         case TAB:
-            return "Tab: " + prop("title", "(untitled)");
+            base = "Tab: " + prop("title", "(untitled)");
+            break;
         default:
-            return type.name();
+            base = type.name();
         }
+        // Append style info if present
+        String style = prop("style");
+        String color = prop("color");
+        if (style != null || color != null) {
+            StringBuilder sb = new StringBuilder(base).append(" [");
+            boolean first = true;
+            if (style != null) {
+                sb.append(style.toUpperCase());
+                first = false;
+            }
+            if (color != null) {
+                if (!first)
+                    sb.append(", ");
+                sb.append(color);
+            }
+            sb.append(']');
+            return sb.toString();
+        }
+        return base;
     }
 }

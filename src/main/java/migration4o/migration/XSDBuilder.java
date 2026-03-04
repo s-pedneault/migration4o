@@ -245,7 +245,7 @@ public class XSDBuilder {
         String destClassName = schemaClass.destinationName; // Already from reference schema
         Map<String, DOSchemaField> fields = fieldsByClass.getOrDefault(className, new LinkedHashMap<>());
 
-        xsdWriter.write("  <!-- " + destClassName + " -->\n");
+        // xsdWriter.write("  <!-- " + destClassName + " -->\n");
         if (schemaClass.title != null && schemaClass.title.length() > 0) {
             xsdWriter.write("  <!-- " + schemaClass.title + " -->\n");
         }
