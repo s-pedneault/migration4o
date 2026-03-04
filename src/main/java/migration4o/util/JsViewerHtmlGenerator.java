@@ -28,10 +28,14 @@ public final class JsViewerHtmlGenerator {
     }
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass) throws IOException {
-        return writeViewerForJs(jsPath, schemaClass, "[]", "./");
+        return writeViewerForJs(jsPath, schemaClass, "[]", "./", "null");
     }
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref) throws IOException {
+        return writeViewerForJs(jsPath, schemaClass, navItemsJson, baseHref, "null");
+    }
+
+    public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson) throws IOException {
         if (jsPath == null) {
             throw new IllegalArgumentException("jsPath must not be null");
         }
@@ -50,9 +54,10 @@ public final class JsViewerHtmlGenerator {
         String entityName = (schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName;
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
+        String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());

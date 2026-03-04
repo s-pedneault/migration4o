@@ -1344,3 +1344,83 @@ body {
         border-bottom: 1px solid var(--c-border-light);
     }
 }
+
+/* ── Layout Designer Detail View ─────────────────────────────────── */
+
+.layout-columns {
+    display: grid;
+    gap: 0;
+    margin: 0;
+}
+
+.layout-column {
+    padding: 0 4px;
+    min-width: 0;
+}
+
+.layout-column:not(:last-child) {
+    border-right: 1px solid var(--c-border-light);
+}
+
+.layout-divider {
+    border: none;
+    border-top: 1px solid var(--c-border);
+    margin: 16px 0;
+}
+
+.layout-section-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+/* Tabs */
+.layout-tabs {
+    margin: 8px 0;
+}
+
+.layout-tabs-header {
+    font-weight: 600;
+    font-size: 0.95rem;
+    padding: 8px 12px 4px;
+    color: var(--c-text-muted);
+}
+
+.tab-bar {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid var(--c-border);
+    padding: 0 8px;
+}
+
+.tab-bar button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    padding: 8px 16px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    color: var(--c-text-muted);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+}
+
+.tab-bar button:hover {
+    color: var(--c-primary);
+}
+
+.tab-bar button.active {
+    color: var(--c-primary);
+    border-bottom-color: var(--c-primary);
+    font-weight: 600;
+}
+
+.tab-panel {
+    display: none;
+    padding: 8px 0;
+}
+
+.tab-panel.active {
+    display: block;
+}
+}

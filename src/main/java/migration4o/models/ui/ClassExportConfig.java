@@ -11,6 +11,7 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.models.ui.layout.DetailLayout;
 import migration4o.util.ClassUtil;
 
 /**
@@ -27,6 +28,7 @@ public class ClassExportConfig {
     private final List<ExportCriteria> criteria;
     private final String description;
     private final Map<String, Float> unitCosts; // Price list: key -> unit cost
+    private DetailLayout layout; // Optional detail view layout
 
     /**
      * Creates a simple config with just the class name (backward compatibility).
@@ -52,8 +54,7 @@ public class ClassExportConfig {
     /**
      * Creates a complete config with all properties.
      */
-    public ClassExportConfig(String className, String destinationFileName, List<ExportCriteria> criteria,
-            String description, Map<String, Float> unitCosts) {
+    public ClassExportConfig(String className, String destinationFileName, List<ExportCriteria> criteria, String description, Map<String, Float> unitCosts) {
         this.className = className;
         this.destinationFileName = destinationFileName;
         this.criteria = new ArrayList<>(criteria);
@@ -69,9 +70,7 @@ public class ClassExportConfig {
      * Returns the destination file name, or the class name if none specified.
      */
     public String getDestinationFileName() {
-        return destinationFileName != null && !destinationFileName.isEmpty()
-                ? destinationFileName
-                : ClassUtil.getSimpleName(className);
+        return destinationFileName != null && !destinationFileName.isEmpty() ? destinationFileName : ClassUtil.getSimpleName(className);
     }
 
     /**
@@ -110,6 +109,18 @@ public class ClassExportConfig {
 
     public boolean hasCriteria() {
         return !criteria.isEmpty();
+    }
+
+    public DetailLayout getLayout() {
+        return layout;
+    }
+
+    public void setLayout(DetailLayout layout) {
+        this.layout = layout;
+    }
+
+    public boolean hasLayout() {
+        return layout != null && !layout.isEmpty();
     }
 
     /**
@@ -185,8 +196,7 @@ public class ClassExportConfig {
                 }
                 // System.out.println("DEBUG matchesAllCriteria: MATCHED");
             } catch (Exception e) {
-                System.out.println("DEBUG matchesAllCriteria: Exception accessing field " + criterion.getFieldName()
-                        + ": " + e.getMessage());
+                System.out.println("DEBUG matchesAllCriteria: Exception accessing field " + criterion.getFieldName() + ": " + e.getMessage());
                 e.printStackTrace();
                 return false; // Error accessing field
             }

@@ -5,6 +5,9 @@ import org.w3c.dom.*;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
 import migration4o.models.ui.MigrationModule;
+import migration4o.models.ui.layout.DetailLayout;
+import migration4o.models.ui.layout.LayoutNode;
+import migration4o.models.ui.layout.LayoutNodeType;
 
 import javax.xml.parsers.*;
 import java.io.File;
@@ -135,6 +138,17 @@ public class DOModuleStructureReader {
         }
 
         ClassExportConfig config = new ClassExportConfig(sourceName, destinationFile, criteria, description, unitCosts);
+
+        // Parse layout if present
+        NodeList layoutNodes = classRefElement.getChildNodes();
+        for (int i = 0; i < layoutNodes.getLength(); i++) {
+            Node node = layoutNodes.item(i);
+            if (node.getNodeType() == Node.ELEMENT_NODE && "layout".equals(node.getNodeName())) {
+                config.setLayout(parseLayout((Element) node));
+                break;
+            }
+        }
+
         if (!criteria.isEmpty()) {
             // System.out.println(
             // "DEBUG parseClassRef: Created config for " + sourceName + " with " +
@@ -164,5 +178,46 @@ public class DOModuleStructureReader {
         }
 
         return new ExportCriteria(field, operator, value);
+    }
+
+    private DetailLayout parseLayout(Element layoutElement) {
+        DetailLayout layout = new DetailLayout();
+        NodeList children = layoutElement.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                LayoutNode node = parseLayoutNode((Element) child);
+                if (node != null)
+                    layout.nodes.add(node);
+            }
+        }
+        return layout.isEmpty() ? null : layout;
+    }
+
+    private LayoutNode parseLayoutNode(Element element) {
+        LayoutNodeType type = LayoutNodeType.fromXmlTag(element.getNodeName());
+        if (type == null)
+            return null;
+
+        LayoutNode node = new LayoutNode(type);
+
+        // Copy all attributes as properties
+        var attrs = element.getAttributes();
+        for (int i = 0; i < attrs.getLength(); i++) {
+            var attr = attrs.item(i);
+            node.setProp(attr.getNodeName(), attr.getNodeValue());
+        }
+
+        // Recurse children
+        NodeList children = element.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            Node child = children.item(i);
+            if (child.getNodeType() == Node.ELEMENT_NODE) {
+                LayoutNode childNode = parseLayoutNode((Element) child);
+                if (childNode != null)
+                    node.children.add(childNode);
+            }
+        }
+        return node;
     }
 }

@@ -37,7 +37,17 @@
                     <classRef sourceName="gest.activite.Acte"/>
                     <classRef sourceName="gest.activite.TypeActivQuart"/>
                     <classRef sourceName="gest.champPerso.TypeChampPerso"/>
-                    <classRef sourceName="gest.fournisseur.Fournisseur"/>
+                    <classRef sourceName="gest.fournisseur.Fournisseur">
+                        <layout>
+                            <field label="Nom" ref="nom"/>
+                            <section collapsible="true" title="Interne">
+                                <field label="ID" ref="id"/>
+                                <field label="Dernière modification" ref="derniereModification"/>
+                            </section>
+                            <divider/>
+                            <table ref="listePieceJointe"/>
+                        </layout>
+                    </classRef>
                     <classRef sourceName="gest.listePerso.ListePerso"/>
                     <classRef sourceName="gest.mobile.Mobile"/>
                     <classRef sourceName="gest.preference.Preference"/>

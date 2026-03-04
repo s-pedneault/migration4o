@@ -7,6 +7,8 @@ import java.util.List;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
 import migration4o.models.ui.MigrationModule;
+import migration4o.models.ui.layout.DetailLayout;
+import migration4o.models.ui.layout.LayoutNode;
 import migration4o.util.FileUtil;
 
 /**
@@ -75,8 +77,8 @@ public class DOModuleStructureWriter {
             writer.write(" description=\"" + escapeXml(config.getDescription()) + "\"");
         }
 
-        // If there are criteria or unit costs, use child elements; otherwise self-close
-        if (config.hasCriteria() || !config.getUnitCosts().isEmpty()) {
+        // If there are criteria, unit costs, or layout, use child elements; otherwise self-close
+        if (config.hasCriteria() || !config.getUnitCosts().isEmpty() || config.hasLayout()) {
             writer.write(">\n");
 
             // Write criteria
@@ -87,6 +89,11 @@ public class DOModuleStructureWriter {
             // Write unit costs
             for (java.util.Map.Entry<String, Float> entry : config.getUnitCosts().entrySet()) {
                 writeUnitCost(writer, entry.getKey(), entry.getValue(), indentLevel + 1);
+            }
+
+            // Write layout if present
+            if (config.hasLayout()) {
+                writeLayout(writer, config.getLayout(), indentLevel + 1);
             }
 
             writer.write(indent + "</classRef>\n");
@@ -121,10 +128,32 @@ public class DOModuleStructureWriter {
         if (text == null) {
             return "";
         }
-        return text.replace("&", "&amp;")
-                .replace("<", "&lt;")
-                .replace(">", "&gt;")
-                .replace("\"", "&quot;")
-                .replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+    }
+
+    private void writeLayout(FileWriter writer, DetailLayout layout, int indentLevel) throws IOException {
+        String indent = "    ".repeat(indentLevel);
+        writer.write(indent + "<layout>\n");
+        for (LayoutNode node : layout.nodes) {
+            writeLayoutNode(writer, node, indentLevel + 1);
+        }
+        writer.write(indent + "</layout>\n");
+    }
+
+    private void writeLayoutNode(FileWriter writer, LayoutNode node, int indentLevel) throws IOException {
+        String indent = "    ".repeat(indentLevel);
+        writer.write(indent + "<" + node.type.xmlTag);
+        for (java.util.Map.Entry<String, String> e : node.properties.entrySet()) {
+            writer.write(" " + e.getKey() + "=\"" + escapeXml(e.getValue()) + "\"");
+        }
+        if (node.children.isEmpty()) {
+            writer.write("/>\n");
+        } else {
+            writer.write(">\n");
+            for (LayoutNode child : node.children) {
+                writeLayoutNode(writer, child, indentLevel + 1);
+            }
+            writer.write(indent + "</" + node.type.xmlTag + ">\n");
+        }
     }
 }

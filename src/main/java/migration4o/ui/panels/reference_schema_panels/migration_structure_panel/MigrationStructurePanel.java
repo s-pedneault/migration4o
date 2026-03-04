@@ -58,6 +58,7 @@ import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.ModuleNode;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.DetailLayoutDesigner;
 import migration4o.ui.dialogs.ExportConfirmationDialog;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
@@ -807,6 +808,18 @@ public class MigrationStructurePanel extends JPanel {
         }
     }
 
+    private void openDetailLayoutDesigner(ClassNode classNode) {
+        DOSchemaClass schemaClass = classNode.getSchemaClass();
+        ClassExportConfig config = classNode.getExportConfig();
+        if (config == null) {
+            config = new ClassExportConfig(schemaClass.source);
+            classNode.setExportConfig(config);
+        }
+        DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DetailLayoutDesigner designer = new DetailLayoutDesigner(config, schemaClass, refSchema);
+        designer.setVisible(true);
+    }
+
     private DefaultMutableTreeNode findClassNodeInExportTree(String className) {
         DefaultMutableTreeNode root = getExportRoot();
         return MigrationStructurePanelUtil.findClassNodeInTree(root, className);
@@ -909,6 +922,10 @@ public class MigrationStructurePanel extends JPanel {
             JMenuItem configureItem = new JMenuItem("Configure Export...");
             configureItem.addActionListener(evt -> configureClassExport(node));
             contextMenu.add(configureItem);
+
+            JMenuItem designLayoutItem = new JMenuItem("Design Detail View...");
+            designLayoutItem.addActionListener(evt -> openDetailLayoutDesigner(classNode));
+            contextMenu.add(designLayoutItem);
 
             contextMenu.addSeparator();
 

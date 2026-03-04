@@ -1173,10 +1173,204 @@
         let html = '';
         html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '\u2014')} \u2022 ${esc(t('record'))} #${rec.pos}</div></div>`;
         html += '<div class="detail-scroll">';
-        html += renderNodeSection(rec.entity, rec.raw, 0);
+        if (typeof DETAIL_LAYOUT !== 'undefined' && DETAIL_LAYOUT) {
+            html += renderLayoutDetail(rec.raw, DETAIL_LAYOUT);
+        } else {
+            html += renderNodeSection(rec.entity, rec.raw, 0);
+        }
         html += '</div>';
 
         detailContainer.innerHTML = html;
+        bindTabEvents();
+    }
+
+    /* ── Layout-driven detail renderer ──────────────────────────── */
+
+    function resolveFieldValue(data, ref) {
+        if (!data || !ref) return null;
+        return ref.split('.').reduce(function (obj, key) {
+            if (obj == null) return null;
+            if (Array.isArray(obj) && obj.length === 1) obj = obj[0];
+            return (typeof obj === 'object') ? obj[key] : null;
+        }, data);
+    }
+
+    function formatDatePattern(date, pattern) {
+        if (!(date instanceof Date) || isNaN(date.getTime())) return '';
+        var months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        var monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+        return pattern
+            .replace('yyyy', date.getFullYear())
+            .replace('MM', pad(date.getMonth() + 1))
+            .replace('dd', pad(date.getDate()))
+            .replace('HH', pad(date.getHours()))
+            .replace('mm', pad(date.getMinutes()))
+            .replace('ss', pad(date.getSeconds()))
+            .replace('MMMM', months[date.getMonth()])
+            .replace('MMM', monthsShort[date.getMonth()]);
+    }
+
+    function fmtValueWithFormat(value, formatSpec, key) {
+        if (value === null || value === undefined) return '<span style="color:var(--c-text-muted)">\u2014</span>';
+        if (!formatSpec) return fmtValue(value, key);
+
+        var colonIdx = formatSpec.indexOf(':');
+        if (colonIdx < 0) return fmtValue(value, key);
+        var fmtType = formatSpec.substring(0, colonIdx);
+        var fmtSpec = formatSpec.substring(colonIdx + 1);
+
+        if (fmtType === 'date') {
+            try { return esc(formatDatePattern(new Date(value), fmtSpec)); } catch (e) { return esc(String(value)); }
+        }
+        if (fmtType === 'longdate') {
+            try { return esc(formatDatePattern(new Date(Number(value)), fmtSpec)); } catch (e) { return esc(String(value)); }
+        }
+        if (fmtType === 'bool') {
+            var parts = fmtSpec.split(',');
+            var tv = parts[0] || 'True', fv = parts[1] || 'False';
+            var bv = String(value).toLowerCase();
+            if (bv === 'true') return '<span class="badge badge-true">' + esc(tv) + '</span>';
+            if (bv === 'false') return '<span class="badge badge-false">' + esc(fv) + '</span>';
+            return esc(String(value));
+        }
+        if (fmtType === 'num') {
+            var num = Number(value);
+            if (isNaN(num)) return esc(String(value));
+            // Extract suffix text after pattern: "num:#,##0.0 Km" -> suffix=" Km"
+            var match = fmtSpec.match(/^([#0,.]+)\s*(.*)$/);
+            if (!match) return '<span class="badge badge-number">' + esc(String(num)) + '</span>';
+            var decMatch = match[1].match(/\.([0#]+)$/);
+            var decimals = decMatch ? decMatch[1].length : 0;
+            var formatted = num.toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+            return '<span class="badge badge-number">' + esc(formatted + (match[2] ? ' ' + match[2] : '')) + '</span>';
+        }
+        return fmtValue(value, key);
+    }
+
+    function renderLayoutDetail(data, layout) {
+        var html = '';
+        for (var i = 0; i < layout.length; i++) {
+            html += renderLayoutNode(data, layout[i]);
+        }
+        return html;
+    }
+
+    function renderLayoutNode(data, node) {
+        var p = node.props || {};
+        var children = node.children || [];
+
+        switch (node.type) {
+            case 'section': {
+                var collapsible = p.collapsible === 'true';
+                var titleStyle = p.titleColor ? ' style="color:' + esc(p.titleColor) + '"' : '';
+                if (collapsible) {
+                    return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleStyle + '>'
+                        + esc(p.title || '') + '</span></summary><div class="section-body">'
+                        + renderLayoutChildren(data, children) + '</div></details>';
+                }
+                return '<div class="detail-section"><div class="section-body">'
+                    + (p.title ? '<div class="layout-section-title"' + titleStyle + ' style="padding:8px 12px;' + (p.titleColor ? 'color:' + esc(p.titleColor) : '') + '">' + esc(p.title) + '</div>' : '')
+                    + renderLayoutChildren(data, children) + '</div></div>';
+            }
+            case 'columns': {
+                var sizes = (p.sizes || '').split(',').map(function (s) { return s.trim() + '%'; });
+                var gridCols = sizes.join(' ');
+                return '<div class="layout-columns" style="grid-template-columns:' + gridCols + '">'
+                    + renderLayoutChildren(data, children) + '</div>';
+            }
+            case 'column':
+                return '<div class="layout-column">' + renderLayoutChildren(data, children) + '</div>';
+
+            case 'field': {
+                var val = resolveFieldValue(data, p.ref);
+                var label = p.label || displayFieldLabel(p.ref);
+                var formatted = fmtValueWithFormat(val, p.format, p.ref);
+                return '<div class="field-row"><div class="field-label">' + esc(label)
+                    + '</div><div class="field-value">' + formatted + '</div></div>';
+            }
+            case 'divider':
+                return '<hr class="layout-divider"/>';
+
+            case 'table': {
+                var items = resolveFieldValue(data, p.ref);
+                if (!Array.isArray(items) || items.length === 0) {
+                    return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(p.ref))
+                        + '</div><div class="field-value" style="color:var(--c-text-muted)">\u2014</div></div>';
+                }
+                var cols = (p.columns || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+                var widths = (p.widths || '').split(',').map(function (s) { return s.trim(); });
+                if (cols.length === 0) {
+                    // Auto-detect columns from first item
+                    var first = items[0];
+                    if (first && typeof first === 'object') cols = Object.keys(first);
+                }
+                var thtml = '<details class="detail-section" open><summary><span class="summary-title">'
+                    + esc(displayFieldLabel(p.ref)) + '</span><span class="summary-meta">' + items.length + ' ' + esc(t('elements'))
+                    + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
+                cols.forEach(function (col, idx) {
+                    var w = widths[idx] ? ' style="width:' + esc(widths[idx]) + '%"' : '';
+                    thtml += '<th' + w + '>' + esc(displayFieldLabel(col)) + '</th>';
+                });
+                thtml += '</tr></thead><tbody>';
+                items.forEach(function (item) {
+                    thtml += '<tr>';
+                    cols.forEach(function (col) {
+                        var cellVal = (item && typeof item === 'object') ? item[col] : item;
+                        thtml += '<td>' + fmtValue(cellVal, col) + '</td>';
+                    });
+                    thtml += '</tr>';
+                });
+                thtml += '</tbody></table></div></div></details>';
+                return thtml;
+            }
+            case 'tabs': {
+                var tabId = 'lt' + (collectionIdCounter++);
+                var html = '<div class="layout-tabs">';
+                if (p.title) html += '<div class="layout-tabs-header">' + esc(p.title) + '</div>';
+                html += '<div class="tab-bar" data-tabgroup="' + tabId + '">';
+                children.forEach(function (child, idx) {
+                    var cp = child.props || {};
+                    html += '<button type="button" data-tab-target="' + tabId + '-' + idx + '"'
+                        + (idx === 0 ? ' class="active"' : '') + '>' + esc(cp.title || 'Tab ' + (idx + 1)) + '</button>';
+                });
+                html += '</div>';
+                children.forEach(function (child, idx) {
+                    html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + tabId + '-' + idx + '">'
+                        + renderLayoutChildren(data, child.children || []) + '</div>';
+                });
+                html += '</div>';
+                return html;
+            }
+            case 'tab':
+                return renderLayoutChildren(data, children);
+
+            default:
+                return '';
+        }
+    }
+
+    function renderLayoutChildren(data, children) {
+        var html = '';
+        for (var i = 0; i < children.length; i++) {
+            html += renderLayoutNode(data, children[i]);
+        }
+        return html;
+    }
+
+    function bindTabEvents() {
+        document.querySelectorAll('.tab-bar button[data-tab-target]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var target = btn.getAttribute('data-tab-target');
+                var bar = btn.parentElement;
+                bar.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+                btn.classList.add('active');
+                var container = bar.parentElement;
+                container.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+                var panel = container.querySelector('[data-tab-id="' + target + '"]');
+                if (panel) panel.classList.add('active');
+            });
+        });
     }
 
     function applyLanguage() {

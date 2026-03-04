@@ -674,7 +674,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(xmlPath, null);
+            generateHtmlViewerIfNeeded(xmlPath, null, null);
 
             if (isXMLFormat() && operation.sharedXSDBuilder == null) {
                 Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
@@ -909,7 +909,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(xmlPath, schemaClass);
+            generateHtmlViewerIfNeeded(xmlPath, schemaClass, config);
 
             // Only generate individual XSD if not using shared builder
             if (isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
@@ -1026,7 +1026,7 @@ public class ExportEngine {
         return sanitizeModuleName(parent.toString());
     }
 
-    private void generateHtmlViewerIfNeeded(Path outputPath, DOSchemaClass schemaClass) {
+    private void generateHtmlViewerIfNeeded(Path outputPath, DOSchemaClass schemaClass, migration4o.models.ui.ClassExportConfig config) {
         if (!operation.generateHtmlViewer || outputPath == null) {
             return;
         }
@@ -1034,7 +1034,11 @@ public class ExportEngine {
         try {
             if ("JS".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
                 String baseHref = computeBaseHref(outputPath);
-                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass, cachedNavJson, baseHref);
+                String layoutJson = "null";
+                if (config != null && config.hasLayout()) {
+                    layoutJson = config.getLayout().toJson();
+                }
+                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass, cachedNavJson, baseHref, layoutJson);
             } else {
                 if (schemaClass != null) {
                     DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
@@ -1204,7 +1208,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(Paths.get(outputPath), null);
+            generateHtmlViewerIfNeeded(Paths.get(outputPath), null, null);
 
             // Generate XSD schema
             if (isXMLFormat()) {
