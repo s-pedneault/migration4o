@@ -13,27 +13,53 @@ public class MigrationModule {
 
     private final String name;
     private final String id;
+    /** Optional Lucide icon name (e.g. "fire-truck", "building-2"). May be null. */
+    private final String icon;
+    /** Optional hex background color for the nav tile (e.g. "#e8f0fe"). Null = auto. */
+    private final String tileBg;
+    /** Optional hex text/label color for the nav tile (e.g. "#1a1a2e"). Null = auto. */
+    private final String tileTextColor;
+    /** Optional hex icon color for the nav tile (e.g. "#1a73e8"). Null = auto. */
+    private final String tileIconColor;
+    /** Optional tile label font-size "12"–"16" (px). Null = default (14). */
+    private final String tileFontSize;
     private final List<ClassExportConfig> classConfigs;
     private final List<MigrationModule> childModules;
 
-    public MigrationModule(String name, String id, List<ClassExportConfig> classConfigs,
-            List<MigrationModule> childModules) {
+    public MigrationModule(String name, String id, String icon, String tileBg, String tileTextColor, String tileIconColor, String tileFontSize, List<ClassExportConfig> classConfigs, List<MigrationModule> childModules) {
         this.name = name;
         this.id = id;
+        this.icon = (icon != null && !icon.isBlank()) ? icon.trim() : null;
+        this.tileBg = (tileBg != null && !tileBg.isBlank()) ? tileBg.trim() : null;
+        this.tileTextColor = (tileTextColor != null && !tileTextColor.isBlank()) ? tileTextColor.trim() : null;
+        this.tileIconColor = (tileIconColor != null && !tileIconColor.isBlank()) ? tileIconColor.trim() : null;
+        this.tileFontSize = (tileFontSize != null && !tileFontSize.isBlank()) ? tileFontSize.trim() : null;
         this.classConfigs = new ArrayList<>(classConfigs);
         this.childModules = new ArrayList<>(childModules);
+    }
+
+    /** Backward-compatible constructor — tile colors / font-size default to null. */
+    public MigrationModule(String name, String id, String icon, List<ClassExportConfig> classConfigs, List<MigrationModule> childModules) {
+        this(name, id, icon, null, null, null, null, classConfigs, childModules);
+    }
+
+    /** Backward-compatible constructor — icon and tile colors default to null. */
+    public MigrationModule(String name, String id, List<ClassExportConfig> classConfigs, List<MigrationModule> childModules) {
+        this(name, id, null, null, null, null, null, classConfigs, childModules);
     }
 
     /**
      * Backward compatibility constructor that takes class names as strings.
      */
-    public MigrationModule(String name, String id, List<String> classNames, List<MigrationModule> childModules,
-            boolean isStringList) {
+    public MigrationModule(String name, String id, List<String> classNames, List<MigrationModule> childModules, boolean isStringList) {
         this.name = name;
         this.id = id;
-        this.classConfigs = classNames.stream()
-                .map(ClassExportConfig::new)
-                .collect(Collectors.toList());
+        this.icon = null;
+        this.tileBg = null;
+        this.tileTextColor = null;
+        this.tileIconColor = null;
+        this.tileFontSize = null;
+        this.classConfigs = classNames.stream().map(ClassExportConfig::new).collect(Collectors.toList());
         this.childModules = new ArrayList<>(childModules);
     }
 
@@ -42,7 +68,7 @@ public class MigrationModule {
     }
 
     public MigrationModule(String name, List<ClassExportConfig> classConfigs) {
-        this(name, name, classConfigs, Collections.emptyList());
+        this(name, name, null, null, null, null, null, classConfigs, Collections.emptyList());
     }
 
     public String getName() {
@@ -51,6 +77,35 @@ public class MigrationModule {
 
     public String getId() {
         return id;
+    }
+
+    /**
+     * Returns the Lucide icon name for this module (may be null).
+     */
+    public String getIcon() {
+        return icon;
+    }
+
+    /** Returns the hex tile background color (e.g. "#e8f0fe") or null for auto. */
+    public String getTileBg() {
+        return tileBg;
+    }
+
+    /** Returns the hex tile text/label color (e.g. "#1a1a2e") or null for auto. */
+    public String getTileTextColor() {
+        return tileTextColor;
+    }
+
+    /** Returns the hex tile icon color (e.g. "#1a73e8") or null for auto. */
+    public String getTileIconColor() {
+        return tileIconColor;
+    }
+
+    /**
+     * Returns the tile label font-size string (e.g. "14") or null for default.
+     */
+    public String getTileFontSize() {
+        return tileFontSize;
     }
 
     /**
@@ -66,9 +121,7 @@ public class MigrationModule {
      * appear multiple times in the list.
      */
     public List<String> getClassNames() {
-        return classConfigs.stream()
-                .map(ClassExportConfig::getClassName)
-                .collect(Collectors.toList());
+        return classConfigs.stream().map(ClassExportConfig::getClassName).collect(Collectors.toList());
     }
 
     public List<MigrationModule> getChildModules() {

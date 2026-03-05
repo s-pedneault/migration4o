@@ -77,13 +77,6 @@
         }
     };
 
-    function countLeaves(item) {
-        if (!item.children || item.children.length === 0) return 1;
-        var n = 0;
-        item.children.forEach(function (c) { n += countLeaves(c); });
-        return n;
-    }
-
     function escHtml(s) {
         return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     }
@@ -99,12 +92,15 @@
         return false;
     }
 
+    // Tile color palette: cycles through 8 hues for depth-0 module tiles
+    var tileColorIndex = 0;
+
     function renderNavItem(item, depth) {
         var hasCh = item.children && item.children.length > 0;
-        var indent = depth > 0 ? (depth * 16) : 0;
+        var indent = depth > 0 ? (depth * 14) : 0;
 
         if (!hasCh) {
-            // ── Leaf item ─────────────────────────────────────
+            // ── Leaf item (database icon) ─────────────────────────────────
             var isCurrent = isCurrentPage(item.href);
             var a = document.createElement('a');
             a.className = 'nav-item-link' + (isCurrent ? ' nav-current' : '');
@@ -114,7 +110,7 @@
             var iconSpan = document.createElement('span');
             iconSpan.className = 'nav-item-icon';
             if (indent > 0) iconSpan.style.paddingLeft = indent + 'px';
-            iconSpan.appendChild(ICONS.file());
+            iconSpan.appendChild(ICONS.database());
 
             var labelSpan = document.createElement('span');
             labelSpan.className = 'nav-item-label';
@@ -125,7 +121,70 @@
             return a;
         }
 
-        // ── Group item ────────────────────────────────────
+        if (depth === 0) {
+            // ── Top-level module tile ─────────────────────────────────────
+            var hasCurrent = hasCurrentDescendant(item);
+            // Always auto-cycle the palette class as default; inline styles override below
+            var colorIdx = tileColorIndex % 8;
+            tileColorIndex++;
+            var colorClass = 'nav-tile-c' + colorIdx;
+
+            var tileDiv = document.createElement('div');
+            tileDiv.className = 'nav-module-tile ' + colorClass + (hasCurrent ? ' open' : '');
+
+            var tileBtn = document.createElement('button');
+            tileBtn.type = 'button';
+            tileBtn.className = 'nav-tile-btn';
+            tileBtn.title = item.label || '';
+
+            var iconWrap = document.createElement('span');
+            iconWrap.className = 'nav-tile-icon';
+            if (item.icon) {
+                // item.icon is a pre-built inline SVG string from LucideIcons.java
+                iconWrap.innerHTML = item.icon;
+            } else {
+                iconWrap.appendChild(ICONS.folder());
+            }
+
+            var labelSpan = document.createElement('span');
+            labelSpan.className = 'nav-tile-label';
+            labelSpan.textContent = item.label || '';
+            if (item.tileFontSize) {
+                labelSpan.style.fontSize = item.tileFontSize + 'px';
+            }
+
+            // ── Optional inline color overrides ───────────────────────────
+            if (item.tileBg) {
+                tileDiv.style.setProperty('--tile-bg', item.tileBg);
+                tileDiv.style.setProperty('--tile-bg-open', item.tileBg);
+            }
+            if (item.tileText) {
+                labelSpan.style.color = item.tileText;
+            }
+            if (item.tileIcon) {
+                iconWrap.style.color = item.tileIcon;
+            }
+
+            tileBtn.appendChild(iconWrap);
+            tileBtn.appendChild(labelSpan);
+
+            var childDiv = document.createElement('div');
+            childDiv.className = 'nav-group-children nav-tile-children' + (hasCurrent ? ' open' : '');
+            (item.children || []).forEach(function (child) {
+                childDiv.appendChild(renderNavItem(child, depth + 1));
+            });
+
+            tileBtn.addEventListener('click', function () {
+                tileDiv.classList.toggle('open');
+                childDiv.classList.toggle('open');
+            });
+
+            tileDiv.appendChild(tileBtn);
+            tileDiv.appendChild(childDiv);
+            return tileDiv;
+        }
+
+        // ── Sub-group item (depth > 0, has children) ─────────────────────
         var hasCurrent = hasCurrentDescendant(item);
         var div = document.createElement('div');
 
@@ -137,27 +196,14 @@
         var iconSpan = document.createElement('span');
         iconSpan.className = 'nav-group-icon';
         if (indent > 0) iconSpan.style.paddingLeft = indent + 'px';
-        // Start with open folder if expanded, closed folder otherwise
         iconSpan.appendChild(hasCurrent ? ICONS.folderOpen() : ICONS.folder());
 
         var labelSpan = document.createElement('span');
         labelSpan.className = 'nav-group-label';
         labelSpan.textContent = item.label || '';
 
-        // Count badge
-        var leafCount = countLeaves(item);
-        var countBadge = document.createElement('span');
-        countBadge.className = 'nav-child-count';
-        countBadge.textContent = leafCount;
-
-        var chevSpan = document.createElement('span');
-        chevSpan.className = 'nav-chevron';
-        chevSpan.appendChild(ICONS.chevron());
-
         btn.appendChild(iconSpan);
         btn.appendChild(labelSpan);
-        btn.appendChild(countBadge);
-        btn.appendChild(chevSpan);
 
         var childDiv = document.createElement('div');
         childDiv.className = 'nav-group-children' + (hasCurrent ? ' open' : '');
@@ -168,7 +214,6 @@
         btn.addEventListener('click', function () {
             var isOpen = btn.classList.toggle('open');
             childDiv.classList.toggle('open');
-            // Swap folder icon
             iconSpan.innerHTML = '';
             iconSpan.appendChild(isOpen ? ICONS.folderOpen() : ICONS.folder());
         });

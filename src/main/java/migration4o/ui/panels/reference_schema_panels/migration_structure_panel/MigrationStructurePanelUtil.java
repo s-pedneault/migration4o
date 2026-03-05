@@ -170,7 +170,7 @@ public class MigrationStructurePanelUtil {
             }
         }
 
-        return new MigrationModule(module.getName(), module.getId(), classConfigs, childModules);
+        return new MigrationModule(module.getName(), module.getId(), module.getIcon(), module.getTileBg(), module.getTileTextColor(), module.getTileIconColor(), module.getTileFontSize(), classConfigs, childModules);
     }
 
     /**
@@ -290,7 +290,7 @@ public class MigrationStructurePanelUtil {
      * @param exportedClasses set to track exported class names (modified in place)
      */
     public static void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module, DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
-        ModuleNode moduleNode = new ModuleNode(module.getName(), module.getId());
+        ModuleNode moduleNode = new ModuleNode(module.getName(), module.getId(), module.getIcon(), module.getTileBg(), module.getTileTextColor(), module.getTileIconColor(), module.getTileFontSize());
         DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
         parentNode.add(moduleTreeNode);
 
@@ -556,7 +556,7 @@ public class MigrationStructurePanelUtil {
             }
         }
 
-        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), classConfigs, childModules);
+        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), moduleNode.getIcon(), moduleNode.getTileBg(), moduleNode.getTileTextColor(), moduleNode.getTileIconColor(), moduleNode.getTileFontSize(), classConfigs, childModules);
     }
 
 }

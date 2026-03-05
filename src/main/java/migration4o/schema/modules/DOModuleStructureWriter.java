@@ -47,6 +47,21 @@ public class DOModuleStructureWriter {
         if (module.getId() != null && !module.getId().isEmpty()) {
             writer.write(" id=\"" + escapeXml(module.getId()) + "\"");
         }
+        if (module.getIcon() != null && !module.getIcon().isEmpty()) {
+            writer.write(" icon=\"" + escapeXml(module.getIcon()) + "\"");
+        }
+        if (module.getTileBg() != null && !module.getTileBg().isEmpty()) {
+            writer.write(" tile-bg=\"" + escapeXml(module.getTileBg()) + "\"");
+        }
+        if (module.getTileTextColor() != null && !module.getTileTextColor().isEmpty()) {
+            writer.write(" tile-text=\"" + escapeXml(module.getTileTextColor()) + "\"");
+        }
+        if (module.getTileIconColor() != null && !module.getTileIconColor().isEmpty()) {
+            writer.write(" tile-icon=\"" + escapeXml(module.getTileIconColor()) + "\"");
+        }
+        if (module.getTileFontSize() != null && !module.getTileFontSize().isEmpty()) {
+            writer.write(" tile-font-size=\"" + escapeXml(module.getTileFontSize()) + "\"");
+        }
         writer.write(">\n");
 
         // Write class configurations

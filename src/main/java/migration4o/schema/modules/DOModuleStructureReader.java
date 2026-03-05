@@ -55,6 +55,26 @@ public class DOModuleStructureReader {
         if (id == null || id.isEmpty()) {
             id = name; // Use name as ID if no ID specified
         }
+        String icon = moduleElement.getAttribute("icon");
+        if (icon != null && icon.isEmpty()) {
+            icon = null;
+        }
+        String tileBg = moduleElement.getAttribute("tile-bg");
+        if (tileBg != null && tileBg.isEmpty()) {
+            tileBg = null;
+        }
+        String tileTextColor = moduleElement.getAttribute("tile-text");
+        if (tileTextColor != null && tileTextColor.isEmpty()) {
+            tileTextColor = null;
+        }
+        String tileIconColor = moduleElement.getAttribute("tile-icon");
+        if (tileIconColor != null && tileIconColor.isEmpty()) {
+            tileIconColor = null;
+        }
+        String tileFontSize = moduleElement.getAttribute("tile-font-size");
+        if (tileFontSize != null && tileFontSize.isEmpty()) {
+            tileFontSize = null;
+        }
 
         List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<MigrationModule> childModules = new ArrayList<>();
@@ -77,7 +97,7 @@ public class DOModuleStructureReader {
             }
         }
 
-        return new MigrationModule(name, id, classConfigs, childModules);
+        return new MigrationModule(name, id, icon, tileBg, tileTextColor, tileIconColor, tileFontSize, classConfigs, childModules);
     }
 
     /**

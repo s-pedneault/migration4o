@@ -24,6 +24,7 @@ import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.JsViewerHtmlGenerator;
+import migration4o.util.LucideIcons;
 import migration4o.util.SchemaUtil;
 import migration4o.util.XmlViewerHtmlGenerator;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -46,11 +47,33 @@ public class ExportEngine {
         final String label;
         /** Root-relative href (e.g. "Activités/Intervention/Intervention.html"); null for groups. */
         final String rootRelativeHref;
+        /** Inline SVG string for Lucide icon; non-null only when a known icon name is configured. */
+        final String iconSvg;
+        /** Nesting depth: 0 = top-level module tile, 1+ = child group or leaf. */
+        final int depth;
+        /** Hex tile background color; null = auto-cycle. */
+        final String tileBg;
+        /** Hex tile text/label color; null = auto. */
+        final String tileTextColor;
+        /** Hex tile icon color; null = auto. */
+        final String tileIconColor;
+        /** Tile label font-size string e.g. "14"; null = default. */
+        final String tileFontSize;
         final List<NavNode> children = new ArrayList<>();
 
         NavNode(String label, String rootRelativeHref) {
+            this(label, rootRelativeHref, null, 1, null, null, null, null);
+        }
+
+        NavNode(String label, String rootRelativeHref, String iconSvg, int depth, String tileBg, String tileTextColor, String tileIconColor, String tileFontSize) {
             this.label = label;
             this.rootRelativeHref = rootRelativeHref;
+            this.iconSvg = iconSvg;
+            this.depth = depth;
+            this.tileBg = tileBg;
+            this.tileTextColor = tileTextColor;
+            this.tileIconColor = tileIconColor;
+            this.tileFontSize = tileFontSize;
         }
 
         boolean isLeaf() {
@@ -192,12 +215,15 @@ public class ExportEngine {
             }
             Path actualModuleFolder = moduleFolderPath.getParent() != null ? moduleFolderPath.getParent().resolve(moduleId(m)) : base.resolve(moduleId(m));
 
-            NavNode moduleNode = new NavNode(m.getName(), null);
-            buildModuleNavChildren(moduleNode, m, actualModuleFolder, base);
+            // Only set iconSvg when the module has a recognized Lucide icon name
+            String iconName = m.getIcon();
+            String iconSvg = (iconName != null && LucideIcons.isKnown(iconName)) ? LucideIcons.getSvg(iconName) : null;
+            NavNode moduleNode = new NavNode(m.getName(), null, iconSvg, 0, m.getTileBg(), m.getTileTextColor(), m.getTileIconColor(), m.getTileFontSize());
+            buildModuleNavChildren(moduleNode, m, actualModuleFolder, base, 0);
 
             if (parts.length > 1) {
                 NavNode group = prefixGroups.computeIfAbsent(parts[0], k -> {
-                    NavNode g = new NavNode(k, null);
+                    NavNode g = new NavNode(k, null, null, 0, null, null, null, null);
                     navTree.add(g);
                     return g;
                 });
@@ -226,15 +252,18 @@ public class ExportEngine {
      * Recursively adds class leaves and child module groups to a nav node,
      * using root-relative href strings.
      */
-    private void buildModuleNavChildren(NavNode node, MigrationModule module, Path folderPath, Path base) {
+    private void buildModuleNavChildren(NavNode node, MigrationModule module, Path folderPath, Path base, int depth) {
         for (ClassExportConfig config : module.getClassConfigs()) {
             String destName = config.getDestinationFileName();
+            // Use the human-readable title from the reference schema when available
+            DOSchemaClass sc = (operation.referenceSchema != null) ? operation.referenceSchema.findClassByName(config.getClassName()) : null;
+            String label = (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
             String href = base.relativize(folderPath.resolve(destName + ".html")).toString().replace('\\', '/');
-            node.children.add(new NavNode(destName, href));
+            node.children.add(new NavNode(label, href, null, depth + 1, null, null, null, null));
         }
         for (MigrationModule child : module.getChildModules()) {
-            NavNode childNode = new NavNode(child.getName(), null);
-            buildModuleNavChildren(childNode, child, folderPath.resolve(moduleId(child)), base);
+            NavNode childNode = new NavNode(child.getName(), null, null, depth + 1, null, null, null, null);
+            buildModuleNavChildren(childNode, child, folderPath.resolve(moduleId(child)), base, depth + 1);
             node.children.add(childNode);
         }
     }
@@ -268,6 +297,22 @@ public class ExportEngine {
 
     private void appendNavNode(StringBuilder sb, NavNode node) {
         sb.append("{\"label\":\"").append(escNavJson(node.label)).append('"');
+        sb.append(",\"depth\":").append(node.depth);
+        if (node.iconSvg != null && !node.iconSvg.isEmpty()) {
+            sb.append(",\"icon\":\"").append(escNavJson(node.iconSvg)).append('"');
+        }
+        if (node.tileBg != null) {
+            sb.append(",\"tileBg\":\"").append(escNavJson(node.tileBg)).append('"');
+        }
+        if (node.tileTextColor != null) {
+            sb.append(",\"tileText\":\"").append(escNavJson(node.tileTextColor)).append('"');
+        }
+        if (node.tileIconColor != null) {
+            sb.append(",\"tileIcon\":\"").append(escNavJson(node.tileIconColor)).append('"');
+        }
+        if (node.tileFontSize != null) {
+            sb.append(",\"tileFontSize\":\"").append(escNavJson(node.tileFontSize)).append('"');
+        }
         if (node.isLeaf()) {
             sb.append(",\"href\":\"").append(escNavJson(node.rootRelativeHref)).append('"');
         } else {

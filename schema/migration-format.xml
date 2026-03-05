@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <modules>
-        <module name="Organisation" id="1-Organisation">
+        <module name="Organisation" id="1-Organisation" icon="brick-wall-fire" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Configuration" id="Configuration">
                 <module name="Paramètres" id="Parametres">
                     <classRef sourceName="gest.consolide.ParamSSI">
@@ -70,7 +70,7 @@
                 <classRef sourceName="gest.rapport.RapportPerso"/>
             </module>
         </module>
-        <module name="Territoire" id="2-Territoire">
+        <module name="Territoire" id="2-Territoire" icon="map" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Dossier adresse" id="DossierAdresse">
                 <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse">
                     <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
@@ -120,7 +120,7 @@
                 <classRef sourceName="gest.secCiv.PPI"/>
             </module>
         </module>
-        <module name="Matériel" id="4-Materiel">
+        <module name="Matériel" id="4-Materiel" icon="van" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <classRef sourceName="gest.caserne.Caserne">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
@@ -168,7 +168,7 @@
                 </module>
             </module>
         </module>
-        <module name="Personnel" id="3-Personnel">
+        <module name="Personnel" id="3-Personnel" icon="users" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <classRef sourceName="gest.employe.Employe" description="Profil des employés">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
@@ -201,7 +201,7 @@
                 <classRef sourceName="gest.horaire.TypeActivHoraire"/>
             </module>
         </module>
-        <module name="Activités" id="5-Activites">
+        <module name="Activités" id="5-Activites" icon="flame" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Prévention" id="Prevention">
                 <classRef sourceName="gest.prevention.Prevention">
                     <unitCost priceList="" cost="0.5"/>

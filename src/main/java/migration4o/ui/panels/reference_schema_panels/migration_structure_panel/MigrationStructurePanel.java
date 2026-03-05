@@ -543,15 +543,20 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     private void addModule() {
-        ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Add Module", null, null);
+        ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Add Module", null, null, null, null, null, null, null);
         dialog.setVisible(true);
 
         if (dialog.isConfirmed()) {
             String moduleName = dialog.getModuleName();
             String moduleId = dialog.getModuleId();
+            String icon = dialog.getIcon();
+            String tileBg = dialog.getTileBg();
+            String tileTextColor = dialog.getTileTextColor();
+            String tileIconColor = dialog.getTileIconColor();
+            String tileFontSize = dialog.getTileFontSize();
 
             DefaultMutableTreeNode root = getExportRoot();
-            ModuleNode moduleNode = new ModuleNode(moduleName, moduleId);
+            ModuleNode moduleNode = new ModuleNode(moduleName, moduleId, icon, tileBg, tileTextColor, tileIconColor, tileFontSize);
             DefaultMutableTreeNode newModule = new DefaultMutableTreeNode(moduleNode);
 
             // Check if a module is selected - if so, add as child
@@ -583,12 +588,17 @@ public class MigrationStructurePanel extends JPanel {
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
         if (node.getUserObject() instanceof ModuleNode) {
             ModuleNode moduleNode = (ModuleNode) node.getUserObject();
-            ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Rename Module", moduleNode.getName(), moduleNode.getId());
+            ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Rename Module", moduleNode.getName(), moduleNode.getId(), moduleNode.getIcon(), moduleNode.getTileBg(), moduleNode.getTileTextColor(), moduleNode.getTileIconColor(), moduleNode.getTileFontSize());
             dialog.setVisible(true);
 
             if (dialog.isConfirmed()) {
                 moduleNode.setName(dialog.getModuleName());
                 moduleNode.setId(dialog.getModuleId());
+                moduleNode.setIcon(dialog.getIcon());
+                moduleNode.setTileBg(dialog.getTileBg());
+                moduleNode.setTileTextColor(dialog.getTileTextColor());
+                moduleNode.setTileIconColor(dialog.getTileIconColor());
+                moduleNode.setTileFontSize(dialog.getTileFontSize());
                 reloadExportModel();
             }
         }
