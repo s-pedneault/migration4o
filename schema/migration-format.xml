@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <database>
     <modules>
-        <module name="Organisation" id="Organisation">
+        <module name="Organisation" id="1-Organisation">
             <module name="Configuration" id="Configuration">
-                <module name="Paramètres" id="Paramètres">
+                <module name="Paramètres" id="Parametres">
                     <classRef sourceName="gest.consolide.ParamSSI">
                         <unitCost priceList="" cost="1000.0"/>
                     </classRef>
@@ -33,7 +33,7 @@
                     <classRef sourceName="gest.schema.ParamSchema"/>
                     <classRef sourceName="gest.secCiv.ParamSecCiv"/>
                 </module>
-                <module name="Listes" id="listes">
+                <module name="Listes" id="Listes">
                     <classRef sourceName="gest.activite.Acte"/>
                     <classRef sourceName="gest.activite.TypeActivQuart"/>
                     <classRef sourceName="gest.champPerso.TypeChampPerso"/>
@@ -53,6 +53,8 @@
                     <classRef sourceName="gest.preference.Preference"/>
                     <classRef sourceName="gest.graph.GraphLib"/>
                     <classRef sourceName="gest.graph.TypeGraph"/>
+                    <classRef sourceName="gest.DSI2003.DSI2003"/>
+                    <classRef sourceName="gest.DSI2003.DSI2003Perso"/>
                 </module>
             </module>
             <module name="Rapports" id="Rapports">
@@ -68,8 +70,8 @@
                 <classRef sourceName="gest.rapport.RapportPerso"/>
             </module>
         </module>
-        <module name="Territoire" id="Territoire">
-            <module name="Dossier adresse" id="Dossier adresse">
+        <module name="Territoire" id="2-Territoire">
+            <module name="Dossier adresse" id="DossierAdresse">
                 <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse">
                     <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
                     <unitCost priceList="" cost="1.0"/>
@@ -90,7 +92,7 @@
                     </classRef>
                     <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
                 </module>
-                <module name="Caractéristiques" id="Caractéristiques">
+                <module name="Caractéristiques" id="Caracteristiques">
                     <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
                     <classRef sourceName="gest.typeCheminee.TypeCheminee"/>
                     <classRef sourceName="gest.typeChauffage.TypeChauffage"/>
@@ -100,14 +102,14 @@
                     <classRef sourceName="gest.parement.Parement"/>
                 </module>
             </module>
-            <module name="Plan d&apos;intervention" id="Plan d&apos;intervention">
+            <module name="Plan d&apos;intervention" id="PlanIntervention">
                 <classRef sourceName="gest.planInterv.PlanInterv">
                     <unitCost priceList="" cost="1.0"/>
                 </classRef>
                 <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
                 <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
             </module>
-            <module name="Sécurité civile" id="Sécurité civile">
+            <module name="Sécurité civile" id="SecuriteCivile">
                 <classRef sourceName="gest.docum.Docum"/>
                 <classRef sourceName="gest.secCiv.LogSinistre"/>
                 <classRef sourceName="gest.secCiv.NivAlerte"/>
@@ -118,14 +120,14 @@
                 <classRef sourceName="gest.secCiv.PPI"/>
             </module>
         </module>
-        <module name="Matériel" id="Matériel">
+        <module name="Matériel" id="4-Materiel">
             <classRef sourceName="gest.caserne.Caserne">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
             <classRef sourceName="gest.vehicule.Vehicule">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
-            <module name="Équipements" id="Équipements">
+            <module name="Équipements" id="Equipements">
                 <classRef sourceName="gest.equipement.EquipExist">
                     <unitCost priceList="" cost="1.0"/>
                 </classRef>
@@ -166,7 +168,7 @@
                 </module>
             </module>
         </module>
-        <module name="Personnel" id="Personnel">
+        <module name="Personnel" id="3-Personnel">
             <classRef sourceName="gest.employe.Employe" description="Profil des employés">
                 <unitCost priceList="" cost="1.0"/>
             </classRef>
@@ -199,8 +201,8 @@
                 <classRef sourceName="gest.horaire.TypeActivHoraire"/>
             </module>
         </module>
-        <module name="Activités" id="Activités">
-            <module name="Prévention" id="Prévention">
+        <module name="Activités" id="5-Activites">
+            <module name="Prévention" id="Prevention">
                 <classRef sourceName="gest.prevention.Prevention">
                     <unitCost priceList="" cost="0.5"/>
                 </classRef>
@@ -231,7 +233,7 @@
                 </classRef>
                 <classRef sourceName="gest.rci.TypeActivRci"/>
             </module>
-            <module name="Autre travail" id="Autre travail">
+            <module name="Autre travail" id="AutreTravail">
                 <classRef sourceName="gest.quart.Quart">
                     <unitCost priceList="" cost="0.25"/>
                 </classRef>

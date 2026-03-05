@@ -190,7 +190,7 @@ public class ExportEngine {
             for (String part : parts) {
                 moduleFolderPath = moduleFolderPath.resolve(part);
             }
-            Path actualModuleFolder = moduleFolderPath.getParent() != null ? moduleFolderPath.getParent().resolve(m.getName()) : base.resolve(m.getName());
+            Path actualModuleFolder = moduleFolderPath.getParent() != null ? moduleFolderPath.getParent().resolve(moduleId(m)) : base.resolve(moduleId(m));
 
             NavNode moduleNode = new NavNode(m.getName(), null);
             buildModuleNavChildren(moduleNode, m, actualModuleFolder, base);
@@ -234,9 +234,18 @@ public class ExportEngine {
         }
         for (MigrationModule child : module.getChildModules()) {
             NavNode childNode = new NavNode(child.getName(), null);
-            buildModuleNavChildren(childNode, child, folderPath.resolve(child.getName()), base);
+            buildModuleNavChildren(childNode, child, folderPath.resolve(moduleId(child)), base);
             node.children.add(childNode);
         }
+    }
+
+    /**
+     * Returns the folder identifier for a module: the module's ID when non-blank,
+     * otherwise falls back to the module's display name.
+     */
+    private static String moduleId(MigrationModule m) {
+        String id = m.getId();
+        return (id != null && !id.isBlank()) ? id : m.getName();
     }
 
     private String serializeNavTree() {
@@ -538,10 +547,8 @@ public class ExportEngine {
      * @throws Exception if export fails
      */
     public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
-        // Use module name as path (backward compatibility - single module at
-        // root
-        // level)
-        return exportModuleStructured(module, module.getName(), baseOutputPath, monitor, sharedTracker);
+        // Use module ID as path (falls back to name if ID is blank)
+        return exportModuleStructured(module, moduleId(module), baseOutputPath, monitor, sharedTracker);
     }
 
     /**
@@ -674,7 +681,7 @@ public class ExportEngine {
                 outputWriter.close();
                 outputWriter = null;
             }
-            generateHtmlViewerIfNeeded(xmlPath, null, null);
+            // Extra is exported to XML only — no HTML viewer generated.
 
             if (isXMLFormat() && operation.sharedXSDBuilder == null) {
                 Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
@@ -728,9 +735,8 @@ public class ExportEngine {
                 operation.monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
             }
 
-            // Create folder for this module (use module name to preserve proper
-            // casing)
-            Path modulePath = currentBasePath.resolve(module.getName());
+            // Create folder for this module using module ID (falls back to name)
+            Path modulePath = currentBasePath.resolve(moduleId(module));
             Files.createDirectories(modulePath);
 
             // Export each class configuration in this module

@@ -116,6 +116,8 @@
                     <div class="detail-drag"></div>
                 </div>
                 <div class="detail-sheet-top-right">
+                    <a class="detail-xml-btn" id="detailXmlBtn" href="#" target="_blank" title="Ouvrir le fichier XML source">XML</a>
+                    <span class="detail-btn-sep"></span>
                     <button class="detail-nav-btn" id="detailPrevBtn" type="button" title="Précédent">&#9666;</button>
                     <span class="detail-nav-pos" id="detailNavPos"></span>
                     <button class="detail-nav-btn" id="detailNextBtn" type="button" title="Suivant">&#9656;</button>
@@ -132,6 +134,14 @@
     <script>__EMBEDDED_JS_DATA__</script>
     <script>var entityName = '__ENTITY_NAME__';</script>
     <script>__SIDEBAR_NAV_JS__</script>
+    <script>
+    (function() {
+        var btn = document.getElementById('detailXmlBtn');
+        if (btn) {
+            btn.href = window.location.href.replace(/\.html(\?.*)?$/, '.xml$1');
+        }
+    })();
+    </script>
 </body>
 
 </html>

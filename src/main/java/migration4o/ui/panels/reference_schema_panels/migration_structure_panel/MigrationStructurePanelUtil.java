@@ -520,7 +520,9 @@ public class MigrationStructurePanelUtil {
             Object userObject = currentNode.getUserObject();
             if (userObject instanceof ModuleNode) {
                 ModuleNode moduleNode = (ModuleNode) userObject;
-                pathParts.add(0, moduleNode.getName()); // Add at beginning to build path from root
+                String part = (moduleNode.getId() != null && !moduleNode.getId().isBlank())
+                        ? moduleNode.getId() : moduleNode.getName();
+                pathParts.add(0, part); // Add at beginning to build path from root
             }
             currentNode = (DefaultMutableTreeNode) currentNode.getParent();
         }

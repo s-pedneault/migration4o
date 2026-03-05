@@ -14,7 +14,7 @@ import java.util.Locale;
 
 /**
  * TreeTableModel for displaying migration structure with pricing columns.
- * Columns: Tree (Name), Description, Unit Cost, Cost, Sub-total, Total
+ * Columns: Tree (Name), ID, Description, Unit Cost, Cost, Sub-total, Total
  */
 public class ExportTreeTableModel extends AbstractTreeTableModel {
 
@@ -23,6 +23,7 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
 
     private static final String[] COLUMN_NAMES = {
             "Name",
+            "ID",
             "Description",
             "Unit Cost",
             "Cost",
@@ -32,11 +33,12 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
 
     private static final Class<?>[] COLUMN_TYPES = {
             String.class, // Name (tree column)
+            String.class, // ID
             String.class, // Description
             String.class, // Unit Cost (formatted as money)
             String.class, // Cost (formatted as money)
             String.class, // Sub-total (formatted as money)
-            String.class // Total (formatted as money)
+            String.class  // Total (formatted as money)
     };
 
     public ExportTreeTableModel(Object root) {
@@ -100,7 +102,14 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                     return userObject != null ? userObject.toString() : "";
                 }
 
-            case 1: // Description
+            case 1: // ID (modules only)
+                if (userObject instanceof ModuleNode) {
+                    String id = ((ModuleNode) userObject).getId();
+                    return id != null ? id : "";
+                }
+                return "";
+
+            case 2: // Description
                 if (userObject instanceof ClassNode) {
                     ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
                     if (config != null && config.getDescription() != null) {
@@ -109,7 +118,7 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 }
                 return "";
 
-            case 2: // Unit Cost
+            case 3: // Unit Cost
                 if (userObject instanceof ClassNode) {
                     ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
                     if (config != null) {
@@ -121,7 +130,7 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 }
                 return "";
 
-            case 3: // Cost (for classes only)
+            case 4: // Cost (for classes only)
                 if (userObject instanceof ClassNode) {
                     ClassNode classNode = (ClassNode) userObject;
                     ClassExportConfig config = classNode.getExportConfig();
@@ -137,13 +146,13 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 }
                 return "";
 
-            case 4: // Sub-total (for modules only)
+            case 5: // Sub-total (for modules only)
                 if (userObject instanceof ModuleNode) {
                     return MONEY_FORMAT.format(calculateModuleSubtotal(treeNode));
                 }
                 return "";
 
-            case 5: // Total (for root node only)
+            case 6: // Total (for root node only)
                 // Only show total for the root node
                 if (treeNode == root) {
                     return MONEY_FORMAT.format(calculateGrandTotal((DefaultMutableTreeNode) root));

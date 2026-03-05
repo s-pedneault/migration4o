@@ -1108,6 +1108,35 @@ body {
     flex-shrink: 0;
 }
 
+.detail-xml-btn {
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+    color: var(--c-text-secondary);
+    border-radius: 8px;
+    height: 30px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    letter-spacing: 0.04em;
+}
+
+.detail-xml-btn:hover {
+    background: var(--c-bg);
+    color: var(--c-text);
+}
+
+.detail-btn-sep {
+    display: inline-block;
+    width: 8px;
+    flex-shrink: 0;
+}
+
 .detail-nav-btn {
     border: 1px solid var(--c-border);
     background: var(--c-surface);

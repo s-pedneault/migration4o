@@ -589,7 +589,7 @@ public class MigrationStructurePanel extends JPanel {
             if (dialog.isConfirmed()) {
                 moduleNode.setName(dialog.getModuleName());
                 moduleNode.setId(dialog.getModuleId());
-                notifyNodeChanged(node);
+                reloadExportModel();
             }
         }
     }

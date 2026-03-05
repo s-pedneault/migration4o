@@ -106,7 +106,7 @@
         <reference class="gest.caserne.Caserne" field="mVectQteRequise" />
         <reference class="gest.intervention.Intervention" field="mVectTabsStates" />
     </class>
-    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="false" parentClass="gest.gen.EntiteContientID" title="DSI 2003">
+    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="false" parentClass="gest.gen.EntiteContientID" title="DSI2003">
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
@@ -114,104 +114,104 @@
         <field source="mGroupe" destinationName="groupe" isExported="true" skipWhen="DEFAULT" type="string" title="Groupe" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="DEFAULT" type="string" title="Nom" />
     </class>
-    <class source="gest.DSI2003.DSI2003Perso" destinationName="DSI2003Perso" isExported="true" parentClass="gest.DSI2003.DSI2003" title="DSI 2003 perso">
+    <class source="gest.DSI2003.DSI2003Perso" destinationName="DSI2003Perso" isExported="true" parentClass="gest.DSI2003.DSI2003" title="DSI2003 perso">
         <reference class="gest.intervention.ParamIntervention" field="mVectCausesProbables" />
         <field source="mIDSousCodeMSP" destinationName="idSousCodeMSP" isExported="true" skipWhen="DEFAULT" type="gest.DSI2003.IDDSI2003" title="ID de sous code MSP" />
     </class>
-    <class source="gest.DSI2003.IDDSI2003" destinationName="IDDSI2003" isExported="false" parentClass="gest.gen.IDEntite" pointsTo="gest.DSI2003.DSI2003" title="IDDSI 2003">
+    <class source="gest.DSI2003.IDDSI2003" destinationName="IDDSI2003" isExported="false" parentClass="gest.gen.IDEntite" pointsTo="gest.DSI2003.DSI2003" title="IDDSI2003">
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 c 1">
+    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 C1">
         <reference class="gest.intervention.Intervention" field="mTypeEvenement" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 d 6">
+    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 D6">
         <reference class="gest.intervention.ParamIntervDSI2003" field="mMoyenTrans" />
         <reference class="gest.intervention.ParamIntervention" field="mMoyenTrans" />
         <reference class="gest.intervention.IntervChronologie" field="mMoyenTrans" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 d 8">
+    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 D8">
         <reference class="gest.intervention.IntervChronologie" field="mRaisonDelai" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 12">
+    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E12">
         <reference class="gest.intervention.IntervPerte" field="mIDAssurance" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 13">
+    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E13">
         <reference class="gest.intervention.IntervVehFeu" field="mIDEvacuation" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDEvacuation" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 14">
+    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E14">
         <reference class="gest.intervention.IntervVehFeu" field="mIDSauvetage" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDSauvetage" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 2">
+    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E2">
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.planInterv.ConfigSectionEtatInitialPourPlan" field="mIDCategRisque" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 3">
+    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E3">
         <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
         <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 e 8">
+    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 E8">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 1">
+    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F1">
         <reference class="gest.dossPrev.Protection" field="mIDAvertisseur" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 2">
+    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F2">
         <reference class="gest.intervention.IntervProtection" field="mIDAvertFonctionne" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 3">
+    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F3">
         <reference class="gest.dossPrev.Protection" field="mIDSystAlarme" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 4">
+    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F4">
         <reference class="gest.intervention.IntervProtection" field="mIDSystAlarmeFonctionne" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 5">
+    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F5">
         <reference class="gest.dossPrev.Protection" field="mIDExtinction" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 f 6">
+    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 F6">
         <reference class="gest.intervention.IntervProtection" field="mIDExtinctionFonctionne" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 1">
+    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G1">
         <reference class="gest.intervention.IntervCauseIncendie" field="mLieuOrigine" />
         <reference class="gest.rci.RciLieu" field="mIDLieuOrigine" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 2">
+    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G2">
         <reference class="gest.intervention.IntervCauseIncendie" field="mSourceChaleur" />
         <reference class="gest.rci.SourceChaleur" field="mSource" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 3">
+    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G3">
         <reference class="gest.rci.Combustible" field="mCombus" />
         <reference class="gest.intervention.IntervCauseIncendie" field="mCombustible" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 4">
+    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mCauseProbable" />
         <reference class="gest.rci.RciLieu" field="mIDCauseProbable" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 5">
+    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPremMatEnflamme" />
         <reference class="gest.rci.RciLieu" field="mIDPremMatEnflamme" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 6">
+    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G6">
         <reference class="gest.intervention.IntervCauseIncendie" field="mAmpleurIncendie" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 7">
+    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G7">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPropagation" />
         <reference class="gest.rci.RciLieu" field="mIDPropagation" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 g 8">
+    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 G8">
         <reference class="gest.intervention.IntervCauseIncendie" field="mDommage" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 h 5">
+    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 H5">
         <reference class="gest.intervention.IntervFeuExterieur" field="mIDAssurance" />
         <reference class="gest.intervention.IntervVehicule" field="mIDAssurance" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 m 4">
+    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 M4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDModeInflammation" />
         <reference class="gest.rci.RciLieu" field="mIDModeInflammation" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="ID de DSI 2003 m 5">
+    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" parentClass="gest.DSI2003.IDDSI2003" title="IDDsi2003 M5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
         <reference class="gest.rci.RciLieu" field="mIDEnergie" />
     </class>
@@ -1459,9 +1459,9 @@
     <class source="gest.dossPrev.Protection" destinationName="Protection" isExported="true" parentClass="gest.gen.Entite" title="Protection">
         <reference class="gest.dossPrev.DossPrev" field="mProtection" />
         <field source="mDetail" definition="mDetail" />
-        <field source="mIDAvertisseur" destinationName="idAvertisseur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F1" embedContents="true" title="ID d’avertisseur" />
-        <field source="mIDExtinction" destinationName="idExtinction" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F5" embedContents="true" title="ID d’extinction" />
-        <field source="mIDSystAlarme" destinationName="idSystemeAlarme" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F3" embedContents="true" title="ID de systeme alarme" />
+        <field source="mIDAvertisseur" destinationName="idAvertisseur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F1" embedContents="true" title="Avertisseur" />
+        <field source="mIDExtinction" destinationName="idExtinction" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F5" embedContents="true" title="Extinction" />
+        <field source="mIDSystAlarme" destinationName="idSystemeAlarme" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F3" embedContents="true" title="Système alarme" />
     </class>
     <class source="gest.employe.ContactUrgence" destinationName="ContactUrgence" isExported="true" parentClass="gest.gen.Entite" title="Contact urgence">
         <reference class="gest.employe.Employe" field="mVectContactUrgence" />

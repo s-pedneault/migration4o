@@ -16,8 +16,6 @@ import javax.swing.SwingUtilities;
 public class ModuleDialog extends migration4o.ui.common.dialogs.BaseFormDialog {
     private JTextField nameField;
     private JTextField idField;
-    private String initialName;
-    private String initialId;
 
     /**
      * Creates a new module dialog.
@@ -30,8 +28,13 @@ public class ModuleDialog extends migration4o.ui.common.dialogs.BaseFormDialog {
     public ModuleDialog(Window owner, String title, String initialName, String initialId) {
         super(owner, title);
 
-        this.initialName = initialName;
-        this.initialId = initialId;
+        // buildFormPanel() was already called by super(); set the initial values now.
+        if (initialName != null) {
+            nameField.setText(initialName);
+        }
+        if (initialId != null) {
+            idField.setText(initialId);
+        }
 
         // Set focus to name field after dialog is built
         SwingUtilities.invokeLater(() -> nameField.requestFocusInWindow());
@@ -42,9 +45,9 @@ public class ModuleDialog extends migration4o.ui.common.dialogs.BaseFormDialog {
         JPanel panel = createGridBagFormPanel();
         GridBagConstraints gbc = createFormConstraints();
 
-        // Initialize fields here, during buildFormPanel
-        nameField = new JTextField(initialName != null ? initialName : "", 20);
-        idField = new JTextField(initialId != null ? initialId : "", 20);
+        // Fields created with empty text; values are set in the constructor after super() returns.
+        nameField = new JTextField("", 20);
+        idField = new JTextField("", 20);
 
         addFormRow(panel, gbc, "Module Name:", nameField);
         addFormRow(panel, gbc, "Module ID:", idField);
