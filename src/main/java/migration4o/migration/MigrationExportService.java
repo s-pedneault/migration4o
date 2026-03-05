@@ -95,7 +95,7 @@ public class MigrationExportService {
 
         Set<Long> reachedObjectIds = collectReachedObjectIds(results);
         Set<Long> unreachedObjectIds = collectUnreachedObjectIds(databaseSchema, reachedObjectIds);
-        if (!unreachedObjectIds.isEmpty()) {
+        if (exporter.isXMLFormat() && !unreachedObjectIds.isEmpty()) {
             if (monitor != null) {
                 monitor.onStatusMessage("Exporting " + unreachedObjectIds.size() + " unreached objects to _Migration/Extra.xml...");
             }

@@ -3293,22 +3293,22 @@
         <field source="ChaufPrinc" destinationName="chauffagePrincipal" isExported="true" skipWhen="DEFAULT" type="gest.dossPrev.Chauffage" embedContents="true" title="Chauffage principal" />
         <field source="ChaufSecond" destinationName="chauffageSecondaire" isExported="true" skipWhen="DEFAULT" type="gest.dossPrev.Chauffage" embedContents="true" title="Chauffage secondaire" />
         <field source="UtiliseChaufSecond" destinationName="utiliseChauffageSecondaire" isExported="true" skipWhen="DEFAULT" type="boolean" title="Utilise chauffage secondaire" />
-        <field source="mElecEquipRaccorde" destinationName="electriciteEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Electricite équipement raccorde" />
+        <field source="mElecEquipRaccorde" destinationName="electriciteEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Electricite équipement raccordé" />
         <field source="mElecLocation" destinationName="electriciteEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Electricite emplacement" />
-        <field source="mElecNombre" destinationName="electriciteNombre" isExported="true" skipWhen="DEFAULT" type="int" title="Electricite nombre" />
+        <field source="mElecNombre" destinationName="electriciteNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Electricite nombre" />
         <field source="mElecQuant" destinationName="electriciteQuantite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" title="Electricite quantité" />
-        <field source="mGazEquipRaccorde" destinationName="gazEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Gaz équipement raccorde" />
+        <field source="mGazEquipRaccorde" destinationName="gazEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Gaz équipement raccordé" />
         <field source="mGazLocation" destinationName="gazEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Gaz emplacement" />
-        <field source="mGazNombre" destinationName="gazNombre" isExported="true" skipWhen="DEFAULT" type="int" title="Gaz nombre" />
+        <field source="mGazNombre" destinationName="gazNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Gaz nombre" />
         <field source="mGeneratrice" destinationName="generatrice" isExported="true" skipWhen="DEFAULT" type="boolean" title="Generatrice" />
         <field source="mGeneratricePos" destinationName="generatriceEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Generatrice emplacement" />
-        <field source="mMazEquipRaccorde" destinationName="mazoutEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout équipement raccorde" />
-        <field source="mMazLocation" destinationName="mazoutLocation" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout location" />
-        <field source="mMazNombre" destinationName="mazoutNombre" isExported="true" skipWhen="DEFAULT" type="int" title="Mazout nombre" />
+        <field source="mMazEquipRaccorde" destinationName="mazoutEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout équipement raccordé" />
+        <field source="mMazLocation" destinationName="mazoutEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout emplacement" />
+        <field source="mMazNombre" destinationName="mazoutNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Mazout nombre" />
         <field source="mMazQuant" destinationName="mazoutQuantite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" title="Mazout quantité" />
-        <field source="mPropEquipRaccorde" destinationName="propaneEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Propane équipement raccorde" />
+        <field source="mPropEquipRaccorde" destinationName="propaneEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Propane équipement raccordé" />
         <field source="mPropLocation" destinationName="propaneEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Propane emplacement" />
-        <field source="mPropNombre" destinationName="propaneNombre" isExported="true" skipWhen="DEFAULT" type="int" title="Propane nombre" />
+        <field source="mPropNombre" destinationName="propaneNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Propane nombre" />
         <field source="mPropQuant" destinationName="propaneQuantite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" title="Propane quantité" />
     </class>
     <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="HistoImportDossPrev" summary="[nomFichier] ([dateImport])" parentClass="gest.gen.EntiteContientID">
@@ -4395,8 +4395,75 @@
         <reference class="gest.planInterv.AlimDisp" field="mVitesseMoyenne" />
         <reference class="gest.planInterv.Exposition" field="mEspacement" />
         <reference class="gest.borne.Bouchon" field="mDiam" />
-        <field source="mMes" destinationName="mesure" isExported="true" skipWhen="DEFAULT" type="int" title="Mesure" />
-        <field source="mTypeQte" destinationName="typeQuantite" isExported="true" skipWhen="DEFAULT" type="int" title="Type de quantité" />
+        <field source="mMes" destinationName="mesure" isExported="true" skipWhen="DEFAULT" type="int" title="Mesure">
+            <valueMap>
+                <!-- Volume -->
+                <mapping from="1" to="VOLUME_GALLON_IMPERIAL" />
+                <mapping from="2" to="VOLUME_GALLON" />
+                <mapping from="3" to="VOLUME_LITRE" />
+                <mapping from="4" to="VOLUME_MILLILITRE" />
+                <mapping from="5" to="VOLUME_METRE_CUBE" />
+                <mapping from="6" to="VOLUME_PIED_CUBE" />
+                <mapping from="7" to="VOLUME_PINTE" />
+                <!-- Dimension -->
+                <mapping from="101" to="DIMENSION_PIED" />
+                <mapping from="102" to="DIMENSION_POUCE" />
+                <mapping from="103" to="DIMENSION_CENTIMETRE" />
+                <mapping from="104" to="DIMENSION_MILLIMETRE" />
+                <mapping from="105" to="DIMENSION_METRE" />
+                <mapping from="106" to="DIMENSION_KILOMETRE" />
+                <mapping from="107" to="DIMENSION_MILE" />
+                <!-- Poids -->
+                <mapping from="201" to="POIDS_LIVRE" />
+                <mapping from="202" to="POIDS_KILO" />
+                <mapping from="203" to="POIDS_TONNE_IMP" />
+                <mapping from="204" to="POIDS_TONNE_METRIQUE" />
+                <mapping from="205" to="POIDS_GRAMME" />
+                <mapping from="206" to="POIDS_ONCE" />
+                <mapping from="207" to="POIDS_TONNE_US" />
+                <!-- Pression -->
+                <mapping from="301" to="PRESSION_LBS_POUCE_CUBE" />
+                <mapping from="302" to="PRESSION_MILLIPASCAL" />
+                <mapping from="303" to="PRESSION_PASCAL" />
+                <mapping from="304" to="PRESSION_KILOPASCAL" />
+                <!-- Débit -->
+                <mapping from="401" to="DEBIT_GPM" />
+                <mapping from="402" to="DEBIT_GIPM" />
+                <mapping from="403" to="DEBIT_LPM" />
+                <!-- Capacité électrique -->
+                <mapping from="501" to="CAPACITE_ELECTRIQUE_AMPERE" />
+                <!-- Vitesse -->
+                <mapping from="601" to="VITESSE_KMH" />
+                <!-- Aire -->
+                <mapping from="701" to="AIRE_METRE_CARRE" />
+                <mapping from="702" to="AIRE_PIED_CARRE" />
+                <mapping from="703" to="AIRE_POUCE_CARRE" />
+                <mapping from="704" to="AIRE_KM_CARRE" />
+                <mapping from="705" to="AIRE_MILLE_CARRE" />
+                <!-- Durée -->
+                <mapping from="801" to="DUREE_SECONDES" />
+                <mapping from="802" to="DUREE_MINUTES" />
+                <mapping from="803" to="DUREE_HEURES" />
+                <mapping from="804" to="DUREE_JOURS" />
+                <mapping from="805" to="DUREE_SEMAINES" />
+                <mapping from="806" to="DUREE_MOIS" />
+                <mapping from="807" to="DUREE_ANNEES" />
+            </valueMap>
+        </field>
+        <field source="mTypeQte" destinationName="typeQuantite" isExported="true" skipWhen="DEFAULT" type="int" title="Type de quantité">
+            <valueMap>
+                <mapping from="1" to="VOLUME" />
+                <mapping from="2" to="DIMENSION" />
+                <mapping from="4" to="POIDS" />
+                <mapping from="8" to="PRESSION" />
+                <mapping from="16" to="DEBIT" />
+                <mapping from="32" to="CAPACITE_ELECTRIQUE" />
+                <mapping from="64" to="VITESSE" />
+                <mapping from="128" to="AIRE" />
+                <mapping from="256" to="DUREE" />
+                <mapping from="512" to="UNITE" />
+            </valueMap>
+        </field>
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="DEFAULT" type="double" title="Valeur" />
     </class>
     <class source="gest.gen.Requete" destinationName="Requete" isExported="true" title="Requete" parentClass="gest.gen.EntiteContientID">
