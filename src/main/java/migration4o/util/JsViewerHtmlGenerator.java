@@ -10,6 +10,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
@@ -173,6 +174,12 @@ public final class JsViewerHtmlGenerator {
             return "[]";
         }
 
+        DOSchema refSchema = null;
+        try {
+            refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
+        } catch (Exception ignored) {
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append('[');
         boolean first = true;
@@ -194,14 +201,14 @@ public final class JsViewerHtmlGenerator {
                 sb.append(',');
             }
             first = false;
-            appendFieldJson(sb, field, name, 0);
+            appendFieldJson(sb, field, name, 0, refSchema);
         }
 
         sb.append(']');
         return sb.toString();
     }
 
-    private static void appendFieldJson(StringBuilder sb, DOSchemaField field, String path, int depth) {
+    private static void appendFieldJson(StringBuilder sb, DOSchemaField field, String path, int depth, DOSchema refSchema) {
         String name = field.destinationName != null ? field.destinationName : field.source;
         sb.append('{');
         sb.append("\"name\":\"").append(escapeJson(name != null ? name : path)).append("\",");
@@ -211,6 +218,15 @@ public final class JsViewerHtmlGenerator {
 
         if (field.title != null && !field.title.isBlank()) {
             sb.append(",\"title\":\"").append(escapeJson(field.title)).append('"');
+        }
+
+        // Mark IDEntite fields that do not embed their contents — the HTML viewer
+        // will render these inline (multicolumn) inside the parent section.
+        if (!field.isCollection && !field.embedContents && field.type != null && refSchema != null) {
+            DOSchemaClass typeClass = refSchema.findClassByName(field.type);
+            if (typeClass != null && typeClass.isIDEntite(refSchema)) {
+                sb.append(",\"idEntite\":true");
+            }
         }
 
         if (depth < 2 && field.childrenSchemaClass != null && field.childrenSchemaClass.fields != null) {
@@ -229,7 +245,7 @@ public final class JsViewerHtmlGenerator {
                     sb.append(',');
                 }
                 childFirst = false;
-                appendFieldJson(sb, cf, path + "." + cn, depth + 1);
+                appendFieldJson(sb, cf, path + "." + cn, depth + 1, refSchema);
             }
             sb.append(']');
         }

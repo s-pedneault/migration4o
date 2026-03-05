@@ -345,6 +345,23 @@
 
     indexSchemaFields(schemaFields);
 
+    // Build a set of field names/paths that represent non-embedding IDEntite fields.
+    // These will be rendered inline (multicolumn) inside their parent section.
+    const idEntiteFieldSet = new Set();
+    function collectIdEntiteFields(fields) {
+        if (!Array.isArray(fields)) return;
+        fields.forEach(function (field) {
+            if (field && field.idEntite) {
+                var p = normalizeSchemaPath(field.path || field.name || '');
+                var n = normalizeSchemaPath(field.name || '');
+                if (p) idEntiteFieldSet.add(p);
+                if (n) idEntiteFieldSet.add(n);
+            }
+            if (field && Array.isArray(field.children)) collectIdEntiteFields(field.children);
+        });
+    }
+    collectIdEntiteFields(schemaFields);
+
     function appendField(map, key, value) {
         if (!key) return;
         const normalizedKey = normalizeFieldPath(key);
@@ -1341,6 +1358,40 @@
         return html;
     }
 
+    /**
+     * Renders a non-embedding IDEntite sub-object inline inside its parent section.
+     * The sub-object's primitive fields are shown in a 2-column grid with the field
+     * name as a small subtitle, and no collapsible wrapper of its own.
+     */
+    function renderInlineIdEntiteSection(key, value) {
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+        const entries = getObjectEntries(value);
+        const primitiveEntries = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive'));
+        const collectionEntries = entries.filter((e) => e.type === 'collection');
+        // If effectively empty (e.g. just a zero ID), skip
+        if (primitiveEntries.length === 0 && collectionEntries.length === 0) return '';
+        if (primitiveEntries.length <= 1 && collectionEntries.length === 0) {
+            const single = primitiveEntries[0];
+            if (single) {
+                const lo = String(single.key || '').toLowerCase().split('.').pop() || '';
+                const valStr = String(single.value ?? '').trim();
+                if ((lo === 'mid' || lo === 'id') && (!valStr || valStr === '0' || valStr === '-1')) return '';
+            }
+        }
+        let html = '<div class="field-group">';
+        html += '<div class="field-group-subtitle">' + esc(formatSectionTitle(key)) + '</div>';
+        if (primitiveEntries.length >= 2) {
+            html += '<div class="field-columns-2">';
+            primitiveEntries.forEach((e) => { html += renderFieldRow(e); });
+            html += '</div>';
+        } else {
+            primitiveEntries.forEach((e) => { html += renderFieldRow(e); });
+        }
+        collectionEntries.forEach((e) => { html += renderCollectionSection(e.key, e.value, 2); });
+        html += '</div>';
+        return html;
+    }
+
     function renderNodeSection(label, value, level) {
         level = level || 0;
         if (value === null || value === undefined) {
@@ -1357,11 +1408,15 @@
 
         const entries = getObjectEntries(value);
         const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive'));
-        const objectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+        const allObjectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
         const collectionEntries = entries.filter((entry) => entry.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
+        // Separate IDEntite sub-objects (rendered inline) from regular sub-objects
+        const idEntiteEntries = allObjectEntries.filter((e) => idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
+        const objectEntries = allObjectEntries.filter((e) => !idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
+
         // If the section only contains a single ID-like field and nothing else, render inline
-        if (objectEntries.length === 0 && collectionEntries.length === 0 && primitiveEntries.length <= 1) {
+        if (objectEntries.length === 0 && idEntiteEntries.length === 0 && collectionEntries.length === 0 && primitiveEntries.length <= 1) {
             const single = primitiveEntries[0];
             if (single) {
                 const lo = String(single.key || '').toLowerCase().split('.').pop() || '';
@@ -1374,9 +1429,14 @@
         }
 
         const openAttr = level <= 1 ? ' open' : '';
-        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
+        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + idEntiteEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
 
         html += renderPrimitiveGroup(primitiveEntries);
+
+        // Render IDEntite sub-objects inline (multicolumn, no separate header)
+        idEntiteEntries.forEach((entry) => {
+            html += renderInlineIdEntiteSection(entry.key, entry.value);
+        });
 
         objectEntries.forEach((entry) => {
             html += renderNodeSection(entry.key, entry.value, level + 1);
@@ -1523,13 +1583,21 @@
                     if (lastPart === 'id') return false;
                     return true;
                 }));
-                const objectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+                const allObjectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
                 const collectionEntries = entries.filter((e) => e.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
-                if (filteredPrimitives.length > 0) {
+                // Split object entries: IDEntite non-embedding fields rendered inline in the
+                // details section; all other objects get their own collapsible section.
+                const idEntiteObjectEntries = allObjectEntries.filter((e) => idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
+                const objectEntries = allObjectEntries.filter((e) => !idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
+
+                if (filteredPrimitives.length > 0 || idEntiteObjectEntries.length > 0) {
                     let sectionTitle = t('details');
                     html += `<details class="detail-section" open><summary><span class="summary-title">${esc(sectionTitle)}</span></summary><div class="section-body">`;
                     html += renderPrimitiveGroup(filteredPrimitives);
+                    idEntiteObjectEntries.forEach((entry) => {
+                        html += renderInlineIdEntiteSection(entry.key, entry.value);
+                    });
                     html += '</div></details>';
                 }
 
