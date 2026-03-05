@@ -212,8 +212,7 @@ public class ExportUtil {
     private static String findModulePathRecursive(List<MigrationModule> modules, String moduleName, String parentPath) {
         for (MigrationModule module : modules) {
             // Use module ID for folder name (same logic as ExportEngine.moduleId())
-            String folderName = (module.getId() != null && !module.getId().isBlank())
-                    ? module.getId() : module.getName();
+            String folderName = (module.getId() != null && !module.getId().isBlank()) ? module.getId() : module.getName();
             String currentPath = parentPath.isEmpty() ? folderName : parentPath + "/" + folderName;
 
             if (module.getName().equals(moduleName)) {

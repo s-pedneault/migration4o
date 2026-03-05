@@ -21,24 +21,15 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
     private String priceListKey = ""; // Current price list selection (empty = "Default")
     private static final NumberFormat MONEY_FORMAT = NumberFormat.getCurrencyInstance(Locale.US);
 
-    private static final String[] COLUMN_NAMES = {
-            "Name",
-            "ID",
-            "Description",
-            "Unit Cost",
-            "Cost",
-            "Sub-total",
-            "Total"
-    };
+    private static final String[] COLUMN_NAMES = { "Name", "ID", "Description", "Unit Cost", "Cost", "Sub-total", "Total" };
 
-    private static final Class<?>[] COLUMN_TYPES = {
-            String.class, // Name (tree column)
+    private static final Class<?>[] COLUMN_TYPES = { String.class, // Name (tree column)
             String.class, // ID
             String.class, // Description
             String.class, // Unit Cost (formatted as money)
             String.class, // Cost (formatted as money)
             String.class, // Sub-total (formatted as money)
-            String.class  // Total (formatted as money)
+            String.class // Total (formatted as money)
     };
 
     public ExportTreeTableModel(Object root) {
@@ -93,74 +84,74 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
         Object userObject = treeNode.getUserObject();
 
         switch (column) {
-            case 0: // Name (tree column)
-                if (userObject instanceof ModuleNode) {
-                    return ((ModuleNode) userObject).toString();
-                } else if (userObject instanceof ClassNode) {
-                    return ((ClassNode) userObject).toString();
-                } else {
-                    return userObject != null ? userObject.toString() : "";
-                }
+        case 0: // Name (tree column)
+            if (userObject instanceof ModuleNode) {
+                return ((ModuleNode) userObject).toString();
+            } else if (userObject instanceof ClassNode) {
+                return ((ClassNode) userObject).toString();
+            } else {
+                return userObject != null ? userObject.toString() : "";
+            }
 
-            case 1: // ID (modules only)
-                if (userObject instanceof ModuleNode) {
-                    String id = ((ModuleNode) userObject).getId();
-                    return id != null ? id : "";
-                }
-                return "";
+        case 1: // ID (modules only)
+            if (userObject instanceof ModuleNode) {
+                String id = ((ModuleNode) userObject).getId();
+                return id != null ? id : "";
+            }
+            return "";
 
-            case 2: // Description
-                if (userObject instanceof ClassNode) {
-                    ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
-                    if (config != null && config.getDescription() != null) {
-                        return config.getDescription();
+        case 2: // Description
+            if (userObject instanceof ClassNode) {
+                ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
+                if (config != null && config.getDescription() != null) {
+                    return config.getDescription();
+                }
+            }
+            return "";
+
+        case 3: // Unit Cost
+            if (userObject instanceof ClassNode) {
+                ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
+                if (config != null) {
+                    float unitCost = config.getUnitCost(priceListKey);
+                    if (unitCost > 0) {
+                        return MONEY_FORMAT.format(unitCost);
                     }
                 }
-                return "";
+            }
+            return "";
 
-            case 3: // Unit Cost
-                if (userObject instanceof ClassNode) {
-                    ClassExportConfig config = ((ClassNode) userObject).getExportConfig();
-                    if (config != null) {
-                        float unitCost = config.getUnitCost(priceListKey);
-                        if (unitCost > 0) {
-                            return MONEY_FORMAT.format(unitCost);
-                        }
+        case 4: // Cost (for classes only)
+            if (userObject instanceof ClassNode) {
+                ClassNode classNode = (ClassNode) userObject;
+                ClassExportConfig config = classNode.getExportConfig();
+                if (config != null) {
+                    float unitCost = config.getUnitCost(priceListKey);
+                    // Use filtered object count (applies criteria if configured)
+                    int objectCount = classNode.getObjectCount();
+                    if (unitCost > 0 && objectCount > 0) {
+                        float cost = unitCost * objectCount;
+                        return MONEY_FORMAT.format(cost);
                     }
                 }
-                return "";
+            }
+            return "";
 
-            case 4: // Cost (for classes only)
-                if (userObject instanceof ClassNode) {
-                    ClassNode classNode = (ClassNode) userObject;
-                    ClassExportConfig config = classNode.getExportConfig();
-                    if (config != null) {
-                        float unitCost = config.getUnitCost(priceListKey);
-                        // Use filtered object count (applies criteria if configured)
-                        int objectCount = classNode.getObjectCount();
-                        if (unitCost > 0 && objectCount > 0) {
-                            float cost = unitCost * objectCount;
-                            return MONEY_FORMAT.format(cost);
-                        }
-                    }
-                }
-                return "";
+        case 5: // Sub-total (for modules only)
+            if (userObject instanceof ModuleNode) {
+                return MONEY_FORMAT.format(calculateModuleSubtotal(treeNode));
+            }
+            return "";
 
-            case 5: // Sub-total (for modules only)
-                if (userObject instanceof ModuleNode) {
-                    return MONEY_FORMAT.format(calculateModuleSubtotal(treeNode));
-                }
-                return "";
+        case 6: // Total (for root node only)
+            // Only show total for the root node
+            if (treeNode == root) {
+                return MONEY_FORMAT.format(calculateGrandTotal((DefaultMutableTreeNode) root));
+            }
+            return "";
 
-            case 6: // Total (for root node only)
-                // Only show total for the root node
-                if (treeNode == root) {
-                    return MONEY_FORMAT.format(calculateGrandTotal((DefaultMutableTreeNode) root));
-                }
-                return "";
-
-            default:
-                return null;
+        default:
+            return null;
         }
     }
 

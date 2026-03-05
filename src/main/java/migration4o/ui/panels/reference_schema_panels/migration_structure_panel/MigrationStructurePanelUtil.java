@@ -180,8 +180,7 @@ public class MigrationStructurePanelUtil {
      * @param formatFilePath the path to the migration format XML file
      * @throws Exception if save operation fails
      */
-    public static void saveMigrationStructure(DefaultMutableTreeNode exportRoot, String formatFilePath)
-            throws Exception {
+    public static void saveMigrationStructure(DefaultMutableTreeNode exportRoot, String formatFilePath) throws Exception {
         List<MigrationModule> modules = new ArrayList<>();
 
         Enumeration<?> children = exportRoot.children();
@@ -205,8 +204,7 @@ public class MigrationStructurePanelUtil {
      *                         categorization
      * @return categorized classes ready for tree population
      */
-    public static CategorizedClasses categorizeClasses(DOSchema schema, Set<String> exportedClasses,
-            boolean includeIDEntites) {
+    public static CategorizedClasses categorizeClasses(DOSchema schema, Set<String> exportedClasses, boolean includeIDEntites) {
         CategorizedClasses categorized = new CategorizedClasses();
 
         if (schema == null || schema.getClasses() == null) {
@@ -291,11 +289,8 @@ public class MigrationStructurePanelUtil {
      * @param databaseSchema  the database schema (may be null)
      * @param exportedClasses set to track exported class names (modified in place)
      */
-    public static void addModuleToTree(DefaultMutableTreeNode parentNode,
-            MigrationModule module,
-            DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
-        ModuleNode moduleNode = new ModuleNode(module.getName(),
-                module.getId());
+    public static void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module, DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
+        ModuleNode moduleNode = new ModuleNode(module.getName(), module.getId());
         DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
         parentNode.add(moduleTreeNode);
 
@@ -336,8 +331,7 @@ public class MigrationStructurePanelUtil {
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
             if (child.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) child
-                        .getUserObject();
+                ClassNode classNode = (ClassNode) child.getUserObject();
                 exportedClasses.remove(classNode.getSchemaClass().source);
             }
         }
@@ -351,8 +345,7 @@ public class MigrationStructurePanelUtil {
      * @param exportedClasses set of already exported class names
      * @return true if added successfully, false if already exported
      */
-    public static boolean addClassToModule(DOSchemaClass schemaClass, DefaultMutableTreeNode targetModule,
-            Set<String> exportedClasses) {
+    public static boolean addClassToModule(DOSchemaClass schemaClass, DefaultMutableTreeNode targetModule, Set<String> exportedClasses) {
         // Check if already exported
         if (exportedClasses.contains(schemaClass.source)) {
             return false;
@@ -403,8 +396,7 @@ public class MigrationStructurePanelUtil {
      * @param currentPath the current tree path
      * @param modulePaths the list to collect module paths into
      */
-    public static void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath,
-            List<TreePath> modulePaths) {
+    public static void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
         Object userObject = node.getUserObject();
 
         // If this node is a module, add it to the list
@@ -428,8 +420,7 @@ public class MigrationStructurePanelUtil {
      * @param currentPath the current tree path
      * @param modulePaths the list to collect module paths into
      */
-    public static void collectRootModulePaths(DefaultMutableTreeNode node, TreePath currentPath,
-            List<TreePath> modulePaths) {
+    public static void collectRootModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
         Object userObject = node.getUserObject();
 
         // If this node is a module, add it (it's a root level module)
@@ -520,8 +511,7 @@ public class MigrationStructurePanelUtil {
             Object userObject = currentNode.getUserObject();
             if (userObject instanceof ModuleNode) {
                 ModuleNode moduleNode = (ModuleNode) userObject;
-                String part = (moduleNode.getId() != null && !moduleNode.getId().isBlank())
-                        ? moduleNode.getId() : moduleNode.getName();
+                String part = (moduleNode.getId() != null && !moduleNode.getId().isBlank()) ? moduleNode.getId() : moduleNode.getName();
                 pathParts.add(0, part); // Add at beginning to build path from root
             }
             currentNode = (DefaultMutableTreeNode) currentNode.getParent();

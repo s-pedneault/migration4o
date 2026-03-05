@@ -88,8 +88,7 @@ public class MigrationExportService {
         List<ExportStatistics> results = new ArrayList<>();
         for (int i = 0; i < modules.size(); i++) {
             MigrationModule module = modules.get(i);
-            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i)
-                    : (module.getId() != null && !module.getId().isBlank() ? module.getId() : module.getName());
+            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : (module.getId() != null && !module.getId().isBlank() ? module.getId() : module.getName());
             results.add(exporter.exportModuleStructured(module, modulePath, baseOutputPath, monitor, tracker));
         }
         results.add(exporter.exportReferencedClasses(baseOutputPath, monitor, tracker));
