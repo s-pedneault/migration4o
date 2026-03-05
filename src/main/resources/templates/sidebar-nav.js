@@ -261,7 +261,9 @@
             toggleLogic: 'Cliquer pour alterner ET/OU', allFields: 'Tous les champs', value: 'Valeur...', fieldFilter: 'Champ...',
             colRow: '#', colId: 'ID', colSummary: 'Résumé', err: 'Erreur', noPayload: 'Aucune donnée JS trouvée (window.__m4o).',
             object: 'Objet', collection: 'Collection', elements: 'éléments', noItems: 'Aucun élément',
-            prev: 'Préc.', next: 'Suiv.'
+            prev: 'Préc.', next: 'Suiv.',
+            keyInfo: 'Informations clés', dates: 'Dates', identifiers: 'Identifiants', flags: 'Indicateurs',
+            emptyFields: 'Champs vides', numbers: 'Valeurs numériques', details: 'Détails'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -273,7 +275,9 @@
             toggleLogic: 'Click to toggle AND/OR', allFields: 'All fields', value: 'Value...', fieldFilter: 'Field...',
             colRow: '#', colId: 'ID', colSummary: 'Summary', err: 'Error', noPayload: 'No JS payload found (window.__m4o).',
             object: 'Object', collection: 'Collection', elements: 'items', noItems: 'No items',
-            prev: 'Prev', next: 'Next'
+            prev: 'Prev', next: 'Next',
+            keyInfo: 'Key Information', dates: 'Dates', identifiers: 'Identifiers', flags: 'Flags',
+            emptyFields: 'Empty Fields', numbers: 'Numeric Values', details: 'Details'
         }
     };
 
@@ -946,31 +950,196 @@
         return schemaTitleForPath(last) || humanizeFieldName(last);
     }
 
-    function renderPrimitiveGroup(entries) {
+    /* ── Field classification for auto-columnization ───────────── */
+
+    const IMPORTANT_FIELD_PATTERNS = ['nom', 'name', 'prenom', 'titre', 'title', 'code', 'numero', 'identifiant', 'description', 'libelle', 'label'];
+    const KEY_INFO_PATTERNS = ['nom', 'name', 'prenom', 'titre', 'title', 'code', 'numero', 'identifiant', 'type', 'statut', 'status', 'categorie', 'actif', 'active', 'inactif', 'email', 'courriel', 'telephone', 'matricule'];
+
+    function classifyPrimitiveBucket(key, value) {
+        const text = String(value ?? '').trim();
+        const lo = String(key || '').toLowerCase();
+        if (!text) return 'empty';
+        if (text === 'true' || text === 'false') return 'bool';
+        if (lo === 'id' || lo.endsWith('.id') || (lo.startsWith('id') && lo.length > 2 && lo[2] === lo[2].toUpperCase())) return 'id';
+        if (lo.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(text)) return 'date';
+        if (/^-?\d+(\.\d+)?$/.test(text) && text.length <= 10) return 'number';
+        if (text.length <= 30) return 'short';
+        return 'long';
+    }
+
+    function extractCamelPrefix(name) {
+        const clean = String(name || '').replace(/^@/, '');
+        const parts = clean.split('.');
+        const last = parts[parts.length - 1] || clean;
+        const match = last.match(/^([a-z]+)[A-Z]/);
+        return match ? match[1].toLowerCase() : '';
+    }
+
+    function groupByPrefix(entries) {
+        const groups = {};
+        entries.forEach((entry) => {
+            const prefix = extractCamelPrefix(entry.key);
+            const groupKey = prefix.length >= 3 ? prefix : '__ungrouped';
+            if (!groups[groupKey]) groups[groupKey] = [];
+            groups[groupKey].push(entry);
+        });
+        return groups;
+    }
+
+    function fieldImportanceScore(key) {
+        const lo = String(key || '').toLowerCase();
+        const lastPart = lo.split('.').pop() || lo;
+        for (let i = 0; i < IMPORTANT_FIELD_PATTERNS.length; i++) {
+            if (lastPart === IMPORTANT_FIELD_PATTERNS[i]) return i;
+            if (lastPart.includes(IMPORTANT_FIELD_PATTERNS[i])) return i + 100;
+        }
+        return 999;
+    }
+
+    function sortPrimitiveEntries(entries) {
+        return entries.slice().sort((a, b) => {
+            const aEmpty = !String(a.value ?? '').trim();
+            const bEmpty = !String(b.value ?? '').trim();
+            if (aEmpty !== bEmpty) return aEmpty ? 1 : -1;
+            const aScore = fieldImportanceScore(a.key);
+            const bScore = fieldImportanceScore(b.key);
+            if (aScore !== bScore) return aScore - bScore;
+            return String(a.key || '').localeCompare(String(b.key || ''));
+        });
+    }
+
+    function renderFieldRow(entry) {
+        return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(entry.key)) + '</div><div class="field-value">' + fmtValue(entry.value, entry.key) + '</div></div>';
+    }
+
+    function renderColumnGroup(entries, cols, subtitle) {
         if (!entries || entries.length === 0) return '';
         let html = '<div class="field-group">';
+        if (subtitle) html += '<div class="field-group-subtitle">' + esc(subtitle) + '</div>';
+        if (entries.length >= cols) {
+            html += '<div class="field-columns-' + cols + '">';
+            entries.forEach((e) => { html += renderFieldRow(e); });
+            html += '</div>';
+        } else {
+            entries.forEach((e) => { html += renderFieldRow(e); });
+        }
+        html += '</div>';
+        return html;
+    }
 
-        let index = 0;
-        while (index < entries.length) {
-            const current = entries[index];
-            const next = entries[index + 1];
-            const currentNarrow = isNarrowField(current.key, current.value);
-            const nextNarrow = next ? isNarrowField(next.key, next.value) : false;
+    function renderPrimitiveGroup(entries) {
+        if (!entries || entries.length === 0) return '';
 
-            if (next && currentNarrow && nextNarrow) {
-                html += '<div class="field-pair">';
-                html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(current.key)) + '</div><div class="field-value">' + fmtValue(current.value, current.key) + '</div></div>';
-                html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(next.key)) + '</div><div class="field-value">' + fmtValue(next.value, next.key) + '</div></div>';
-                html += '</div>';
-                index += 2;
-                continue;
-            }
+        const sorted = sortPrimitiveEntries(entries);
 
-            html += '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(current.key)) + '</div><div class="field-value">' + fmtValue(current.value, current.key) + '</div></div>';
-            index += 1;
+        const buckets = { bool: [], id: [], date: [], number: [], short: [], long: [], empty: [] };
+        sorted.forEach((entry) => {
+            const bucket = classifyPrimitiveBucket(entry.key, entry.value);
+            buckets[bucket].push(entry);
+        });
+
+        let html = '';
+
+        // Booleans: render in 3-column grid if 3+, 2-column if 2
+        if (buckets.bool.length >= 3) {
+            html += renderColumnGroup(buckets.bool, 3, t('flags'));
+        } else if (buckets.bool.length === 2) {
+            html += renderColumnGroup(buckets.bool, 2, t('flags'));
         }
 
-        html += '</div>';
+        // Dates: render in 2-column grid if 2+
+        if (buckets.date.length >= 2) {
+            html += renderColumnGroup(buckets.date, 2, t('dates'));
+        }
+
+        // IDs: render in 2-column grid if 2+
+        if (buckets.id.length >= 2) {
+            html += renderColumnGroup(buckets.id, 2, t('identifiers'));
+        }
+
+        // Numbers: render in 2-column grid if 3+, otherwise mix with remaining
+        if (buckets.number.length >= 3) {
+            html += renderColumnGroup(buckets.number, 2, t('numbers'));
+        }
+
+        // Remaining: collect singletons from above + all short/long text
+        const remaining = [];
+        if (buckets.bool.length === 1) remaining.push(...buckets.bool);
+        if (buckets.date.length === 1) remaining.push(...buckets.date);
+        if (buckets.id.length === 1) remaining.push(...buckets.id);
+        if (buckets.number.length < 3) remaining.push(...buckets.number);
+        remaining.push(...buckets.short);
+        remaining.push(...buckets.long);
+
+        // Try to sub-group remaining short fields by prefix
+        if (remaining.length > 0) {
+            const shortRemaining = remaining.filter((e) => {
+                const text = String(e.value ?? '').trim();
+                return text.length <= 30;
+            });
+            const longRemaining = remaining.filter((e) => {
+                const text = String(e.value ?? '').trim();
+                return text.length > 30;
+            });
+
+            const prefixGroups = groupByPrefix(shortRemaining);
+            const rendered = new Set();
+            let groupHtml = '';
+
+            // Render prefix groups with 2+ entries as column groups
+            Object.entries(prefixGroups).forEach(([prefix, group]) => {
+                if (prefix !== '__ungrouped' && group.length >= 2) {
+                    const subtitle = schemaTitleForPath(prefix) || humanizeFieldName(prefix);
+                    groupHtml += renderColumnGroup(group, 2, subtitle);
+                    group.forEach((e) => rendered.add(e));
+                }
+            });
+
+            // Collect ungrouped short + prefix singletons
+            const ungrouped = shortRemaining.filter((e) => !rendered.has(e));
+
+            // Render ungrouped using the old pair logic for narrow fields
+            if (ungrouped.length > 0 || longRemaining.length > 0) {
+                groupHtml += '<div class="field-group">';
+                let idx = 0;
+                while (idx < ungrouped.length) {
+                    const current = ungrouped[idx];
+                    const next = ungrouped[idx + 1];
+                    const currentNarrow = isNarrowField(current.key, current.value);
+                    const nextNarrow = next ? isNarrowField(next.key, next.value) : false;
+
+                    if (next && currentNarrow && nextNarrow) {
+                        groupHtml += '<div class="field-pair">';
+                        groupHtml += renderFieldRow(current);
+                        groupHtml += renderFieldRow(next);
+                        groupHtml += '</div>';
+                        idx += 2;
+                        continue;
+                    }
+                    groupHtml += renderFieldRow(current);
+                    idx += 1;
+                }
+                longRemaining.forEach((e) => { groupHtml += renderFieldRow(e); });
+                groupHtml += '</div>';
+            }
+
+            html += groupHtml;
+        }
+
+        // Empty fields: compact 3-column group at the bottom
+        if (buckets.empty.length > 0) {
+            html += '<div class="field-empty-group">';
+            html += '<div class="field-group-subtitle">' + esc(t('emptyFields')) + ' (' + buckets.empty.length + ')</div>';
+            if (buckets.empty.length >= 3) {
+                html += '<div class="field-columns-3">';
+                buckets.empty.forEach((e) => { html += renderFieldRow(e); });
+                html += '</div>';
+            } else {
+                buckets.empty.forEach((e) => { html += renderFieldRow(e); });
+            }
+            html += '</div>';
+        }
+
         return html;
     }
 
@@ -1164,9 +1333,9 @@
         }
 
         const entries = getObjectEntries(value);
-        const primitiveEntries = entries.filter((entry) => entry.type === 'primitive');
-        const objectEntries = entries.filter((entry) => entry.type === 'object');
-        const collectionEntries = entries.filter((entry) => entry.type === 'collection');
+        const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive'));
+        const objectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+        const collectionEntries = entries.filter((entry) => entry.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
         const openAttr = level <= 1 ? ' open' : '';
         let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
@@ -1212,14 +1381,106 @@
         collectionIdCounter = 1;
 
         let html = '';
-        html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '\u2014')} \u2022 ${esc(t('record'))} #${rec.pos}</div></div>`;
-        html += '<div class="detail-scroll">';
+
         if (typeof DETAIL_LAYOUT !== 'undefined' && DETAIL_LAYOUT) {
+            // Layout-driven mode: keep original header
+            html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '\u2014')} \u2022 ${esc(t('record'))} #${rec.pos}</div></div>`;
+            html += '<div class="detail-scroll">';
             html += renderLayoutDetail(rec.raw, DETAIL_LAYOUT);
+            html += '</div>';
         } else {
-            html += renderNodeSection(rec.entity, rec.raw, 0);
+            // Auto-discovery mode: hero header + key info + smart sections
+
+            // 1) Build hero header with promoted subtitle fields
+            const subtitleFields = [];
+            if (rec.fields) {
+                const subtitleCandidates = ['nom', 'name', 'prenom', 'titre', 'title', 'description', 'libelle', 'label', 'raisonSociale'];
+                subtitleCandidates.forEach((c) => {
+                    if (subtitleFields.length >= 3) return;
+                    const entry = Object.entries(rec.fields).find(([k]) => {
+                        const lo = k.toLowerCase();
+                        return lo === c || lo.endsWith('.' + c);
+                    });
+                    if (entry && entry[1] && String(entry[1]).trim().length > 0) {
+                        const label = displayFieldLabel(entry[0]);
+                        const val = String(entry[1]).trim();
+                        if (val !== rec.summary && val !== rec.id) {
+                            subtitleFields.push({ label, value: val });
+                        }
+                    }
+                });
+            }
+
+            html += '<div class="detail-hero">';
+            html += '<div class="detail-hero-entity">' + esc(rec.entity) + '</div>';
+            html += '<div class="detail-hero-title">' + esc(rec.summary || rec.entity) + '</div>';
+            if (subtitleFields.length > 0) {
+                html += '<div class="detail-hero-subtitle">';
+                html += subtitleFields.map((f) => '<strong>' + esc(f.label) + ':</strong> ' + esc(f.value)).join(' &nbsp;\u2022&nbsp; ');
+                html += '</div>';
+            }
+            html += '<div class="detail-hero-meta">';
+            if (rec.id) html += '<span class="badge badge-id">ID: ' + esc(rec.id) + '</span>';
+            html += '<span>' + esc(t('record')) + ' #' + rec.pos + '</span>';
+            html += '</div>';
+            html += '</div>';
+
+            // 2) Extract key info fields from raw data
+            html += '<div class="detail-scroll">';
+            const rawData = rec.raw;
+            const keyInfoEntries = [];
+            const promotedKeys = new Set();
+
+            if (rawData && typeof rawData === 'object') {
+                const allEntries = getObjectEntries(rawData);
+                allEntries.forEach((entry) => {
+                    if (entry.type !== 'primitive') return;
+                    const lo = String(entry.key || '').toLowerCase();
+                    const lastPart = lo.split('.').pop() || lo;
+                    if (lastPart === '_summary') return;
+                    const isKeyField = KEY_INFO_PATTERNS.some((p) => lastPart === p || lastPart.includes(p));
+                    const isDateField = lastPart.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(String(entry.value ?? ''));
+                    if (isKeyField || isDateField) {
+                        keyInfoEntries.push(entry);
+                        promotedKeys.add(entry.key);
+                    }
+                });
+            }
+
+            if (keyInfoEntries.length > 0) {
+                const sortedKeyInfo = sortPrimitiveEntries(keyInfoEntries);
+                html += '<div class="detail-key-info">';
+                html += '<div class="detail-key-info-title">' + esc(t('keyInfo')) + '</div>';
+                html += renderPrimitiveGroup(sortedKeyInfo);
+                html += '</div>';
+            }
+
+            // 3) Render remaining data (with promoted keys removed from root primitives)
+            if (rawData && typeof rawData === 'object' && promotedKeys.size > 0) {
+                const entries = getObjectEntries(rawData);
+                const filteredPrimitives = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive' && !promotedKeys.has(e.key)));
+                const objectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+                const collectionEntries = entries.filter((e) => e.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+
+                if (filteredPrimitives.length > 0) {
+                    let sectionTitle = t('details');
+                    html += `<details class="detail-section" open><summary><span class="summary-title">${esc(sectionTitle)}</span></summary><div class="section-body">`;
+                    html += renderPrimitiveGroup(filteredPrimitives);
+                    html += '</div></details>';
+                }
+
+                objectEntries.forEach((entry) => {
+                    html += renderNodeSection(entry.key, entry.value, 1);
+                });
+                collectionEntries.forEach((entry) => {
+                    html += renderCollectionSection(entry.key, entry.value, 1);
+                });
+            } else {
+                html += renderNodeSection(rec.entity, rawData, 0);
+            }
+
+            html += '</div>';
         }
-        html += '</div>';
 
         detailContainer.innerHTML = html;
         bindTabEvents();
