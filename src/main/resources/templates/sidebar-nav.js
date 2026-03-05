@@ -244,6 +244,9 @@
     const detailContainer = document.getElementById('detailContainer');
     const detailOverlay = document.getElementById('detailOverlay');
     const detailCloseBtn = document.getElementById('detailCloseBtn');
+    const detailPrevBtn = document.getElementById('detailPrevBtn');
+    const detailNextBtn = document.getElementById('detailNextBtn');
+    const detailNavPos = document.getElementById('detailNavPos');
     const languageSelect = document.getElementById('languageSelect');
     const columnsBtn = document.getElementById('columnsBtn');
     const columnsMenu = document.getElementById('columnsMenu');
@@ -263,7 +266,8 @@
             object: 'Objet', collection: 'Collection', elements: 'éléments', noItems: 'Aucun élément',
             prev: 'Préc.', next: 'Suiv.',
             keyInfo: 'Informations clés', dates: 'Dates', identifiers: 'Identifiants', flags: 'Indicateurs',
-            emptyFields: 'Champs vides', numbers: 'Valeurs numériques', details: 'Détails'
+            emptyFields: 'Champs vides', numbers: 'Valeurs numériques', details: 'Détails',
+            boolTrue: 'Oui', boolFalse: 'Non'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -277,7 +281,8 @@
             object: 'Object', collection: 'Collection', elements: 'items', noItems: 'No items',
             prev: 'Prev', next: 'Next',
             keyInfo: 'Key Information', dates: 'Dates', identifiers: 'Identifiers', flags: 'Flags',
-            emptyFields: 'Empty Fields', numbers: 'Numeric Values', details: 'Details'
+            emptyFields: 'Empty Fields', numbers: 'Numeric Values', details: 'Details',
+            boolTrue: 'Yes', boolFalse: 'No'
         }
     };
 
@@ -783,12 +788,30 @@
         nextBtn.disabled = currentPage >= totalPages;
     }
 
+    function fmtDate(val) {
+        const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+        if (!m) return null;
+        try {
+            const d = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]),
+                m[4] ? Number(m[4]) : 0, m[5] ? Number(m[5]) : 0, m[6] ? Number(m[6]) : 0);
+            if (isNaN(d.getTime())) return null;
+            const opts = { year: 'numeric', month: 'long', day: 'numeric' };
+            if (m[4]) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
+            return d.toLocaleDateString('fr-CA', opts);
+        } catch (_) { return null; }
+    }
+
     function fmtValue(v, key) {
         const val = String(v ?? '');
         if (!val.trim()) return '<span style="color:var(--c-text-muted)">\u2014</span>';
         const lowerKey = String(key || '').toLowerCase();
-        if (val === 'true') return '<span class="badge badge-true">\u2713 True</span>';
-        if (val === 'false') return '<span class="badge badge-false">\u2717 False</span>';
+        if (val === 'true') return '<span class="badge badge-true">' + esc(t('boolTrue')) + '</span>';
+        if (val === 'false') return '<span class="badge badge-false">' + esc(t('boolFalse')) + '</span>';
+        // Date detection (before numeric check so dates aren't caught)
+        if (lowerKey.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
+            const formatted = fmtDate(val);
+            if (formatted) return esc(formatted);
+        }
         if (lowerKey === 'id' || lowerKey.startsWith('id') || lowerKey.endsWith('id')) return `<span class="badge badge-id">${esc(val)}</span>`;
         if (/^-?\d+(\.\d+)?$/.test(val)) return `<span class="badge badge-number">${esc(val)}</span>`;
         return esc(val);
@@ -1057,9 +1080,9 @@
             html += renderColumnGroup(buckets.id, 2, t('identifiers'));
         }
 
-        // Numbers: render in 2-column grid if 3+, otherwise mix with remaining
+        // Numbers: render in 3-column grid if 3+, otherwise mix with remaining
         if (buckets.number.length >= 3) {
-            html += renderColumnGroup(buckets.number, 2, t('numbers'));
+            html += renderColumnGroup(buckets.number, 3, t('numbers'));
         }
 
         // Remaining: collect singletons from above + all short/long text
@@ -1308,7 +1331,7 @@
             html += `<th>${esc(t('collection'))}</th>`;
         } else {
             table.columns.forEach((col) => {
-                html += `<th>${esc(displayFieldLabel(col))}</th>`;
+                html += `<th data-collection-id="${collectionId}" data-sort-col="${esc(col)}">${esc(displayFieldLabel(col))}<span class="sort-indicator"></span></th>`;
             });
         }
         html += `</tr></thead><tbody id="collection-body-${collectionId}">${renderCollectionTableBody(collectionViewState[collectionId])}</tbody></table>`;
@@ -1336,6 +1359,19 @@
         const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive'));
         const objectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
         const collectionEntries = entries.filter((entry) => entry.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+
+        // If the section only contains a single ID-like field and nothing else, render inline
+        if (objectEntries.length === 0 && collectionEntries.length === 0 && primitiveEntries.length <= 1) {
+            const single = primitiveEntries[0];
+            if (single) {
+                const lo = String(single.key || '').toLowerCase().split('.').pop() || '';
+                const valStr = String(single.value ?? '').trim();
+                if ((lo === 'mid' || lo === 'id' || lo.startsWith('id')) && (!valStr || valStr === '0' || valStr === '-1')) {
+                    // Empty ID reference — skip entirely
+                    return '';
+                }
+            }
+        }
 
         const openAttr = level <= 1 ? ' open' : '';
         let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
@@ -1368,7 +1404,29 @@
         selectedRecordKey = rec.key;
         renderResults();
         renderDetail(rec);
+        updateDetailNav();
         openDetailOverlay();
+    }
+
+    function findCurrentRecordIndex() {
+        if (!selectedRecordKey) return -1;
+        return filteredRecords.findIndex((r) => r.key === selectedRecordKey);
+    }
+
+    function updateDetailNav() {
+        const idx = findCurrentRecordIndex();
+        const total = filteredRecords.length;
+        if (detailNavPos) detailNavPos.textContent = (idx >= 0 ? (idx + 1) : '?') + ' / ' + total;
+        if (detailPrevBtn) detailPrevBtn.disabled = idx <= 0;
+        if (detailNextBtn) detailNextBtn.disabled = idx < 0 || idx >= total - 1;
+    }
+
+    function navigateDetail(delta) {
+        const idx = findCurrentRecordIndex();
+        if (idx < 0) return;
+        const newIdx = idx + delta;
+        if (newIdx < 0 || newIdx >= filteredRecords.length) return;
+        selectRecord(filteredRecords[newIdx]);
     }
 
     function renderDetail(rec) {
@@ -1412,7 +1470,7 @@
             }
 
             html += '<div class="detail-hero">';
-            html += '<div class="detail-hero-entity">' + esc(rec.entity) + '</div>';
+            html += '<div class="detail-hero-entity">' + esc(typeof entityName !== 'undefined' && entityName ? entityName : rec.entity) + '</div>';
             html += '<div class="detail-hero-title">' + esc(rec.summary || rec.entity) + '</div>';
             if (subtitleFields.length > 0) {
                 html += '<div class="detail-hero-subtitle">';
@@ -1458,7 +1516,13 @@
             // 3) Render remaining data (with promoted keys removed from root primitives)
             if (rawData && typeof rawData === 'object' && promotedKeys.size > 0) {
                 const entries = getObjectEntries(rawData);
-                const filteredPrimitives = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive' && !promotedKeys.has(e.key)));
+                const filteredPrimitives = sortPrimitiveEntries(entries.filter((e) => {
+                    if (e.type !== 'primitive') return false;
+                    if (promotedKeys.has(e.key)) return false;
+                    const lastPart = String(e.key || '').toLowerCase().split('.').pop() || '';
+                    if (lastPart === 'id') return false;
+                    return true;
+                }));
                 const objectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
                 const collectionEntries = entries.filter((e) => e.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
@@ -1809,8 +1873,52 @@
         }
     });
     detailCloseBtn.addEventListener('click', closeDetailOverlay);
+    if (detailPrevBtn) detailPrevBtn.addEventListener('click', () => navigateDetail(-1));
+    if (detailNextBtn) detailNextBtn.addEventListener('click', () => navigateDetail(1));
     detailOverlay.addEventListener('click', (e) => { if (e.target === detailOverlay) closeDetailOverlay(); });
     detailContainer.addEventListener('click', (e) => {
+        // Handle collection table header sorting
+        const th = e.target.closest('th[data-sort-col]');
+        if (th) {
+            const collectionId = th.getAttribute('data-collection-id');
+            const sortCol = th.getAttribute('data-sort-col');
+            const state = collectionViewState[collectionId];
+            if (state) {
+                if (state.sortCol === sortCol) {
+                    state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
+                } else {
+                    state.sortCol = sortCol;
+                    state.sortDir = 'asc';
+                }
+                state.rows.sort((a, b) => {
+                    const va = String(a[sortCol] ?? '');
+                    const vb = String(b[sortCol] ?? '');
+                    const na = parseFloat(va), nb = parseFloat(vb);
+                    let cmp = (!isNaN(na) && !isNaN(nb)) ? na - nb : va.localeCompare(vb, 'fr', { sensitivity: 'base' });
+                    return state.sortDir === 'desc' ? -cmp : cmp;
+                });
+                state.page = 1;
+                const body = detailContainer.querySelector(`#collection-body-${collectionId}`);
+                const pgInfo = detailContainer.querySelector(`#collection-page-${collectionId}`);
+                const totalPages = Math.max(1, Math.ceil(state.rows.length / state.pageSize));
+                if (body) body.innerHTML = renderCollectionTableBody(state);
+                if (pgInfo) pgInfo.textContent = `${state.page} / ${totalPages}`;
+                // Update sort indicators
+                const headerRow = th.closest('tr');
+                if (headerRow) {
+                    headerRow.querySelectorAll('.sort-indicator').forEach((si) => { si.textContent = ''; si.classList.remove('active'); });
+                }
+                const indicator = th.querySelector('.sort-indicator');
+                if (indicator) { indicator.textContent = state.sortDir === 'asc' ? ' \u25B2' : ' \u25BC'; indicator.classList.add('active'); }
+                // Update pager buttons
+                const prevButton = detailContainer.querySelector(`button[data-collection-action="prev"][data-collection-id="${collectionId}"]`);
+                const nextButton = detailContainer.querySelector(`button[data-collection-action="next"][data-collection-id="${collectionId}"]`);
+                if (prevButton) prevButton.disabled = state.page <= 1;
+                if (nextButton) nextButton.disabled = state.page >= totalPages;
+            }
+            return;
+        }
+
         const btn = e.target.closest('button[data-collection-action]');
         if (!btn) return;
 
@@ -1838,7 +1946,13 @@
         if (prevButton) prevButton.disabled = state.page <= 1;
         if (nextButton) nextButton.disabled = state.page >= totalPages;
     });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeDetailOverlay(); });
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDetailOverlay();
+        if (detailOverlay.classList.contains('open')) {
+            if (e.key === 'ArrowLeft') { navigateDetail(-1); e.preventDefault(); }
+            if (e.key === 'ArrowRight') { navigateDetail(1); e.preventDefault(); }
+        }
+    });
 
     initialize();
 })();

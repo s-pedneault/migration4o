@@ -16,7 +16,7 @@
         <nav class="nav-sidebar" id="navSidebar" aria-label="Module navigation">
             <!-- Header -->
             <div class="sidebar-head">
-                <a class="sidebar-brand" href="__BASE_HREF__" title="Accueil">
+                <a class="sidebar-brand" href="index.html" title="Accueil">
                     <div class="sidebar-logo">M</div>
                     <span class="sidebar-name">Migration4o</span>
                 </a>
@@ -108,8 +108,19 @@
     <div class="detail-overlay" id="detailOverlay" aria-hidden="true">
         <div class="detail-sheet">
             <div class="detail-sheet-top">
-                <div class="detail-drag"></div>
-                <button class="detail-close" id="detailCloseBtn" type="button" aria-label="Close">✕</button>
+                <div class="detail-sheet-top-left">
+                    <div class="detail-sheet-logo">M</div>
+                    <span class="detail-sheet-appname">Migration4o</span>
+                </div>
+                <div class="detail-sheet-top-center">
+                    <div class="detail-drag"></div>
+                </div>
+                <div class="detail-sheet-top-right">
+                    <button class="detail-nav-btn" id="detailPrevBtn" type="button" title="Précédent">&#9666;</button>
+                    <span class="detail-nav-pos" id="detailNavPos"></span>
+                    <button class="detail-nav-btn" id="detailNextBtn" type="button" title="Suivant">&#9656;</button>
+                    <button class="detail-close" id="detailCloseBtn" type="button" aria-label="Close">✕</button>
+                </div>
             </div>
             <div id="detailContainer" class="detail-scroll"></div>
         </div>
