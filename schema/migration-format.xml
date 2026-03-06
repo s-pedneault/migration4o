@@ -5,7 +5,7 @@
             <module name="Configuration" id="Configuration">
                 <module name="Paramètres" id="Parametres">
                     <classRef sourceName="gest.consolide.ParamSSI">
-                        <unitCost priceList="" cost="1000.0"/>
+                        <unitCost priceList="" cost="1.0"/>
                     </classRef>
                     <classRef sourceName="gest.borne.ParamMaintBorne"/>
                     <classRef sourceName="gest.cauca.ParamCauca"/>
@@ -104,17 +104,21 @@
             </module>
             <module name="Plan d&apos;intervention" id="PlanIntervention">
                 <classRef sourceName="gest.planInterv.PlanInterv">
-                    <unitCost priceList="" cost="1.0"/>
+                    <unitCost priceList="" cost="5.0"/>
                 </classRef>
                 <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
                 <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
             </module>
             <module name="Sécurité civile" id="SecuriteCivile">
-                <classRef sourceName="gest.docum.Docum"/>
+                <classRef sourceName="gest.docum.Docum">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
                 <classRef sourceName="gest.secCiv.LogSinistre"/>
                 <classRef sourceName="gest.secCiv.NivAlerte"/>
                 <classRef sourceName="gest.secCiv.RessSecCiv"/>
-                <classRef sourceName="gest.secCiv.Sinistre"/>
+                <classRef sourceName="gest.secCiv.Sinistre">
+                    <unitCost priceList="" cost="5.0"/>
+                </classRef>
                 <classRef sourceName="gest.secCiv.MesurePrev"/>
                 <classRef sourceName="gest.secCiv.Risque"/>
                 <classRef sourceName="gest.secCiv.PPI"/>
@@ -193,8 +197,12 @@
                 </module>
             </module>
             <module name="Horaires" id="Horaires">
-                <classRef sourceName="gest.horaire.Horaire"/>
-                <classRef sourceName="gest.horaire.HorQuart"/>
+                <classRef sourceName="gest.horaire.Horaire">
+                    <unitCost priceList="" cost="1.0"/>
+                </classRef>
+                <classRef sourceName="gest.horaire.HorQuart">
+                    <unitCost priceList="" cost="0.25"/>
+                </classRef>
                 <classRef sourceName="gest.horaire.ModeleHorQuart"/>
                 <classRef sourceName="gest.horaire.ModeleHoraire"/>
                 <classRef sourceName="gest.horaire.InfoEmployeQuart"/>
@@ -214,9 +222,7 @@
                 <classRef sourceName="gest.typeAnom.TypeAnom">
                     <unitCost priceList="" cost="0.25"/>
                 </classRef>
-                <classRef sourceName="gest.prevention.TypeActivPrevention">
-                    <unitCost priceList="" cost="0.5"/>
-                </classRef>
+                <classRef sourceName="gest.prevention.TypeActivPrevention"/>
             </module>
             <module name="Intervention" id="Intervention">
                 <classRef sourceName="gest.intervention.Intervention">
