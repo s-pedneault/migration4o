@@ -376,7 +376,7 @@ body {
 
 .nav-item-icon {
     flex-shrink: 0;
-    width: 20px;
+    /* width: 20px; */
     line-height: 1;
     display: flex;
     align-items: center;
@@ -507,7 +507,7 @@ body {
 
 .nav-module-tile {
     border-radius: 10px;
-    background: var(--tile-bg);
+    /* background: var(--tile-bg); */
     margin-bottom: 6px;
     overflow: hidden;
     transition: box-shadow .18s ease;
