@@ -12,7 +12,7 @@ import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.HtmlNavPostProcessor;
@@ -37,7 +37,7 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
         List<String> normalizedOptions = ExportOutputOption.normalize(outputOptions);
         List<ExportStatistics> allFormatResults = new ArrayList<>();
 
@@ -56,7 +56,7 @@ public class MigrationExportService {
         return ExportUtil.combineResults(allFormatResults, baseOutputPath);
     }
 
-    private ExportStatistics exportModulesSingleFormat(migration4o.database.DODatabaseContext dbContext, List<MigrationModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat, boolean generateHtmlViewer, boolean generateXsd, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
+    private ExportStatistics exportModulesSingleFormat(migration4o.database.DODatabaseContext dbContext, List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, String outputFormat, boolean generateHtmlViewer, boolean generateXsd, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = dbContext.databaseSchema;
         String databasePath = dbContext.databaseFilePath;
@@ -81,14 +81,14 @@ public class MigrationExportService {
         // instead.
         exporter.initializeSharedTracking();
         ReferencedClassTracker tracker = new ReferencedClassTracker();
-        for (MigrationModule module : modules) {
+        for (DOSchemaModule module : modules) {
             ExportUtil.registerAllModuleClasses(module, tracker);
         }
 
         List<ExportStatistics> results = new ArrayList<>();
         for (int i = 0; i < modules.size(); i++) {
-            MigrationModule module = modules.get(i);
-            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : (module.getId() != null && !module.getId().isBlank() ? module.getId() : module.getName());
+            DOSchemaModule module = modules.get(i);
+            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : (module.id != null && !module.id.isBlank() ? module.id : module.name);
             results.add(exporter.exportModuleStructured(module, modulePath, baseOutputPath, monitor, tracker));
         }
         results.add(exporter.exportReferencedClasses(baseOutputPath, monitor, tracker));
@@ -162,7 +162,8 @@ public class MigrationExportService {
             }
         }
 
-        // Navigation sidebar is embedded per-file at generation time via setModuleNavData()
+        // Navigation sidebar is embedded per-file at generation time via
+        // setModuleNavData()
 
         exporter.resetSharedTracking();
 
@@ -184,11 +185,11 @@ public class MigrationExportService {
             throw new UnsupportedOperationException("Single-class export is no longer supported. Please export via modules instead.");
         }
 
-        List<MigrationModule> modules = new ArrayList<>();
+        List<DOSchemaModule> modules = new ArrayList<>();
         List<String> modulePaths = new ArrayList<>();
         if (params.moduleNames != null && !params.moduleNames.isEmpty()) {
             for (String moduleName : params.moduleNames) {
-                MigrationModule module = ExportUtil.findModuleByName(moduleName);
+                DOSchemaModule module = ExportUtil.findModuleByName(moduleName);
                 if (module == null)
                     throw new IllegalStateException("Could not find module '" + moduleName + "'");
                 modules.add(module);
@@ -196,7 +197,7 @@ public class MigrationExportService {
                 modulePaths.add(ExportUtil.findModulePathByName(moduleName));
             }
         } else {
-            MigrationModule module = ExportUtil.findModuleByName(params.targetName);
+            DOSchemaModule module = ExportUtil.findModuleByName(params.targetName);
             if (module == null)
                 throw new IllegalStateException("Could not find module '" + params.targetName + "'");
             modules.add(module);

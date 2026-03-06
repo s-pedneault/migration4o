@@ -3,7 +3,7 @@ package migration4o.schema.processors;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.modules.DOModuleService;
 
 import java.util.*;
@@ -11,27 +11,21 @@ import java.util.stream.Collectors;
 
 /**
  * Post-processing step that determines optimal embedding strategy for entity
- * fields.
- * Makes a GLOBAL decision per entity based on reference pattern.
+ * fields. Makes a GLOBAL decision per entity based on reference pattern.
  * 
  * Must be run after DOReferenceDetector has populated all field references.
  * 
- * Embedding Strategy:
- * - If entity is referenced ONLY by fields in a SINGLE PACKAGE OR MODULE: Set
- * embedContents=true on ALL those fields
- * Rationale: Safe to embed - all classes in same package/module are typically
- * exported together
+ * Embedding Strategy: - If entity is referenced ONLY by fields in a SINGLE
+ * PACKAGE OR MODULE: Set embedContents=true on ALL those fields Rationale: Safe
+ * to embed - all classes in same package/module are typically exported together
  * - If entity is referenced by fields in MULTIPLE PACKAGES AND MODULES: Set
- * embedContents=false on ALL fields
- * Rationale: Cannot embed - other packages/modules exporting separately will
- * need access
- * to this entity
+ * embedContents=false on ALL fields Rationale: Cannot embed - other
+ * packages/modules exporting separately will need access to this entity
  * 
  * Example: BornePer referenced by gest.borne.Borne, gest.borne.ModeleBorne, and
- * gest.borne.ParamMaintBorne
- * → All in package gest.borne → embedContents=true for ALL 5 fields
- * → When exporting the gest.borne package, all BornePer entities are contained
- * within
+ * gest.borne.ParamMaintBorne → All in package gest.borne → embedContents=true
+ * for ALL 5 fields → When exporting the gest.borne package, all BornePer
+ * entities are contained within
  */
 public class DOEmbeddingCoordinator {
 
@@ -68,9 +62,8 @@ public class DOEmbeddingCoordinator {
 
     /**
      * Analyzes the reference schema and sets embedding strategy for all entity
-     * classes.
-     * Global decision per entity: embedContents=true ONLY if ALL references are in
-     * ONE package.
+     * classes. Global decision per entity: embedContents=true ONLY if ALL
+     * references are in ONE package.
      */
     public void coordinateEmbedding() {
         System.out.println("\n=== DOEmbeddingCoordinator: Analyzing embedding strategy ===");
@@ -78,7 +71,8 @@ public class DOEmbeddingCoordinator {
         // Step 1: Build map of entity classes to all fields that reference them
         buildReferenceMap();
 
-        // Step 2: For each entity, make global decision based on how many packages
+        // Step 2: For each entity, make global decision based on how many
+        // packages
         // reference it
         int embeddedEntities = 0;
         int notEmbeddedEntities = 0;
@@ -94,9 +88,7 @@ public class DOEmbeddingCoordinator {
             }
 
             // Count how many DIFFERENT packages reference this entity
-            Set<String> referencingPackages = allReferences.stream()
-                    .map(FieldReference::getPackageName)
-                    .collect(Collectors.toSet());
+            Set<String> referencingPackages = allReferences.stream().map(FieldReference::getPackageName).collect(Collectors.toSet());
 
             boolean allowEmbed = false;
             String groupingReason = "";
@@ -130,12 +122,8 @@ public class DOEmbeddingCoordinator {
                 embeddedEntities++;
                 totalFieldsEmbedded += allReferences.size();
 
-                Set<String> classNames = allReferences.stream()
-                        .map(FieldReference::getClassName)
-                        .collect(Collectors.toSet());
-                System.out.println("✓ EMBED: " + entityClass +
-                        " → " + allReferences.size() + " field(s) in " + groupingReason +
-                        " (" + classNames.size() + " class(es))");
+                Set<String> classNames = allReferences.stream().map(FieldReference::getClassName).collect(Collectors.toSet());
+                System.out.println("✓ EMBED: " + entityClass + " → " + allReferences.size() + " field(s) in " + groupingReason + " (" + classNames.size() + " class(es))");
                 if (allReferences.size() > 1) {
                     for (FieldReference ref : allReferences) {
                         System.out.println("    - " + ref.getClassName() + "." + ref.field.source);
@@ -150,8 +138,7 @@ public class DOEmbeddingCoordinator {
                 notEmbeddedEntities++;
                 totalFieldsNotEmbedded += allReferences.size();
 
-                System.out.println("⊗ NO EMBED: " + entityClass +
-                        " → " + allReferences.size() + " field(s) across " + referencingPackages.size() + " packages");
+                System.out.println("⊗ NO EMBED: " + entityClass + " → " + allReferences.size() + " field(s) across " + referencingPackages.size() + " packages");
                 if (referencingPackages.size() <= 5) {
                     System.out.println("    Packages: " + referencingPackages);
                 }
@@ -159,12 +146,9 @@ public class DOEmbeddingCoordinator {
         }
 
         System.out.println("\n=== Embedding Strategy Summary ===");
-        System.out.println("Entities embedded (all refs in 1 package/module): " + embeddedEntities +
-                " (" + totalFieldsEmbedded + " fields)");
-        System.out.println("Entities NOT embedded (multi-package/module):     " + notEmbeddedEntities +
-                " (" + totalFieldsNotEmbedded + " fields)");
-        System.out.println("Total entities analyzed:                          " +
-                (embeddedEntities + notEmbeddedEntities));
+        System.out.println("Entities embedded (all refs in 1 package/module): " + embeddedEntities + " (" + totalFieldsEmbedded + " fields)");
+        System.out.println("Entities NOT embedded (multi-package/module):     " + notEmbeddedEntities + " (" + totalFieldsNotEmbedded + " fields)");
+        System.out.println("Total entities analyzed:                          " + (embeddedEntities + notEmbeddedEntities));
     }
 
     /**
@@ -176,7 +160,8 @@ public class DOEmbeddingCoordinator {
                 String fieldType = field.type;
                 String childrenType = field.childrenType;
 
-                // Check if field references an entity (non-primitive type in schema)
+                // Check if field references an entity (non-primitive type in
+                // schema)
                 if (fieldType != null && !fieldType.isEmpty()) {
                     if (isEntityType(fieldType)) {
                         addReference(fieldType, schemaClass, field);
@@ -216,32 +201,27 @@ public class DOEmbeddingCoordinator {
         }
 
         String lower = typeName.toLowerCase();
-        return lower.equals("string") || lower.equals("int") || lower.equals("integer") ||
-                lower.equals("long") || lower.equals("double") || lower.equals("float") ||
-                lower.equals("boolean") || lower.equals("bool") || lower.equals("date") ||
-                lower.equals("datetime") || lower.equals("byte") || lower.equals("short") ||
-                lower.equals("char") || lower.equals("character");
+        return lower.equals("string") || lower.equals("int") || lower.equals("integer") || lower.equals("long") || lower.equals("double") || lower.equals("float") || lower.equals("boolean") || lower.equals("bool") || lower.equals("date") || lower.equals("datetime") || lower.equals("byte") || lower.equals("short") || lower.equals("char") || lower.equals("character");
     }
 
     /**
      * Add a reference from a field to an entity class
      */
     private void addReference(String entityClass, DOSchemaClass containingClass, DOSchemaField field) {
-        entityReferences.computeIfAbsent(entityClass, k -> new ArrayList<>())
-                .add(new FieldReference(containingClass, field));
+        entityReferences.computeIfAbsent(entityClass, k -> new ArrayList<>()).add(new FieldReference(containingClass, field));
     }
 
     /**
-     * Find which module contains the given class by recursively searching through
-     * modules and their children
+     * Find which module contains the given class by recursively searching
+     * through modules and their children
      */
     private String findModuleForClass(String className) {
-        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
         if (modules == null || modules.isEmpty()) {
             return null;
         }
 
-        for (MigrationModule module : modules) {
+        for (DOSchemaModule module : modules) {
             String result = findModuleForClassRecursive(module, className);
             if (result != null) {
                 return result;
@@ -253,14 +233,15 @@ public class DOEmbeddingCoordinator {
     /**
      * Recursively search a module and its children for a class
      */
-    private String findModuleForClassRecursive(MigrationModule module, String className) {
+    private String findModuleForClassRecursive(DOSchemaModule module, String className) {
         // Check if this module contains the class
-        if (module.getClassNames().contains(className)) {
-            return module.getName();
+        boolean hasClass = module.classConfigs.stream().anyMatch(c -> c.getClassName().equals(className));
+        if (hasClass) {
+            return module.name;
         }
 
         // Check child modules recursively
-        for (MigrationModule child : module.getChildModules()) {
+        for (DOSchemaModule child : module.children) {
             String result = findModuleForClassRecursive(child, className);
             if (result != null) {
                 return result;

@@ -11,22 +11,28 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.ui.common.DOExportMonitor;
 
 /**
  * Post-processes all generated HTML viewer files in an export output directory
  * to inject a collapsible navigation sidebar listing all module pages.
  *
- * <p>The sidebar is populated by replacing the {@code // @nav-data-begin} /
+ * <p>
+ * The sidebar is populated by replacing the {@code // @nav-data-begin} /
  * {@code // @nav-data-end} markers embedded in the HTML templates with a JSON
- * array of navigation items whose hrefs are relative to each individual file.</p>
+ * array of navigation items whose hrefs are relative to each individual file.
+ * </p>
  *
- * <p>Must be called after all HTML viewer files have been generated.</p>
+ * <p>
+ * Must be called after all HTML viewer files have been generated.
+ * </p>
  */
 public final class HtmlNavPostProcessor {
 
-    /** Marker that starts the replaceable nav data block inside HTML scripts. */
+    /**
+     * Marker that starts the replaceable nav data block inside HTML scripts.
+     */
     private static final String MARKER_START = "// @nav-data-begin\n";
 
     /** Marker that ends the replaceable nav data block. */
@@ -35,19 +41,21 @@ public final class HtmlNavPostProcessor {
     private HtmlNavPostProcessor() {
     }
 
-    // ── Public entry point ─────────────────────────────────────────────────────
+    // ── Public entry point
+    // ─────────────────────────────────────────────────────
 
     /**
-     * Scans all {@code .html} files under {@code dbBasePath}, builds a navigation
-     * tree ordered by the given module list, and injects per-file relative
-     * navigation links into each one.
+     * Scans all {@code .html} files under {@code dbBasePath}, builds a
+     * navigation tree ordered by the given module list, and injects per-file
+     * relative navigation links into each one.
      *
-     * @param dbBasePath  Root of the database export output (e.g. {@code output/54060})
-     * @param modules     Ordered list of export modules (from DOModuleService)
+     * @param dbBasePath Root of the database export output (e.g.
+     * {@code output/54060})
+     * @param modules Ordered list of export modules (from DOModuleService)
      * @param modulePaths Corresponding output paths, one per module
-     * @param monitor     Optional progress monitor (may be null)
+     * @param monitor Optional progress monitor (may be null)
      */
-    public static void postProcess(Path dbBasePath, List<MigrationModule> modules, List<String> modulePaths, DOExportMonitor monitor) {
+    public static void postProcess(Path dbBasePath, List<DOSchemaModule> modules, List<String> modulePaths, DOExportMonitor monitor) {
         if (dbBasePath == null || !Files.isDirectory(dbBasePath)) {
             return;
         }
@@ -80,7 +88,8 @@ public final class HtmlNavPostProcessor {
         }
     }
 
-    // ── File collection ────────────────────────────────────────────────────────
+    // ── File collection
+    // ────────────────────────────────────────────────────────
 
     private static List<Path> collectHtmlFiles(Path base) throws IOException {
         List<Path> result = new ArrayList<>();
@@ -103,7 +112,8 @@ public final class HtmlNavPostProcessor {
         return result;
     }
 
-    // ── Nav tree ───────────────────────────────────────────────────────────────
+    // ── Nav tree
+    // ───────────────────────────────────────────────────────────────
 
     /**
      * A node in the navigation tree: either a folder group (has children) or an
@@ -126,13 +136,14 @@ public final class HtmlNavPostProcessor {
     }
 
     /**
-     * Builds a nav tree whose top-level groups are the export modules (in order,
-     * with their proper display names from the module definition). HTML files found
-     * under each module's output path are attached as leaf children. Any HTML files
-     * not covered by a module (e.g. {@code _Migration/Extra.html}) are appended
-     * under a catch-all group at the end.
+     * Builds a nav tree whose top-level groups are the export modules (in
+     * order, with their proper display names from the module definition). HTML
+     * files found under each module's output path are attached as leaf
+     * children. Any HTML files not covered by a module (e.g.
+     * {@code _Migration/Extra.html}) are appended under a catch-all group at
+     * the end.
      */
-    private static NavNode buildNavTreeFromModules(Path dbBasePath, List<MigrationModule> modules, List<String> modulePaths, List<Path> allHtmlFiles) {
+    private static NavNode buildNavTreeFromModules(Path dbBasePath, List<DOSchemaModule> modules, List<String> modulePaths, List<Path> allHtmlFiles) {
 
         NavNode root = new NavNode("root", null);
 
@@ -141,8 +152,8 @@ public final class HtmlNavPostProcessor {
 
         // One group per module, in declaration order
         for (int i = 0; i < modules.size(); i++) {
-            MigrationModule module = modules.get(i);
-            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : module.getName();
+            DOSchemaModule module = modules.get(i);
+            String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : module.name;
             Path moduleDir = dbBasePath.resolve(modulePath);
 
             // Collect HTML files that live inside this module's directory
@@ -158,7 +169,7 @@ public final class HtmlNavPostProcessor {
                 continue; // module produced no HTML — skip it in the nav
             }
 
-            NavNode moduleGroup = new NavNode(module.getName(), null);
+            NavNode moduleGroup = new NavNode(module.name, null);
             // Within the module, mirror sub-folder structure
             for (Path file : moduleFiles) {
                 Path relative = moduleDir.relativize(file);
@@ -204,7 +215,8 @@ public final class HtmlNavPostProcessor {
         return fileName;
     }
 
-    // ── Injection ──────────────────────────────────────────────────────────────
+    // ── Injection
+    // ──────────────────────────────────────────────────────────────
 
     /**
      * Replaces the nav data block in the given HTML file with JSON navigation
@@ -228,7 +240,8 @@ public final class HtmlNavPostProcessor {
         return true;
     }
 
-    // ── JSON serialisation ─────────────────────────────────────────────────────
+    // ── JSON serialisation
+    // ─────────────────────────────────────────────────────
 
     private static String buildNavJson(List<NavNode> children, Path currentFile) {
         StringBuilder sb = new StringBuilder();

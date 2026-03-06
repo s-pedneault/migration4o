@@ -3,18 +3,17 @@ package migration4o.schema.modules;
 import java.util.ArrayList;
 import java.util.List;
 
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 
 /**
- * Singleton service for managing the module structure.
- * Ensures the module structure is loaded once and shared across the entire
- * application.
- * All components should use this service instead of loading/saving modules
+ * Singleton service for managing the module structure. Ensures the module
+ * structure is loaded once and shared across the entire application. All
+ * components should use this service instead of loading/saving modules
  * directly.
  * 
  * This service follows the same pattern as DODatabaseService and
- * DOSchemaService,
- * providing centralized access to the migration module structure.
+ * DOSchemaService, providing centralized access to the migration module
+ * structure.
  */
 public class DOModuleService {
 
@@ -23,7 +22,7 @@ public class DOModuleService {
     static final String DEFAULT_MODULE_FILE = "schema/migration-format.xml";
     static final String BACKUP_MODULES_PATH = "local/schema/migration-format.xml";
 
-    private List<MigrationModule> modules;
+    private List<DOSchemaModule> modules;
     private String currentModuleFilePath;
 
     private DOModuleService() {
@@ -42,25 +41,25 @@ public class DOModuleService {
     }
 
     /**
-     * Load the module structure from the default file path.
-     * If modules are already loaded from a different path, they will be replaced.
+     * Load the module structure from the default file path. If modules are
+     * already loaded from a different path, they will be replaced.
      * 
      * @return The loaded modules
      * @throws Exception If the module structure cannot be loaded
      */
-    public synchronized List<MigrationModule> loadModuleStructure() throws Exception {
+    public synchronized List<DOSchemaModule> loadModuleStructure() throws Exception {
         return loadModuleStructure(DEFAULT_MODULE_FILE);
     }
 
     /**
-     * Load the module structure from the specified path.
-     * If modules are already loaded from a different path, they will be replaced.
+     * Load the module structure from the specified path. If modules are already
+     * loaded from a different path, they will be replaced.
      * 
      * @param filePath Path to the migration-format.xml file
      * @return The loaded modules
      * @throws Exception If the module structure cannot be loaded
      */
-    public synchronized List<MigrationModule> loadModuleStructure(String filePath) throws Exception {
+    public synchronized List<DOSchemaModule> loadModuleStructure(String filePath) throws Exception {
         DOModuleStructureReader reader = new DOModuleStructureReader();
         modules = reader.readMigrationFormat(filePath);
         currentModuleFilePath = filePath;
@@ -68,7 +67,8 @@ public class DOModuleService {
         System.out.println("Module structure loaded: " + filePath);
         System.out.println("  Modules: " + modules.size());
 
-        return new ArrayList<>(modules); // Return a copy to prevent external modification
+        return new ArrayList<>(modules); // Return a copy to prevent external
+                                         // modification
     }
 
     /**
@@ -76,8 +76,9 @@ public class DOModuleService {
      * 
      * @return A copy of the module list, or empty list if no modules are loaded
      */
-    public synchronized List<MigrationModule> getModules() {
-        return new ArrayList<>(modules); // Return a copy to prevent external modification
+    public synchronized List<DOSchemaModule> getModules() {
+        return new ArrayList<>(modules); // Return a copy to prevent external
+                                         // modification
     }
 
     /**
@@ -86,7 +87,7 @@ public class DOModuleService {
      * @param modules The modules to save
      * @throws Exception If the module structure cannot be saved
      */
-    public synchronized void saveModuleStructure(List<MigrationModule> modules) throws Exception {
+    public synchronized void saveModuleStructure(List<DOSchemaModule> modules) throws Exception {
         String filePath = (currentModuleFilePath != null) ? currentModuleFilePath : DEFAULT_MODULE_FILE;
         saveModuleStructure(modules, filePath);
     }
@@ -94,11 +95,11 @@ public class DOModuleService {
     /**
      * Save the module structure to the specified path.
      * 
-     * @param modules  The modules to save
+     * @param modules The modules to save
      * @param filePath Path to the migration-format.xml file
      * @throws Exception If the module structure cannot be saved
      */
-    public synchronized void saveModuleStructure(List<MigrationModule> modules, String filePath) throws Exception {
+    public synchronized void saveModuleStructure(List<DOSchemaModule> modules, String filePath) throws Exception {
         DOModuleStructureWriter writer = new DOModuleStructureWriter();
         writer.writeMigrationFormat(modules, filePath);
 
@@ -110,13 +111,15 @@ public class DOModuleService {
     }
 
     /**
-     * Set the modules directly (used when modules are created programmatically).
+     * Set the modules directly (used when modules are created
+     * programmatically).
      * 
      * @param modules The modules to set
      */
-    public synchronized void setModules(List<MigrationModule> modules) {
+    public synchronized void setModules(List<DOSchemaModule> modules) {
         this.modules = new ArrayList<>(modules);
-        this.currentModuleFilePath = null; // Path not known when setting directly
+        this.currentModuleFilePath = null; // Path not known when setting
+                                           // directly
     }
 
     /**

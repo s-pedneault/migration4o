@@ -20,8 +20,8 @@ import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
-import migration4o.models.ui.MigrationModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.LucideIcons;
@@ -45,11 +45,19 @@ public class ExportEngine {
     // ── Module nav tree (built once before export) ──────────────────────────
     private static final class NavNode {
         final String label;
-        /** Root-relative href (e.g. "Activités/Intervention/Intervention.html"); null for groups. */
+        /**
+         * Root-relative href (e.g. "Activités/Intervention/Intervention.html");
+         * null for groups.
+         */
         final String rootRelativeHref;
-        /** Inline SVG string for Lucide icon; non-null only when a known icon name is configured. */
+        /**
+         * Inline SVG string for Lucide icon; non-null only when a known icon
+         * name is configured.
+         */
         final String iconSvg;
-        /** Nesting depth: 0 = top-level module tile, 1+ = child group or leaf. */
+        /**
+         * Nesting depth: 0 = top-level module tile, 1+ = child group or leaf.
+         */
         final int depth;
         /** Hex tile background color; null = auto-cycle. */
         final String tileBg;
@@ -83,16 +91,20 @@ public class ExportEngine {
 
     /** Top-level nav tree — same for all files in this export. */
     private final List<NavNode> navTree = new ArrayList<>();
-    /** Nav JSON serialized once from navTree; injected verbatim into every HTML file. */
+    /**
+     * Nav JSON serialized once from navTree; injected verbatim into every HTML
+     * file.
+     */
     private String cachedNavJson = "[]";
 
     /**
-     * Creates export engine using the shared in-memory database from DODatabaseService.
+     * Creates export engine using the shared in-memory database from
+     * DODatabaseService.
      * 
-     * @param schema         The reference schema
+     * @param schema The reference schema
      * @param databaseSchema The database schema
-     * @param databasePath   The database file path (for naming output folders)
-     * @param dbContext      The database context
+     * @param databasePath The database file path (for naming output folders)
+     * @param dbContext The database context
      */
     public ExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath, migration4o.database.DODatabaseContext dbContext) {
         this.operation = new ExportOperation();
@@ -125,8 +137,8 @@ public class ExportEngine {
     /**
      * Sets the maximum number of objects to export per class.
      * 
-     * @param maxObjectsPerClass Maximum objects to export per class, or null for
-     *                           all objects
+     * @param maxObjectsPerClass Maximum objects to export per class, or null
+     * for all objects
      */
     public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
         this.operation.maxObjectsPerClass = maxObjectsPerClass;
@@ -174,7 +186,7 @@ public class ExportEngine {
      * Sets the structured output format used by the writer layer.
      *
      * @param outputFormat format name from StructuredWriterProvider (e.g. XML,
-     *                     JSON, EXCEL)
+     * JSON, EXCEL)
      */
     public void setOutputFormat(String outputFormat) {
         if (outputFormat == null || outputFormat.isBlank()) {
@@ -189,11 +201,11 @@ public class ExportEngine {
     }
 
     /**
-     * Pre-builds the hierarchical nav tree for the HTML viewer sidebar.
-     * Must be called before export starts. The tree mirrors the module structure:
-     *   path-prefix groups → module groups → class leaves (recursively).
+     * Pre-builds the hierarchical nav tree for the HTML viewer sidebar. Must be
+     * called before export starts. The tree mirrors the module structure:
+     * path-prefix groups → module groups → class leaves (recursively).
      */
-    public void setModuleNavData(List<MigrationModule> modules, List<String> modulePaths, String baseOutputDir) {
+    public void setModuleNavData(List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputDir) {
         navTree.clear();
         cachedNavJson = "[]";
         if (modules == null || modules.isEmpty())
@@ -204,21 +216,23 @@ public class ExportEngine {
         LinkedHashMap<String, NavNode> prefixGroups = new LinkedHashMap<>();
 
         for (int i = 0; i < modules.size(); i++) {
-            MigrationModule m = modules.get(i);
-            String mp = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : m.getName();
+            DOSchemaModule m = modules.get(i);
+            String mp = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : m.name;
             String[] parts = mp.split("/");
 
-            // Compute the module's actual output folder (mirrors exportModuleRecursive logic)
+            // Compute the module's actual output folder (mirrors
+            // exportModuleRecursive logic)
             Path moduleFolderPath = base;
             for (String part : parts) {
                 moduleFolderPath = moduleFolderPath.resolve(part);
             }
             Path actualModuleFolder = moduleFolderPath.getParent() != null ? moduleFolderPath.getParent().resolve(moduleId(m)) : base.resolve(moduleId(m));
 
-            // Only set iconSvg when the module has a recognized Lucide icon name
-            String iconName = m.getIcon();
+            // Only set iconSvg when the module has a recognized Lucide icon
+            // name
+            String iconName = m.icon;
             String iconSvg = (iconName != null && LucideIcons.isKnown(iconName)) ? LucideIcons.getSvg(iconName) : null;
-            NavNode moduleNode = new NavNode(m.getName(), null, iconSvg, 0, m.getTileBg(), m.getTileTextColor(), m.getTileIconColor(), m.getTileFontSize());
+            NavNode moduleNode = new NavNode(m.name, null, iconSvg, 0, m.tileBg, m.tileTextColor, m.tileIconColor, m.tileFontSize);
             buildModuleNavChildren(moduleNode, m, actualModuleFolder, base, 0);
 
             if (parts.length > 1) {
@@ -252,29 +266,30 @@ public class ExportEngine {
      * Recursively adds class leaves and child module groups to a nav node,
      * using root-relative href strings.
      */
-    private void buildModuleNavChildren(NavNode node, MigrationModule module, Path folderPath, Path base, int depth) {
-        for (ClassExportConfig config : module.getClassConfigs()) {
+    private void buildModuleNavChildren(NavNode node, DOSchemaModule module, Path folderPath, Path base, int depth) {
+        for (ClassExportConfig config : module.classConfigs) {
             String destName = config.getDestinationFileName();
-            // Use the human-readable title from the reference schema when available
+            // Use the human-readable title from the reference schema when
+            // available
             DOSchemaClass sc = (operation.referenceSchema != null) ? operation.referenceSchema.findClassByName(config.getClassName()) : null;
             String label = (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
             String href = base.relativize(folderPath.resolve(destName + ".html")).toString().replace('\\', '/');
             node.children.add(new NavNode(label, href, null, depth + 1, null, null, null, null));
         }
-        for (MigrationModule child : module.getChildModules()) {
-            NavNode childNode = new NavNode(child.getName(), null, null, depth + 1, null, null, null, null);
+        for (DOSchemaModule child : module.children) {
+            NavNode childNode = new NavNode(child.name, null, null, depth + 1, null, null, null, null);
             buildModuleNavChildren(childNode, child, folderPath.resolve(moduleId(child)), base, depth + 1);
             node.children.add(childNode);
         }
     }
 
     /**
-     * Returns the folder identifier for a module: the module's ID when non-blank,
-     * otherwise falls back to the module's display name.
+     * Returns the folder identifier for a module: the module's ID when
+     * non-blank, otherwise falls back to the module's display name.
      */
-    private static String moduleId(MigrationModule m) {
-        String id = m.getId();
-        return (id != null && !id.isBlank()) ? id : m.getName();
+    private static String moduleId(DOSchemaModule m) {
+        String id = m.id;
+        return (id != null && !id.isBlank()) ? id : m.name;
     }
 
     private String serializeNavTree() {
@@ -323,11 +338,13 @@ public class ExportEngine {
     }
 
     /**
-     * Computes the base href for a given output file — a relative path from that
-     * file's directory back to the db export root (e.g. "../../" for depth 2).
+     * Computes the base href for a given output file — a relative path from
+     * that file's directory back to the db export root (e.g. "../../" for depth
+     * 2).
      */
     private String computeBaseHref(Path outputPath) {
-        // moduleStack.size() is the number of nested module folders the file sits in
+        // moduleStack.size() is the number of nested module folders the file
+        // sits in
         // (e.g. Organisation/ = 1, Organisation/Configuration/ = 2, ...)
         // Each level needs one "../" to get back to the db root.
         int levels = operation.moduleStack.size();
@@ -357,9 +374,9 @@ public class ExportEngine {
     }
 
     /**
-     * Initializes shared object tracking and XSD builder for multi-module exports.
-     * Call this before exporting multiple modules to ensure objects are only
-     * counted once and a single comprehensive XSD is generated.
+     * Initializes shared object tracking and XSD builder for multi-module
+     * exports. Call this before exporting multiple modules to ensure objects
+     * are only counted once and a single comprehensive XSD is generated.
      */
     public void initializeSharedTracking() {
         operation.exportedObjectIds = new HashSet<>();
@@ -370,8 +387,8 @@ public class ExportEngine {
     }
 
     /**
-     * Resets shared object tracking and XSD builder. Call this to clear tracking
-     * state between different export sessions.
+     * Resets shared object tracking and XSD builder. Call this to clear
+     * tracking state between different export sessions.
      */
     public void resetSharedTracking() {
         operation.useSharedTracking = false;
@@ -391,8 +408,8 @@ public class ExportEngine {
     }
 
     /**
-     * Writes the comprehensive XSD schema file. Should be called after all exports
-     * are complete when using shared tracking.
+     * Writes the comprehensive XSD schema file. Should be called after all
+     * exports are complete when using shared tracking.
      * 
      * @param baseOutputPath The base output directory
      * @throws IOException if writing fails
@@ -470,20 +487,21 @@ public class ExportEngine {
 
     /**
      * Exports a module with folder structure, using provided hierarchical path.
-     * This is used when exporting a child module standalone to preserve the parent
-     * folder structure.
+     * This is used when exporting a child module standalone to preserve the
+     * parent folder structure.
      * 
-     * @param module         The module to export (including child modules)
-     * @param modulePath     The full hierarchical path for this module (e.g.,
-     *                       "Activités/Intervention")
+     * @param module The module to export (including child modules)
+     * @param modulePath The full hierarchical path for this module (e.g.,
+     * "Activités/Intervention")
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
+     * @param monitor Progress monitor (can be null)
+     * @param sharedTracker Shared reference tracker for bulk exports (can be
+     * null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportStatistics exportModuleStructured(MigrationModule module, String modulePath, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
-        System.out.println("DEBUG exportModuleStructured: module=" + module.getName() + ", modulePath=" + modulePath);
+    public ExportStatistics exportModuleStructured(DOSchemaModule module, String modulePath, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
+        System.out.println("DEBUG exportModuleStructured: module=" + module.name + ", modulePath=" + modulePath);
 
         // Count total classes for progress reporting
         int totalClasses = countTotalClasses(module);
@@ -492,7 +510,7 @@ public class ExportEngine {
         operation.baseOutputPath = baseOutputPath;
 
         if (operation.monitor != null) {
-            operation.monitor.onExportStart(module.getName(), totalClasses);
+            operation.monitor.onExportStart(module.name, totalClasses);
         }
 
         operation.statistics = new ExportStatistics(operation.monitor);
@@ -557,17 +575,17 @@ public class ExportEngine {
             String fullOutputPath = dbBasePath.toString();
             operation.statistics.schemaWarnings.clear();
             operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
-            operation.statistics.setExportInfo(module.getName(), fullOutputPath);
+            operation.statistics.setExportInfo(module.name, fullOutputPath);
 
             if (operation.monitor != null) {
-                operation.monitor.onExportComplete(module.getName(), operation.statistics.objectsSucceeded, operation.statistics.schemaWarnings.size());
+                operation.monitor.onExportComplete(module.name, operation.statistics.objectsSucceeded, operation.statistics.schemaWarnings.size());
             }
 
             return operation.statistics;
 
         } catch (Exception e) {
             if (operation.monitor != null) {
-                operation.monitor.onExportError(module.getName(), e.getMessage());
+                operation.monitor.onExportError(module.name, e.getMessage());
             }
             throw e;
         } finally {
@@ -576,22 +594,23 @@ public class ExportEngine {
     }
 
     /**
-     * Exports a module with folder structure matching the module hierarchy. Each
-     * class is exported to its own XML/XSD file within the module folders. Files
-     * are written to output/<db-folder>/
+     * Exports a module with folder structure matching the module hierarchy.
+     * Each class is exported to its own XML/XSD file within the module folders.
+     * Files are written to output/<db-folder>/
      * 
      * Automatically tracks and exports referenced classes that are not in the
-     * module structure. Referenced classes are exported to a virtual "Referenced"
-     * module.
+     * module structure. Referenced classes are exported to a virtual
+     * "Referenced" module.
      * 
-     * @param module         The module to export (including child modules)
+     * @param module The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param sharedTracker  Shared reference tracker for bulk exports (can be null)
+     * @param monitor Progress monitor (can be null)
+     * @param sharedTracker Shared reference tracker for bulk exports (can be
+     * null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
+    public ExportStatistics exportModuleStructured(DOSchemaModule module, String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker sharedTracker) throws Exception {
         // Use module ID as path (falls back to name if ID is blank)
         return exportModuleStructured(module, moduleId(module), baseOutputPath, monitor, sharedTracker);
     }
@@ -600,23 +619,24 @@ public class ExportEngine {
      * Exports a module with folder structure (convenience method without shared
      * tracker).
      * 
-     * @param module         The module to export (including child modules)
+     * @param module The module to export (including child modules)
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
+     * @param monitor Progress monitor (can be null)
      * @return ExportStatistics with details about the export operation
      * @throws Exception if export fails
      */
-    public ExportStatistics exportModuleStructured(MigrationModule module, String baseOutputPath, DOExportMonitor monitor) throws Exception {
+    public ExportStatistics exportModuleStructured(DOSchemaModule module, String baseOutputPath, DOExportMonitor monitor) throws Exception {
         return exportModuleStructured(module, baseOutputPath, monitor, null);
     }
 
     /**
-     * Exports referenced classes that were discovered during bulk export. Should be
-     * called after all modules have been exported with a shared tracker.
+     * Exports referenced classes that were discovered during bulk export.
+     * Should be called after all modules have been exported with a shared
+     * tracker.
      * 
      * @param baseOutputPath The base output directory (typically "output")
-     * @param monitor        Progress monitor (can be null)
-     * @param tracker        The shared reference tracker from bulk export
+     * @param monitor Progress monitor (can be null)
+     * @param tracker The shared reference tracker from bulk export
      * @throws Exception if export fails
      */
     public ExportStatistics exportReferencedClasses(String baseOutputPath, DOExportMonitor monitor, ReferencedClassTracker tracker) throws Exception {
@@ -761,9 +781,9 @@ public class ExportEngine {
     /**
      * Counts total number of classes in a module and all its children.
      */
-    private int countTotalClasses(MigrationModule module) {
-        int count = module.getClassNames().size();
-        for (MigrationModule child : module.getChildModules()) {
+    private int countTotalClasses(DOSchemaModule module) {
+        int count = module.classConfigs.size();
+        for (DOSchemaModule child : module.children) {
             count += countTotalClasses(child);
         }
         return count;
@@ -772,15 +792,16 @@ public class ExportEngine {
     /**
      * Recursively exports a module and its children to folder structure.
      */
-    private void exportModuleRecursive(MigrationModule module, Path currentBasePath, int depth) throws Exception {
+    private void exportModuleRecursive(DOSchemaModule module, Path currentBasePath, int depth) throws Exception {
 
         operation.moduleStack.push(module);
         try {
             if (operation.monitor != null) {
-                operation.monitor.onModuleStart(module.getName(), module.getClassConfigs().size(), depth);
+                operation.monitor.onModuleStart(module.name, module.classConfigs.size(), depth);
             }
 
-            // Create folder for this module using module ID (falls back to name)
+            // Create folder for this module using module ID (falls back to
+            // name)
             Path modulePath = currentBasePath.resolve(moduleId(module));
             Files.createDirectories(modulePath);
 
@@ -789,13 +810,14 @@ public class ExportEngine {
             // module.getName()
             // + "' has "
             // + module.getClassConfigs().size() + " class configs");
-            for (ClassExportConfig config : module.getClassConfigs()) {
+            for (ClassExportConfig config : module.classConfigs) {
                 if (operation.monitor != null && operation.monitor.isCancelled()) {
                     break;
                 }
 
                 String className = config.getClassName();
-                // System.out.println("DEBUG exportModuleRecursive: Processing class
+                // System.out.println("DEBUG exportModuleRecursive: Processing
+                // class
                 // " +
                 // className + ", hasCriteria="
                 // + config.hasCriteria() + ", criteria count=" +
@@ -808,17 +830,20 @@ public class ExportEngine {
 
                 DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
                 if (schemaClass == null) {
-                    continue; // Skip missing classes silently - errors tracked via
+                    continue; // Skip missing classes silently - errors tracked
+                              // via
                               // monitor
                 }
 
                 DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
                 if (dbSchemaClass == null) {
-                    continue; // Skip missing classes silently - errors tracked via
+                    continue; // Skip missing classes silently - errors tracked
+                              // via
                               // monitor
                 }
 
-                // Use the destination file name from config (defaults to class name
+                // Use the destination file name from config (defaults to class
+                // name
                 // if not set)
                 String fileName = config.getDestinationFileName() + getOutputFileExtension();
                 String xsdFileName = config.getDestinationFileName() + ".xsd";
@@ -835,7 +860,7 @@ public class ExportEngine {
             }
 
             // Recursively export child modules
-            for (MigrationModule childModule : module.getChildModules()) {
+            for (DOSchemaModule childModule : module.children) {
                 if (operation.monitor != null && operation.monitor.isCancelled()) {
                     break;
                 }
@@ -843,7 +868,7 @@ public class ExportEngine {
             }
 
             if (operation.monitor != null) {
-                operation.monitor.onModuleComplete(module.getName());
+                operation.monitor.onModuleComplete(module.name);
             }
         } finally {
             operation.moduleStack.pop();
@@ -853,8 +878,8 @@ public class ExportEngine {
     /**
      * Exports a single class to the specified file paths.
      * 
-     * @param config Optional export configuration with criteria filtering. If null,
-     *               exports all objects.
+     * @param config Optional export configuration with criteria filtering. If
+     * null, exports all objects.
      */
     private void exportClassToFile(DOSchemaClass schemaClass, DOSchemaClass dbSchemaClass, Path xmlPath, Path xsdPath, migration4o.models.ui.ClassExportConfig config) throws Exception {
 
@@ -1109,18 +1134,21 @@ public class ExportEngine {
      * Recursively registers all modules and their classes with the reference
      * tracker.
      */
-    private void registerModuleClasses(MigrationModule module, ReferencedClassTracker tracker) {
-        Set<String> classNames = new HashSet<>(module.getClassNames());
-        tracker.registerModule(module.getName(), classNames);
+    private void registerModuleClasses(DOSchemaModule module, ReferencedClassTracker tracker) {
+        Set<String> classNames = new HashSet<>();
+        for (ClassExportConfig c : module.classConfigs)
+            classNames.add(c.getClassName());
+        tracker.registerModule(module.name, classNames);
 
-        for (MigrationModule childModule : module.getChildModules()) {
+        for (DOSchemaModule childModule : module.children) {
             registerModuleClasses(childModule, tracker);
         }
     }
 
     /**
-     * Exports referenced classes that were discovered during export but not in the
-     * original request. Creates a "Referenced" module to hold these classes.
+     * Exports referenced classes that were discovered during export but not in
+     * the original request. Creates a "Referenced" module to hold these
+     * classes.
      */
     private void exportReferencedClasses(Set<String> referencedClasses, Path basePath) throws Exception {
 

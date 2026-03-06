@@ -4,20 +4,20 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
-import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.layout.DetailLayout;
 import migration4o.models.ui.layout.LayoutNode;
 import migration4o.util.FileUtil;
 
 /**
- * Writes migration structure to migration-format.xml file.
- * Uses the same backup strategy as DODatabaseSchemaWriter.
+ * Writes migration structure to migration-format.xml file. Uses the same backup
+ * strategy as DODatabaseSchemaWriter.
  */
 public class DOModuleStructureWriter {
 
-    public void writeMigrationFormat(List<MigrationModule> modules, String filePath) throws IOException {
+    public void writeMigrationFormat(List<DOSchemaModule> modules, String filePath) throws IOException {
         // Create backup first
         FileUtil.createBackup(filePath, DOModuleService.BACKUP_MODULES_PATH);
 
@@ -27,7 +27,7 @@ public class DOModuleStructureWriter {
             writer.write("<database>\n");
             writer.write("    <modules>\n");
 
-            for (MigrationModule module : modules) {
+            for (DOSchemaModule module : modules) {
                 writeModule(writer, module);
             }
 
@@ -36,41 +36,41 @@ public class DOModuleStructureWriter {
         }
     }
 
-    private void writeModule(FileWriter writer, MigrationModule module) throws IOException {
+    private void writeModule(FileWriter writer, DOSchemaModule module) throws IOException {
         writeModule(writer, module, 2);
     }
 
-    private void writeModule(FileWriter writer, MigrationModule module, int indentLevel) throws IOException {
+    private void writeModule(FileWriter writer, DOSchemaModule module, int indentLevel) throws IOException {
         String indent = "    ".repeat(indentLevel);
 
-        writer.write(indent + "<module name=\"" + escapeXml(module.getName()) + "\"");
-        if (module.getId() != null && !module.getId().isEmpty()) {
-            writer.write(" id=\"" + escapeXml(module.getId()) + "\"");
+        writer.write(indent + "<module name=\"" + escapeXml(module.name) + "\"");
+        if (module.id != null && !module.id.isEmpty()) {
+            writer.write(" id=\"" + escapeXml(module.id) + "\"");
         }
-        if (module.getIcon() != null && !module.getIcon().isEmpty()) {
-            writer.write(" icon=\"" + escapeXml(module.getIcon()) + "\"");
+        if (module.icon != null && !module.icon.isEmpty()) {
+            writer.write(" icon=\"" + escapeXml(module.icon) + "\"");
         }
-        if (module.getTileBg() != null && !module.getTileBg().isEmpty()) {
-            writer.write(" tile-bg=\"" + escapeXml(module.getTileBg()) + "\"");
+        if (module.tileBg != null && !module.tileBg.isEmpty()) {
+            writer.write(" tile-bg=\"" + escapeXml(module.tileBg) + "\"");
         }
-        if (module.getTileTextColor() != null && !module.getTileTextColor().isEmpty()) {
-            writer.write(" tile-text=\"" + escapeXml(module.getTileTextColor()) + "\"");
+        if (module.tileTextColor != null && !module.tileTextColor.isEmpty()) {
+            writer.write(" tile-text=\"" + escapeXml(module.tileTextColor) + "\"");
         }
-        if (module.getTileIconColor() != null && !module.getTileIconColor().isEmpty()) {
-            writer.write(" tile-icon=\"" + escapeXml(module.getTileIconColor()) + "\"");
+        if (module.tileIconColor != null && !module.tileIconColor.isEmpty()) {
+            writer.write(" tile-icon=\"" + escapeXml(module.tileIconColor) + "\"");
         }
-        if (module.getTileFontSize() != null && !module.getTileFontSize().isEmpty()) {
-            writer.write(" tile-font-size=\"" + escapeXml(module.getTileFontSize()) + "\"");
+        if (module.tileFontSize != null && !module.tileFontSize.isEmpty()) {
+            writer.write(" tile-font-size=\"" + escapeXml(module.tileFontSize) + "\"");
         }
         writer.write(">\n");
 
         // Write class configurations
-        for (ClassExportConfig config : module.getClassConfigs()) {
+        for (ClassExportConfig config : module.classConfigs) {
             writeClassRef(writer, config, indentLevel + 1);
         }
 
         // Write child modules recursively
-        for (MigrationModule childModule : module.getChildModules()) {
+        for (DOSchemaModule childModule : module.children) {
             writeModule(writer, childModule, indentLevel + 1);
         }
 
@@ -92,7 +92,8 @@ public class DOModuleStructureWriter {
             writer.write(" description=\"" + escapeXml(config.getDescription()) + "\"");
         }
 
-        // If there are criteria, unit costs, or layout, use child elements; otherwise self-close
+        // If there are criteria, unit costs, or layout, use child elements;
+        // otherwise self-close
         if (config.hasCriteria() || !config.getUnitCosts().isEmpty() || config.hasLayout()) {
             writer.write(">\n");
 

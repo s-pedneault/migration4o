@@ -2,7 +2,7 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
-import migration4o.models.ui.ModuleNode;
+import migration4o.models.schema.DOSchemaModule;
 
 import org.jdesktop.swingx.treetable.AbstractTreeTableModel;
 
@@ -18,12 +18,14 @@ import java.util.Locale;
  */
 public class ExportTreeTableModel extends AbstractTreeTableModel {
 
-    private String priceListKey = ""; // Current price list selection (empty = "Default")
+    private String priceListKey = ""; // Current price list selection (empty =
+                                      // "Default")
     private static final NumberFormat MONEY_FORMAT = NumberFormat.getCurrencyInstance(Locale.US);
 
     private static final String[] COLUMN_NAMES = { "Name", "ID", "Description", "Unit Cost", "Cost", "Sub-total", "Total" };
 
-    private static final Class<?>[] COLUMN_TYPES = { String.class, // Name (tree column)
+    private static final Class<?>[] COLUMN_TYPES = { String.class, // Name (tree
+                                                                   // column)
             String.class, // ID
             String.class, // Description
             String.class, // Unit Cost (formatted as money)
@@ -85,8 +87,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
 
         switch (column) {
         case 0: // Name (tree column)
-            if (userObject instanceof ModuleNode) {
-                return ((ModuleNode) userObject).toString();
+            if (userObject instanceof DOSchemaModule) {
+                return ((DOSchemaModule) userObject).toString();
             } else if (userObject instanceof ClassNode) {
                 return ((ClassNode) userObject).toString();
             } else {
@@ -94,8 +96,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
             }
 
         case 1: // ID (modules only)
-            if (userObject instanceof ModuleNode) {
-                String id = ((ModuleNode) userObject).getId();
+            if (userObject instanceof DOSchemaModule) {
+                String id = ((DOSchemaModule) userObject).id;
                 return id != null ? id : "";
             }
             return "";
@@ -127,7 +129,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 ClassExportConfig config = classNode.getExportConfig();
                 if (config != null) {
                     float unitCost = config.getUnitCost(priceListKey);
-                    // Use filtered object count (applies criteria if configured)
+                    // Use filtered object count (applies criteria if
+                    // configured)
                     int objectCount = classNode.getObjectCount();
                     if (unitCost > 0 && objectCount > 0) {
                         float cost = unitCost * objectCount;
@@ -138,7 +141,7 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
             return "";
 
         case 5: // Sub-total (for modules only)
-            if (userObject instanceof ModuleNode) {
+            if (userObject instanceof DOSchemaModule) {
                 return MONEY_FORMAT.format(calculateModuleSubtotal(treeNode));
             }
             return "";
@@ -156,8 +159,8 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
     }
 
     /**
-     * Calculate the sub-total cost for a module by summing all child class costs
-     * and child module subtotals recursively.
+     * Calculate the sub-total cost for a module by summing all child class
+     * costs and child module subtotals recursively.
      */
     private float calculateModuleSubtotal(DefaultMutableTreeNode moduleNode) {
         float subtotal = 0.0f;
@@ -172,13 +175,14 @@ public class ExportTreeTableModel extends AbstractTreeTableModel {
                 ClassExportConfig config = classNode.getExportConfig();
                 if (config != null) {
                     float unitCost = config.getUnitCost(priceListKey);
-                    // Use filtered object count (applies criteria if configured)
+                    // Use filtered object count (applies criteria if
+                    // configured)
                     int objectCount = classNode.getObjectCount();
                     if (unitCost > 0 && objectCount > 0) {
                         subtotal += unitCost * objectCount;
                     }
                 }
-            } else if (userObject instanceof ModuleNode) {
+            } else if (userObject instanceof DOSchemaModule) {
                 // Recursively add child module subtotals
                 subtotal += calculateModuleSubtotal(childNode);
             }

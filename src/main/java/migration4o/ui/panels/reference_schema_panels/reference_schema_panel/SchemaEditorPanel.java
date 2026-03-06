@@ -42,7 +42,8 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.analysis.DOSchemaAnomaly;
 import migration4o.models.ui.ColumnDefinition;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.SchemaTreeNode;
 import migration4o.models.ui.SchemaTreeNode.NodeType;
 import migration4o.schema.DOReferenceSchemaWriter;
@@ -1188,7 +1189,8 @@ public class SchemaEditorPanel extends JPanel {
         editSummaryButton.addActionListener(e -> {
             Frame owner = (Frame) SwingUtilities.getWindowAncestor(this);
             String edited = SummaryEditorDialog.showDialog(owner, schemaClass, schema);
-            // null → user cancelled; any String (including "") → user confirmed OK
+            // null → user cancelled; any String (including "") → user confirmed
+            // OK
             if (edited != null) {
                 schemaClass.summary = edited.isEmpty() ? null : edited;
                 summaryDisplayField.setText(schemaClass.summary != null ? schemaClass.summary : "");
@@ -2006,13 +2008,14 @@ public class SchemaEditorPanel extends JPanel {
             return "";
         }
 
-        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
         int moduleCount = modules.size();
         int classCount = 0;
         int fieldCount = 0;
 
-        for (MigrationModule module : modules) {
-            List<String> classNames = module.getAllClassNames();
+        for (DOSchemaModule module : modules) {
+            List<String> classNames = new ArrayList<>();
+            collectAllClassNames(module, classNames);
             classCount += classNames.size();
             for (String className : classNames) {
                 DOSchemaClass schemaClass = schema.findClassByName(className);
@@ -2027,6 +2030,16 @@ public class SchemaEditorPanel extends JPanel {
 
     private void setStatus(String status) {
         statusLabel.setText(status);
+    }
+
+    /** Recursively collects all class names from a module and its children. */
+    private void collectAllClassNames(DOSchemaModule module, List<String> classNames) {
+        for (ClassExportConfig config : module.classConfigs) {
+            classNames.add(config.getClassName());
+        }
+        for (DOSchemaModule child : module.children) {
+            collectAllClassNames(child, classNames);
+        }
     }
 
     /**

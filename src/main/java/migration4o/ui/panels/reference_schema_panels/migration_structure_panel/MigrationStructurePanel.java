@@ -54,8 +54,7 @@ import migration4o.models.ui.CategorizedClasses;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
-import migration4o.models.ui.MigrationModule;
-import migration4o.models.ui.ModuleNode;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.DetailLayoutDesigner;
@@ -154,7 +153,8 @@ public class MigrationStructurePanel extends JPanel {
      * Updates the root node name to show the database folder name.
      */
     private void updateRootNodeName() {
-        // Nothing here anymore, since we disconnected the reference schema view from the specific database
+        // Nothing here anymore, since we disconnected the reference schema view
+        // from the specific database
     }
 
     private void initializeUI() {
@@ -313,7 +313,8 @@ public class MigrationStructurePanel extends JPanel {
             }
         });
 
-        // Set up drag gesture recognizer for export tree (to move classes between
+        // Set up drag gesture recognizer for export tree (to move classes
+        // between
         // modules)
         DragSource exportDragSource = new DragSource();
         exportDragSource.createDefaultDragGestureRecognizer(exportTreeTable, DnDConstants.ACTION_MOVE, new DragGestureListener() {
@@ -346,7 +347,7 @@ public class MigrationStructurePanel extends JPanel {
                 if (path != null) {
                     DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
                     // Accept drop on root or module nodes
-                    if (node.getUserObject() instanceof ModuleNode || node == getExportRoot()) {
+                    if (node.getUserObject() instanceof DOSchemaModule || node == getExportRoot()) {
                         dtde.acceptDrag(dtde.getDropAction());
                         setTreeSelection(path);
                         return;
@@ -369,7 +370,7 @@ public class MigrationStructurePanel extends JPanel {
                 DefaultMutableTreeNode targetNode = (DefaultMutableTreeNode) path.getLastPathComponent();
 
                 // Only allow drop on module nodes
-                if (!(targetNode.getUserObject() instanceof ModuleNode)) {
+                if (!(targetNode.getUserObject() instanceof DOSchemaModule)) {
                     dtde.rejectDrop();
                     return;
                 }
@@ -380,7 +381,8 @@ public class MigrationStructurePanel extends JPanel {
                         dtde.acceptDrop(dtde.getDropAction());
                         DOSchemaClass schemaClass = (DOSchemaClass) transferable.getTransferData(ClassTransferable.CLASS_FLAVOR);
 
-                        // Check if this is a move within export tree (ACTION_MOVE)
+                        // Check if this is a move within export tree
+                        // (ACTION_MOVE)
                         if (dtde.getDropAction() == DnDConstants.ACTION_MOVE) {
                             // Find and remove the class from its current module
                             DefaultMutableTreeNode sourceNode = findClassNodeInExportTree(schemaClass.source);
@@ -401,7 +403,8 @@ public class MigrationStructurePanel extends JPanel {
                                 }
                                 // Remove from source
                                 sourceParent.remove(sourceNode);
-                                // Add to target (without duplicate check since we're moving)
+                                // Add to target (without duplicate check since
+                                // we're moving)
                                 ClassNode classNode = new ClassNode(schemaClass);
                                 DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
                                 targetNode.add(classTreeNode);
@@ -489,7 +492,8 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Categorize classes using util, filtering IDEntites if checkbox is unchecked
+        // Categorize classes using util, filtering IDEntites if checkbox is
+        // unchecked
         boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
         CategorizedClasses categorized = MigrationStructurePanelUtil.categorizeClasses(schema, exportedClasses, includeIDEntites);
 
@@ -518,11 +522,13 @@ public class MigrationStructurePanel extends JPanel {
         exportedParamsNode.removeAllChildren();
         exportedOthersNode.removeAllChildren();
 
-        // Just use reference schema, as migration mapping belongs to the reference schema
+        // Just use reference schema, as migration mapping belongs to the
+        // reference schema
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
         DOSchema sourceSchema = referenceSchema;
 
-        // Categorize classes using util, filtering IDEntites if checkbox is unchecked
+        // Categorize classes using util, filtering IDEntites if checkbox is
+        // unchecked
         boolean includeIDEntites = includeIDEntitesCheckbox != null && includeIDEntitesCheckbox.isSelected();
         CategorizedClasses categorized = MigrationStructurePanelUtil.categorizeClasses(sourceSchema, exportedClasses, includeIDEntites);
 
@@ -556,7 +562,14 @@ public class MigrationStructurePanel extends JPanel {
             String tileFontSize = dialog.getTileFontSize();
 
             DefaultMutableTreeNode root = getExportRoot();
-            ModuleNode moduleNode = new ModuleNode(moduleName, moduleId, icon, tileBg, tileTextColor, tileIconColor, tileFontSize);
+            DOSchemaModule moduleNode = new DOSchemaModule();
+            moduleNode.name = moduleName;
+            moduleNode.id = moduleId;
+            moduleNode.icon = icon;
+            moduleNode.tileBg = tileBg;
+            moduleNode.tileTextColor = tileTextColor;
+            moduleNode.tileIconColor = tileIconColor;
+            moduleNode.tileFontSize = tileFontSize;
             DefaultMutableTreeNode newModule = new DefaultMutableTreeNode(moduleNode);
 
             // Check if a module is selected - if so, add as child
@@ -564,7 +577,7 @@ public class MigrationStructurePanel extends JPanel {
             if (selectedPath != null) {
                 DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
                 // Only add as child if selected node is a module (not a class)
-                if (selectedNode.getUserObject() instanceof ModuleNode || selectedNode == root) {
+                if (selectedNode.getUserObject() instanceof DOSchemaModule || selectedNode == root) {
                     selectedNode.add(newModule);
                     reloadExportModel();
                     expandTreePath(new TreePath(selectedNode.getPath()));
@@ -586,19 +599,19 @@ public class MigrationStructurePanel extends JPanel {
         }
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-        if (node.getUserObject() instanceof ModuleNode) {
-            ModuleNode moduleNode = (ModuleNode) node.getUserObject();
-            ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Rename Module", moduleNode.getName(), moduleNode.getId(), moduleNode.getIcon(), moduleNode.getTileBg(), moduleNode.getTileTextColor(), moduleNode.getTileIconColor(), moduleNode.getTileFontSize());
+        if (node.getUserObject() instanceof DOSchemaModule) {
+            DOSchemaModule moduleNode = (DOSchemaModule) node.getUserObject();
+            ModuleDialog dialog = new ModuleDialog(SwingUtilities.getWindowAncestor(this), "Rename Module", moduleNode.name, moduleNode.id, moduleNode.icon, moduleNode.tileBg, moduleNode.tileTextColor, moduleNode.tileIconColor, moduleNode.tileFontSize);
             dialog.setVisible(true);
 
             if (dialog.isConfirmed()) {
-                moduleNode.setName(dialog.getModuleName());
-                moduleNode.setId(dialog.getModuleId());
-                moduleNode.setIcon(dialog.getIcon());
-                moduleNode.setTileBg(dialog.getTileBg());
-                moduleNode.setTileTextColor(dialog.getTileTextColor());
-                moduleNode.setTileIconColor(dialog.getTileIconColor());
-                moduleNode.setTileFontSize(dialog.getTileFontSize());
+                moduleNode.name = dialog.getModuleName();
+                moduleNode.id = dialog.getModuleId();
+                moduleNode.icon = dialog.getIcon();
+                moduleNode.tileBg = dialog.getTileBg();
+                moduleNode.tileTextColor = dialog.getTileTextColor();
+                moduleNode.tileIconColor = dialog.getTileIconColor();
+                moduleNode.tileFontSize = dialog.getTileFontSize();
                 reloadExportModel();
             }
         }
@@ -620,7 +633,7 @@ public class MigrationStructurePanel extends JPanel {
 
         if (confirm == JOptionPane.YES_OPTION) {
             // If it's a module, move all its classes back to available
-            if (node.getUserObject() instanceof ModuleNode) {
+            if (node.getUserObject() instanceof DOSchemaModule) {
                 moveChildrenToAvailable(node);
             } else if (MigrationStructurePanelUtil.isClassNode(node)) {
                 // Single class node
@@ -732,8 +745,8 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Removes all currently selected classes from export. Handles multiple class
-     * selection.
+     * Removes all currently selected classes from export. Handles multiple
+     * class selection.
      */
     private void removeSelectedClassesFromExport() {
         TreePath[] selectedPaths = getSelectedTreePaths();
@@ -777,8 +790,8 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Opens the configuration dialog for a class export. Allows editing destination
-     * file name and export criteria.
+     * Opens the configuration dialog for a class export. Allows editing
+     * destination file name and export criteria.
      */
     private void configureClassExport(DefaultMutableTreeNode treeNode) {
         if (!(treeNode.getUserObject() instanceof ClassNode)) {
@@ -855,7 +868,8 @@ public class MigrationStructurePanel extends JPanel {
             addToExportItem.addActionListener(evt -> addSelectedClassToExport());
             contextMenu.add(addToExportItem);
 
-            // Severed database tie: removed "View Objects" menu item which used DODatabaseService.
+            // Severed database tie: removed "View Objects" menu item which used
+            // DODatabaseService.
         }
 
         if (contextMenu.getComponentCount() > 0) {
@@ -875,7 +889,8 @@ public class MigrationStructurePanel extends JPanel {
 
         DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
 
-        // Only change selection if the right-clicked node is not already selected
+        // Only change selection if the right-clicked node is not already
+        // selected
         // This preserves multi-selection when right-clicking on a selected item
         TreePath[] selectedPaths = getSelectedTreePaths();
         boolean isAlreadySelected = false;
@@ -894,14 +909,14 @@ public class MigrationStructurePanel extends JPanel {
         JPopupMenu contextMenu = new JPopupMenu();
 
         // Export option for modules
-        if (node.getUserObject() instanceof ModuleNode) {
+        if (node.getUserObject() instanceof DOSchemaModule) {
             // Check if multiple modules are selected
             TreePath[] allSelectedPaths = getSelectedTreePaths();
             int moduleCount = 0;
             if (allSelectedPaths != null) {
                 for (TreePath selectedPath : allSelectedPaths) {
                     DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
-                    if (selectedNode.getUserObject() instanceof ModuleNode) {
+                    if (selectedNode.getUserObject() instanceof DOSchemaModule) {
                         moduleCount++;
                     }
                 }
@@ -944,7 +959,8 @@ public class MigrationStructurePanel extends JPanel {
             removeFromExportItem.addActionListener(evt -> removeSelectedClassesFromExport());
             contextMenu.add(removeFromExportItem);
 
-            // Severed database tie: removed "View Objects" menu item which used DODatabaseService.
+            // Severed database tie: removed "View Objects" menu item which used
+            // DODatabaseService.
         }
 
         if (contextMenu.getComponentCount() > 0) {
@@ -969,11 +985,11 @@ public class MigrationStructurePanel extends JPanel {
         // Build modules for export using util
         List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
         for (MigrationStructurePanelUtil.ModuleTreeInfo info : moduleInfos) {
-            MigrationModule module = MigrationStructurePanelUtil.buildModuleFromTree(info.treeNode, info.moduleNode);
-            if (!module.getClassNames().isEmpty() || !module.getChildModules().isEmpty()) {
+            DOSchemaModule module = MigrationStructurePanelUtil.buildModuleFromTree(info.treeNode, info.moduleNode);
+            if (!module.classConfigs.isEmpty() || !module.children.isEmpty()) {
                 // Build full hierarchical path (e.g., "Activités/Intervention")
                 String fullPath = MigrationStructurePanelUtil.buildFullModulePath(info.treeNode);
-                modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.getName(), module, fullPath));
+                modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.name, module, fullPath));
             }
         }
 
@@ -1043,7 +1059,8 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Select all root module paths (nested modules will be exported as part of
+        // Select all root module paths (nested modules will be exported as part
+        // of
         // their parents)
         TreePath[] paths = rootModulePaths.toArray(new TreePath[0]);
         if (paths.length > 0) {
@@ -1071,12 +1088,12 @@ public class MigrationStructurePanel extends JPanel {
 
     private void loadMigrationStructure() {
         try {
-            List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure(MIGRATION_FORMAT_FILE);
+            List<DOSchemaModule> modules = DOModuleService.getInstance().loadModuleStructure(MIGRATION_FORMAT_FILE);
 
             DefaultMutableTreeNode root = getExportRoot();
             root.removeAllChildren();
 
-            for (MigrationModule module : modules) {
+            for (DOSchemaModule module : modules) {
                 addModuleToTree(root, module);
             }
 
@@ -1090,7 +1107,7 @@ public class MigrationStructurePanel extends JPanel {
         }
     }
 
-    private void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module) {
+    private void addModuleToTree(DefaultMutableTreeNode parentNode, DOSchemaModule module) {
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
         DOSchema databaseSchema = null;
         MigrationStructurePanelUtil.addModuleToTree(parentNode, module, referenceSchema, databaseSchema, exportedClasses);
@@ -1219,10 +1236,12 @@ public class MigrationStructurePanel extends JPanel {
             // Format monetary values if they're not already formatted
             if (value instanceof String && !value.toString().isEmpty()) {
                 String strValue = value.toString();
-                // If it's not already formatted with $, and it looks like a number, format it
+                // If it's not already formatted with $, and it looks like a
+                // number, format it
                 if (!strValue.contains("$") && strValue.matches(".*\\d.*")) {
                     try {
-                        // Try to parse as money format - might already have $ or commas
+                        // Try to parse as money format - might already have $
+                        // or commas
                         String cleanValue = strValue.replace("$", "").replace(",", "").trim();
                         if (!cleanValue.isEmpty()) {
                             double amount = Double.parseDouble(cleanValue);

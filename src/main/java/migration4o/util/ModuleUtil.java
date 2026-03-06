@@ -1,7 +1,8 @@
 package migration4o.util;
 
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.ui.ClassExportConfig;
 import migration4o.schema.modules.DOModuleService;
 
 import java.util.List;
@@ -12,11 +13,12 @@ import java.util.List;
 public class ModuleUtil {
 
     /**
-     * Checks if a class is listed in any export module (from migration-format.xml).
+     * Checks if a class is listed in any export module (from
+     * migration-format.xml).
      * 
      * @param schemaClass The class to check
-     * @return true if the class is listed in at least one migration module, false
-     *         otherwise
+     * @return true if the class is listed in at least one migration module,
+     * false otherwise
      */
     public static boolean isClassListedInAnyModule(DOSchemaClass schemaClass) {
         if (schemaClass == null) {
@@ -24,10 +26,10 @@ public class ModuleUtil {
         }
 
         String className = schemaClass.source;
-        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
 
-        for (MigrationModule module : modules) {
-            if (module.getAllClassNames().contains(className)) {
+        for (DOSchemaModule module : modules) {
+            if (moduleContainsClass(module, className)) {
                 return true;
             }
         }
@@ -47,13 +49,25 @@ public class ModuleUtil {
         }
 
         String className = schemaClass.source;
-        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
 
-        for (MigrationModule module : modules) {
-            if (module.getAllClassNames().contains(className)) {
-                return module.getName();
+        for (DOSchemaModule module : modules) {
+            if (moduleContainsClass(module, className)) {
+                return module.name;
             }
         }
         return null;
+    }
+
+    private static boolean moduleContainsClass(DOSchemaModule module, String className) {
+        for (ClassExportConfig config : module.classConfigs) {
+            if (config.getClassName().equals(className))
+                return true;
+        }
+        for (DOSchemaModule child : module.children) {
+            if (moduleContainsClass(child, className))
+                return true;
+        }
+        return false;
     }
 }

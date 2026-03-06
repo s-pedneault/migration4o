@@ -41,7 +41,7 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ComparisonTabInfo;
 import migration4o.models.ui.SchemaTabInfo;
 import migration4o.ui.common.DatabaseProgressMonitor;
@@ -67,8 +67,10 @@ public class MainWindow extends JFrame {
 
     private JTabbedPane tabbedPane;
     private JTabbedPane schemaTabPane; // Nested tabs for Schema section
-    private JTabbedPane databaseTabPane; // Active nested tabs for selected Database section
-    private Component databaseTabContainer; // Active selected Database top-level tab
+    private JTabbedPane databaseTabPane; // Active nested tabs for selected
+                                         // Database section
+    private Component databaseTabContainer; // Active selected Database
+                                            // top-level tab
     private WelcomePanel welcomePanel;
     private Map<Component, SchemaTabInfo> schemaTabs = new HashMap<>();
     private Map<Component, ComparisonTabInfo> comparisonTabs = new HashMap<>();
@@ -157,8 +159,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Navigate to a class in the reference schema tab. Switches to the Schema tab
-     * and selects the specified class.
+     * Navigate to a class in the reference schema tab. Switches to the Schema
+     * tab and selects the specified class.
      * 
      * @param className the fully qualified class name to navigate to
      */
@@ -280,7 +282,7 @@ public class MainWindow extends JFrame {
                 Path outputDir = Paths.get("output", "diagrams");
 
                 DOModuleService moduleService = DOModuleService.getInstance();
-                List<MigrationModule> modules = moduleService.getModules();
+                List<DOSchemaModule> modules = moduleService.getModules();
                 if (modules.isEmpty()) {
                     modules = moduleService.loadModuleStructure();
                 }
@@ -374,8 +376,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Automatically opens a database file (used for command-line auto-open). Shows
-     * appropriate error messages if the file doesn't exist.
+     * Automatically opens a database file (used for command-line auto-open).
+     * Shows appropriate error messages if the file doesn't exist.
      * 
      * @param databasePath the absolute path to the database file
      */
@@ -622,8 +624,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Automatically creates a comparison between the reference schema and a newly
-     * loaded database schema.
+     * Automatically creates a comparison between the reference schema and a
+     * newly loaded database schema.
      */
     private void createComparisonWithReference(DatabaseSession session) {
         // Find the reference schema
@@ -643,13 +645,15 @@ public class MainWindow extends JFrame {
         // Make final for lambda
         final SchemaTabInfo finalReferenceTab = referenceTab;
 
-        // Create comparison - use live schema from editor in case it was reloaded
+        // Create comparison - use live schema from editor in case it was
+        // reloaded
         SchemaComparison comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, session.databaseSchema, "Database");
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
 
-        // Set callback to mark editor as modified when field is edited from comparison
+        // Set callback to mark editor as modified when field is edited from
+        // comparison
         comparisonPanel.setOnSchemaModified(() -> {
             finalReferenceTab.editorPanel.markModified();
         });
@@ -808,8 +812,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the current in-memory database container from the context. This allows
-     * reusing the same in-memory instance across all operations.
+     * Gets the current in-memory database container from the context. This
+     * allows reusing the same in-memory instance across all operations.
      * 
      * @return The database container, or null if no database is open
      */
@@ -844,9 +848,9 @@ public class MainWindow extends JFrame {
     /**
      * Notify the migration coverage panel about exported objects.
      * 
-     * @param exportedClasses   Map of class name to number of exported objects
-     * @param exportedObjectIds Map of class name to list of actual exported object
-     *                          IDs
+     * @param exportedClasses Map of class name to number of exported objects
+     * @param exportedObjectIds Map of class name to list of actual exported
+     * object IDs
      */
     public void notifyExportCompleted(Map<String, Integer> exportedClasses, Map<String, List<Long>> exportedObjectIds) {
         if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
@@ -901,8 +905,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Reset reached values in the migration coverage panel. Should be called before
-     * starting a new export.
+     * Reset reached values in the migration coverage panel. Should be called
+     * before starting a new export.
      */
     public void resetCoverageReachedValues() {
         if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
@@ -912,8 +916,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Updates the migration results tab with new export statistics. Also switches
-     * to the Database tab and Warnings & errors sub-tab.
+     * Updates the migration results tab with new export statistics. Also
+     * switches to the Database tab and Warnings & errors sub-tab.
      * 
      * @param result The export statistics to display
      */
@@ -930,8 +934,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Switches to the Migration report tab in the Database section. This is called
-     * when an export operation starts.
+     * Switches to the Migration report tab in the Database section. This is
+     * called when an export operation starts.
      */
     public void showMigrationReportTab() {
         if (migrationReportPanel != null && databaseTabContainer != null) {
@@ -944,8 +948,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the migration report panel as a DOExportMonitor for real-time progress
-     * updates.
+     * Gets the migration report panel as a DOExportMonitor for real-time
+     * progress updates.
      * 
      * @return The migration report monitor, or null if no database is loaded
      */
@@ -961,7 +965,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab to the Schema nested section and track it for comparison.
+     * Add a schema tab to the Schema nested section and track it for
+     * comparison.
      */
     public void addSchemaTabToSchemaSection(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         schemaTabPane.addTab(title, editor);
@@ -972,7 +977,8 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab to the Database nested section and track it for comparison.
+     * Add a schema tab to the Database nested section and track it for
+     * comparison.
      */
     public void addSchemaTabToDatabaseSection(JTabbedPane targetPane, String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         targetPane.addTab(title, editor);
@@ -1102,13 +1108,15 @@ public class MainWindow extends JFrame {
         if (compared == null)
             return;
 
-        // Perform comparison - use live schema from editors in case they were reloaded
+        // Perform comparison - use live schema from editors in case they were
+        // reloaded
         SchemaComparison comparison = new SchemaComparison(reference.editorPanel.getSchema(), reference.label, compared.editorPanel.getSchema(), compared.label);
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(reference.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(reference.editorPanel, parentClass, field));
 
-        // Set callback to mark reference editor as modified when field is edited from
+        // Set callback to mark reference editor as modified when field is
+        // edited from
         // comparison
         comparisonPanel.setOnSchemaModified(() -> {
             reference.editorPanel.markModified();
@@ -1194,7 +1202,8 @@ public class MainWindow extends JFrame {
             }
         }
 
-        // Refresh the Database -> Conformity analysis tab when either reference or
+        // Refresh the Database -> Conformity analysis tab when either reference
+        // or
         // database schema is reloaded, so analysis stays up to date without
         // reopening the database.
         SchemaTabInfo reloadedTabInfo = schemaTabs.get(editor);
@@ -1239,9 +1248,9 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Request repeat export to be triggered after database loads. If database is
-     * already open, triggers immediately. Otherwise, sets flag to trigger after
-     * next database open.
+     * Request repeat export to be triggered after database loads. If database
+     * is already open, triggers immediately. Otherwise, sets flag to trigger
+     * after next database open.
      */
     public void triggerRepeatExport() {
         if (currentDatabaseSchema != null) {

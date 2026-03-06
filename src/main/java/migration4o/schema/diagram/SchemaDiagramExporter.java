@@ -4,8 +4,8 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
-import migration4o.models.ui.MigrationModule;
 import migration4o.util.TypeUtil;
 
 import java.io.IOException;
@@ -49,29 +49,29 @@ public class SchemaDiagramExporter {
         return export(schema, outputDirectory, baseFileName, null);
     }
 
-    public List<Result> exportPerModule(DOSchema schema, List<MigrationModule> modules, Path outputDirectory) throws IOException, InterruptedException {
+    public List<Result> exportPerModule(DOSchema schema, List<DOSchemaModule> modules, Path outputDirectory) throws IOException, InterruptedException {
         if (modules == null || modules.isEmpty()) {
             return List.of();
         }
 
         List<Result> results = new ArrayList<>();
-        for (MigrationModule module : modules) {
+        for (DOSchemaModule module : modules) {
             exportModuleRecursive(schema, module, outputDirectory, new ArrayList<>(), results);
         }
 
         return results;
     }
 
-    private void exportModuleRecursive(DOSchema schema, MigrationModule module, Path outputDirectory, List<String> ancestry, List<Result> results) throws IOException, InterruptedException {
+    private void exportModuleRecursive(DOSchema schema, DOSchemaModule module, Path outputDirectory, List<String> ancestry, List<Result> results) throws IOException, InterruptedException {
         if (module == null) {
             return;
         }
 
         List<String> currentPath = new ArrayList<>(ancestry);
-        currentPath.add(module.getName() != null ? module.getName() : module.getId());
+        currentPath.add(module.name != null ? module.name : module.id);
 
         Set<String> requestedClassNames = new LinkedHashSet<>();
-        for (ClassExportConfig config : module.getClassConfigs()) {
+        for (ClassExportConfig config : module.classConfigs) {
             if (config != null && config.getClassName() != null && !config.getClassName().isBlank()) {
                 requestedClassNames.add(config.getClassName());
             }
@@ -83,7 +83,7 @@ public class SchemaDiagramExporter {
             results.add(result);
         }
 
-        for (MigrationModule child : module.getChildModules()) {
+        for (DOSchemaModule child : module.children) {
             exportModuleRecursive(schema, child, outputDirectory, currentPath, results);
         }
     }

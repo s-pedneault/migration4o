@@ -2,9 +2,9 @@ package migration4o.schema.modules;
 
 import org.w3c.dom.*;
 
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
-import migration4o.models.ui.MigrationModule;
 import migration4o.models.ui.layout.DetailLayout;
 import migration4o.models.ui.layout.LayoutNode;
 import migration4o.models.ui.layout.LayoutNodeType;
@@ -15,14 +15,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Reads migration structure from migration-format.xml file.
- * Supports both old format (simple classRef) and new format (classRef with
- * criteria).
+ * Reads migration structure from migration-format.xml file. Supports both old
+ * format (simple classRef) and new format (classRef with criteria).
  */
 public class DOModuleStructureReader {
 
-    public List<MigrationModule> readMigrationFormat(String filePath) throws Exception {
-        List<MigrationModule> modules = new ArrayList<>();
+    public List<DOSchemaModule> readMigrationFormat(String filePath) throws Exception {
+        List<DOSchemaModule> modules = new ArrayList<>();
 
         File file = new File(filePath);
         if (!file.exists()) {
@@ -49,7 +48,7 @@ public class DOModuleStructureReader {
         return modules;
     }
 
-    private MigrationModule parseModule(Element moduleElement) {
+    private DOSchemaModule parseModule(Element moduleElement) {
         String name = moduleElement.getAttribute("name");
         String id = moduleElement.getAttribute("id");
         if (id == null || id.isEmpty()) {
@@ -77,7 +76,7 @@ public class DOModuleStructureReader {
         }
 
         List<ClassExportConfig> classConfigs = new ArrayList<>();
-        List<MigrationModule> childModules = new ArrayList<>();
+        List<DOSchemaModule> childModules = new ArrayList<>();
 
         // Parse direct children only
         NodeList children = moduleElement.getChildNodes();
@@ -97,16 +96,25 @@ public class DOModuleStructureReader {
             }
         }
 
-        return new MigrationModule(name, id, icon, tileBg, tileTextColor, tileIconColor, tileFontSize, classConfigs, childModules);
+        DOSchemaModule module = new DOSchemaModule();
+        module.name = name;
+        module.id = id;
+        module.icon = icon;
+        module.tileBg = tileBg;
+        module.tileTextColor = tileTextColor;
+        module.tileIconColor = tileIconColor;
+        module.tileFontSize = tileFontSize;
+        module.classConfigs = classConfigs;
+        module.children = childModules;
+        return module;
     }
 
     /**
-     * Parses a classRef element which can be:
-     * - Old format: <classRef sourceName="gest.config.ParamConfig"/>
-     * - New format:
-     * <classRef sourceName="..." destinationFile="..." description="..."><criteria
-     * field="..."
-     * operator="..." value="..."/><unitCost priceList="..." cost="..."/></classRef>
+     * Parses a classRef element which can be: - Old format:
+     * <classRef sourceName="gest.config.ParamConfig"/> - New format:
+     * <classRef sourceName="..." destinationFile="..." description=
+     * "..."><criteria field="..." operator="..." value="..."/><unitCost
+     * priceList="..." cost="..."/></classRef>
      */
     private ClassExportConfig parseClassRef(Element classRefElement) {
         String sourceName = classRefElement.getAttribute("sourceName");
@@ -127,14 +135,16 @@ public class DOModuleStructureReader {
         // Parse criteria if any
         List<ExportCriteria> criteria = new ArrayList<>();
         NodeList criteriaNodes = classRefElement.getElementsByTagName("criteria");
-        // System.out.println("DEBUG parseClassRef: sourceName=" + sourceName + ",
+        // System.out.println("DEBUG parseClassRef: sourceName=" + sourceName +
+        // ",
         // criteriaNodes.length="
         // + criteriaNodes.getLength());
         for (int i = 0; i < criteriaNodes.getLength(); i++) {
             Element criteriaElement = (Element) criteriaNodes.item(i);
             ExportCriteria criterion = parseCriteria(criteriaElement);
             if (criterion != null) {
-                // System.out.println("DEBUG parseClassRef: Added criterion: " + criterion);
+                // System.out.println("DEBUG parseClassRef: Added criterion: " +
+                // criterion);
                 criteria.add(criterion);
             }
         }
@@ -171,7 +181,8 @@ public class DOModuleStructureReader {
 
         if (!criteria.isEmpty()) {
             // System.out.println(
-            // "DEBUG parseClassRef: Created config for " + sourceName + " with " +
+            // "DEBUG parseClassRef: Created config for " + sourceName + " with
+            // " +
             // criteria.size() + " criteria");
         }
         return config;

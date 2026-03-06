@@ -10,8 +10,8 @@ import java.util.Set;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ExportWarning;
 import migration4o.migration.monitoring.ReferencedClassTracker;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
-import migration4o.models.ui.MigrationModule;
 import migration4o.schema.modules.DOModuleService;
 
 public class ExportUtil {
@@ -132,18 +132,20 @@ public class ExportUtil {
         return result;
     }
 
-    public static void registerAllModuleClasses(MigrationModule module, ReferencedClassTracker tracker) {
-        Set<String> classNames = new HashSet<>(module.getClassNames());
-        tracker.registerModule(module.getName(), classNames);
+    public static void registerAllModuleClasses(DOSchemaModule module, ReferencedClassTracker tracker) {
+        Set<String> classNames = new HashSet<>();
+        for (ClassExportConfig c : module.classConfigs)
+            classNames.add(c.getClassName());
+        tracker.registerModule(module.name, classNames);
 
-        for (MigrationModule childModule : module.getChildModules()) {
+        for (DOSchemaModule childModule : module.children) {
             registerAllModuleClasses(childModule, tracker);
         }
     }
 
     public static ClassExportConfig findClassConfig(String className) {
-        List<MigrationModule> modules = DOModuleService.getInstance().getModules();
-        for (MigrationModule module : modules) {
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
+        for (DOSchemaModule module : modules) {
             ClassExportConfig config = findClassConfigInModule(module, className);
             if (config != null) {
                 return config;
@@ -152,14 +154,14 @@ public class ExportUtil {
         return null;
     }
 
-    public static ClassExportConfig findClassConfigInModule(MigrationModule module, String className) {
-        for (ClassExportConfig config : module.getClassConfigs()) {
+    public static ClassExportConfig findClassConfigInModule(DOSchemaModule module, String className) {
+        for (ClassExportConfig config : module.classConfigs) {
             if (config.getClassName().equals(className)) {
                 return config;
             }
         }
 
-        for (MigrationModule childModule : module.getChildModules()) {
+        for (DOSchemaModule childModule : module.children) {
             ClassExportConfig config = findClassConfigInModule(childModule, className);
             if (config != null) {
                 return config;
@@ -169,17 +171,17 @@ public class ExportUtil {
         return null;
     }
 
-    public static MigrationModule findModuleByName(String moduleName) throws Exception {
-        List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
+    public static DOSchemaModule findModuleByName(String moduleName) throws Exception {
+        List<DOSchemaModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
         return findModuleRecursive(modules, moduleName);
     }
 
-    public static MigrationModule findModuleRecursive(List<MigrationModule> modules, String moduleName) {
-        for (MigrationModule module : modules) {
-            if (module.getName().equals(moduleName)) {
+    public static DOSchemaModule findModuleRecursive(List<DOSchemaModule> modules, String moduleName) {
+        for (DOSchemaModule module : modules) {
+            if (module.name.equals(moduleName)) {
                 return module;
             }
-            MigrationModule found = findModuleRecursive(module.getChildModules(), moduleName);
+            DOSchemaModule found = findModuleRecursive(module.children, moduleName);
             if (found != null) {
                 return found;
             }
@@ -188,17 +190,19 @@ public class ExportUtil {
     }
 
     /**
-     * Finds the full hierarchical path for a module by name.
-     * For example, if "Intervention" is under "Activités", returns "Activités/Intervention"
+     * Finds the full hierarchical path for a module by name. For example, if
+     * "Intervention" is under "Activités", returns "Activités/Intervention"
      * 
      * @param moduleName the name of the module to find
-     * @return the full path from root to this module, or just the module name if not found in hierarchy
+     * @return the full path from root to this module, or just the module name
+     * if not found in hierarchy
      * @throws Exception if module structure cannot be loaded
      */
     public static String findModulePathByName(String moduleName) throws Exception {
-        List<MigrationModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
+        List<DOSchemaModule> modules = DOModuleService.getInstance().loadModuleStructure("schema/migration-format.xml");
         String path = findModulePathRecursive(modules, moduleName, "");
-        return path != null ? path : moduleName; // Fallback to module name if not found
+        return path != null ? path : moduleName; // Fallback to module name if
+                                                 // not found
     }
 
     /**
@@ -209,17 +213,18 @@ public class ExportUtil {
      * @param parentPath the path accumulated from parent modules
      * @return the full path if found, null otherwise
      */
-    private static String findModulePathRecursive(List<MigrationModule> modules, String moduleName, String parentPath) {
-        for (MigrationModule module : modules) {
-            // Use module ID for folder name (same logic as ExportEngine.moduleId())
-            String folderName = (module.getId() != null && !module.getId().isBlank()) ? module.getId() : module.getName();
+    private static String findModulePathRecursive(List<DOSchemaModule> modules, String moduleName, String parentPath) {
+        for (DOSchemaModule module : modules) {
+            // Use module ID for folder name (same logic as
+            // ExportEngine.moduleId())
+            String folderName = (module.id != null && !module.id.isBlank()) ? module.id : module.name;
             String currentPath = parentPath.isEmpty() ? folderName : parentPath + "/" + folderName;
 
-            if (module.getName().equals(moduleName)) {
+            if (module.name.equals(moduleName)) {
                 return currentPath;
             }
 
-            String found = findModulePathRecursive(module.getChildModules(), moduleName, currentPath);
+            String found = findModulePathRecursive(module.children, moduleName, currentPath);
             if (found != null) {
                 return found;
             }

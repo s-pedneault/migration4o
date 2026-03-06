@@ -16,7 +16,7 @@ import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
@@ -65,24 +65,27 @@ public class ExportOperation {
     public ExportStatistics statistics;
     public ClassExportConfig exportConfig;
     public ReferencedClassTracker referencedClassTracker;
-    public ObjectExporter objectExporter; // Set after ObjectExporter construction
+    public ObjectExporter objectExporter; // Set after ObjectExporter
+                                          // construction
 
     public ArrayList<DOSchemaField> availableSkipUserOptions;
     public ArrayList<DOSchemaField> selectedSkipUserOptions;
 
-    // ── Module stack tracking the current branch being exported ───────────────
+    // ── Module stack tracking the current branch being exported
+    // ───────────────
     /**
      * Stack of modules currently being exported. The top of the stack is the
      * innermost active module. Push on entry to exportModuleRecursive, pop on
      * exit. {@code size()} gives the current nesting depth.
      */
-    public Deque<MigrationModule> moduleStack = new ArrayDeque<>();
+    public Deque<DOSchemaModule> moduleStack = new ArrayDeque<>();
 
     // ── IDEntite label resolution caches (JS export only) ────────────────────
     /**
-     * Maps a composite key {@code "<mID>:<expectedType>"} to the resolved target
-     * entity's DB4O object ID. Populated lazily; avoids repeating the O(n) mID
-     * scan when multiple fields reference the same entity type with the same mID.
+     * Maps a composite key {@code "<mID>:<expectedType>"} to the resolved
+     * target entity's DB4O object ID. Populated lazily; avoids repeating the
+     * O(n) mID scan when multiple fields reference the same entity type with
+     * the same mID.
      */
     public Map<String, Long> idEntiteTargetCache = new HashMap<>();
     /**

@@ -5,8 +5,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
-import migration4o.models.ui.MigrationModule;
-import migration4o.models.ui.ModuleNode;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.util.SchemaUtil;
 
@@ -21,9 +20,8 @@ import java.util.Set;
 import java.util.TreeMap;
 
 /**
- * Utility class for MigrationStructurePanel operations.
- * Contains helper methods for tree manipulation, class name handling,
- * and schema operations.
+ * Utility class for MigrationStructurePanel operations. Contains helper methods
+ * for tree manipulation, class name handling, and schema operations.
  */
 public class MigrationStructurePanelUtil {
 
@@ -40,7 +38,7 @@ public class MigrationStructurePanelUtil {
     /**
      * Finds a class node in a tree by class name.
      * 
-     * @param root      the root node to start searching from
+     * @param root the root node to start searching from
      * @param className the absolute class name to find
      * @return the tree node containing the class, or null if not found
      */
@@ -76,7 +74,7 @@ public class MigrationStructurePanelUtil {
             if (child.getUserObject() instanceof ClassNode) {
                 ClassNode classNode = (ClassNode) child.getUserObject();
                 classNames.add(classNode.getSchemaClass().source);
-            } else if (child.getUserObject() instanceof ModuleNode) {
+            } else if (child.getUserObject() instanceof DOSchemaModule) {
                 // Recursively collect from child modules
                 collectClassNamesFromModule(child, classNames);
             }
@@ -86,8 +84,8 @@ public class MigrationStructurePanelUtil {
     /**
      * Recursively updates object counts in tree nodes based on database schema.
      * 
-     * @param node           the tree node to update
-     * @param schema         the reference schema
+     * @param node the tree node to update
+     * @param schema the reference schema
      * @param databaseSchema the database schema with updated counts
      */
     public static void updateNodeCounts(DefaultMutableTreeNode node, DOSchema schema, DOSchema databaseSchema) {
@@ -101,7 +99,8 @@ public class MigrationStructurePanelUtil {
             // Get from database schema (has object counts)
             DOSchemaClass dbClass = SchemaUtil.findClassByName(className, databaseSchema);
 
-            // Merge: use reference class properties, but copy object counts from database
+            // Merge: use reference class properties, but copy object counts
+            // from database
             if (referenceClass != null && dbClass != null) {
                 referenceClass.objectIds = dbClass.objectIds;
                 referenceClass.uniqueObjectIds = dbClass.uniqueObjectIds;
@@ -131,62 +130,74 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Finds a class in the schema by its absolute name.
-     * Searches databaseSchema first (if available) for object counts,
-     * then falls back to reference schema.
+     * Finds a class in the schema by its absolute name. Searches databaseSchema
+     * first (if available) for object counts, then falls back to reference
+     * schema.
      * 
-     * @param className      the absolute class name to find
-     * @param schema         the reference schema
+     * @param className the absolute class name to find
+     * @param schema the reference schema
      * @param databaseSchema the database schema (may be null)
      * @return the schema class, or null if not found
      */
 
     /**
-     * Extracts a MigrationModule from a tree node and its children.
-     * Recursively processes all child modules and classes.
+     * Extracts a MigrationModule from a tree node and its children. Recursively
+     * processes all child modules and classes.
      * 
      * @param moduleTreeNode the tree node representing the module
      * @return a MigrationModule object with all nested data
      */
-    public static MigrationModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
-        ModuleNode module = (ModuleNode) moduleTreeNode.getUserObject();
+    public static DOSchemaModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
+        DOSchemaModule module = (DOSchemaModule) moduleTreeNode.getUserObject();
         List<ClassExportConfig> classConfigs = new ArrayList<>();
-        List<MigrationModule> childModules = new ArrayList<>();
+        List<DOSchemaModule> childModules = new ArrayList<>();
 
         Enumeration<?> children = moduleTreeNode.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) children.nextElement();
             if (childNode.getUserObject() instanceof ClassNode) {
                 ClassNode classNode = (ClassNode) childNode.getUserObject();
-                // Get the export config from the node, or create a simple one if not set
+                // Get the export config from the node, or create a simple one
+                // if not set
                 ClassExportConfig config = classNode.getExportConfig();
                 if (config == null) {
-                    // Create a simple config with just the class name (for backward compatibility)
+                    // Create a simple config with just the class name (for
+                    // backward compatibility)
                     config = new ClassExportConfig(classNode.getSchemaClass().source, null, new ArrayList<>());
                 }
                 classConfigs.add(config);
-            } else if (childNode.getUserObject() instanceof ModuleNode) {
+            } else if (childNode.getUserObject() instanceof DOSchemaModule) {
                 childModules.add(extractModule(childNode));
             }
         }
 
-        return new MigrationModule(module.getName(), module.getId(), module.getIcon(), module.getTileBg(), module.getTileTextColor(), module.getTileIconColor(), module.getTileFontSize(), classConfigs, childModules);
+        DOSchemaModule result = new DOSchemaModule();
+        result.name = module.name;
+        result.id = module.id;
+        result.icon = module.icon;
+        result.tileBg = module.tileBg;
+        result.tileTextColor = module.tileTextColor;
+        result.tileIconColor = module.tileIconColor;
+        result.tileFontSize = module.tileFontSize;
+        result.classConfigs = classConfigs;
+        result.children = childModules;
+        return result;
     }
 
     /**
      * Saves the migration structure to the migration format file.
      * 
-     * @param exportRoot     the root node of the export tree
+     * @param exportRoot the root node of the export tree
      * @param formatFilePath the path to the migration format XML file
      * @throws Exception if save operation fails
      */
     public static void saveMigrationStructure(DefaultMutableTreeNode exportRoot, String formatFilePath) throws Exception {
-        List<MigrationModule> modules = new ArrayList<>();
+        List<DOSchemaModule> modules = new ArrayList<>();
 
         Enumeration<?> children = exportRoot.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode moduleNode = (DefaultMutableTreeNode) children.nextElement();
-            if (moduleNode.getUserObject() instanceof ModuleNode) {
+            if (moduleNode.getUserObject() instanceof DOSchemaModule) {
                 modules.add(extractModule(moduleNode));
             }
         }
@@ -195,13 +206,13 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Categorizes schema classes into Entities, Params, and Others,
-     * separated by exported vs available.
+     * Categorizes schema classes into Entities, Params, and Others, separated
+     * by exported vs available.
      * 
-     * @param schema           the schema containing classes
-     * @param exportedClasses  set of class names that have been exported
+     * @param schema the schema containing classes
+     * @param exportedClasses set of class names that have been exported
      * @param includeIDEntites whether to include IDEntite classes in the
-     *                         categorization
+     * categorization
      * @return categorized classes ready for tree population
      */
     public static CategorizedClasses categorizeClasses(DOSchema schema, Set<String> exportedClasses, boolean includeIDEntites) {
@@ -242,11 +253,11 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Groups classes by package, sorts them, and adds to parent node.
-     * Creates package nodes with sorted class children.
+     * Groups classes by package, sorts them, and adds to parent node. Creates
+     * package nodes with sorted class children.
      * 
      * @param parentNode the parent tree node
-     * @param classes    the classes to group and add
+     * @param classes the classes to group and add
      */
     public static void addSortedClassesToNode(DefaultMutableTreeNode parentNode, List<DOSchemaClass> classes) {
         // Group classes by package
@@ -279,25 +290,25 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Adds a module and its classes/children to the tree structure.
-     * Recursively processes child modules and adds class names to exportedClasses
-     * set.
+     * Adds a module and its classes/children to the tree structure. Recursively
+     * processes child modules and adds class names to exportedClasses set.
      * 
-     * @param parentNode      the parent tree node
-     * @param module          the migration module to add
-     * @param schema          the reference schema
-     * @param databaseSchema  the database schema (may be null)
-     * @param exportedClasses set to track exported class names (modified in place)
+     * @param parentNode the parent tree node
+     * @param module the migration module to add
+     * @param schema the reference schema
+     * @param databaseSchema the database schema (may be null)
+     * @param exportedClasses set to track exported class names (modified in
+     * place)
      */
-    public static void addModuleToTree(DefaultMutableTreeNode parentNode, MigrationModule module, DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
-        ModuleNode moduleNode = new ModuleNode(module.getName(), module.getId(), module.getIcon(), module.getTileBg(), module.getTileTextColor(), module.getTileIconColor(), module.getTileFontSize());
-        DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(moduleNode);
+    public static void addModuleToTree(DefaultMutableTreeNode parentNode, DOSchemaModule module, DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
+        DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(module);
         parentNode.add(moduleTreeNode);
 
         // Add classes to module with their configurations
-        for (migration4o.models.ui.ClassExportConfig config : module.getClassConfigs()) {
+        for (ClassExportConfig config : module.classConfigs) {
             String className = config.getClassName();
-            // Use reference schema first (has destinationName), fall back to database
+            // Use reference schema first (has destinationName), fall back to
+            // database
             // schema
             DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
             if (schemaClass == null && databaseSchema != null) {
@@ -314,16 +325,16 @@ public class MigrationStructurePanelUtil {
         }
 
         // Add child modules recursively
-        for (MigrationModule childModule : module.getChildModules()) {
+        for (DOSchemaModule childModule : module.children) {
             addModuleToTree(moduleTreeNode, childModule, schema, databaseSchema, exportedClasses);
         }
     }
 
     /**
-     * Collects all class names from a module's children and removes them from the
-     * exported set.
+     * Collects all class names from a module's children and removes them from
+     * the exported set.
      * 
-     * @param moduleNode      the module tree node
+     * @param moduleNode the module tree node
      * @param exportedClasses set of exported class names (modified in place)
      */
     public static void removeModuleClassesFromExported(DefaultMutableTreeNode moduleNode, Set<String> exportedClasses) {
@@ -340,8 +351,8 @@ public class MigrationStructurePanelUtil {
     /**
      * Adds a class to a module node in the tree structure.
      * 
-     * @param schemaClass     the schema class to add
-     * @param targetModule    the target module node
+     * @param schemaClass the schema class to add
+     * @param targetModule the target module node
      * @param exportedClasses set of already exported class names
      * @return true if added successfully, false if already exported
      */
@@ -365,7 +376,7 @@ public class MigrationStructurePanelUtil {
     /**
      * Removes a class from the export tree.
      * 
-     * @param treeNode        the tree node containing the class
+     * @param treeNode the tree node containing the class
      * @param exportedClasses set of exported class names
      * @return true if removed successfully
      */
@@ -392,7 +403,7 @@ public class MigrationStructurePanelUtil {
     /**
      * Collects all module paths from a tree recursively.
      * 
-     * @param node        the current node
+     * @param node the current node
      * @param currentPath the current tree path
      * @param modulePaths the list to collect module paths into
      */
@@ -400,7 +411,7 @@ public class MigrationStructurePanelUtil {
         Object userObject = node.getUserObject();
 
         // If this node is a module, add it to the list
-        if (userObject instanceof ModuleNode) {
+        if (userObject instanceof DOSchemaModule) {
             modulePaths.add(currentPath);
         }
 
@@ -416,7 +427,7 @@ public class MigrationStructurePanelUtil {
      * Collects only root-level module paths (modules without a parent module).
      * This prevents nested modules from being exported multiple times.
      * 
-     * @param node        the current node
+     * @param node the current node
      * @param currentPath the current tree path
      * @param modulePaths the list to collect module paths into
      */
@@ -425,12 +436,14 @@ public class MigrationStructurePanelUtil {
 
         // If this node is a module, add it (it's a root level module)
         // and don't recurse into its children (they are nested modules)
-        if (userObject instanceof ModuleNode) {
+        if (userObject instanceof DOSchemaModule) {
             modulePaths.add(currentPath);
-            return; // Don't recurse - nested modules will be exported as part of their parent
+            return; // Don't recurse - nested modules will be exported as part
+                    // of their parent
         }
 
-        // Recursively process all children (only if current node is NOT a module)
+        // Recursively process all children (only if current node is NOT a
+        // module)
         for (int i = 0; i < node.getChildCount(); i++) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
             TreePath childPath = currentPath.pathByAddingChild(child);
@@ -453,8 +466,8 @@ public class MigrationStructurePanelUtil {
 
         for (TreePath path : selectedPaths) {
             DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-            if (node.getUserObject() instanceof ModuleNode) {
-                ModuleNode moduleNode = (ModuleNode) node.getUserObject();
+            if (node.getUserObject() instanceof DOSchemaModule) {
+                DOSchemaModule moduleNode = (DOSchemaModule) node.getUserObject();
                 modules.add(new ModuleTreeInfo(node, moduleNode));
             }
         }
@@ -467,9 +480,9 @@ public class MigrationStructurePanelUtil {
      */
     public static class ModuleTreeInfo {
         public final DefaultMutableTreeNode treeNode;
-        public final ModuleNode moduleNode;
+        public final DOSchemaModule moduleNode;
 
-        public ModuleTreeInfo(DefaultMutableTreeNode treeNode, ModuleNode moduleNode) {
+        public ModuleTreeInfo(DefaultMutableTreeNode treeNode, DOSchemaModule moduleNode) {
             this.treeNode = treeNode;
             this.moduleNode = moduleNode;
         }
@@ -480,14 +493,15 @@ public class MigrationStructurePanelUtil {
      */
     public static class ModuleExportInfo {
         public final String name;
-        public final MigrationModule module;
-        public final String fullPath; // Full hierarchical path (e.g., "Activités/Intervention")
+        public final DOSchemaModule module;
+        public final String fullPath; // Full hierarchical path (e.g.,
+                                      // "Activités/Intervention")
 
-        public ModuleExportInfo(String name, MigrationModule module) {
+        public ModuleExportInfo(String name, DOSchemaModule module) {
             this(name, module, name); // Default: fullPath = name
         }
 
-        public ModuleExportInfo(String name, MigrationModule module, String fullPath) {
+        public ModuleExportInfo(String name, DOSchemaModule module, String fullPath) {
             this.name = name;
             this.module = module;
             this.fullPath = fullPath;
@@ -509,10 +523,11 @@ public class MigrationStructurePanelUtil {
         // Walk up the tree collecting module names
         while (currentNode != null) {
             Object userObject = currentNode.getUserObject();
-            if (userObject instanceof ModuleNode) {
-                ModuleNode moduleNode = (ModuleNode) userObject;
-                String part = (moduleNode.getId() != null && !moduleNode.getId().isBlank()) ? moduleNode.getId() : moduleNode.getName();
-                pathParts.add(0, part); // Add at beginning to build path from root
+            if (userObject instanceof DOSchemaModule) {
+                DOSchemaModule moduleNode = (DOSchemaModule) userObject;
+                String part = (moduleNode.id != null && !moduleNode.id.isBlank()) ? moduleNode.id : moduleNode.name;
+                pathParts.add(0, part); // Add at beginning to build path from
+                                        // root
             }
             currentNode = (DefaultMutableTreeNode) currentNode.getParent();
         }
@@ -525,12 +540,12 @@ public class MigrationStructurePanelUtil {
      * Builds a MigrationModule from a tree node with all its children.
      * 
      * @param moduleTreeNode the tree node representing the module
-     * @param moduleNode     the module metadata
+     * @param moduleNode the module metadata
      * @return the constructed MigrationModule
      */
-    public static MigrationModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, ModuleNode moduleNode) {
+    public static DOSchemaModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule moduleNode) {
         List<ClassExportConfig> classConfigs = new ArrayList<>();
-        List<MigrationModule> childModules = new ArrayList<>();
+        List<DOSchemaModule> childModules = new ArrayList<>();
 
         // Iterate through children
         for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
@@ -548,15 +563,25 @@ public class MigrationStructurePanelUtil {
                 }
 
                 classConfigs.add(config);
-            } else if (userObject instanceof ModuleNode) {
+            } else if (userObject instanceof DOSchemaModule) {
                 // Recursively build child module
-                ModuleNode childModuleNode = (ModuleNode) userObject;
-                MigrationModule childModule = buildModuleFromTree(childNode, childModuleNode);
+                DOSchemaModule childModuleNode = (DOSchemaModule) userObject;
+                DOSchemaModule childModule = buildModuleFromTree(childNode, childModuleNode);
                 childModules.add(childModule);
             }
         }
 
-        return new MigrationModule(moduleNode.getName(), moduleNode.getId(), moduleNode.getIcon(), moduleNode.getTileBg(), moduleNode.getTileTextColor(), moduleNode.getTileIconColor(), moduleNode.getTileFontSize(), classConfigs, childModules);
+        DOSchemaModule result = new DOSchemaModule();
+        result.name = moduleNode.name;
+        result.id = moduleNode.id;
+        result.icon = moduleNode.icon;
+        result.tileBg = moduleNode.tileBg;
+        result.tileTextColor = moduleNode.tileTextColor;
+        result.tileIconColor = moduleNode.tileIconColor;
+        result.tileFontSize = moduleNode.tileFontSize;
+        result.classConfigs = classConfigs;
+        result.children = childModules;
+        return result;
     }
 
 }

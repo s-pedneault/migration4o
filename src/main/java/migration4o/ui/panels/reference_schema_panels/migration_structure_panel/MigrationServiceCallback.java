@@ -14,7 +14,7 @@ import migration4o.migration.ExportOutputOption;
 import migration4o.migration.MigrationExportService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
-import migration4o.models.ui.MigrationModule;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
@@ -56,15 +56,15 @@ public class MigrationServiceCallback {
     /**
      * Exports multiple modules to XML in the background.
      * 
-     * @param modulesToExport     the list of modules to export
-    * @param options             export options selected by user
+     * @param modulesToExport the list of modules to export
+     * @param options export options selected by user
      */
     public void exportModulesAsync(DODatabaseContext dbContext, List<ModuleExportInfo> modulesToExport, ExportOptions options) {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
         // Extract modules and paths
-        List<MigrationModule> modules = new ArrayList<>();
+        List<DOSchemaModule> modules = new ArrayList<>();
         List<String> modulePaths = new ArrayList<>();
         for (ModuleExportInfo info : modulesToExport) {
             modules.add(info.module);
@@ -85,7 +85,8 @@ public class MigrationServiceCallback {
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
-                // Use exportModules which handles single or multiple modules automatically
+                // Use exportModules which handles single or multiple modules
+                // automatically
                 DODatabaseContext context = dbContext;
                 if (context == null)
                     throw new IllegalStateException("No database is open");
@@ -94,8 +95,8 @@ public class MigrationServiceCallback {
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
-                for (MigrationModule module : modules) {
-                    moduleNames.add(module.getName());
+                for (DOSchemaModule module : modules) {
+                    moduleNames.add(module.name);
                 }
 
                 // Save to history if successful
@@ -167,8 +168,8 @@ public class MigrationServiceCallback {
     // ==================== HELPER METHODS ====================
 
     /**
-     * Resets reached values in the migration coverage panel before starting a new
-     * export.
+     * Resets reached values in the migration coverage panel before starting a
+     * new export.
      */
     private void resetReachedValuesInCoveragePanel() {
         if (parentComponent != null) {
@@ -237,7 +238,8 @@ public class MigrationServiceCallback {
     }
 
     /**
-     * Switches the main window to the Migration report tab in the Database section.
+     * Switches the main window to the Migration report tab in the Database
+     * section.
      */
     private void showMigrationReportTab() {
         if (parentComponent != null) {
