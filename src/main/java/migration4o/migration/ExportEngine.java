@@ -43,51 +43,6 @@ public class ExportEngine {
     private final ExportOperation operation;
 
     // ── Module nav tree (built once before export) ──────────────────────────
-    private static final class NavNode {
-        final String label;
-        /**
-         * Root-relative href (e.g. "Activités/Intervention/Intervention.html");
-         * null for groups.
-         */
-        final String rootRelativeHref;
-        /**
-         * Inline SVG string for Lucide icon; non-null only when a known icon
-         * name is configured.
-         */
-        final String iconSvg;
-        /**
-         * Nesting depth: 0 = top-level module tile, 1+ = child group or leaf.
-         */
-        final int depth;
-        /** Hex tile background color; null = auto-cycle. */
-        final String tileBg;
-        /** Hex tile text/label color; null = auto. */
-        final String tileTextColor;
-        /** Hex tile icon color; null = auto. */
-        final String tileIconColor;
-        /** Tile label font-size string e.g. "14"; null = default. */
-        final String tileFontSize;
-        final List<NavNode> children = new ArrayList<>();
-
-        NavNode(String label, String rootRelativeHref) {
-            this(label, rootRelativeHref, null, 1, null, null, null, null);
-        }
-
-        NavNode(String label, String rootRelativeHref, String iconSvg, int depth, String tileBg, String tileTextColor, String tileIconColor, String tileFontSize) {
-            this.label = label;
-            this.rootRelativeHref = rootRelativeHref;
-            this.iconSvg = iconSvg;
-            this.depth = depth;
-            this.tileBg = tileBg;
-            this.tileTextColor = tileTextColor;
-            this.tileIconColor = tileIconColor;
-            this.tileFontSize = tileFontSize;
-        }
-
-        boolean isLeaf() {
-            return rootRelativeHref != null;
-        }
-    }
 
     /** Top-level nav tree — same for all files in this export. */
     private final List<NavNode> navTree = new ArrayList<>();
