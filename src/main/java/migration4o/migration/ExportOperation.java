@@ -170,4 +170,31 @@ public class ExportOperation {
     public Path getBaseOutputPath(String baseOutputDir) {
         return Paths.get(baseOutputDir).resolve(getDatabaseFolderName());
     }
+
+    // ── Shared tracking lifecycle
+    // ─────────────────────────────────────────────
+
+    /**
+     * Initializes shared object tracking and XSD builder for multi-module
+     * exports. Call this before exporting multiple modules to ensure objects
+     * are only counted once and a single comprehensive XSD is generated.
+     */
+    public void initializeSharedTracking() {
+        exportedObjectIds = new HashSet<>();
+        useSharedTracking = true;
+        sharedXSDBuilder = new XSDBuilder(dbContext);
+        sharedXSDBuilder.startExportRoot();
+        exportedXMLFiles = new HashSet<>();
+    }
+
+    /**
+     * Resets shared object tracking and XSD builder. Call this to clear
+     * tracking state between different export sessions.
+     */
+    public void resetSharedTracking() {
+        useSharedTracking = false;
+        exportedObjectIds = new HashSet<>();
+        sharedXSDBuilder = null;
+        exportedXMLFiles = null;
+    }
 }

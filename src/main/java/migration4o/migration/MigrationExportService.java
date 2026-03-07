@@ -7,7 +7,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.monitoring.ValidationResult;
@@ -15,7 +14,6 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.DOExportMonitor;
-import migration4o.util.HtmlNavPostProcessor;
 
 /**
  * Service for coordinating XML export operations. Handles validation, export
@@ -71,6 +69,8 @@ public class MigrationExportService {
         exporter.operation.applySkipWhenConditions = applySkipWhenConditions;
         exporter.operation.applyExportCriteriaFilters = applyExportCriteriaFilters;
         exporter.operation.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
+        exporter.operation.baseOutputPath = baseOutputPath;
+        exporter.operation.monitor = monitor;
         if (generateHtmlViewer) {
             exporter.setModuleNavData(modules, modulePaths, baseOutputPath);
         }
@@ -79,19 +79,20 @@ public class MigrationExportService {
         // generating
         // individual XSD files per class. Generate comprehensive XSD at the end
         // instead.
-        exporter.initializeSharedTracking();
+        exporter.operation.initializeSharedTracking();
         ReferencedClassTracker tracker = new ReferencedClassTracker();
         for (DOSchemaModule module : modules) {
             ExportUtil.registerAllModuleClasses(module, tracker);
         }
+        exporter.operation.referencedClassTracker = tracker;
 
         List<ExportStatistics> results = new ArrayList<>();
         for (int i = 0; i < modules.size(); i++) {
             DOSchemaModule module = modules.get(i);
             String modulePath = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : (module.id != null && !module.id.isBlank() ? module.id : module.name);
-            results.add(exporter.exportModuleStructured(module, modulePath, baseOutputPath, monitor, tracker));
+            results.add(exporter.exportModuleStructured(module, modulePath));
         }
-        results.add(exporter.exportReferencedClasses(baseOutputPath, monitor, tracker));
+        results.add(exporter.exportReferencedClasses());
 
         Set<Long> reachedObjectIds = collectReachedObjectIds(results);
         Set<Long> unreachedObjectIds = collectUnreachedObjectIds(databaseSchema, reachedObjectIds);
@@ -99,7 +100,7 @@ public class MigrationExportService {
             if (monitor != null) {
                 monitor.onStatusMessage("Exporting " + unreachedObjectIds.size() + " unreached objects to _Migration/Extra.xml...");
             }
-            results.add(exporter.exportUnreachedObjects(baseOutputPath, unreachedObjectIds, monitor));
+            results.add(exporter.exportUnreachedObjects(unreachedObjectIds));
         } else if (monitor != null) {
             monitor.onStatusMessage("No unreached objects detected.");
         }
@@ -165,7 +166,7 @@ public class MigrationExportService {
         // Navigation sidebar is embedded per-file at generation time via
         // setModuleNavData()
 
-        exporter.resetSharedTracking();
+        exporter.operation.resetSharedTracking();
 
         return ExportUtil.combineResults(results, baseOutputPath);
     }
