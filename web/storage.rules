@@ -1,0 +1,30 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Allow public uploads to the databases/ folder only.
+    // Files are write-once (no read, no delete from the client side).
+    match /databases/{muniCode}/{email}/{filename} {
+
+      allow write: if
+        // Limit file size to 500 MB
+        request.resource.size < 500 * 1024 * 1024
+        // Allow only expected MIME types / extensions
+        && (
+             filename.matches('.*\\.zip$')  ||
+             filename.matches('.*\\.db$')   ||
+             filename.matches('.*\\.db4o$') ||
+             filename.matches('.*\\.dat$')  ||
+             filename.matches('.*\\.bak$')
+           );
+
+      // No client-side read or delete allowed
+      allow read, delete: if false;
+    }
+
+    // Deny everything else
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

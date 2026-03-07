@@ -1,0 +1,1510 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title data-i18n="pageTitle">Téléversement de base de données — Migration</title>
+
+    <!-- Firebase SDKs (compat v9) -->
+    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-storage-compat.js"></script>
+
+    <style>
+        /* ── Reset & base ────────────────────────────────────────── */
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --blue: #1a56db;
+            --blue-lt: #e8f0fe;
+            --green: #057a55;
+            --green-lt: #d5f0e8;
+            --red: #c81e1e;
+            --red-lt: #fde8e8;
+            --gray: #6b7280;
+            --gray-lt: #f3f4f6;
+            --border: #d1d5db;
+            --text: #111827;
+            --radius: 10px;
+            --shadow: 0 4px 24px rgba(0, 0, 0, .10);
+            --trans: .3s ease;
+            --c-primary-hover: #3b5ce0;
+            --c-primary-selected: #19417c;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #1a3a5c;
+            min-height: 100vh;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            isolation: isolate;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: -20px;
+            background-image: url('splash.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            filter: blur(8px);
+            z-index: -1;
+        }
+
+        /* ── Top bar ─────────────────────────────────────────────── */
+        header {
+            width: 100%;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .06);
+        }
+
+        header .brand {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--c-primary-selected);
+            letter-spacing: -.3px;
+        }
+
+        #lang-select {
+            font-size: 12px;
+            padding: 4px 8px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--gray-lt);
+            color: var(--gray);
+            cursor: pointer;
+            outline: none;
+            transition: border-color var(--trans);
+        }
+
+        #lang-select:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        /* ── Card ────────────────────────────────────────────────── */
+        main {
+            width: 100%;
+            max-width: 640px;
+            padding: 40px 16px 60px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
+            color: #fff;
+            padding: 28px 32px 24px;
+        }
+
+        .card-header h1 {
+            font-size: 21px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin-bottom: 6px;
+        }
+
+        .card-header p {
+            font-size: 14px;
+            opacity: .84;
+            line-height: 1.5;
+        }
+
+        /* ── Stepper ─────────────────────────────────────────────── */
+        .stepper {
+            display: flex;
+            justify-content: center;
+            padding: 20px 24px 10px;
+            gap: 0;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .step-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+            flex: 1;
+        }
+
+        .step-item:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 15px;
+            left: 60%;
+            width: 80%;
+            height: 2px;
+            background: var(--border);
+            transition: background var(--trans);
+        }
+
+        .step-item.done:not(:last-child)::after,
+        .step-item.active:not(:last-child)::after {
+            background: var(--blue);
+        }
+
+        .step-dot {
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--gray);
+            transition: all var(--trans);
+            z-index: 1;
+        }
+
+        .step-item.active .step-dot {
+            border-color: var(--blue);
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .step-item.done .step-dot {
+            border-color: var(--green);
+            background: var(--green);
+            color: #fff;
+        }
+
+        .step-item.done .step-dot::before {
+            content: '✓';
+        }
+
+        .step-label {
+            font-size: 10px;
+            margin-top: 5px;
+            color: var(--gray);
+            text-align: center;
+            white-space: nowrap;
+            transition: color var(--trans);
+        }
+
+        .step-item.active .step-label {
+            color: var(--blue);
+            font-weight: 600;
+        }
+
+        .step-item.done .step-label {
+            color: var(--green);
+        }
+
+        /* ── Step panels ─────────────────────────────────────────── */
+        .steps-container {
+            padding: 28px 32px 32px;
+        }
+
+        .step-panel {
+            display: none;
+        }
+
+        .step-panel.active {
+            display: block;
+            animation: fadeIn .25s ease;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ── Form elements ───────────────────────────────────────── */
+        .field-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: #374151;
+        }
+
+        label span.req {
+            color: var(--red);
+            margin-left: 2px;
+        }
+
+        input[type=text],
+        input[type=email],
+        input[type=file] {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 15px;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            outline: none;
+            transition: border-color var(--trans), box-shadow var(--trans);
+            background: #fff;
+            color: var(--text);
+        }
+
+        input[type=text]:focus,
+        input[type=email]:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, .12);
+        }
+
+        input.invalid {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(200, 30, 30, .10);
+        }
+
+        input.valid {
+            border-color: var(--green);
+        }
+
+        .field-hint {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 5px;
+        }
+
+        .field-error {
+            font-size: 12px;
+            color: var(--red);
+            margin-top: 5px;
+            display: none;
+        }
+
+        /* ── Municipality result card ────────────────────────────── */
+        #muni-result {
+            background: var(--blue-lt);
+            border: 1.5px solid #93c5fd;
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 12px;
+            display: none;
+            animation: fadeIn .2s ease;
+        }
+
+        #muni-result .muni-name {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--blue);
+        }
+
+        #muni-result .muni-mrc {
+            font-size: 13px;
+            color: #1e40af;
+            margin-top: 3px;
+        }
+
+        #muni-not-found {
+            background: var(--red-lt);
+            border: 1.5px solid #fca5a5;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--red);
+            display: none;
+        }
+
+        /* ── Legal text ──────────────────────────────────────────── */
+        .legal-box {
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 16px 18px;
+            height: 220px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.65;
+            color: #374151;
+            background: var(--gray-lt);
+            margin-bottom: 16px;
+        }
+
+        .legal-box h3 {
+            font-size: 14px;
+            margin-bottom: 8px;
+            color: var(--text);
+        }
+
+        .legal-box p {
+            margin-bottom: 10px;
+        }
+
+        .checkbox-row {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 4px;
+        }
+
+        .checkbox-row input[type=checkbox] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--blue);
+            cursor: pointer;
+        }
+
+        .checkbox-row label {
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            margin: 0;
+        }
+
+        /* ── File upload zone ────────────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            padding: 28px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color var(--trans), background var(--trans);
+            background: var(--gray-lt);
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.dragover {
+            border-color: var(--blue);
+            background: var(--blue-lt);
+        }
+
+        .drop-zone input[type=file] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .drop-icon {
+            font-size: 36px;
+            margin-bottom: 10px;
+            display: block;
+        }
+
+        .drop-zone .drop-text {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .drop-zone .drop-sub {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 4px;
+        }
+
+        #file-name-display {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--blue);
+            font-weight: 600;
+            word-break: break-all;
+        }
+
+        /* ── Progress bar ────────────────────────────────────────── */
+        .progress-wrapper {
+            margin-top: 18px;
+            display: none;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+
+        .progress-bar-track {
+            width: 100%;
+            height: 12px;
+            background: #e5e7eb;
+            border-radius: 999px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1a56db, #6366f1);
+            border-radius: 999px;
+            width: 0%;
+            transition: width .4s ease;
+        }
+
+        .progress-sub {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 6px;
+            text-align: right;
+        }
+
+        .upload-error {
+            margin-top: 12px;
+            padding: 10px 14px;
+            background: var(--red-lt);
+            border: 1.5px solid #fca5a5;
+            border-radius: 8px;
+            font-size: 13px;
+            color: var(--red);
+            display: none;
+        }
+
+        /* ── Summary box ─────────────────────────────────────────── */
+        .summary-box {
+            background: var(--gray-lt);
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            padding: 14px 18px;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .summary-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 6px;
+            align-items: baseline;
+        }
+
+        .summary-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #374151;
+            min-width: 160px;
+            font-size: 13px;
+        }
+
+        .summary-value {
+            color: var(--text);
+            font-size: 13px;
+            word-break: break-word;
+        }
+
+        /* ── Confirmation screen ─────────────────────────────────── */
+        .success-icon {
+            width: 72px;
+            height: 72px;
+            background: var(--green-lt);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 20px;
+        }
+
+        .confirmation-panel {
+            text-align: center;
+            padding-top: 8px;
+        }
+
+        .confirmation-panel h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--green);
+            margin-bottom: 10px;
+        }
+
+        .confirmation-panel p {
+            font-size: 14px;
+            color: #374151;
+            line-height: 1.6;
+            max-width: 460px;
+            margin: 0 auto 16px;
+        }
+
+        .ref-chip {
+            display: inline-block;
+            background: var(--blue-lt);
+            border: 1.5px solid #93c5fd;
+            border-radius: 8px;
+            padding: 8px 18px;
+            font-family: monospace;
+            font-size: 14px;
+            color: var(--blue);
+            font-weight: 700;
+            letter-spacing: .5px;
+            margin-bottom: 20px;
+        }
+
+        /* ── Navigation buttons ──────────────────────────────────── */
+        .nav-row {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            margin-top: 24px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .btn {
+            padding: 10px 24px;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            border: none;
+            transition: all var(--trans);
+        }
+
+        .btn-sm {
+            padding: 8px 18px;
+            font-size: 13px;
+        }
+
+        .btn-prev {
+            background: var(--gray-lt);
+            color: #374151;
+            border: 1.5px solid var(--border);
+        }
+
+        .btn-prev:hover {
+            background: #e5e7eb;
+        }
+
+        .btn-next {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .btn-next:hover {
+            background: #1e40af;
+        }
+
+        .btn-next:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .btn-upload {
+            background: var(--green);
+            color: #fff;
+            width: 100%;
+            padding: 12px;
+            font-size: 15px;
+            margin-top: 16px;
+        }
+
+        .btn-upload:hover {
+            background: #065f46;
+        }
+
+        .btn-upload:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        /* ── Purpose selection tiles ─────────────────────────────── */
+        .purpose-intro {
+            font-size: 13px;
+            color: #374151;
+            margin-bottom: 20px;
+            line-height: 1.6;
+        }
+
+        .purpose-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .purpose-tile {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 16px 20px;
+            border: 2px solid var(--border);
+            border-radius: 10px;
+            background: #fff;
+            cursor: pointer;
+            text-align: left;
+            width: 100%;
+            transition: border-color var(--trans), background var(--trans), box-shadow var(--trans);
+            font-family: inherit;
+        }
+
+        .purpose-tile:hover {
+            border-color: var(--blue);
+            background: var(--blue-lt);
+            box-shadow: 0 2px 12px rgba(26, 86, 219, .10);
+        }
+
+        .purpose-tile.selected {
+            border-color: var(--blue);
+            background: var(--blue-lt);
+            box-shadow: 0 0 0 3px rgba(26, 86, 219, .15);
+        }
+
+        .purpose-tile-icon {
+            font-size: 26px;
+            flex-shrink: 0;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--gray-lt);
+            border-radius: 10px;
+            transition: background var(--trans);
+        }
+
+        .purpose-tile:hover .purpose-tile-icon,
+        .purpose-tile.selected .purpose-tile-icon {
+            background: #c7d7fb;
+        }
+
+        .purpose-tile-body {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .purpose-tile-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .purpose-tile-desc {
+            font-size: 12px;
+            color: var(--gray);
+            line-height: 1.45;
+        }
+
+        .purpose-tile:hover .purpose-tile-title,
+        .purpose-tile.selected .purpose-tile-title {
+            color: var(--blue);
+        }
+
+        .purpose-tile-check {
+            font-size: 20px;
+            flex-shrink: 0;
+            color: var(--blue);
+            opacity: 0;
+            transition: opacity var(--trans);
+        }
+
+        .purpose-tile.selected .purpose-tile-check {
+            opacity: 1;
+        }
+
+        /* ── Responsive ──────────────────────────────────────────── */
+        @media (max-width: 480px) {
+            .card-header {
+                padding: 22px 20px 18px;
+            }
+
+            .steps-container {
+                padding: 22px 20px 24px;
+            }
+
+            .step-label {
+                display: none;
+            }
+
+            .summary-label {
+                min-width: 120px;
+            }
+        }
+
+        .sidebar-logo {
+            width: 34px;
+            height: 34px;
+            background: linear-gradient(135deg, var(--c-primary-hover), var(--c-primary-selected));
+            border-radius: 10px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 16px;
+            flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(79, 70, 229, .25);
+            transition: transform .2s var(--ease-spring), box-shadow .2s ease;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- ── Top bar ──────────────────────────────────────────────── -->
+    <header>
+        <span>
+            <span class="sidebar-logo">G</span>
+            <span class="brand" data-i18n="brandName">Gestion Technologies</span>
+        </span>
+        <select id="lang-select" onchange="setLang(this.value)" title="Language / Langue">
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+        </select>
+    </header>
+
+    <!-- ── Main card ────────────────────────────────────────────── -->
+    <main>
+        <div class="card">
+
+            <!-- Card header -->
+            <div class="card-header">
+                <h1 data-i18n="heading">Téléversement de base de données PL</h1>
+                <p data-i18n="subheading">Transmettez votre base de données PL de façon sécurisée pour qu'elle soit traitée avec Migration4o</p>
+            </div>
+
+            <!-- Stepper -->
+            <nav class="stepper" id="stepper" aria-label="Étapes">
+                <div class="step-item active" id="si-0">
+                    <div class="step-dot">1</div>
+                    <span class="step-label" data-i18n="stepLabelPurpose">Objectif</span>
+                </div>
+                <div class="step-item" id="si-1">
+                    <div class="step-dot">2</div>
+                    <span class="step-label" data-i18n="stepLabelMuni">Municipalité</span>
+                </div>
+                <div class="step-item" id="si-2">
+                    <div class="step-dot">3</div>
+                    <span class="step-label" data-i18n="stepLabelEmail">Courriel</span>
+                </div>
+                <div class="step-item" id="si-3">
+                    <div class="step-dot">4</div>
+                    <span class="step-label" data-i18n="stepLabelLegal">Conditions</span>
+                </div>
+                <div class="step-item" id="si-4">
+                    <div class="step-dot">5</div>
+                    <span class="step-label" data-i18n="stepLabelUpload">Fichier</span>
+                </div>
+                <div class="step-item" id="si-5">
+                    <div class="step-dot">6</div>
+                    <span class="step-label" data-i18n="stepLabelDone">Reçu</span>
+                </div>
+            </nav>
+
+            <!-- Step panels -->
+            <div class="steps-container">
+
+                <!-- ── STEP 0 : Purpose ───────────────────────────────── -->
+                <div class="step-panel active" id="step-0">
+                    <p class="purpose-intro" data-i18n="purposeIntro">Veuillez sélectionner l'objectif de cette soumission.</p>
+                    <div class="purpose-grid">
+                        <button class="purpose-tile" data-purpose="analyse" onclick="selectPurpose(this)">
+                            <span class="purpose-tile-icon">🔍</span>
+                            <span class="purpose-tile-body">
+                                <span class="purpose-tile-title" data-i18n="purposeOpt1">Analyse et estimation du prix</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt1Desc">Soumettre la base de données pour analyse préliminaire et soumission de prix.</span>
+                            </span>
+                            <span class="purpose-tile-check">✓</span>
+                        </button>
+                        <button class="purpose-tile" data-purpose="test" onclick="selectPurpose(this)">
+                            <span class="purpose-tile-icon">🧪</span>
+                            <span class="purpose-tile-body">
+                                <span class="purpose-tile-title" data-i18n="purposeOpt2">Migration test</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt2Desc">Soumettre la base de données pour une migration d'essai et validation des résultats.</span>
+                            </span>
+                            <span class="purpose-tile-check">✓</span>
+                        </button>
+                        <button class="purpose-tile" data-purpose="final" onclick="selectPurpose(this)">
+                            <span class="purpose-tile-icon">🚀</span>
+                            <span class="purpose-tile-body">
+                                <span class="purpose-tile-title" data-i18n="purposeOpt3">Migration finale</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt3Desc">Soumettre la base de données pour la migration officielle et définitive.</span>
+                            </span>
+                            <span class="purpose-tile-check">✓</span>
+                        </button>
+                    </div>
+                    <div class="nav-row">
+                        <button class="btn btn-next" id="next-0" onclick="goNext(0)" disabled data-i18n="btnNext">Suivant →</button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 1 : Municipality ─────────────────────────── -->
+                <div class="step-panel" id="step-1">
+                    <div class="field-group">
+                        <label for="muni-code">
+                            <span data-i18n="muniLabel">Code de municipalité</span>
+                            <span class="req">*</span>
+                        </label>
+                        <input type="text" id="muni-code" maxlength="5" inputmode="numeric" placeholder="" autocomplete="off" />
+                        <p class="field-hint" data-i18n="muniHint">Entrez le code à 5 chiffres de votre municipalité.</p>
+                        <div class="field-error" id="muni-error" data-i18n="muniError">Veuillez entrer un code de municipalité valide.</div>
+                    </div>
+
+                    <div id="muni-result">
+                        <div class="muni-name" id="muni-name"></div>
+                        <div class="muni-mrc" id="muni-mrc"></div>
+                    </div>
+
+                    <div id="muni-not-found" data-i18n="muniNotFound">Aucune municipalité trouvée pour ce code.</div>
+
+                    <div class="nav-row">
+                        <button class="btn btn-next" id="next-1" onclick="goNext(1)" disabled data-i18n="btnNext">Suivant →</button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 2 : Email ────────────────────────────────── -->
+                <div class="step-panel" id="step-2">
+                    <div class="field-group">
+                        <label for="email1">
+                            <span data-i18n="emailLabel">Adresse courriel</span>
+                            <span class="req">*</span>
+                        </label>
+                        <input type="email" id="email1" data-i18n-placeholder="emailPlaceholder" placeholder="vous@exemple.com" autocomplete="email" />
+                    </div>
+                    <div class="field-group">
+                        <label for="email2">
+                            <span data-i18n="emailConfirmLabel">Confirmer le courriel</span>
+                            <span class="req">*</span>
+                        </label>
+                        <input type="email" id="email2" data-i18n-placeholder="emailConfirmPlaceholder" placeholder="vous@exemple.com" autocomplete="off" />
+                        <div class="field-error" id="email-error" data-i18n="emailMismatch">Les adresses courriel ne correspondent pas.</div>
+                    </div>
+
+                    <div class="nav-row">
+                        <button class="btn btn-prev" onclick="goPrev(2)" data-i18n="btnPrev">← Retour</button>
+                        <button class="btn btn-next" id="next-2" onclick="goNext(2)" data-i18n="btnNext">Suivant →</button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 3 : Legal ────────────────────────────────── -->
+                <div class="step-panel" id="step-3">
+                    <div class="legal-box" id="legal-box">
+                        <h3 data-i18n="legalTitle">Conditions d'utilisation et autorisation de traitement</h3>
+
+                        <!-- FR placeholder text — to be replaced by client -->
+                        <div id="legal-text-fr">
+                            <p>Les présentes conditions encadrent la transmission et le traitement de votre base de données PL à des fins d'analyse et de planification du coût de traitement, et/ou d'extraction et de migration vers les formats universels visés.</p>
+                            <p>En soumettant votre fichier, vous confirmez être dûment autorisé(e) à partager ces données au nom de votre municipalité ou organisme.</p>
+                            <p>Le fichier transmis sera stocké de façon sécurisée et ne sera utilisé qu'aux fins de la conversion demandée. Il ne sera pas divulgué à des tiers sans votre consentement explicite.</p>
+                            <p>Les données seront conservées le temps nécessaire au traitement, puis supprimées de nos dossiers.</p>
+                            <p>Gestion Technologies se réserve le droit de refuser tout fichier non conforme ou dont le contenu serait inapproprié.</p>
+                        </div>
+
+                        <!-- EN placeholder text -->
+                        <div id="legal-text-en" style="display:none">
+                            <p>These terms govern the transmission and processing of your PL database for analysis and cost planning purposes, and/or for extraction and migration to the targeted universal formats.</p>
+                            <p>By submitting your file, you confirm that you are duly authorized to share this data on behalf of your municipality or organization.</p>
+                            <p>The submitted file will be stored securely and used only for the requested conversion. It will not be disclosed to third parties without your explicit consent.</p>
+                            <p>Data will be retained as long as necessary for processing, then deleted from our records.</p>
+                            <p>Gestion Technologies reserves the right to refuse any non-conforming or inappropriate file.</p>
+                        </div>
+                    </div>
+
+                    <div class="checkbox-row">
+                        <input type="checkbox" id="legal-check" onchange="onLegalCheck()" />
+                        <label for="legal-check" data-i18n="legalCheckbox">
+                            J'ai lu et j'accepte les conditions ci-dessus.
+                        </label>
+                    </div>
+                    <div class="field-error" id="legal-error" data-i18n="legalError">Vous devez accepter les conditions pour continuer.</div>
+
+                    <div class="nav-row">
+                        <button class="btn btn-prev" onclick="goPrev(3)" data-i18n="btnPrev">← Retour</button>
+                        <button class="btn btn-next" id="next-3" onclick="goNext(3)" disabled data-i18n="btnNext">Suivant →</button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 4 : Upload ───────────────────────────────── -->
+                <div class="step-panel" id="step-4">
+
+                    <!-- Summary -->
+                    <div class="summary-box" id="upload-summary">
+                        <div class="summary-row">
+                            <span class="summary-label" data-i18n="summaryPurpose">Objectif :</span>
+                            <span class="summary-value" id="sum-purpose">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label" data-i18n="summaryMuni">Municipalité :</span>
+                            <span class="summary-value" id="sum-muni">—</span>
+                        </div>
+                        <div class="summary-row">
+                            <span class="summary-label" data-i18n="summaryEmail">Courriel :</span>
+                            <span class="summary-value" id="sum-email">—</span>
+                        </div>
+                    </div>
+
+                    <!-- Drop zone -->
+                    <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+                        <input type="file" id="file-input" accept=".zip,.db,.db4o,.dat,.bak" onchange="onFileSelected(event)" />
+                        <span class="drop-icon">📂</span>
+                        <div class="drop-text" data-i18n="dropText">Glisser-déposer le fichier ici</div>
+                        <div class="drop-sub" data-i18n="dropSub">ou cliquer pour parcourir — .zip, .db, .db4o, .dat, .bak</div>
+                    </div>
+                    <div id="file-name-display"></div>
+
+                    <!-- Progress bar -->
+                    <div class="progress-wrapper" id="progress-wrapper">
+                        <div class="progress-header">
+                            <span data-i18n="progressLabel">Téléversement en cours…</span>
+                            <span id="progress-pct">0 %</span>
+                        </div>
+                        <div class="progress-bar-track">
+                            <div class="progress-bar-fill" id="progress-fill"></div>
+                        </div>
+                        <div class="progress-sub" id="progress-sub"></div>
+                    </div>
+
+                    <div class="upload-error" id="upload-error"></div>
+
+                    <button class="btn btn-upload" id="btn-upload" onclick="startUpload()" disabled data-i18n="btnUpload">Téléverser le fichier</button>
+
+                    <div class="nav-row" style="border-top:none; padding-top:0; margin-top:10px;">
+                        <button class="btn btn-prev btn-sm" id="btn-prev-4" onclick="goPrev(4)" data-i18n="btnPrev">← Retour</button>
+                    </div>
+                </div>
+
+                <!-- ── STEP 5 : Confirmation ─────────────────────────── -->
+                <div class="step-panel" id="step-5">
+                    <div class="confirmation-panel">
+                        <div class="success-icon">✅</div>
+                        <h2 data-i18n="confirmTitle">Fichier reçu !</h2>
+                        <p data-i18n="confirmText">Votre base de données a été transmise avec succès. Notre équipe la traitera dans les prochains jours ouvrables.</p>
+                        <p data-i18n="confirmRef">Votre numéro de référence :</p>
+                        <div class="ref-chip" id="ref-number">—</div>
+                        <p data-i18n="confirmEmail">Un courriel de confirmation vous sera envoyé à l'adresse fournie.</p>
+                    </div>
+                </div>
+
+            </div><!-- /steps-container -->
+        </div><!-- /card -->
+    </main>
+
+    <!-- ── Municipalities data ───────────────────────────────────── -->
+    <script src="municipalities.js"></script>
+
+    <script>
+        /* ════════════════════════════════════════════════════════════════
+           FIREBASE CONFIGURATION
+           ──────────────────────────────────────────────────────────────
+           Replace the values below with your own Firebase project config.
+           You can find them in the Firebase Console → Project Settings →
+           General → Your apps → SDK setup and configuration.
+           ════════════════════════════════════════════════════════════════ */
+        const FIREBASE_CONFIG = {
+            apiKey: "AIzaSyCNlYgUp5xBJdtI1-ZcXTkiJweG83EGE98",
+            authDomain: "securitepublique-859dd.firebaseapp.com",
+            projectId: "securitepublique-859dd",
+            storageBucket: "securitepublique-859dd.appspot.com",
+            messagingSenderId: "1042182846479",
+            appId: "1:1042182846479:web:f201ae0d8bb0fa786f0b7a",
+            measurementId: "G-EW01G1B1MJ"
+        };
+
+        // Storage folder where uploads will be stored
+        const STORAGE_FOLDER = "databases";
+
+        /* ════════════════════════════════════════════════════════════════
+           i18n STRINGS
+           ════════════════════════════════════════════════════════════════ */
+        const I18N = {
+            fr: {
+                pageTitle: "Téléversement de base de données PL — Migration4o",
+                brandName: "Gestion Technologies",
+                heading: "Téléversement de base de données PL",
+                subheading: "Transmettez votre base de données PL de façon sécurisée pour qu'elle soit traitée avec Migration4o.",
+                stepLabelPurpose: "Objectif",
+                stepLabelMuni: "Municipalité",
+                stepLabelEmail: "Courriel",
+                stepLabelLegal: "Conditions",
+                stepLabelUpload: "Fichier",
+                stepLabelDone: "Reçu",
+                purposeIntro: "Veuillez sélectionner l'objectif de cette soumission.",
+                purposeOpt1: "Analyse et estimation du prix",
+                purposeOpt1Desc: "Soumettre la base de données pour analyse préliminaire et soumission de prix.",
+                purposeOpt2: "Migration test",
+                purposeOpt2Desc: "Soumettre la base de données pour une migration d'essai et validation des résultats.",
+                purposeOpt3: "Migration finale",
+                purposeOpt3Desc: "Soumettre la base de données pour la migration officielle et définitive.",
+                summaryPurpose: "Objectif :",
+                muniLabel: "Code de municipalité",
+                muniPlaceholder: "",
+                muniHint: "Entrez le code à 5 chiffres de votre municipalité.",
+                muniError: "Veuillez entrer un code de municipalité valide.",
+                muniNotFound: "Aucune municipalité trouvée pour ce code.",
+                emailLabel: "Adresse courriel",
+                emailPlaceholder: "vous@exemple.com",
+                emailConfirmLabel: "Confirmer le courriel",
+                emailConfirmPlaceholder: "vous@exemple.com",
+                emailMismatch: "Les adresses courriel ne correspondent pas.",
+                legalTitle: "Conditions d'utilisation et autorisation de traitement",
+                legalCheckbox: "J'ai lu et j'accepte les conditions ci-dessus.",
+                legalError: "Vous devez accepter les conditions pour continuer.",
+                summaryMuni: "Municipalité :",
+                summaryEmail: "Courriel :",
+                dropText: "Glisser-déposer le fichier ici",
+                dropSub: "ou cliquer pour parcourir — .zip, .db, .db4o, .dat, .bak",
+                progressLabel: "Téléversement en cours…",
+                progressDoneLabel: "Téléversement terminé",
+                btnUpload: "Téléverser le fichier",
+                uploadErrNoFile: "Veuillez sélectionner un fichier avant de continuer.",
+                uploadErrGeneric: "Erreur lors du téléversement. Veuillez réessayer.",
+                confirmTitle: "Fichier reçu !",
+                confirmText: "Votre base de données a été transmise avec succès. Notre équipe la traitera dans les prochains jours ouvrables.",
+                confirmRef: "Votre numéro de référence :",
+                confirmEmail: "Un courriel de confirmation vous sera envoyé à l'adresse fournie.",
+                btnNext: "Suivant →",
+                btnPrev: "← Retour",
+                transferredOf: "Mo transférés sur",
+            },
+            en: {
+                pageTitle: "PL Database Upload — Migration4o",
+                brandName: "Gestion Technologies",
+                heading: "PL Database Upload",
+                subheading: "Securely transmit your PL database to be processed with Migration4o.",
+                stepLabelPurpose: "Purpose",
+                stepLabelMuni: "Municipality",
+                stepLabelEmail: "Email",
+                stepLabelLegal: "Terms",
+                stepLabelUpload: "File",
+                stepLabelDone: "Done",
+                purposeIntro: "Please select the purpose of this submission.",
+                purposeOpt1: "Analysis & pricing",
+                purposeOpt1Desc: "Submit the database for preliminary analysis and a pricing quote.",
+                purposeOpt2: "Test migration",
+                purposeOpt2Desc: "Submit the database for a trial migration and results validation.",
+                purposeOpt3: "Final migration",
+                purposeOpt3Desc: "Submit the database for the official and definitive migration.",
+                summaryPurpose: "Purpose:",
+                muniLabel: "Municipality Code",
+                muniPlaceholder: "",
+                muniHint: "Enter the 5-digit code for your municipality.",
+                muniError: "Please enter a valid municipality code.",
+                muniNotFound: "No municipality found for this code.",
+                emailLabel: "Email Address",
+                emailPlaceholder: "you@example.com",
+                emailConfirmLabel: "Confirm Email",
+                emailConfirmPlaceholder: "you@example.com",
+                emailMismatch: "Email addresses do not match.",
+                legalTitle: "Terms of Use and Processing Authorization",
+                legalCheckbox: "I have read and agree to the terms above.",
+                legalError: "You must accept the terms to continue.",
+                summaryMuni: "Municipality:",
+                summaryEmail: "Email:",
+                dropText: "Drag and drop file here",
+                dropSub: "or click to browse — .zip, .db, .db4o, .dat, .bak",
+                progressLabel: "Upload in progress…",
+                progressDoneLabel: "Upload complete",
+                btnUpload: "Upload File",
+                uploadErrNoFile: "Please select a file before continuing.",
+                uploadErrGeneric: "Upload error. Please try again.",
+                confirmTitle: "File Received!",
+                confirmText: "Your database was successfully transmitted. Our team will process it within the next business days.",
+                confirmRef: "Your reference number:",
+                confirmEmail: "A confirmation email will be sent to the address you provided.",
+                btnNext: "Next →",
+                btnPrev: "← Back",
+                transferredOf: "MB transferred of",
+            }
+        };
+
+        /* ════════════════════════════════════════════════════════════════
+           STATE
+           ════════════════════════════════════════════════════════════════ */
+        let currentLang = 'fr';
+        let currentStep = 0;
+        const TOTAL_STEPS = 6;
+
+        let state = {
+            purpose: '',
+            muniCode: '',
+            muniName: '',
+            muniMRC: '',
+            email: '',
+            file: null,
+            refNumber: ''
+        };
+
+        /* ════════════════════════════════════════════════════════════════
+           FIREBASE INIT (lazy — only when needed)
+           ════════════════════════════════════════════════════════════════ */
+        let firebaseApp = null;
+        let firebaseStorage = null;
+
+        function initFirebase() {
+            if (firebaseApp) return;
+            try {
+                firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+                firebaseStorage = firebase.storage();
+            } catch (e) {
+                console.error('Firebase init error:', e);
+            }
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           i18n
+           ════════════════════════════════════════════════════════════════ */
+        function t(key) {
+            return I18N[currentLang][key] || I18N.fr[key] || key;
+        }
+
+        function applyLang(lang) {
+            currentLang = lang;
+            document.documentElement.lang = lang;
+            document.title = t('pageTitle');
+
+            // Text nodes
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                el.textContent = t(el.dataset.i18n);
+            });
+
+            // Placeholder attributes
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                el.placeholder = t(el.dataset.i18nPlaceholder);
+            });
+
+            // Legal text visibility
+            document.getElementById('legal-text-fr').style.display = lang === 'fr' ? '' : 'none';
+            document.getElementById('legal-text-en').style.display = lang === 'en' ? '' : 'none';
+        }
+
+        function setLang(lang) {
+            applyLang(lang);
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           STEP NAVIGATION
+           ════════════════════════════════════════════════════════════════ */
+        function showStep(n) {
+            document.querySelectorAll('.step-panel').forEach((p, i) => {
+                p.classList.toggle('active', i === n);
+            });
+
+            document.querySelectorAll('.step-item').forEach((si, i) => {
+                si.classList.remove('active', 'done');
+                if (i < n) si.classList.add('done');
+                if (i === n) si.classList.add('active');
+
+                // Replace number with checkmark for done steps (managed via CSS ::before)
+                const dot = si.querySelector('.step-dot');
+                if (i < n) {
+                    dot.textContent = '';  // CSS adds ✓ via ::before
+                } else if (i > n) {
+                    dot.textContent = i + 1;
+                } else {
+                    dot.textContent = i + 1;
+                }
+            });
+
+            currentStep = n;
+        }
+
+        function goNext(fromStep) {
+            if (!validateStep(fromStep)) return;
+
+            if (fromStep === 1) {
+                state.muniCode = document.getElementById('muni-code').value.trim();
+                const m = MUNICIPALITIES[state.muniCode];
+                state.muniName = m ? m.n : state.muniCode;
+                state.muniMRC = m ? m.m : '';
+            }
+            if (fromStep === 2) {
+                state.email = document.getElementById('email1').value.trim();
+            }
+            if (fromStep === 4) {
+                // Upload step — goNext not used; upload button handles transition
+                return;
+            }
+
+            // Populate upload summary before showing step 4
+            if (fromStep + 1 === 4) {
+                const selectedTile = document.querySelector('.purpose-tile.selected [data-i18n^="purposeOpt"][class*="title"]');
+                document.getElementById('sum-purpose').textContent = selectedTile ? selectedTile.textContent : state.purpose;
+                const mrc = state.muniMRC ? ` — ${state.muniMRC}` : '';
+                document.getElementById('sum-muni').textContent = `${state.muniName} (${state.muniCode})${mrc}`;
+                document.getElementById('sum-email').textContent = state.email;
+                initFirebase();
+            }
+
+            showStep(fromStep + 1);
+        }
+
+        function goPrev(fromStep) {
+            if (fromStep === 0) return;
+            showStep(fromStep - 1);
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           VALIDATION
+           ════════════════════════════════════════════════════════════════ */
+        function validateStep(step) {
+            if (step === 0) {
+                return !!state.purpose;
+            }
+
+            if (step === 1) {
+                const code = document.getElementById('muni-code').value.trim();
+                const errEl = document.getElementById('muni-error');
+                if (!MUNICIPALITIES[code]) {
+                    errEl.style.display = 'block';
+                    document.getElementById('muni-code').classList.add('invalid');
+                    return false;
+                }
+                errEl.style.display = 'none';
+                return true;
+            }
+
+            if (step === 2) {
+                const e1 = document.getElementById('email1').value.trim();
+                const e2 = document.getElementById('email2').value.trim();
+                const errEl = document.getElementById('email-error');
+                const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRe.test(e1) || e1 !== e2) {
+                    errEl.textContent = !emailRe.test(e1)
+                        ? (currentLang === 'fr' ? 'Veuillez entrer une adresse courriel valide.' : 'Please enter a valid email address.')
+                        : t('emailMismatch');
+                    errEl.style.display = 'block';
+                    document.getElementById('email2').classList.add('invalid');
+                    return false;
+                }
+                errEl.style.display = 'none';
+                document.getElementById('email2').classList.remove('invalid');
+                return true;
+            }
+
+            if (step === 3) {
+                const checked = document.getElementById('legal-check').checked;
+                document.getElementById('legal-error').style.display = checked ? 'none' : 'block';
+                return checked;
+            }
+
+            return true;
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           STEP 0 — purpose selection
+           ════════════════════════════════════════════════════════════════ */
+        function selectPurpose(tile) {
+            document.querySelectorAll('.purpose-tile').forEach(t => t.classList.remove('selected'));
+            tile.classList.add('selected');
+            state.purpose = tile.dataset.purpose;
+            document.getElementById('next-0').disabled = false;
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           STEP 1 — municipality lookup
+           ════════════════════════════════════════════════════════════════ */
+        document.getElementById('muni-code').addEventListener('input', function () {
+            const code = this.value.trim();
+            const res = document.getElementById('muni-result');
+            const nf = document.getElementById('muni-not-found');
+            const btn = document.getElementById('next-1');
+            const errEl = document.getElementById('muni-error');
+
+            errEl.style.display = 'none';
+            this.classList.remove('invalid', 'valid');
+
+            if (code.length === 0) {
+                res.style.display = 'none';
+                nf.style.display = 'none';
+                btn.disabled = true;
+                return;
+            }
+
+            const m = MUNICIPALITIES[code];
+            if (m) {
+                document.getElementById('muni-name').textContent = m.n;
+                document.getElementById('muni-mrc').textContent = m.m || '';
+                res.style.display = 'block';
+                nf.style.display = 'none';
+                this.classList.add('valid');
+                btn.disabled = false;
+            } else {
+                res.style.display = 'none';
+                if (code.length === 5) {
+                    nf.style.display = 'block';
+                    this.classList.add('invalid');
+                } else {
+                    nf.style.display = 'none';
+                }
+                btn.disabled = true;
+            }
+        });
+
+        /* ════════════════════════════════════════════════════════════════
+           STEP 3 — legal checkbox
+           ════════════════════════════════════════════════════════════════ */
+        function onLegalCheck() {
+            const checked = document.getElementById('legal-check').checked;
+            document.getElementById('next-3').disabled = !checked;
+            if (checked) document.getElementById('legal-error').style.display = 'none';
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           STEP 4 — file selection & drag/drop
+           ════════════════════════════════════════════════════════════════ */
+        function onFileSelected(evt) {
+            const file = evt.target.files[0];
+            setSelectedFile(file);
+        }
+
+        function setSelectedFile(file) {
+            if (!file) return;
+            state.file = file;
+            const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+            document.getElementById('file-name-display').textContent = `📄 ${file.name}  (${sizeMB} MB)`;
+            document.getElementById('btn-upload').disabled = false;
+            resetProgress();
+        }
+
+        function onDragOver(evt) {
+            evt.preventDefault();
+            document.getElementById('drop-zone').classList.add('dragover');
+        }
+        function onDragLeave() {
+            document.getElementById('drop-zone').classList.remove('dragover');
+        }
+        function onDrop(evt) {
+            evt.preventDefault();
+            document.getElementById('drop-zone').classList.remove('dragover');
+            const file = evt.dataTransfer.files[0];
+            if (file) setSelectedFile(file);
+        }
+
+        function resetProgress() {
+            document.getElementById('progress-wrapper').style.display = 'none';
+            document.getElementById('progress-pct').textContent = '0 %';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-sub').textContent = '';
+            document.getElementById('upload-error').style.display = 'none';
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           UPLOAD
+           ════════════════════════════════════════════════════════════════ */
+        function generateRefNumber() {
+            const ts = Date.now().toString(36).toUpperCase();
+            const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+            return `${state.muniCode}-${ts}-${rand}`;
+        }
+
+        function startUpload() {
+            if (!state.file) {
+                showUploadError(t('uploadErrNoFile'));
+                return;
+            }
+
+            if (!firebaseStorage) {
+                showUploadError('Firebase Storage non initialisé. Vérifiez la configuration.');
+                return;
+            }
+
+            state.refNumber = generateRefNumber();
+
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+            const safeName = state.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+            const path = `${STORAGE_FOLDER}/${state.muniCode}/${state.email}/${timestamp}_${safeName}`;
+
+            const storageRef = firebaseStorage.ref().child(path);
+            const metadata = {
+                customMetadata: {
+                    purpose: state.purpose,
+                    muniCode: state.muniCode,
+                    muniName: state.muniName,
+                    email: state.email,
+                    refNumber: state.refNumber,
+                    uploadedAt: new Date().toISOString()
+                }
+            };
+
+            // Lock UI
+            document.getElementById('btn-upload').disabled = true;
+            document.getElementById('btn-prev-4').disabled = true;
+            document.getElementById('file-input').disabled = true;
+            document.getElementById('upload-error').style.display = 'none';
+
+            const pw = document.getElementById('progress-wrapper');
+            pw.style.display = 'block';
+            document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('progressLabel');
+
+            const uploadTask = storageRef.put(state.file, metadata);
+
+            uploadTask.on(
+                'state_changed',
+
+                /* progress */
+                (snap) => {
+                    const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
+                    const donesMB = (snap.bytesTransferred / 1024 / 1024).toFixed(1);
+                    const totalMB = (snap.totalBytes / 1024 / 1024).toFixed(1);
+
+                    document.getElementById('progress-fill').style.width = pct + '%';
+                    document.getElementById('progress-pct').textContent = pct + ' %';
+                    document.getElementById('progress-sub').textContent =
+                        `${donesMB} ${t('transferredOf')} ${totalMB} MB`;
+                },
+
+                /* error */
+                (err) => {
+                    console.error('Upload error:', err);
+                    document.getElementById('btn-upload').disabled = false;
+                    document.getElementById('btn-prev-4').disabled = false;
+                    document.getElementById('file-input').disabled = false;
+                    showUploadError(t('uploadErrGeneric') + ' (' + err.code + ')');
+                },
+
+                /* complete */
+                () => {
+                    document.getElementById('progress-fill').style.width = '100%';
+                    document.getElementById('progress-pct').textContent = '100 %';
+                    document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent =
+                        t('progressDoneLabel');
+
+                    document.getElementById('ref-number').textContent = state.refNumber;
+                    setTimeout(() => showStep(5), 600);
+                }
+            );
+        }
+
+        function showUploadError(msg) {
+            const el = document.getElementById('upload-error');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           INIT
+           ════════════════════════════════════════════════════════════════ */
+        applyLang('fr');
+    </script>
+</body>
+
+</html>
