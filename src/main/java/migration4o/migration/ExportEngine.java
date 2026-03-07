@@ -15,7 +15,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Set;
 
-import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
@@ -28,10 +27,7 @@ import migration4o.util.LucideIcons;
 import migration4o.util.SchemaUtil;
 import migration4o.util.XmlViewerHtmlGenerator;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
-import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
-import migration4o.util.tools.structuredwriter.StructuredWriterProvider;
-import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
 
 /**
  * Orchestrates XML export operations by coordinating specialized components.
@@ -40,17 +36,7 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
  * object graph traversal - XSDBuilder: schema generation
  */
 public class ExportEngine {
-    private final ExportOperation operation;
-
-    // ── Module nav tree (built once before export) ──────────────────────────
-
-    /** Top-level nav tree — same for all files in this export. */
-    private final List<NavNode> navTree = new ArrayList<>();
-    /**
-     * Nav JSON serialized once from navTree; injected verbatim into every HTML
-     * file.
-     */
-    private String cachedNavJson = "[]";
+    public final ExportOperation operation;
 
     /**
      * Creates export engine using the shared in-memory database from
@@ -90,82 +76,16 @@ public class ExportEngine {
     }
 
     /**
-     * Sets the maximum number of objects to export per class.
-     * 
-     * @param maxObjectsPerClass Maximum objects to export per class, or null
-     * for all objects
-     */
-    public void setMaxObjectsPerClass(Integer maxObjectsPerClass) {
-        this.operation.maxObjectsPerClass = maxObjectsPerClass;
-    }
-
-    /**
-     * Sets whether to export native DB4O object IDs as XML attributes.
-     * 
-     * @param exportNativeIds true to include id attribute with DB4O object ID
-     */
-    public void setExportNativeIds(boolean exportNativeIds) {
-        this.operation.exportNativeIds = exportNativeIds;
-    }
-
-    /**
-     * Sets fields selected by the user to be skipped during export.
-     * 
-     * @param selectedSkipOptions schema fields to skip
-     */
-    public void setSelectedSkipOptions(List<migration4o.models.schema.DOSchemaField> selectedSkipOptions) {
-        if (selectedSkipOptions == null) {
-            this.operation.selectedSkipUserOptions = new ArrayList<>();
-        } else {
-            this.operation.selectedSkipUserOptions = new ArrayList<>(selectedSkipOptions);
-        }
-    }
-
-    public void setApplyUserSelectedFieldExclusions(boolean applyUserSelectedFieldExclusions) {
-        this.operation.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
-    }
-
-    public void setApplySkipWhenConditions(boolean applySkipWhenConditions) {
-        this.operation.applySkipWhenConditions = applySkipWhenConditions;
-    }
-
-    public void setApplyExportCriteriaFilters(boolean applyExportCriteriaFilters) {
-        this.operation.applyExportCriteriaFilters = applyExportCriteriaFilters;
-    }
-
-    public void setSkipObjectsWithoutExportableFields(boolean skipObjectsWithoutExportableFields) {
-        this.operation.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
-    }
-
-    /**
-     * Sets the structured output format used by the writer layer.
-     *
-     * @param outputFormat format name from StructuredWriterProvider (e.g. XML,
-     * JSON, EXCEL)
-     */
-    public void setOutputFormat(String outputFormat) {
-        if (outputFormat == null || outputFormat.isBlank()) {
-            this.operation.outputFormat = "XML";
-        } else {
-            this.operation.outputFormat = outputFormat;
-        }
-    }
-
-    public void setGenerateHtmlViewer(boolean generateHtmlViewer) {
-        this.operation.generateHtmlViewer = generateHtmlViewer;
-    }
-
-    /**
      * Pre-builds the hierarchical nav tree for the HTML viewer sidebar. Must be
      * called before export starts. The tree mirrors the module structure:
      * path-prefix groups → module groups → class leaves (recursively).
      */
     public void setModuleNavData(List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputDir) {
-        navTree.clear();
-        cachedNavJson = "[]";
+        operation.navTree.clear();
+        operation.cachedNavJson = "[]";
         if (modules == null || modules.isEmpty())
             return;
-        Path base = getBaseOutputPath(baseOutputDir);
+        Path base = operation.getBaseOutputPath(baseOutputDir);
 
         // Group top-level modules by their first path segment.
         LinkedHashMap<String, NavNode> prefixGroups = new LinkedHashMap<>();
@@ -193,24 +113,24 @@ public class ExportEngine {
             if (parts.length > 1) {
                 NavNode group = prefixGroups.computeIfAbsent(parts[0], k -> {
                     NavNode g = new NavNode(k, null, null, 0, null, null, null, null);
-                    navTree.add(g);
+                    operation.navTree.add(g);
                     return g;
                 });
                 group.children.add(moduleNode);
             } else {
-                navTree.add(moduleNode);
+                operation.navTree.add(moduleNode);
             }
         }
 
         // Serialize once — all files share the same root-relative hrefs
-        cachedNavJson = serializeNavTree();
+        operation.cachedNavJson = serializeNavTree();
 
         // Generate welcome / index page at the db root
         if (operation.generateHtmlViewer) {
             try {
                 int modCount = modules.size();
                 int classCount = modules.stream().mapToInt(this::countTotalClasses).sum();
-                JsViewerHtmlGenerator.writeWelcomePage(base, getDatabaseFolderName(), cachedNavJson, modCount, classCount);
+                JsViewerHtmlGenerator.writeWelcomePage(base, operation.getDatabaseFolderName(), operation.cachedNavJson, modCount, classCount);
             } catch (Exception e) {
                 System.err.println("Warning: failed to generate welcome page: " + e.getMessage());
             }
@@ -248,10 +168,10 @@ public class ExportEngine {
     }
 
     private String serializeNavTree() {
-        if (navTree.isEmpty())
+        if (operation.navTree.isEmpty())
             return "[]";
         StringBuilder sb = new StringBuilder();
-        appendNavNodes(sb, navTree);
+        appendNavNodes(sb, operation.navTree);
         return sb.toString();
     }
 
@@ -317,17 +237,6 @@ public class ExportEngine {
         return v.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 
-    public boolean isXMLFormat() {
-        return "XML".equalsIgnoreCase(getStructuredWriterAPI().getName());
-    }
-
-    private boolean shouldExportNativeIdsForCurrentFormat() {
-        if ("EXCEL".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
-            return true;
-        }
-        return operation.exportNativeIds;
-    }
-
     /**
      * Initializes shared object tracking and XSD builder for multi-module
      * exports. Call this before exporting multiple modules to ensure objects
@@ -353,16 +262,6 @@ public class ExportEngine {
     }
 
     /**
-     * Gets the list of exported XML files. Only available when using shared
-     * tracking.
-     * 
-     * @return Set of XML file paths, or null if not using shared tracking
-     */
-    public Set<String> getExportedXMLFiles() {
-        return operation.exportedXMLFiles;
-    }
-
-    /**
      * Writes the comprehensive XSD schema file. Should be called after all
      * exports are complete when using shared tracking.
      * 
@@ -380,12 +279,12 @@ public class ExportEngine {
     }
 
     private Path getComprehensiveSchemaPath(String baseOutputPath) {
-        Path dbBasePath = getBaseOutputPath(baseOutputPath);
+        Path dbBasePath = operation.getBaseOutputPath(baseOutputPath);
         return dbBasePath.resolve("_Migration").resolve("Schema.xsd");
     }
 
     private String getSchemaLocationForXml(Path xmlPath) {
-        if (!isXMLFormat()) {
+        if (!operation.isXMLFormat()) {
             return null;
         }
 
@@ -400,34 +299,6 @@ public class ExportEngine {
         } catch (Exception e) {
             return "_Migration/Schema.xsd";
         }
-    }
-
-    /**
-     * Extracts the database folder name from the database path. For example:
-     * "local/54060/BackupManuel.dat" -> "54060"
-     */
-    private String getDatabaseFolderName() {
-        if (operation.databasePath == null) {
-            return "default";
-        }
-
-        Path path = Paths.get(operation.databasePath);
-        Path parent = path.getParent();
-
-        if (parent != null) {
-            return parent.getFileName().toString();
-        }
-
-        return "default";
-    }
-
-    /**
-     * Gets the base output directory for the current database. Returns:
-     * output/<database-folder>/
-     */
-    public Path getBaseOutputPath(String baseOutputDir) {
-        String dbFolder = getDatabaseFolderName();
-        return Paths.get(baseOutputDir).resolve(dbFolder);
     }
 
     /**
@@ -477,7 +348,7 @@ public class ExportEngine {
             // Use the in-memory container (already open)
 
             // Create database-specific output directory: output/<db-folder>/
-            Path dbBasePath = getBaseOutputPath(baseOutputPath);
+            Path dbBasePath = operation.getBaseOutputPath(baseOutputPath);
             Files.createDirectories(dbBasePath);
 
             // Register all modules and their classes with the tracker
@@ -603,7 +474,7 @@ public class ExportEngine {
 
         Set<String> referencedClasses = tracker.getReferencedClasses();
         if (referencedClasses.isEmpty()) {
-            operation.statistics.setExportInfo("Referenced", getBaseOutputPath(baseOutputPath).resolve("Referenced").toString());
+            operation.statistics.setExportInfo("Referenced", operation.getBaseOutputPath(baseOutputPath).resolve("Referenced").toString());
             return operation.statistics;
         }
 
@@ -612,7 +483,7 @@ public class ExportEngine {
         }
 
         try {
-            Path dbBasePath = getBaseOutputPath(baseOutputPath);
+            Path dbBasePath = operation.getBaseOutputPath(baseOutputPath);
 
             exportReferencedClasses(referencedClasses, dbBasePath);
             operation.statistics.schemaWarnings.clear();
@@ -633,12 +504,12 @@ public class ExportEngine {
         operation.monitor = monitor;
         operation.statistics = new ExportStatistics(operation.monitor);
 
-        Path dbBasePath = getBaseOutputPath(baseOutputPath);
+        Path dbBasePath = operation.getBaseOutputPath(baseOutputPath);
         Path migrationPath = dbBasePath.resolve("_Migration");
         Files.createDirectories(migrationPath);
 
-        Path xmlPath = migrationPath.resolve("Extra" + getOutputFileExtension());
-        if (isXMLFormat() && operation.exportedXMLFiles != null) {
+        Path xmlPath = migrationPath.resolve("Extra" + operation.getOutputFileExtension());
+        if (operation.isXMLFormat() && operation.exportedXMLFiles != null) {
             operation.exportedXMLFiles.add(xmlPath.toString());
         }
 
@@ -657,9 +528,9 @@ public class ExportEngine {
             }
 
             outputWriter = new FileWriter(xmlPath.toFile());
-            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, xmlPath);
+            operation.xmlWriter = new StructuredWriter(operation.getStructuredWriterAPI(), outputWriter, xmlPath);
 
-            operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
+            operation.exportNativeIds = operation.shouldExportNativeIdsForCurrentFormat();
             if (!operation.useSharedTracking) {
                 operation.exportedObjectIds = new HashSet<>();
             }
@@ -670,7 +541,7 @@ public class ExportEngine {
             ObjectExporter objectExporter = new ObjectExporter(operation, operation.xmlWriter, operation.xsdBuilder);
             objectExporter.reset();
 
-            if (isXMLFormat()) {
+            if (operation.isXMLFormat()) {
                 operation.xmlWriter.openRootStructure("export", getSchemaLocationForXml(xmlPath));
             } else {
                 operation.xmlWriter.openStructure("export");
@@ -703,7 +574,7 @@ public class ExportEngine {
             }
             // Extra is exported to XML only — no HTML viewer generated.
 
-            if (isXMLFormat() && operation.sharedXSDBuilder == null) {
+            if (operation.isXMLFormat() && operation.sharedXSDBuilder == null) {
                 Path xsdPath = getComprehensiveSchemaPath(baseOutputPath);
                 Files.createDirectories(xsdPath.getParent());
                 operation.xsdBuilder.writeXSD(xsdPath.toString());
@@ -800,13 +671,13 @@ public class ExportEngine {
                 // Use the destination file name from config (defaults to class
                 // name
                 // if not set)
-                String fileName = config.getDestinationFileName() + getOutputFileExtension();
+                String fileName = config.getDestinationFileName() + operation.getOutputFileExtension();
                 String xsdFileName = config.getDestinationFileName() + ".xsd";
                 Path xmlPath = modulePath.resolve(fileName);
-                Path xsdPath = isXMLFormat() ? modulePath.resolve(xsdFileName) : null;
+                Path xsdPath = operation.isXMLFormat() ? modulePath.resolve(xsdFileName) : null;
 
                 // Track XML file for validation if using shared tracking
-                if (isXMLFormat() && operation.exportedXMLFiles != null) {
+                if (operation.isXMLFormat() && operation.exportedXMLFiles != null) {
                     operation.exportedXMLFiles.add(xmlPath.toString());
                 }
 
@@ -849,11 +720,11 @@ public class ExportEngine {
         try {
             // Create structured writer
             outputWriter = new FileWriter(xmlPath.toFile());
-            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, xmlPath);
+            operation.xmlWriter = new StructuredWriter(operation.getStructuredWriterAPI(), outputWriter, xmlPath);
 
             // Create export operation
             operation.baseOutputPath = xmlPath.getParent().getParent().toString();
-            operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
+            operation.exportNativeIds = operation.shouldExportNativeIdsForCurrentFormat();
             operation.exportConfig = config;
             if (!operation.useSharedTracking) {
                 operation.exportedObjectIds = new HashSet<>();
@@ -872,12 +743,12 @@ public class ExportEngine {
             String module = getModuleNameForXml(xmlPath);
 
             // Write XML header and metadata
-            if (isXMLFormat() && operation.sharedXSDBuilder != null) {
+            if (operation.isXMLFormat() && operation.sharedXSDBuilder != null) {
                 String relativeSchemaPath = getSchemaLocationForXml(xmlPath);
                 operation.xmlWriter.openRootStructure("export", relativeSchemaPath);
                 operation.xmlWriter.metadata(schemaClass.getMetadata(module));
 
-            } else if (isXMLFormat()) {
+            } else if (operation.isXMLFormat()) {
                 // Individual XSD - no schema reference needed (pass null for
                 // schemaLocation)
                 operation.xmlWriter.openRootStructure("export", null);
@@ -943,7 +814,7 @@ public class ExportEngine {
             generateHtmlViewerIfNeeded(xmlPath, schemaClass, config);
 
             // Only generate individual XSD if not using shared builder
-            if (isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
+            if (operation.isXMLFormat() && operation.sharedXSDBuilder == null && xsdPath != null) {
                 if (operation.monitor != null) {
                     operation.monitor.onXSDGenerationStart(xsdPath.toString());
                 }
@@ -970,28 +841,6 @@ public class ExportEngine {
                 }
             }
         }
-    }
-
-    private StructuredWriterAPI getStructuredWriterAPI() {
-        StructuredWriterAPI configured = StructuredWriterProvider.getFormat(operation.outputFormat);
-        if (configured != null) {
-            return configured;
-        }
-        return new StructuredWriterXML();
-    }
-
-    private String getOutputFileExtension() {
-        String formatName = getStructuredWriterAPI().getName();
-        if ("EXCEL".equalsIgnoreCase(formatName)) {
-            return ".xlsx";
-        }
-        if ("JS".equalsIgnoreCase(formatName)) {
-            return ".js";
-        }
-        if ("JSON".equalsIgnoreCase(formatName)) {
-            return ".json";
-        }
-        return ".xml";
     }
 
     private static String sanitizeModuleName(String moduleName) {
@@ -1042,7 +891,7 @@ public class ExportEngine {
 
         try {
             if (operation.baseOutputPath != null && !operation.baseOutputPath.isBlank()) {
-                Path dbBasePath = getBaseOutputPath(operation.baseOutputPath);
+                Path dbBasePath = operation.getBaseOutputPath(operation.baseOutputPath);
                 if (dbBasePath != null && parent.startsWith(dbBasePath)) {
                     String relativeModule = dbBasePath.relativize(parent).toString().replace('\\', '/');
                     if (!relativeModule.isBlank()) {
@@ -1063,13 +912,13 @@ public class ExportEngine {
         }
 
         try {
-            if ("JS".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
+            if ("JS".equalsIgnoreCase(operation.getStructuredWriterAPI().getName())) {
                 String baseHref = computeBaseHref(outputPath);
                 String layoutJson = "null";
                 if (config != null && config.hasLayout()) {
                     layoutJson = config.getLayout().toJson();
                 }
-                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass, cachedNavJson, baseHref, layoutJson);
+                JsViewerHtmlGenerator.writeViewerForJs(outputPath, schemaClass, operation.cachedNavJson, baseHref, layoutJson);
             } else {
                 if (schemaClass != null) {
                     DOSchema refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
@@ -1142,10 +991,10 @@ public class ExportEngine {
             }
 
             // Generate file name from destination class name
-            String fileName = schemaClass.destinationName + getOutputFileExtension();
+            String fileName = schemaClass.destinationName + operation.getOutputFileExtension();
             String xsdFileName = schemaClass.destinationName + ".xsd";
             Path xmlPath = referencedPath.resolve(fileName);
-            Path xsdPath = isXMLFormat() ? referencedPath.resolve(xsdFileName) : null;
+            Path xsdPath = operation.isXMLFormat() ? referencedPath.resolve(xsdFileName) : null;
 
             // Export this referenced class (without further reference tracking
             // to avoid
@@ -1195,11 +1044,11 @@ public class ExportEngine {
 
             // Create structured writer
             outputWriter = new FileWriter(outputPath);
-            operation.xmlWriter = new StructuredWriter(getStructuredWriterAPI(), outputWriter, Paths.get(outputPath));
+            operation.xmlWriter = new StructuredWriter(operation.getStructuredWriterAPI(), outputWriter, Paths.get(outputPath));
 
             // Create export operation
             operation.baseOutputPath = outputPath;
-            operation.exportNativeIds = shouldExportNativeIdsForCurrentFormat();
+            operation.exportNativeIds = operation.shouldExportNativeIdsForCurrentFormat();
             if (!operation.useSharedTracking) {
                 operation.exportedObjectIds = new HashSet<>();
             }
@@ -1211,7 +1060,7 @@ public class ExportEngine {
             // Write XML header and metadata
             // xmlWriter.writeExportHeader(moduleName, "module",
             // classNames.size(), null);
-            if (isXMLFormat()) {
+            if (operation.isXMLFormat()) {
                 operation.xmlWriter.openRootStructure("export", null);
             } else {
                 operation.xmlWriter.openStructure("export");
@@ -1245,7 +1094,7 @@ public class ExportEngine {
             generateHtmlViewerIfNeeded(Paths.get(outputPath), null, null);
 
             // Generate XSD schema
-            if (isXMLFormat()) {
+            if (operation.isXMLFormat()) {
                 String xsdPath = xsdOutputPath;
                 if (xsdPath == null) {
                     xsdPath = outputPath.replace(".xml", ".xsd");

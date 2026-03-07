@@ -1,5 +1,7 @@
 package migration4o.migration;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -8,6 +10,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
+import migration4o.util.tools.structuredwriter.StructuredWriterProvider;
+import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
 
 import com.db4o.ext.ExtObjectContainer;
 
@@ -94,4 +100,74 @@ public class ExportOperation {
      * same summary when the same entity is referenced from multiple records.
      */
     public Map<Long, String> idEntiteSummaryCache = new HashMap<>();
+
+    // ── Nav tree (built once before HTML viewer export)
+    // ───────────────────────
+    /** Top-level nav tree — same for all files in this export. */
+    public final List<NavNode> navTree = new ArrayList<>();
+    /**
+     * Nav JSON serialized once from navTree; injected verbatim into every HTML
+     * file.
+     */
+    public String cachedNavJson = "[]";
+
+    // ── Format helpers
+    // ─────────────────────────────────────────────────────────
+
+    public StructuredWriterAPI getStructuredWriterAPI() {
+        StructuredWriterAPI configured = StructuredWriterProvider.getFormat(outputFormat);
+        if (configured != null) {
+            return configured;
+        }
+        return new StructuredWriterXML();
+    }
+
+    public String getOutputFileExtension() {
+        String formatName = getStructuredWriterAPI().getName();
+        if ("EXCEL".equalsIgnoreCase(formatName)) {
+            return ".xlsx";
+        }
+        if ("JS".equalsIgnoreCase(formatName)) {
+            return ".js";
+        }
+        if ("JSON".equalsIgnoreCase(formatName)) {
+            return ".json";
+        }
+        return ".xml";
+    }
+
+    public boolean isXMLFormat() {
+        return "XML".equalsIgnoreCase(getStructuredWriterAPI().getName());
+    }
+
+    public boolean shouldExportNativeIdsForCurrentFormat() {
+        if ("EXCEL".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
+            return true;
+        }
+        return exportNativeIds;
+    }
+
+    /**
+     * Extracts the database folder name from the database path. For example:
+     * "local/54060/BackupManuel.dat" -> "54060"
+     */
+    public String getDatabaseFolderName() {
+        if (databasePath == null) {
+            return "default";
+        }
+        Path path = Paths.get(databasePath);
+        Path parent = path.getParent();
+        if (parent != null) {
+            return parent.getFileName().toString();
+        }
+        return "default";
+    }
+
+    /**
+     * Gets the base output directory for the current database. Returns:
+     * output/&lt;database-folder&gt;/
+     */
+    public Path getBaseOutputPath(String baseOutputDir) {
+        return Paths.get(baseOutputDir).resolve(getDatabaseFolderName());
+    }
 }
