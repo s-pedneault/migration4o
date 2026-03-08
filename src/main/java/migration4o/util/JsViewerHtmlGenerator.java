@@ -1,5 +1,7 @@
 package migration4o.util;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +39,49 @@ public final class JsViewerHtmlGenerator {
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref) throws IOException {
         return writeViewerForJs(jsPath, schemaClass, navItemsJson, baseHref, "null");
+    }
+
+    /**
+     * Writes a self-contained HTML viewer for in-memory JS data (no intermediate
+     * file). The caller provides the complete data script string; this method
+     * embeds it directly in the template and writes to {@code outputPath}.
+     *
+     * @param outputPath  destination {@code .html} file
+     * @param schemaClass schema class for title / field metadata; may be null
+     * @param navItemsJson serialised nav-tree JSON
+     * @param baseHref    relative path back to the export root (e.g. {@code "../../"})
+     * @param layoutJson  detail-layout JSON or {@code "null"}
+     * @param dataScript  pre-built JS data script (the full {@code window.__m4o={…};\n})
+     */
+    public static Path writeViewerForJs(Path outputPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson, String dataScript) throws IOException {
+        if (outputPath == null) {
+            throw new IllegalArgumentException("outputPath must not be null");
+        }
+
+        String embeddedJs = (dataScript != null ? dataScript : "")
+                .replaceAll("(?i)</script", "<\\/script");
+
+        String fileName = outputPath.getFileName() != null ? outputPath.getFileName().toString() : "export.html";
+        String baseName = fileName;
+        int extensionIndex = fileName.lastIndexOf('.');
+        if (extensionIndex > 0) {
+            baseName = fileName.substring(0, extensionIndex);
+        }
+
+        String title = baseName;
+        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
+        String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
+        String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
+        String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
+        String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
+
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+
+        if (outputPath.getParent() != null) {
+            Files.createDirectories(outputPath.getParent());
+        }
+        Files.write(outputPath, html.getBytes(StandardCharsets.UTF_8));
+        return outputPath;
     }
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson) throws IOException {
@@ -96,6 +141,73 @@ public final class JsViewerHtmlGenerator {
         Path welcomePath = dbRoot.resolve("index.html");
         Files.write(welcomePath, html.getBytes(StandardCharsets.UTF_8));
         return welcomePath;
+    }
+
+    /**
+     * Streaming HTML assembler: never loads the full JS data into memory.
+     * <p>
+     * Splits the processed template at the {@code __EMBEDDED_JS_DATA__} placeholder,
+     * writes the header half, then streams {@code jsDataFile} line-by-line (escaping
+     * {@code </script} as it goes), then writes the footer half.
+     *
+     * @param outputPath  destination {@code .html} file
+     * @param schemaClass schema class for title / field metadata; may be null
+     * @param navItemsJson serialised nav-tree JSON
+     * @param baseHref    relative path back to the export root
+     * @param layoutJson  detail-layout JSON or {@code "null"}
+     * @param jsDataFile  temp file containing the pre-built JS data (will NOT be deleted here)
+     */
+    public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass,
+            String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
+        if (outputPath == null) throw new IllegalArgumentException("outputPath must not be null");
+        if (jsDataFile == null) throw new IllegalArgumentException("jsDataFile must not be null");
+
+        String fileName = outputPath.getFileName() != null ? outputPath.getFileName().toString() : "export.html";
+        String baseName = fileName;
+        int extensionIndex = fileName.lastIndexOf('.');
+        if (extensionIndex > 0) baseName = fileName.substring(0, extensionIndex);
+
+        String title = baseName;
+        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank())
+                ? schemaClass.title
+                : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank())
+                        ? schemaClass.destinationName : baseName);
+        String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
+        String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
+        String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
+        String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
+
+        // Build the full template with all substitutions EXCEPT __EMBEDDED_JS_DATA__
+        String template = loadTemplate()
+                .replace("__SIDEBAR_CSS__", loadSidebarCss())
+                .replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs())
+                .replace("__BASE_HREF__", base)
+                .replace("__NAV_ITEMS__", nav)
+                .replace("__DETAIL_LAYOUT__", layout)
+                .replace("__SCHEMA_FIELDS__", schemaFieldsJson)
+                .replace("__TITLE__", escapeHtml(title))
+                .replace("__ENTITY_NAME__", escapeHtml(entityName));
+
+        // Split at the placeholder — stream header, then JS data, then footer
+        final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";
+        int placeholderIndex = template.indexOf(PLACEHOLDER);
+        String header = placeholderIndex >= 0 ? template.substring(0, placeholderIndex) : template;
+        String footer = placeholderIndex >= 0 ? template.substring(placeholderIndex + PLACEHOLDER.length()) : "";
+
+        if (outputPath.getParent() != null) Files.createDirectories(outputPath.getParent());
+
+        try (BufferedWriter out = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
+             BufferedReader jsIn = Files.newBufferedReader(jsDataFile, StandardCharsets.UTF_8)) {
+            out.write(header);
+            String line;
+            while ((line = jsIn.readLine()) != null) {
+                // Escape </script inside JS data to prevent the browser from ending the script block early
+                out.write(line.replaceAll("(?i)</script", "<\\/script"));
+                out.write('\n');
+            }
+            out.write(footer);
+        }
+        return outputPath;
     }
 
     /** Clears the in-memory template caches (useful after resource reload in tests). */

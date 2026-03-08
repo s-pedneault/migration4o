@@ -35,6 +35,8 @@ public class ExportStatistics {
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public int currentClassTotal = 0;
+    /** Resets to 0 each time {@link #setCurrentClass} is called; counts every activation attempt, including embedded objects. */
+    public int currentClassAttempted = 0;
 
     public ExportStatistics() {
         this(null);
@@ -47,13 +49,14 @@ public class ExportStatistics {
     public void setCurrentClass(String className, int totalObjects) {
         this.currentClassName = className;
         this.currentClassTotal = totalObjects;
+        this.currentClassAttempted = 0;
     }
 
     public void incrementAttempted() {
         objectsAttempted++;
-        if (monitor != null && objectsAttempted % 10 == 0 && currentClassTotal > 0) {
-            int current = exportedClassCounts.getOrDefault(currentClassName, 0);
-            monitor.onObjectProgress(currentClassName, current, currentClassTotal);
+        currentClassAttempted++;
+        if (monitor != null && currentClassAttempted % 10 == 0 && currentClassTotal > 0) {
+            monitor.onObjectProgress(currentClassName, currentClassAttempted, currentClassTotal);
         }
     }
 

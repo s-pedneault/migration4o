@@ -5,6 +5,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
+import migration4o.migration.format.FormatHandler;
+
 public final class ExportOutputOption {
 
     public static final String XML_XSD = "XML + XSD";
@@ -87,6 +89,38 @@ public final class ExportOutputOption {
     public static String toPersistedOptions(List<String> options) {
         List<String> normalized = normalize(options);
         return String.join(",", normalized);
+    }
+
+    /**
+     * Converts a list of output-option strings to the corresponding
+     * {@link ExportFormat} values (in normalized order, no duplicates).
+     */
+    public static List<ExportFormat> toFormats(List<String> options) {
+        List<String> normalized = normalize(options);
+        List<ExportFormat> formats = new ArrayList<>();
+        for (String opt : normalized) {
+            if (XML_XSD.equalsIgnoreCase(opt)) formats.add(ExportFormat.XML);
+            else if (HTML_JS.equalsIgnoreCase(opt)) formats.add(ExportFormat.HTML);
+            else if (JSON.equalsIgnoreCase(opt)) formats.add(ExportFormat.JSON);
+            else if (EXCEL.equalsIgnoreCase(opt)) formats.add(ExportFormat.EXCEL);
+        }
+        return formats;
+    }
+
+    /**
+     * Returns {@code true} when the option list includes {@code XML + XSD}
+     * (i.e. the XML format with XSD generation).
+     */
+    public static boolean generatesXsd(List<String> options) {
+        return normalize(options).stream().anyMatch(o -> XML_XSD.equalsIgnoreCase(o));
+    }
+
+    /**
+     * Creates ready-to-use {@link FormatHandler} instances for the requested
+     * output options.
+     */
+    public static List<FormatHandler> toHandlers(List<String> options) {
+        return FormatHandler.create(toFormats(options), generatesXsd(options));
     }
 
     private static String fromPersistedToken(String token) {

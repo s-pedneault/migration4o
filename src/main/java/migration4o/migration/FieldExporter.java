@@ -10,6 +10,8 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.migration.format.ExportContext;
+import migration4o.migration.format.FormatHandler;
 import migration4o.migration.recipes.ArrayTraverser;
 import migration4o.migration.recipes.FieldValueMapper;
 import migration4o.migration.recipes.IDEntityHandler;
@@ -35,6 +37,9 @@ public class FieldExporter {
     private final StructuredWriter xmlWriter;
     private final XSDBuilder xsdBuilder;
     private final ReferenceObjectExporter idEntiteResolver;
+    // New-path fields (null when using old constructor)
+    private final FormatHandler handlerRef;
+    private final ExportContext ctxRef;
 
     // Cache for preloaded objects by class name - load once per target class,
     // reuse
@@ -45,7 +50,19 @@ public class FieldExporter {
         this.operation = operation;
         this.xmlWriter = xmlWriter;
         this.xsdBuilder = xsdBuilder;
+        this.handlerRef = null;
+        this.ctxRef = null;
         this.idEntiteResolver = new ReferenceObjectExporter(operation.databaseSchema);
+    }
+
+    /** New-path constructor: routes XSD observation and field hooks through the FormatHandler. */
+    public FieldExporter(ExportContext ctx, FormatHandler handler, ObjectExporter objectExporter) {
+        this.operation = ctx.operation;
+        this.xmlWriter = handler.writer;
+        this.xsdBuilder = null;
+        this.handlerRef = handler;
+        this.ctxRef = ctx;
+        this.idEntiteResolver = new ReferenceObjectExporter(ctx.operation.databaseSchema);
     }
 
     /**
@@ -193,8 +210,14 @@ public class FieldExporter {
                         continue;
                     }
 
-                    // XSD: record field type
-                    if (schemaField != null) {
+                    // XSD / schema observation
+                    if (handlerRef != null) {
+                        if (schemaField != null) {
+                            ctxRef.setField(schemaField, fieldValue);
+                            try { handlerRef.observeField(ctxRef); } catch (Exception ignored) {}
+                            ctxRef.clearField();
+                        }
+                    } else if (xsdBuilder != null && schemaField != null) {
                         xsdBuilder.addField(parentClass, schemaField);
                     }
 
@@ -510,8 +533,14 @@ public class FieldExporter {
                     Long mID = IDEntityHandler.extractMID(container, fieldValue);
                     if (mID != null) {
                         Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
-                        // For JS exports: resolve to a human-readable label and strip the "id"/"ID" prefix from the column
-                        if ("JS".equalsIgnoreCase(operation.outputFormat) && fieldClass != null) {
+                        // Format-specific field hook / JS label resolution
+                        if (handlerRef != null) {
+                            ctxRef.setField(schemaField, fieldValue);
+                            boolean handled;
+                            try { handled = handlerRef.onField(ctxRef); } catch (Exception e) { handled = false; }
+                            ctxRef.clearField();
+                            if (handled) return;
+                        } else if ("JS".equalsIgnoreCase(operation.outputFormat) && fieldClass != null) {
                             String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, fieldValue, fieldClass, operation.referenceSchema, operation.databaseSchema, operation.idEntiteTargetCache, operation.idEntiteSummaryCache);
                             if (refLabel != null && !refLabel.isBlank()) {
                                 xmlWriter.elementWithContent(stripIdPrefix(fieldName), attrs, refLabel, false);

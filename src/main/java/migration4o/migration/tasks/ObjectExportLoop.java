@@ -2,6 +2,8 @@ package migration4o.migration.tasks;
 
 import migration4o.migration.ExportOperation;
 import migration4o.migration.ObjectExporter;
+import migration4o.migration.format.ExportContext;
+import migration4o.migration.format.FormatHandler;
 import migration4o.models.schema.DOSchemaClass;
 
 /**
@@ -21,9 +23,21 @@ import migration4o.models.schema.DOSchemaClass;
 public class ObjectExportLoop {
 
     private final ExportOperation operation;
+    // New-path fields (null when using old constructor)
+    private final ExportContext ctx;
+    private final FormatHandler handler;
 
     public ObjectExportLoop(ExportOperation operation) {
         this.operation = operation;
+        this.ctx = null;
+        this.handler = null;
+    }
+
+    /** New-path constructor: drives the object loop via FormatHandler hooks. */
+    public ObjectExportLoop(ExportContext ctx, FormatHandler handler) {
+        this.ctx = ctx;
+        this.handler = handler;
+        this.operation = ctx.operation;
     }
 
     /**
@@ -75,6 +89,65 @@ public class ObjectExportLoop {
 
         if (operation.monitor != null) {
             operation.monitor.onClassComplete(schemaClass.source, operation.statistics.objectsSucceeded);
+        }
+    }
+
+    /**
+     * New-path variant: iterates {@code dbSchemaClass.objectIds} and exports each
+     * via {@link ObjectExporter#exportObject}. The reference schema class is taken
+     * from {@code ctx.schemaClass} (set by the caller before invoking this method).
+     *
+     * @param dbSchemaClass Database-schema class (carries object IDs)
+     */
+    public void run(DOSchemaClass dbSchemaClass) throws Exception {
+        long[] objectIds = dbSchemaClass.objectIds;
+        int objectCount = (objectIds != null ? objectIds.length : 0);
+        int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass)
+                ? operation.maxObjectsPerClass : objectCount;
+
+        // Snapshot the loop class now — exportObject nulls ctx.schemaClass in its finally block
+        migration4o.models.schema.DOSchemaClass loopClass = ctx.schemaClass;
+
+        if (operation.monitor != null && loopClass != null) {
+            operation.monitor.onClassStart(loopClass.source, loopClass.destinationName, actualCount);
+        }
+
+        if (objectIds != null) {
+            if (ctx.statistics != null && loopClass != null) {
+                ctx.statistics.setCurrentClass(loopClass.source, actualCount);
+            }
+            ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
+            int exportedCount = 0;
+            for (long objectId : objectIds) {
+                if (operation.monitor != null && operation.monitor.isCancelled()) break;
+                if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass) break;
+                try {
+                    objectExporter.exportObject(objectId, false);
+                } catch (Throwable t) {
+                    String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                    System.err.println("[Export error] skipping object " + objectId + ": " + msg);
+                    if (ctx.statistics != null) {
+                        Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(msg, t);
+                        ctx.statistics.addError(objectId, loopClass != null ? loopClass.source : "unknown", msg, wrapped);
+                    }
+                    if (operation.monitor != null) {
+                        operation.monitor.onObjectError(loopClass != null ? loopClass.source : "unknown", objectId, msg);
+                    }
+                }
+                exportedCount++;
+            }
+
+            // Propagate newly discovered references to the shared tracker
+            if (ctx.referencedClassTracker != null && operation.referencedClassTracker != null) {
+                for (String className : operation.referencedClassTracker.getReferencedClasses()) {
+                    ctx.referencedClassTracker.registerReferencedClass(className);
+                }
+            }
+        }
+
+        if (operation.monitor != null && loopClass != null) {
+            int succeeded = ctx.statistics != null ? ctx.statistics.objectsSucceeded : 0;
+            operation.monitor.onClassComplete(loopClass.source, succeeded);
         }
     }
 }

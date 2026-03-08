@@ -59,6 +59,7 @@ java --add-opens java.base/java.util=ALL-UNNAMED \
      --add-opens java.sql/java.sql=ALL-UNNAMED \
     -Xms"$JAVA_XMS" \
     -Xmx"$JAVA_XMX" \
+    -Djdk.xml.maxGeneralEntitySizeLimit=0 \
      -cp "classes:lib/*:$HOME/.m2/repository/org/swinglabs/swingx/swingx-all/1.6.5-1/swingx-all-1.6.5-1.jar" migration4o.ui.Migration4oUI "$@"
 
 echo ""

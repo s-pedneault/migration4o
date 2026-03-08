@@ -2,18 +2,13 @@ package migration4o.migration;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayDeque;
 import java.util.ArrayList;
-import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import migration4o.util.tools.structuredwriter.StructuredWriterAPI;
-import migration4o.util.tools.structuredwriter.StructuredWriterProvider;
-import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
 
 import com.db4o.ext.ExtObjectContainer;
 
@@ -57,6 +52,11 @@ public class ExportOperation {
     // public List<MigrationModule> modules;
     public List<String> classNames;
 
+    // Modules being exported — set by MigrationExportService so format handlers
+    // (e.g. HtmlFormatHandler) can build the nav tree in their init() hook.
+    public List<DOSchemaModule> exportModules;
+    public List<String> exportModulePaths;
+
     // Export configuration flags
     public boolean saveToHistory = true;
     public boolean useSharedTracking = false;
@@ -64,8 +64,6 @@ public class ExportOperation {
     // Shared export state (across multiple ObjectExporter instances)
     public Set<Long> exportedObjectIds = new HashSet<>();
     public Set<Long> allowedObjectIds;
-    public XSDBuilder sharedXSDBuilder;
-    public Set<String> exportedXMLFiles;
     public StructuredWriter xmlWriter;
     public XSDBuilder xsdBuilder;
     public ExportStatistics statistics;
@@ -76,15 +74,6 @@ public class ExportOperation {
 
     public ArrayList<DOSchemaField> availableSkipUserOptions;
     public ArrayList<DOSchemaField> selectedSkipUserOptions;
-
-    // ── Module stack tracking the current branch being exported
-    // ───────────────
-    /**
-     * Stack of modules currently being exported. The top of the stack is the
-     * innermost active module. Push on entry to exportModuleRecursive, pop on
-     * exit. {@code size()} gives the current nesting depth.
-     */
-    public Deque<DOSchemaModule> moduleStack = new ArrayDeque<>();
 
     // ── IDEntite label resolution caches (JS export only) ────────────────────
     /**
@@ -114,37 +103,19 @@ public class ExportOperation {
     // ── Format helpers
     // ─────────────────────────────────────────────────────────
 
-    public StructuredWriterAPI getStructuredWriterAPI() {
-        StructuredWriterAPI configured = StructuredWriterProvider.getFormat(outputFormat);
-        if (configured != null) {
-            return configured;
-        }
-        return new StructuredWriterXML();
-    }
-
     public String getOutputFileExtension() {
-        String formatName = getStructuredWriterAPI().getName();
-        if ("EXCEL".equalsIgnoreCase(formatName)) {
-            return ".xlsx";
-        }
-        if ("JS".equalsIgnoreCase(formatName)) {
-            return ".js";
-        }
-        if ("JSON".equalsIgnoreCase(formatName)) {
-            return ".json";
-        }
+        if ("EXCEL".equalsIgnoreCase(outputFormat)) return ".xlsx";
+        if ("JS".equalsIgnoreCase(outputFormat))    return ".js";
+        if ("JSON".equalsIgnoreCase(outputFormat))  return ".json";
         return ".xml";
     }
 
     public boolean isXMLFormat() {
-        return "XML".equalsIgnoreCase(getStructuredWriterAPI().getName());
+        return "XML".equalsIgnoreCase(outputFormat);
     }
 
     public boolean shouldExportNativeIdsForCurrentFormat() {
-        if ("EXCEL".equalsIgnoreCase(getStructuredWriterAPI().getName())) {
-            return true;
-        }
-        return exportNativeIds;
+        return "EXCEL".equalsIgnoreCase(outputFormat) || exportNativeIds;
     }
 
     /**
@@ -171,30 +142,4 @@ public class ExportOperation {
         return Paths.get(baseOutputDir).resolve(getDatabaseFolderName());
     }
 
-    // ── Shared tracking lifecycle
-    // ─────────────────────────────────────────────
-
-    /**
-     * Initializes shared object tracking and XSD builder for multi-module
-     * exports. Call this before exporting multiple modules to ensure objects
-     * are only counted once and a single comprehensive XSD is generated.
-     */
-    public void initializeSharedTracking() {
-        exportedObjectIds = new HashSet<>();
-        useSharedTracking = true;
-        sharedXSDBuilder = new XSDBuilder(dbContext);
-        sharedXSDBuilder.startExportRoot();
-        exportedXMLFiles = new HashSet<>();
-    }
-
-    /**
-     * Resets shared object tracking and XSD builder. Call this to clear
-     * tracking state between different export sessions.
-     */
-    public void resetSharedTracking() {
-        useSharedTracking = false;
-        exportedObjectIds = new HashSet<>();
-        sharedXSDBuilder = null;
-        exportedXMLFiles = null;
-    }
 }
