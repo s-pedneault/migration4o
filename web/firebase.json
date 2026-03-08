@@ -1,5 +1,6 @@
 {
     "hosting": {
+        "site": "securitepublique-859dd",
         "public": "public",
         "ignore": [
             "firebase.json",
