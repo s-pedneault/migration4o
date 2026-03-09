@@ -38,6 +38,8 @@ public class HtmlFormatHandler extends FormatHandler {
     private final Map<Long, String> idEntiteSummaryCache = new HashMap<>();
     /** Captured in {@link #open} so {@link #close} has the class even after exportObject nulls ctx.schemaClass. */
     private migration4o.models.schema.DOSchemaClass currentSchemaClass;
+    /** Captured in {@link #open} — classRef title override (may be null). */
+    private String currentConfigTitle;
     /** Temp file path for streaming JS data to disk; cleaned up in {@link #close}. */
     private Path currentTempJsPath;
 
@@ -46,10 +48,14 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     @Override
-    public String extension() { return ".html"; }
+    public String extension() {
+        return ".html";
+    }
 
     @Override
-    public String displayName() { return "HTML"; }
+    public String displayName() {
+        return "HTML";
+    }
 
     /**
      * Creates a disk-backed writer that streams JS data to a temp file
@@ -62,7 +68,8 @@ public class HtmlFormatHandler extends FormatHandler {
         String fileName = filePath.getFileName() != null ? filePath.getFileName().toString() : "export.html";
         String baseName = fileName;
         int dot = baseName.lastIndexOf('.');
-        if (dot > 0) baseName = baseName.substring(0, dot);
+        if (dot > 0)
+            baseName = baseName.substring(0, dot);
         this.currentTempJsPath = filePath.resolveSibling(baseName + ".js.tmp");
         java.io.Writer fileWriter = Files.newBufferedWriter(currentTempJsPath, StandardCharsets.UTF_8);
         return new StructuredWriter(new StructuredWriterJS(), fileWriter, filePath);
@@ -80,18 +87,16 @@ public class HtmlFormatHandler extends FormatHandler {
             ctx.operation.generateHtmlViewer = true;
             // NavTreeBuilder stores results in operation.navTree / cachedNavJson;
             // we copy cachedNavJson to our own field.
-            new NavTreeBuilder(ctx.operation).build(
-                    ctx.operation.exportModules,
-                    ctx.operation.exportModulePaths,
-                    ctx.operation.baseOutputPath);
+            new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, ctx.operation.baseOutputPath);
             cachedNavJson = ctx.operation.cachedNavJson;
         }
     }
 
-    /** Captures the class so {@link #close} can use it after exportObject nulls ctx.schemaClass. */
+    /** Captures the class and config title so {@link #close} can use them after exportObject nulls ctx. */
     @Override
     public void open(ExportContext ctx) throws Exception {
         this.currentSchemaClass = ctx.schemaClass;
+        this.currentConfigTitle = (ctx.exportConfig != null) ? ctx.exportConfig.getTitle() : null;
         super.open(ctx);
     }
 
@@ -102,18 +107,15 @@ public class HtmlFormatHandler extends FormatHandler {
      */
     @Override
     public boolean onObject(ExportContext ctx) throws Exception {
-        if (ctx.schemaClass == null) return false;
+        if (ctx.schemaClass == null)
+            return false;
 
         // IDEntite: attempt to resolve to a human-readable label
         if (ctx.schemaClass.isIDEntite(ctx.operation.databaseSchema)) {
             Object obj = ctx.currentObject().obj;
-            String refLabel = SummaryGenerator.resolveIDEntiteLabel(
-                    ctx.operation.container, obj, ctx.schemaClass,
-                    ctx.operation.referenceSchema, ctx.operation.databaseSchema,
-                    idEntiteTargetCache, idEntiteSummaryCache);
+            String refLabel = SummaryGenerator.resolveIDEntiteLabel(ctx.operation.container, obj, ctx.schemaClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             if (refLabel != null && !refLabel.isBlank()) {
-                writer.elementWithContent(
-                        stripIdPrefix(ctx.schemaClass.destinationName), null, refLabel, false);
+                writer.elementWithContent(stripIdPrefix(ctx.schemaClass.destinationName), null, refLabel, false);
                 return true; // fully written — skip field loop
             }
             // No label resolved — fall through to default structure export
@@ -127,14 +129,13 @@ public class HtmlFormatHandler extends FormatHandler {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
-                String summary = SummaryGenerator.generate(
-                        ctx.operation.container, ctx.currentObject().obj,
-                        ctx.schemaClass, ctx.operation.referenceSchema);
+                String summary = SummaryGenerator.generate(ctx.operation.container, ctx.currentObject().obj, ctx.schemaClass, ctx.operation.referenceSchema);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
                 }
             }
-            if (attrs.isEmpty()) attrs = null;
+            if (attrs.isEmpty())
+                attrs = null;
         }
         writer.openStructure(ctx.schemaClass.destinationName, attrs);
         return false;
@@ -146,20 +147,18 @@ public class HtmlFormatHandler extends FormatHandler {
      */
     @Override
     public boolean onField(ExportContext ctx) throws Exception {
-        if (ctx.field == null || ctx.field.embedContents || ctx.fieldValue == null) return false;
+        if (ctx.field == null || ctx.field.embedContents || ctx.fieldValue == null)
+            return false;
 
         try {
             String className = ClassUtil.getClassName(ctx.fieldValue);
             DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, ctx.operation.referenceSchema);
-            if (fieldClass == null || !fieldClass.isIDEntite(ctx.operation.databaseSchema)) return false;
+            if (fieldClass == null || !fieldClass.isIDEntite(ctx.operation.databaseSchema))
+                return false;
 
-            String refLabel = SummaryGenerator.resolveIDEntiteLabel(
-                    ctx.operation.container, ctx.fieldValue, fieldClass,
-                    ctx.operation.referenceSchema, ctx.operation.databaseSchema,
-                    idEntiteTargetCache, idEntiteSummaryCache);
+            String refLabel = SummaryGenerator.resolveIDEntiteLabel(ctx.operation.container, ctx.fieldValue, fieldClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             if (refLabel != null && !refLabel.isBlank()) {
-                writer.elementWithContent(
-                        stripIdPrefix(ctx.field.destinationName), null, refLabel, false);
+                writer.elementWithContent(stripIdPrefix(ctx.field.destinationName), null, refLabel, false);
                 return true;
             }
         } catch (Exception ignored) {
@@ -184,22 +183,42 @@ public class HtmlFormatHandler extends FormatHandler {
         int levels = ctx.moduleChain.size();
         String baseHref = levels == 0 ? "./" : "../".repeat(levels);
 
-        String layoutJson = (ctx.exportConfig != null && ctx.exportConfig.hasLayout())
-                ? ctx.exportConfig.getLayout().toJson() : "null";
+        String layoutJson = (ctx.exportConfig != null && ctx.exportConfig.hasLayout()) ? ctx.exportConfig.getLayout().toJson() : "null";
 
         Path outputPath = writer.outputPath;
         try {
             if (outputPath != null && currentTempJsPath != null) {
                 Files.createDirectories(outputPath.getParent());
-                JsViewerHtmlGenerator.writeViewerFromTempFile(
-                        outputPath, currentSchemaClass, cachedNavJson, baseHref, layoutJson, currentTempJsPath);
+                JsViewerHtmlGenerator.writeViewerFromTempFile(outputPath, currentSchemaClass, currentConfigTitle, cachedNavJson, baseHref, layoutJson, currentTempJsPath);
             }
         } finally {
             if (currentTempJsPath != null) {
-                try { Files.deleteIfExists(currentTempJsPath); } catch (Exception ignored) {}
+                try {
+                    Files.deleteIfExists(currentTempJsPath);
+                } catch (Exception ignored) {
+                }
                 currentTempJsPath = null;
             }
             this.currentSchemaClass = null;
+            this.currentConfigTitle = null;
+        }
+    }
+
+    /**
+     * After all classes (including referenced ones) are exported, regenerates
+     * the welcome page so it can report the definitive exported-object count.
+     */
+    @Override
+    public void done(ExportContext ctx) throws Exception {
+        if (!ctx.operation.generateHtmlViewer)
+            return;
+        try {
+            java.nio.file.Path base = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath);
+            String dbName = ctx.operation.getDatabaseFolderName();
+            int objectCount = this.exportedIds.size();
+            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.operation.htmlWelcomeModuleCount, ctx.operation.htmlWelcomeClassCount, objectCount);
+        } catch (Exception e) {
+            System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }
     }
 
@@ -210,11 +229,11 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     private static String stripIdPrefix(String name) {
-        if (name == null || name.isEmpty()) return name;
+        if (name == null || name.isEmpty())
+            return name;
         String stripped = name.replaceFirst("(?i)^id\\s*", "");
-        if (stripped.isEmpty() || stripped.equals(name)) return name;
-        return Character.isUpperCase(stripped.charAt(0))
-                ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1)
-                : stripped;
+        if (stripped.isEmpty() || stripped.equals(name))
+            return name;
+        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 }

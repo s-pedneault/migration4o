@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-
 import com.db4o.ext.ExtObjectContainer;
 
 import migration4o.migration.monitoring.ExportStatistics;
@@ -100,13 +99,22 @@ public class ExportOperation {
      */
     public String cachedNavJson = "[]";
 
+    // ── Welcome page stats (set by NavTreeBuilder.build()) ────────────────────
+    /** Total number of exported modules (including nested sub-modules). */
+    public int htmlWelcomeModuleCount;
+    /** Total number of exported class data files. */
+    public int htmlWelcomeClassCount;
+
     // ── Format helpers
     // ─────────────────────────────────────────────────────────
 
     public String getOutputFileExtension() {
-        if ("EXCEL".equalsIgnoreCase(outputFormat)) return ".xlsx";
-        if ("JS".equalsIgnoreCase(outputFormat))    return ".js";
-        if ("JSON".equalsIgnoreCase(outputFormat))  return ".json";
+        if ("EXCEL".equalsIgnoreCase(outputFormat))
+            return ".xlsx";
+        if ("JS".equalsIgnoreCase(outputFormat))
+            return ".js";
+        if ("JSON".equalsIgnoreCase(outputFormat))
+            return ".json";
         return ".xml";
     }
 

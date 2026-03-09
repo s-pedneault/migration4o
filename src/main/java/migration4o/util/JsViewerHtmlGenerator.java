@@ -58,8 +58,7 @@ public final class JsViewerHtmlGenerator {
             throw new IllegalArgumentException("outputPath must not be null");
         }
 
-        String embeddedJs = (dataScript != null ? dataScript : "")
-                .replaceAll("(?i)</script", "<\\/script");
+        String embeddedJs = (dataScript != null ? dataScript : "").replaceAll("(?i)</script", "<\\/script");
 
         String fileName = outputPath.getFileName() != null ? outputPath.getFileName().toString() : "export.html";
         String baseName = fileName;
@@ -120,13 +119,14 @@ public final class JsViewerHtmlGenerator {
     /**
      * Writes an index.html welcome page at the given database output root.
      *
-     * @param dbRoot       The database root folder (e.g. output/54060/)
-     * @param dbName       Human-readable database name shown in the page header
-     * @param navItemsJson Serialised NAV_ITEMS JSON array
-     * @param moduleCount  Number of exported top-level modules
-     * @param classCount   Number of exported classes
+     * @param dbRoot        The database root folder (e.g. output/54060/)
+     * @param dbName        Human-readable database name shown in the page header
+     * @param navItemsJson  Serialised NAV_ITEMS JSON array
+     * @param moduleCount   Total number of exported modules (including sub-modules)
+     * @param classCount    Number of exported class data files
+     * @param objectCount   Total number of exported objects; 0 hides the bubble
      */
-    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount) throws IOException {
+    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount) throws IOException {
         if (dbRoot == null) {
             throw new IllegalArgumentException("dbRoot must not be null");
         }
@@ -134,8 +134,9 @@ public final class JsViewerHtmlGenerator {
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String name = (dbName != null && !dbName.isBlank()) ? dbName : "Export";
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+        String objects = objectCount > 0 ? String.format("%,d", objectCount).replace(',', '\u00a0') : "—";
 
-        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount));
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects);
 
         Files.createDirectories(dbRoot);
         Path welcomePath = dbRoot.resolve("index.html");
@@ -157,36 +158,36 @@ public final class JsViewerHtmlGenerator {
      * @param layoutJson  detail-layout JSON or {@code "null"}
      * @param jsDataFile  temp file containing the pre-built JS data (will NOT be deleted here)
      */
-    public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass,
-            String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
-        if (outputPath == null) throw new IllegalArgumentException("outputPath must not be null");
-        if (jsDataFile == null) throw new IllegalArgumentException("jsDataFile must not be null");
+    public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
+        return writeViewerFromTempFile(outputPath, schemaClass, null, navItemsJson, baseHref, layoutJson, jsDataFile);
+    }
+
+    /**
+     * Streaming HTML assembler with an optional config title override.
+     *
+     * @param configTitle   display title from {@code classRef title="…"} (highest priority); may be null
+     */
+    public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String configTitle, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
+        if (outputPath == null)
+            throw new IllegalArgumentException("outputPath must not be null");
+        if (jsDataFile == null)
+            throw new IllegalArgumentException("jsDataFile must not be null");
 
         String fileName = outputPath.getFileName() != null ? outputPath.getFileName().toString() : "export.html";
         String baseName = fileName;
         int extensionIndex = fileName.lastIndexOf('.');
-        if (extensionIndex > 0) baseName = fileName.substring(0, extensionIndex);
+        if (extensionIndex > 0)
+            baseName = fileName.substring(0, extensionIndex);
 
         String title = baseName;
-        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank())
-                ? schemaClass.title
-                : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank())
-                        ? schemaClass.destinationName : baseName);
+        String entityName = (configTitle != null && !configTitle.isBlank()) ? configTitle : (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         // Build the full template with all substitutions EXCEPT __EMBEDDED_JS_DATA__
-        String template = loadTemplate()
-                .replace("__SIDEBAR_CSS__", loadSidebarCss())
-                .replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs())
-                .replace("__BASE_HREF__", base)
-                .replace("__NAV_ITEMS__", nav)
-                .replace("__DETAIL_LAYOUT__", layout)
-                .replace("__SCHEMA_FIELDS__", schemaFieldsJson)
-                .replace("__TITLE__", escapeHtml(title))
-                .replace("__ENTITY_NAME__", escapeHtml(entityName));
+        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
         final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";
@@ -194,10 +195,10 @@ public final class JsViewerHtmlGenerator {
         String header = placeholderIndex >= 0 ? template.substring(0, placeholderIndex) : template;
         String footer = placeholderIndex >= 0 ? template.substring(placeholderIndex + PLACEHOLDER.length()) : "";
 
-        if (outputPath.getParent() != null) Files.createDirectories(outputPath.getParent());
+        if (outputPath.getParent() != null)
+            Files.createDirectories(outputPath.getParent());
 
-        try (BufferedWriter out = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8);
-             BufferedReader jsIn = Files.newBufferedReader(jsDataFile, StandardCharsets.UTF_8)) {
+        try (BufferedWriter out = Files.newBufferedWriter(outputPath, StandardCharsets.UTF_8); BufferedReader jsIn = Files.newBufferedReader(jsDataFile, StandardCharsets.UTF_8)) {
             out.write(header);
             String line;
             while ((line = jsIn.readLine()) != null) {

@@ -9,6 +9,125 @@
     <style>
         __SIDEBAR_CSS__
     </style>
+    <style>
+        .welcome-section h3 {
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--c-text-secondary);
+            margin: 22px 0 8px;
+        }
+
+        .guide-demo {
+            margin: 12px 0 20px;
+            border: 1px solid var(--c-border);
+            border-radius: 8px;
+            overflow: hidden;
+            max-width: 600px;
+            font-size: 12.5px;
+        }
+
+        .guide-demo-bar {
+            padding: 8px 10px;
+            border-bottom: 1px solid var(--c-border);
+            background: var(--c-surface-alt, #f8f9fa);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .guide-demo-bar input {
+            padding: 4px 8px;
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            font-size: 12px;
+            background: var(--c-bg, #fff);
+            color: var(--c-text);
+            pointer-events: none;
+        }
+
+        .guide-demo table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--c-bg, #fff);
+        }
+
+        .guide-demo th {
+            padding: 5px 10px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .3px;
+            color: var(--c-text-muted);
+            background: var(--c-surface-alt, #f8f9fa);
+            border-bottom: 1px solid var(--c-border);
+        }
+
+        .guide-demo td {
+            padding: 5px 10px;
+            border-bottom: 1px solid var(--c-border-light, #eee);
+        }
+
+        .guide-demo .row-dimmed td {
+            opacity: 0.28;
+        }
+
+        .guide-demo .match-cell {
+            background: rgba(59, 130, 246, .1);
+            font-weight: 600;
+        }
+
+        .op-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: var(--c-surface-alt, #f3f4f6);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            font-size: 12px;
+            color: var(--c-text-secondary);
+            white-space: nowrap;
+        }
+
+        .op-no-val {
+            border-style: dashed;
+            color: var(--c-text-muted);
+        }
+
+        .logic-chip {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 30px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            background: var(--c-primary, #3b82f6);
+            color: #fff;
+            cursor: default;
+        }
+
+        .logic-chip.first {
+            background: var(--c-surface-alt, #e5e7eb);
+            color: var(--c-text-muted);
+        }
+
+        .xml-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            padding: 2px 7px;
+            background: var(--c-surface-alt, #f3f4f6);
+            border: 1px solid var(--c-border);
+            border-radius: 4px;
+            font-size: 11.5px;
+            font-weight: 700;
+            font-family: 'Courier New', monospace;
+            color: var(--c-text-secondary);
+            vertical-align: middle;
+        }
+    </style>
 </head>
 
 <body class="welcome-page">
@@ -29,11 +148,14 @@
             <div class="sidebar-foot">
                 <div class="sidebar-foot-row">
                     <span class="sidebar-foot-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-                            <ellipse cx="12" cy="5" rx="9" ry="3" />
-                            <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
-                            <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
+                            <circle cx="12" cy="12" r="10" />
+                            <path d="M2 12h20" />
+                            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
                         </svg></span>
-                    <span class="sidebar-badge-text" title="__DB_NAME__">__DB_NAME__</span>
+                    <select id="languageSelect" class="lang-select" aria-label="Language">
+                        <option value="fr" selected>Français</option>
+                        <option value="en">English</option>
+                    </select>
                 </div>
             </div>
         </nav>
@@ -41,7 +163,6 @@
         <div class="app-main">
             <div class="welcome-header">
                 <h1>__DB_NAME__</h1>
-                <div class="subtitle">Export Migration4O — __EXPORT_DATE__</div>
             </div>
 
             <div class="info-grid">
@@ -60,22 +181,130 @@
                     <div class="card-value" style="font-size:15px;letter-spacing:0">__EXPORT_DATE__</div>
                     <div class="card-detail">dernière génération</div>
                 </div>
+                <div class="info-card">
+                    <div class="card-label">Objets exportés</div>
+                    <div class="card-value">__OBJECT_COUNT__</div>
+                    <div class="card-detail">enregistrements au total</div>
+                </div>
             </div>
 
             <div class="welcome-section">
-                <h2>À propos de cet export</h2>
-                <p class="placeholder-text">
-                    [Placeholder] Cette section décrira le contenu de la base de données exportée,
-                    les modules disponibles et les instructions de navigation.
-                </p>
-            </div>
-
-            <div class="welcome-section">
-                <h2>Navigation</h2>
+                <h2>Utilisation</h2>
                 <p>
                     Utilisez le menu de gauche pour naviguer entre les modules et les classes exportées.
-                    Chaque classe contient un tableau interactif avec des filtres de recherche.
-                    Cliquez sur une entrée pour afficher le détail complet de l'enregistrement.
+                    Cliquez sur une classe pour ouvrir son tableau de données interactif.
+                    La barre de recherche du menu filtre les classes par nom.
+                </p>
+
+                <h3>Recherche avancée par critères</h3>
+                <p>
+                    Chaque tableau dispose d'un panneau de recherche structuré. Cliquez sur
+                    <strong>+ Critère</strong> pour ajouter une condition, puis choisissez&nbsp;:
+                </p>
+                <ul style="font-size:13.5px;line-height:1.9;color:var(--c-text-secondary);margin:8px 0 16px 18px;">
+                    <li><strong>Le champ</strong> — utilisez le filtre texte intégré pour restreindre la liste, ou laissez sur <em>Tous les champs</em> pour chercher partout.</li>
+                    <li><strong>L'opérateur</strong> — six options disponibles selon le type de champ&nbsp;:
+                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;">
+                            <span class="op-badge">Contient</span>
+                            <span class="op-badge">Ne contient pas</span>
+                            <span class="op-badge">Égale</span>
+                            <span class="op-badge">Différent de</span>
+                            <span class="op-badge op-no-val">Est vide</span>
+                            <span class="op-badge op-no-val">N'est pas vide</span>
+                        </div>
+                        <span style="font-size:12px;color:var(--c-text-muted);">Les deux derniers n'ont pas besoin de valeur.</span>
+                    </li>
+                    <li><strong>La valeur</strong> — saisir du texte, puis appuyer sur <kbd>Entrée</kbd> ou cliquer <strong>Appliquer</strong>.</li>
+                </ul>
+
+                <div class="guide-demo" aria-hidden="true">
+                    <div class="guide-demo-bar" style="justify-content:space-between;align-items:center;">
+                        <div style="display:flex;gap:6px;align-items:center;flex:1;">
+                            <span class="logic-chip first">ET</span>
+                            <input type="text" value="" placeholder="Champ..." readonly style="width:80px;">
+                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                <option>Nom de famille</option>
+                            </select>
+                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                <option>Contient</option>
+                            </select>
+                            <input type="text" value="Dup" readonly style="width:56px;">
+                        </div>
+                        <div style="display:flex;gap:6px;align-items:center;margin-left:8px;">
+                            <span class="logic-chip">ET</span>
+                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                <option>Tous les champs</option>
+                            </select>
+                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                <option>N'est pas vide</option>
+                            </select>
+                        </div>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Résumé</th>
+                                <th>Nom de famille</th>
+                                <th>Prénom</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td>1</td>
+                                <td>Dupont Jean</td>
+                                <td class="match-cell">Dupont</td>
+                                <td>Jean</td>
+                            </tr>
+                            <tr class="row-dimmed">
+                                <td>2</td>
+                                <td>Martin Marie</td>
+                                <td>Martin</td>
+                                <td>Marie</td>
+                            </tr>
+                            <tr>
+                                <td>3</td>
+                                <td>Dupuis Pierre</td>
+                                <td class="match-cell">Dupuis</td>
+                                <td>Pierre</td>
+                            </tr>
+                            <tr class="row-dimmed">
+                                <td>4</td>
+                                <td>Leclerc Sophie</td>
+                                <td>Leclerc</td>
+                                <td>Sophie</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <h3>Logique ET / OU</h3>
+                <p>
+                    Dès qu'il y a deux critères ou plus, un badge grisé affiche la logique active
+                    (<strong>ET</strong> ou <strong>OU</strong>). Cliquer dessus bascule entre les deux modes
+                    pour l'ensemble des critères simultanément.
+                </p>
+
+                <h3>Colonnes visibles</h3>
+                <p>
+                    Le bouton <strong>Colonnes</strong> (en haut du tableau) ouvre un sélecteur permettant
+                    d'afficher ou de masquer les colonnes de votre choix. Lorsqu'un critère de
+                    recherche porte sur un champ masqué, ce champ est automatiquement rendu visible.
+                </p>
+
+                <h3>Pagination</h3>
+                <p>
+                    Le sélecteur <strong>Rangées</strong> ajuste le nombre d'enregistrements affichés par page.
+                    Les boutons de navigation permettent de parcourir les pages de résultats.
+                </p>
+
+                <h3>Fiche détail &amp; bouton XML</h3>
+                <p>
+                    Cliquer sur une ligne ouvre la fiche complète de l'enregistrement dans un panneau
+                    latéral. En haut de la fiche, le bouton <span class="xml-badge">XML</span> ouvre
+                    le fichier XML source de la classe dans un nouvel onglet — utile pour inspecter
+                    la structure complète ou copier les données brutes. Les flèches ◂ ▸ permettent
+                    de naviguer d'une fiche à l'autre sans fermer le panneau.
                 </p>
             </div>
         </div>

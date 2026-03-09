@@ -169,6 +169,12 @@ public class DOModuleStructureReader {
 
         ClassExportConfig config = new ClassExportConfig(sourceName, destinationFile, criteria, description, unitCosts);
 
+        // Parse optional title override
+        String title = classRefElement.getAttribute("title");
+        if (title != null && !title.isEmpty()) {
+            config.setTitle(title);
+        }
+
         // Parse layout if present
         NodeList layoutNodes = classRefElement.getChildNodes();
         for (int i = 0; i < layoutNodes.getLength(); i++) {

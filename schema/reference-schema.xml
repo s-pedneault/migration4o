@@ -3300,8 +3300,8 @@
         <field source="mGazEquipRaccorde" destinationName="gazEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Gaz équipement raccordé" />
         <field source="mGazLocation" destinationName="gazEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Gaz emplacement" />
         <field source="mGazNombre" destinationName="gazNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Gaz nombre" />
-        <field source="mGeneratrice" destinationName="generatrice" isExported="true" skipWhen="DEFAULT" type="boolean" title="Generatrice" />
-        <field source="mGeneratricePos" destinationName="generatriceEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Generatrice emplacement" />
+        <field source="mGeneratrice" destinationName="generatrice" isExported="true" skipWhen="DEFAULT" type="boolean" title="Génératrice" />
+        <field source="mGeneratricePos" destinationName="generatriceEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Emplacement de la génératrice" />
         <field source="mMazEquipRaccorde" destinationName="mazoutEquipementRaccorde" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout équipement raccordé" />
         <field source="mMazLocation" destinationName="mazoutEmplacement" isExported="true" skipWhen="DEFAULT" type="string" title="Mazout emplacement" />
         <field source="mMazNombre" destinationName="mazoutNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Mazout nombre" />
@@ -3316,7 +3316,7 @@
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mDateImport" destinationName="dateImport" isExported="true" skipWhen="DEFAULT" type="date" title="Date de l’import" />
         <field source="mFilename" destinationName="nomFichier" isExported="true" skipWhen="DEFAULT" type="string" title="Nom de fichier" />
-        <field source="mIDOperateur" destinationName="idOperateur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="ID d’operateur" />
+        <field source="mIDOperateur" destinationName="idOperateur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="ID d’opérateur" />
         <field source="mCodeGeo" destinationName="codeGeo" isExported="true" skipWhen="DEFAULT" type="string" title="Code geo" />
         <field source="mNumAjoutsAnalyses" destinationName="nombreAjoutsAnalyses" isExported="true" skipWhen="DEFAULT" type="int" title="Nombre ajouts analyses" />
         <field source="mNumAjoutsEffectues" destinationName="nombreAjoutsEffectues" isExported="true" skipWhen="DEFAULT" type="int" title="Nombre ajouts effectues" />

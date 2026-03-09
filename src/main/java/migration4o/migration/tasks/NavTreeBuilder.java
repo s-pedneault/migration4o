@@ -9,7 +9,6 @@ import migration4o.migration.NavNode;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
-import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.LucideIcons;
 
 /**
@@ -77,15 +76,10 @@ public class NavTreeBuilder {
 
         operation.cachedNavJson = serializeNavTree();
 
-        if (operation.generateHtmlViewer) {
-            try {
-                int modCount = modules.size();
-                int classCount = modules.stream().mapToInt(this::countTotalClasses).sum();
-                JsViewerHtmlGenerator.writeWelcomePage(base, operation.getDatabaseFolderName(), operation.cachedNavJson, modCount, classCount);
-            } catch (Exception e) {
-                System.err.println("Warning: failed to generate welcome page: " + e.getMessage());
-            }
-        }
+        // Store counts for the welcome page; the actual HTML write is deferred
+        // to HtmlFormatHandler.done() so the exported-object count is known.
+        operation.htmlWelcomeModuleCount = modules.stream().mapToInt(this::countTotalModules).sum();
+        operation.htmlWelcomeClassCount = modules.stream().mapToInt(this::countTotalClasses).sum();
     }
 
     // ── Nav tree construction
@@ -95,7 +89,7 @@ public class NavTreeBuilder {
         for (ClassExportConfig config : module.classConfigs) {
             String destName = config.getDestinationFileName();
             DOSchemaClass sc = (operation.referenceSchema != null) ? operation.referenceSchema.findClassByName(config.getClassName()) : null;
-            String label = (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
+            String label = config.hasTitle() ? config.getTitle() : (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
             String href = base.relativize(folderPath.resolve(destName + ".html")).toString().replace('\\', '/');
             node.children.add(new NavNode(label, href, null, depth + 1, null, null, null, null));
         }
@@ -104,6 +98,14 @@ public class NavTreeBuilder {
             buildModuleNavChildren(childNode, child, folderPath.resolve(ModulePathUtil.moduleId(child)), base, depth + 1);
             node.children.add(childNode);
         }
+    }
+
+    private int countTotalModules(DOSchemaModule module) {
+        int count = 1; // this module itself
+        for (DOSchemaModule child : module.children) {
+            count += countTotalModules(child);
+        }
+        return count;
     }
 
     private int countTotalClasses(DOSchemaModule module) {

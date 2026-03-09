@@ -82,6 +82,11 @@ public class DOModuleStructureWriter {
 
         writer.write(indent + "<classRef sourceName=\"" + escapeXml(config.getClassName()) + "\"");
 
+        // Add title override if set
+        if (config.hasTitle()) {
+            writer.write(" title=\"" + escapeXml(config.getTitle()) + "\"");
+        }
+
         // Add destination file if custom
         if (config.hasCustomDestination()) {
             writer.write(" destinationFile=\"" + escapeXml(config.getRawDestinationFileName()) + "\"");

@@ -29,6 +29,7 @@ public class ClassExportConfig {
     private final String description;
     private final Map<String, Float> unitCosts; // Price list: key -> unit cost
     private DetailLayout layout; // Optional detail view layout
+    private String title; // Optional display title override (from classRef title="..."), overrides schema class title
 
     /**
      * Creates a simple config with just the class name (backward compatibility).
@@ -121,6 +122,18 @@ public class ClassExportConfig {
 
     public boolean hasLayout() {
         return layout != null && !layout.isEmpty();
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = (title != null && !title.isBlank()) ? title : null;
+    }
+
+    public boolean hasTitle() {
+        return title != null && !title.isBlank();
     }
 
     /**

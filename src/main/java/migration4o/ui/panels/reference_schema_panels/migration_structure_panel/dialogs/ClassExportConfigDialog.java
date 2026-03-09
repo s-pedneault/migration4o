@@ -21,6 +21,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
 
     private final String className;
     private final DOSchemaClass schemaClass;
+    private JTextField titleField;
     private JTextField destinationFileField;
     private JTextArea descriptionArea;
     private JTable criteriaTable;
@@ -55,6 +56,18 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
         topPanel.setBorder(BorderFactory.createTitledBorder("Output Settings"));
+
+        JPanel titlePanel = new JPanel(new BorderLayout(5, 0));
+        titlePanel.add(new JLabel("Display Title:"), BorderLayout.WEST);
+        titleField = new JTextField(20);
+        titleField.setToolTipText("Optional: override the class title shown in the nav sidebar and search screen (leave empty to use schema title)");
+        titlePanel.add(titleField, BorderLayout.CENTER);
+        JLabel titleHint = new JLabel("(Leave empty to use schema title)");
+        titleHint.setFont(titleHint.getFont().deriveFont(Font.ITALIC, 11f));
+        titleHint.setForeground(Color.GRAY);
+        titlePanel.add(titleHint, BorderLayout.SOUTH);
+        topPanel.add(titlePanel);
+        topPanel.add(Box.createVerticalStrut(10));
 
         JPanel fileNamePanel = new JPanel(new BorderLayout(5, 0));
         fileNamePanel.add(new JLabel("Destination File Name:"), BorderLayout.WEST);
@@ -191,8 +204,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         // Format Unit Cost column as money
         priceListTable.getColumnModel().getColumn(1).setCellRenderer(new javax.swing.table.DefaultTableCellRenderer() {
             @Override
-            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected,
-                    boolean hasFocus, int row, int column) {
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 if (value instanceof Float) {
                     setText(String.format("%.2f $", value));
@@ -240,6 +252,11 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     }
 
     private void loadConfiguration(ClassExportConfig config) {
+        // Load title override
+        if (config.hasTitle()) {
+            titleField.setText(config.getTitle());
+        }
+
         // Load destination file name
         if (config.hasCustomDestination()) {
             destinationFileField.setText(config.getRawDestinationFileName());
@@ -265,11 +282,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     }
 
     private void addCriteriaToTable(ExportCriteria criterion) {
-        Object[] row = {
-                criterion.getFieldName(),
-                criterion.getOperator().getSymbol(),
-                criterion.getValue() != null ? criterion.getValue() : ""
-        };
+        Object[] row = { criterion.getFieldName(), criterion.getOperator().getSymbol(), criterion.getValue() != null ? criterion.getValue() : "" };
         criteriaTableModel.addRow(row);
     }
 
@@ -282,13 +295,9 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         System.out.println("DEBUG ClassExportConfigDialog.addCriteria: schemaClass=" + schemaClass);
         if (schemaClass != null) {
             System.out.println("  schemaClass.source=" + schemaClass.source);
-            System.out.println(
-                    "  schemaClass.fields=" + (schemaClass.fields != null ? schemaClass.fields.length : "null"));
+            System.out.println("  schemaClass.fields=" + (schemaClass.fields != null ? schemaClass.fields.length : "null"));
         }
-        ExportCriteriaDialog dialog = new ExportCriteriaDialog(
-                (Frame) SwingUtilities.getWindowAncestor(this),
-                schemaClass,
-                null);
+        ExportCriteriaDialog dialog = new ExportCriteriaDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass, null);
         dialog.setVisible(true);
 
         ExportCriteria newCriteria = dialog.getResult();
@@ -311,10 +320,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         ExportCriteria currentCriteria = new ExportCriteria(fieldName, operator, value.isEmpty() ? null : value);
 
         // Show edit dialog
-        ExportCriteriaDialog dialog = new ExportCriteriaDialog(
-                (Frame) SwingUtilities.getWindowAncestor(this),
-                schemaClass,
-                currentCriteria);
+        ExportCriteriaDialog dialog = new ExportCriteriaDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass, currentCriteria);
         dialog.setVisible(true);
 
         ExportCriteria updatedCriteria = dialog.getResult();
@@ -322,8 +328,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             // Update table row
             criteriaTableModel.setValueAt(updatedCriteria.getFieldName(), selectedRow, 0);
             criteriaTableModel.setValueAt(updatedCriteria.getOperator().getSymbol(), selectedRow, 1);
-            criteriaTableModel.setValueAt(updatedCriteria.getValue() != null ? updatedCriteria.getValue() : "",
-                    selectedRow, 2);
+            criteriaTableModel.setValueAt(updatedCriteria.getValue() != null ? updatedCriteria.getValue() : "", selectedRow, 2);
         }
     }
 
@@ -347,27 +352,13 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         String currentPriceList = (String) priceListTableModel.getValueAt(selectedRow, 0);
         Float currentCost = (Float) priceListTableModel.getValueAt(selectedRow, 1);
 
-        String priceListName = (String) JOptionPane.showInputDialog(
-                this,
-                "Enter price list name:",
-                "Edit Unit Cost",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                currentPriceList);
+        String priceListName = (String) JOptionPane.showInputDialog(this, "Enter price list name:", "Edit Unit Cost", JOptionPane.PLAIN_MESSAGE, null, null, currentPriceList);
 
         if (priceListName == null || priceListName.trim().isEmpty()) {
             return;
         }
 
-        String costStr = (String) JOptionPane.showInputDialog(
-                this,
-                "Enter unit cost for '" + priceListName.trim() + "':",
-                "Edit Unit Cost",
-                JOptionPane.PLAIN_MESSAGE,
-                null,
-                null,
-                currentCost.toString());
+        String costStr = (String) JOptionPane.showInputDialog(this, "Enter unit cost for '" + priceListName.trim() + "':", "Edit Unit Cost", JOptionPane.PLAIN_MESSAGE, null, null, currentCost.toString());
 
         if (costStr == null || costStr.trim().isEmpty()) {
             return;
@@ -378,11 +369,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             priceListTableModel.setValueAt(priceListName.trim(), selectedRow, 0);
             priceListTableModel.setValueAt(cost, selectedRow, 1);
         } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Invalid number format: " + costStr,
-                    "Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Invalid number format: " + costStr, "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -414,10 +401,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             String value = (String) criteriaTableModel.getValueAt(i, 2);
 
             ExportCriteria.Operator operator = ExportCriteria.Operator.fromSymbol(operatorStr);
-            ExportCriteria criterion = new ExportCriteria(
-                    fieldName,
-                    operator,
-                    value.isEmpty() ? null : value);
+            ExportCriteria criterion = new ExportCriteria(fieldName, operator, value.isEmpty() ? null : value);
             criteria.add(criterion);
         }
 
@@ -430,6 +414,13 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         }
 
         result = new ClassExportConfig(className, destinationFile, criteria, description, unitCosts);
+        String titleOverride = titleField.getText().trim();
+        if (!titleOverride.isEmpty()) {
+            result.setTitle(titleOverride);
+        }
+        if (initialConfig != null && initialConfig.hasLayout()) {
+            result.setLayout(initialConfig.getLayout());
+        }
         return true;
     }
 

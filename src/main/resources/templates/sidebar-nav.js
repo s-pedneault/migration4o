@@ -8,6 +8,7 @@
     // ── SVG icon helpers ──────────────────────────────────────────────────
     var SVG_NS = 'http://www.w3.org/2000/svg';
 
+    // Generic Lucide-style outline icon
     function svgIcon(paths, size) {
         size = size || 18;
         var svg = document.createElementNS(SVG_NS, 'svg');
@@ -27,28 +28,41 @@
         return svg;
     }
 
-    // Icon definitions (Lucide-style)
+    // Tabler filled icon: first path is always the transparent bounding box
+    // (fill="none" stroke="none"); all other paths inherit fill="currentColor".
+    function tablerIcon(paths, size) {
+        size = size || 16;
+        var svg = document.createElementNS(SVG_NS, 'svg');
+        svg.setAttribute('width', size);
+        svg.setAttribute('height', size);
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'currentColor');
+        svg.setAttribute('class', 'tabler-icon-filled');
+        paths.forEach(function (d, i) {
+            var p = document.createElementNS(SVG_NS, 'path');
+            p.setAttribute('stroke', 'none');
+            p.setAttribute('d', d);
+            if (i === 0) p.setAttribute('fill', 'none');
+            svg.appendChild(p);
+        });
+        return svg;
+    }
+
+    // Icon definitions
     var ICONS = {
-        // Folder closed
+        // Tabler folder (outline)
         folder: function () {
-            return svgIcon([
-                'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z'
+            return tablerIcon([
+                'M0 0h24v24H0z',
+                'M9 3a1 1 0 0 1 .608 .206l.1 .087l2.706 2.707h6.586a3 3 0 0 1 2.995 2.824l.005 .176v8a3 3 0 0 1 -2.824 2.995l-.176 .005h-14a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-11a3 3 0 0 1 2.824 -2.995l.176 -.005h4z'
             ]);
         },
-        // Folder open
+        // Tabler folder-open (outline)
         folderOpen: function () {
-            return svgIcon([
-                'M6 14l1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2v3'
+            return tablerIcon([
+                'M0 0h24v24H0z',
+                'M9 3a1 1 0 0 1 .608 .206l.1 .087l2.706 2.707h6.586a3 3 0 0 1 2.995 2.824l.005 .176v8a3 3 0 0 1 -2.824 2.995l-.176 .005h-14a3 3 0 0 1 -2.995 -2.824l-.005 -.176v-11a3 3 0 0 1 2.824 -2.995l.176 -.005h4z'
             ]);
-        },
-        // Document / file
-        file: function () {
-            return svgIcon([
-                'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z',
-                'M14 2v6h6',
-                'M16 13H8',
-                'M16 17H8'
-            ], 16);
         },
         // Chevron right
         chevron: function () {
@@ -56,24 +70,20 @@
         },
         // Hamburger / sidebar toggle
         menu: function () {
-            return svgIcon([
-                'M3 12h18', 'M3 6h18', 'M3 18h18'
-            ]);
+            return svgIcon(['M3 12h18', 'M3 6h18', 'M3 18h18']);
         },
-        // Collapse sidebar (panel left close)
+        // Collapse sidebar
         panelLeft: function () {
-            return svgIcon([
-                'M3 3h18v18H3z',
-                'M9 3v18'
-            ]);
+            return svgIcon(['M3 3h18v18H3z', 'M9 3v18']);
         },
-        // Database icon for footer
+        // Tabler database (filled) — used for leaf class items
         database: function () {
-            return svgIcon([
-                'M12 2C6.48 2 2 4.02 2 6.5v11C2 19.98 6.48 22 12 22s10-2.02 10-4.5v-11C22 4.02 17.52 2 12 2z',
-                'M2 6.5C2 8.98 6.48 11 12 11s10-2.02 10-4.5',
-                'M2 11.5C2 13.98 6.48 16 12 16s10-2.02 10-4.5',
-            ], 16);
+            return tablerIcon([
+                'M0 0h24v24H0z',
+                'M3 15.731c1.968 1.507 5.234 2.269 9 2.269c3.76 0 7.025 -.76 9 -2.252v2.252c0 2.425 -3.895 3.936 -8.693 3.998l-.307 .002c-4.938 0 -9 -1.523 -9 -4z',
+                'M3 9.731c1.968 1.507 5.234 2.269 9 2.269c3.76 0 7.025 -.76 9 -2.252v2.252c0 2.477 -4.062 4 -9 4c-4.798 0 -8.77 -1.438 -8.979 -3.795l-.016 -.101l-.005 -.104z',
+                'M12 2c1.041 0 2.044 .068 2.977 .198l.469 .071q .84 .14 1.586 .348l.44 .131l.075 .024a11 11 0 0 1 .805 .3l.199 .086q .535 .242 .967 .53q .165 .11 .313 .225a3.8 3.8 0 0 1 .669 .668l.091 .128q .07 .105 .129 .211l.07 .139q .163 .35 .2 .73l.01 .211c0 2.477 -4.062 4 -9 4c-4.798 0 -8.77 -1.438 -8.979 -3.795a1 1 0 0 1 -.021 -.205l.005 -.104l.016 -.1c.205 -2.306 4.01 -3.733 8.667 -3.794z'
+            ]);
         }
     };
 
@@ -95,7 +105,7 @@
     // Tile color palette: cycles through 8 hues for depth-0 module tiles
     var tileColorIndex = 0;
 
-    function renderNavItem(item, depth) {
+    function renderNavItem(item, depth, forceOpen) {
         var hasCh = item.children && item.children.length > 0;
         var indent = depth > 0 ? (depth * 14) : 0;
 
@@ -107,9 +117,13 @@
             a.href = item.href || '#';
             a.title = item.label || '';
 
+            // Shift background to start at the parent connector line, same as sub-groups
+            var leafIndent = (depth - 1) * 19;
+            if (leafIndent > 0) a.style.marginLeft = leafIndent + 'px';
+
             var iconSpan = document.createElement('span');
             iconSpan.className = 'nav-item-icon';
-            if (indent > 0) iconSpan.style.paddingLeft = indent + 'px';
+            iconSpan.style.paddingLeft = '6px';
             iconSpan.appendChild(ICONS.database());
 
             var labelSpan = document.createElement('span');
@@ -124,13 +138,14 @@
         if (depth === 0) {
             // ── Top-level module tile ─────────────────────────────────────
             var hasCurrent = hasCurrentDescendant(item);
+            var isOpen = hasCurrent || !!forceOpen;
             // Always auto-cycle the palette class as default; inline styles override below
             var colorIdx = tileColorIndex % 8;
             tileColorIndex++;
             var colorClass = 'nav-tile-c' + colorIdx;
 
             var tileDiv = document.createElement('div');
-            tileDiv.className = 'nav-module-tile ' + colorClass + (hasCurrent ? ' open' : '');
+            tileDiv.className = 'nav-module-tile ' + colorClass + (isOpen ? ' open' : '');
 
             var tileBtn = document.createElement('button');
             tileBtn.type = 'button';
@@ -169,11 +184,12 @@
             tileBtn.appendChild(labelSpan);
 
             var childDiv = document.createElement('div');
-            childDiv.className = 'nav-group-children nav-tile-children' + (hasCurrent ? ' open' : '');
+            childDiv.className = 'nav-group-children nav-tile-children' + (isOpen ? ' open' : '');
             (item.children || []).forEach(function (child) {
-                childDiv.appendChild(renderNavItem(child, depth + 1));
+                childDiv.appendChild(renderNavItem(child, depth + 1, forceOpen));
             });
 
+            tileBtn.tabIndex = -1;
             tileBtn.addEventListener('click', function () {
                 tileDiv.classList.toggle('open');
                 childDiv.classList.toggle('open');
@@ -186,17 +202,28 @@
 
         // ── Sub-group item (depth > 0, has children) ─────────────────────
         var hasCurrent = hasCurrentDescendant(item);
+        var isOpen = hasCurrent || !!forceOpen;
         var div = document.createElement('div');
 
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'nav-group-toggle' + (hasCurrent ? ' open' : '');
+        btn.className = 'nav-group-toggle' + (isOpen ? ' open' : '');
         btn.title = item.label || '';
+
+        // Shift the button's left edge to the connector line of its parent level.
+        // All nav-group-children share the same absolute left wall as nav-tile-children,
+        // so cumulative offset = (depth - 1) * 19px.
+        var subIndent = (depth - 1) * 19;
+        if (subIndent > 0) btn.style.marginLeft = subIndent + 'px';
+
+        // Set border-radius inline to guarantee no left rounding; open state
+        // adds a bottom-right corner for a soft close.
+        btn.style.borderRadius = isOpen ? '0 0 6px 0' : '0';
 
         var iconSpan = document.createElement('span');
         iconSpan.className = 'nav-group-icon';
-        if (indent > 0) iconSpan.style.paddingLeft = indent + 'px';
-        iconSpan.appendChild(hasCurrent ? ICONS.folderOpen() : ICONS.folder());
+        iconSpan.style.paddingLeft = '6px';
+        iconSpan.appendChild(isOpen ? ICONS.folderOpen() : ICONS.folder());
 
         var labelSpan = document.createElement('span');
         labelSpan.className = 'nav-group-label';
@@ -206,16 +233,18 @@
         btn.appendChild(labelSpan);
 
         var childDiv = document.createElement('div');
-        childDiv.className = 'nav-group-children' + (hasCurrent ? ' open' : '');
+        childDiv.className = 'nav-group-children' + (isOpen ? ' open' : '');
         (item.children || []).forEach(function (child) {
-            childDiv.appendChild(renderNavItem(child, depth + 1));
+            childDiv.appendChild(renderNavItem(child, depth + 1, forceOpen));
         });
 
+        btn.tabIndex = -1;
         btn.addEventListener('click', function () {
-            var isOpen = btn.classList.toggle('open');
+            var nowOpen = btn.classList.toggle('open');
             childDiv.classList.toggle('open');
+            btn.style.borderRadius = nowOpen ? '0 0 6px 0' : '0';
             iconSpan.innerHTML = '';
-            iconSpan.appendChild(isOpen ? ICONS.folderOpen() : ICONS.folder());
+            iconSpan.appendChild(nowOpen ? ICONS.folderOpen() : ICONS.folder());
         });
 
         div.appendChild(btn);
@@ -223,22 +252,180 @@
         return div;
     }
 
+    // ── Filter helpers ────────────────────────────────────────────────────
+    function filterTree(items, q) {
+        var out = [];
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if (!item.children || item.children.length === 0) {
+                if (item.label && item.label.toLowerCase().indexOf(q) >= 0) out.push(item);
+            } else {
+                var fc = filterTree(item.children, q);
+                if (fc.length > 0) out.push({ label: item.label, icon: item.icon, tileBg: item.tileBg, tileText: item.tileText, tileIcon: item.tileIcon, tileFontSize: item.tileFontSize, children: fc });
+            }
+        }
+        return out;
+    }
+
+    function renderAll(items, forceOpen) {
+        tileColorIndex = 0;
+        navSidebarScroll.innerHTML = '';
+        if (!items || items.length === 0) {
+            navSidebarScroll.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--c-text-muted);text-align:center;">No results</div>';
+            return;
+        }
+        items.forEach(function (item) {
+            navSidebarScroll.appendChild(renderNavItem(item, 0, forceOpen));
+        });
+        if (!forceOpen) {
+            var cur = navSidebarScroll.querySelector('.nav-current');
+            if (cur) setTimeout(function () { cur.scrollIntoView({ block: 'center', behavior: 'smooth' }); }, 100);
+        }
+    }
+
     // ── Render navigation ─────────────────────────────────────────────────
     var navItems = (typeof NAV_ITEMS !== 'undefined') ? NAV_ITEMS : [];
     if (navItems && navItems.length > 0) {
-        navItems.forEach(function (item) {
-            navSidebarScroll.appendChild(renderNavItem(item, 0));
-        });
-        // Smooth scroll to current page
-        var cur = navSidebarScroll.querySelector('.nav-current');
-        if (cur) {
-            setTimeout(function () {
-                cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
-            }, 100);
-        }
+        renderAll(navItems, false);
     } else {
         navSidebarScroll.innerHTML = '<div style="padding:16px;font-size:12px;color:var(--c-text-muted);text-align:center;">No modules</div>';
     }
+
+    // ── Search bar ────────────────────────────────────────────────────────
+    var searchWrap = document.createElement('div');
+    searchWrap.className = 'sidebar-search';
+    searchWrap.id = 'navSearchWrap';
+
+    var searchIconSvg = document.createElementNS(SVG_NS, 'svg');
+    searchIconSvg.setAttribute('class', 'nav-search-icon');
+    searchIconSvg.setAttribute('width', '14'); searchIconSvg.setAttribute('height', '14');
+    searchIconSvg.setAttribute('viewBox', '0 0 24 24'); searchIconSvg.setAttribute('fill', 'none');
+    searchIconSvg.setAttribute('stroke', 'currentColor'); searchIconSvg.setAttribute('stroke-width', '2.2');
+    searchIconSvg.setAttribute('stroke-linecap', 'round'); searchIconSvg.setAttribute('stroke-linejoin', 'round');
+    var sc = document.createElementNS(SVG_NS, 'circle');
+    sc.setAttribute('cx', '11'); sc.setAttribute('cy', '11'); sc.setAttribute('r', '8');
+    var sl = document.createElementNS(SVG_NS, 'path'); sl.setAttribute('d', 'M21 21l-4.35-4.35');
+    searchIconSvg.appendChild(sc); searchIconSvg.appendChild(sl);
+
+    var searchInput = document.createElement('input');
+    searchInput.type = 'text';
+    searchInput.className = 'nav-search-input';
+    searchInput.placeholder = 'Filter classes\u2026';
+    searchInput.autocomplete = 'off';
+    searchInput.setAttribute('spellcheck', 'false');
+
+    var clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'nav-search-clear';
+    clearBtn.title = 'Clear';
+    clearBtn.innerHTML = '&#10005;';
+    clearBtn.style.opacity = '0';
+    clearBtn.style.pointerEvents = 'none';
+
+    searchWrap.appendChild(searchIconSvg);
+    searchWrap.appendChild(searchInput);
+    searchWrap.appendChild(clearBtn);
+    navSidebarScroll.parentNode.insertBefore(searchWrap, navSidebarScroll);
+
+    var NAV_SEARCH_I18N = { fr: 'Rechercher...', en: 'Find...' };
+    function updateSearchPlaceholder() {
+        var langEl = document.getElementById('languageSelect');
+        var lang = (langEl && langEl.value === 'en') ? 'en' : 'fr';
+        searchInput.placeholder = NAV_SEARCH_I18N[lang];
+    }
+    updateSearchPlaceholder();
+    var langSelectEl = document.getElementById('languageSelect');
+    if (langSelectEl) langSelectEl.addEventListener('change', updateSearchPlaceholder);
+
+    // ── Keyboard navigation helpers ──────────────────────────────────
+    function getLeaves() {
+        return Array.prototype.slice.call(navSidebarScroll.querySelectorAll('a.nav-item-link'));
+    }
+
+    function setKbFocus(el) {
+        getLeaves().forEach(function (l) { l.classList.remove('nav-item-kbfocus'); });
+        if (el) {
+            el.classList.add('nav-item-kbfocus');
+            el.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+
+    function focusLeafAt(idx) {
+        var leaves = getLeaves();
+        if (!leaves.length) return;
+        idx = ((idx % leaves.length) + leaves.length) % leaves.length;
+        setKbFocus(leaves[idx]);
+    }
+
+    function currentLeafIdx() {
+        var leaves = getLeaves();
+        for (var i = 0; i < leaves.length; i++) {
+            if (leaves[i].classList.contains('nav-item-kbfocus')) return i;
+        }
+        return -1;
+    }
+
+    searchInput.addEventListener('keydown', function (e) {
+        var leaves = getLeaves();
+        if (!leaves.length) return;
+        if (e.key === 'Tab' || e.key === 'ArrowDown') {
+            e.preventDefault();
+            var idx = currentLeafIdx();
+            focusLeafAt(idx + 1 < leaves.length ? idx + 1 : 0);
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            focusLeafAt(leaves.length - 1);
+        } else if (e.key === 'Escape') {
+            setKbFocus(null);
+        } else if (e.key === 'Enter') {
+            var idx2 = currentLeafIdx();
+            if (idx2 >= 0) { e.preventDefault(); window.location.href = leaves[idx2].href; }
+        }
+    });
+
+    navSidebarScroll.addEventListener('keydown', function (e) {
+        var leaves = getLeaves();
+        if (!leaves.length) return;
+        var idx = currentLeafIdx();
+        if (idx < 0) return;
+        if (e.key === 'ArrowDown' || e.key === 'Tab' && !e.shiftKey) {
+            e.preventDefault();
+            if (idx + 1 < leaves.length) focusLeafAt(idx + 1);
+        } else if (e.key === 'ArrowUp' || e.key === 'Tab' && e.shiftKey) {
+            e.preventDefault();
+            if (idx > 0) { focusLeafAt(idx - 1); }
+            else { setKbFocus(null); searchInput.focus(); }
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            window.location.href = leaves[idx].href;
+        } else if (e.key === 'Escape') {
+            setKbFocus(null);
+            searchInput.focus();
+        }
+    });
+
+    var searchTimer = null;
+    function applyFilter() {
+        var q = searchInput.value.trim().toLowerCase();
+        if (q === '') {
+            clearBtn.style.opacity = '0';
+            clearBtn.style.pointerEvents = 'none';
+            renderAll(navItems, false);
+        } else {
+            clearBtn.style.opacity = '1';
+            clearBtn.style.pointerEvents = '';
+            renderAll(filterTree(navItems, q), true);
+        }
+    }
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(applyFilter, 80);
+    });
+    clearBtn.addEventListener('click', function () {
+        searchInput.value = '';
+        applyFilter();
+        searchInput.focus();
+    });
 
     // ── Collapse state persistence ────────────────────────────────────────
     var stored = null;
@@ -312,7 +499,8 @@
             prev: 'Préc.', next: 'Suiv.',
             keyInfo: 'Informations clés', dates: 'Dates', identifiers: 'Identifiants', flags: 'Indicateurs',
             emptyFields: 'Champs vides', numbers: 'Valeurs numériques', details: 'Détails',
-            boolTrue: 'Oui', boolFalse: 'Non'
+            boolTrue: 'Oui', boolFalse: 'Non',
+            logicAnd: 'ET', logicOr: 'OU'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -327,7 +515,8 @@
             prev: 'Prev', next: 'Next',
             keyInfo: 'Key Information', dates: 'Dates', identifiers: 'Identifiers', flags: 'Flags',
             emptyFields: 'Empty Fields', numbers: 'Numeric Values', details: 'Details',
-            boolTrue: 'Yes', boolFalse: 'No'
+            boolTrue: 'Yes', boolFalse: 'No',
+            logicAnd: 'AND', logicOr: 'OR'
         }
     };
 
@@ -356,6 +545,7 @@
     const NO_VALUE_OPS = new Set(['empty', 'not_empty']);
 
     function t(key) { return (I18N[currentLanguage] && I18N[currentLanguage][key]) || key; }
+    function tLogic(op) { return op === 'OR' ? t('logicOr') : t('logicAnd'); }
     function esc(s) { return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
     function normalizeSchemaPath(path) {
@@ -622,7 +812,7 @@
         row.className = 'search-condition';
         row.innerHTML =
             `<div class="condition-main">`
-            + `<span class="logic-label ${isFirst ? 'first' : ''}" title="${esc(t('toggleLogic'))}">${globalLogicOperator}</span>`
+            + `<span class="logic-label ${isFirst ? 'first' : ''}" title="${esc(t('toggleLogic'))}">${tLogic(globalLogicOperator)}</span>`
             + `<input class="field-filter" type="text" placeholder="${esc(t('fieldFilter'))}" aria-label="Field filter">`
             + `<select class="field-select">${buildFieldOptions()}</select>`
             + `<select class="operator-select">${buildOperatorOptions('_all')}</select>`
@@ -674,7 +864,7 @@
         logicLabel.addEventListener('click', () => {
             if (logicLabel.classList.contains('first')) return;
             globalLogicOperator = globalLogicOperator === 'AND' ? 'OR' : 'AND';
-            document.querySelectorAll('.logic-label:not(.first)').forEach((lbl) => lbl.textContent = globalLogicOperator);
+            document.querySelectorAll('.logic-label:not(.first)').forEach((lbl) => lbl.textContent = tLogic(globalLogicOperator));
         });
         removeBtn.addEventListener('click', () => {
             row.remove();

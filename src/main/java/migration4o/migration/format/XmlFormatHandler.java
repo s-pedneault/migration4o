@@ -37,10 +37,14 @@ public class XmlFormatHandler extends FormatHandler {
     }
 
     @Override
-    public String extension() { return ".xml"; }
+    public String extension() {
+        return ".xml";
+    }
 
     @Override
-    public String displayName() { return "XML"; }
+    public String displayName() {
+        return "XML";
+    }
 
     @Override
     protected StructuredWriter createWriter(Path filePath) throws IOException {
@@ -61,7 +65,8 @@ public class XmlFormatHandler extends FormatHandler {
      */
     @Override
     public void observeObject(ExportContext ctx) throws Exception {
-        if (ctx.schemaClass == null || liveXsdBuilder == null) return;
+        if (ctx.schemaClass == null || liveXsdBuilder == null)
+            return;
         liveXsdBuilder.addClass(ctx.schemaClass);
         DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(ctx.schemaClass.source);
         liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
@@ -70,7 +75,8 @@ public class XmlFormatHandler extends FormatHandler {
     /** Registers the current field in the XSD builder. */
     @Override
     public void observeField(ExportContext ctx) throws Exception {
-        if (ctx.field == null || ctx.schemaClass == null || liveXsdBuilder == null) return;
+        if (ctx.field == null || ctx.schemaClass == null || liveXsdBuilder == null)
+            return;
         liveXsdBuilder.addField(ctx.schemaClass, ctx.field);
     }
 
@@ -129,10 +135,12 @@ public class XmlFormatHandler extends FormatHandler {
     // ── Private helpers ───────────────────────────────────────────────────────
 
     private String computeSchemaLocation(ExportContext ctx) {
-        if (writer == null || writer.outputPath == null) return null;
+        if (writer == null || writer.outputPath == null)
+            return null;
         Path schemaPath = ctx.basePath.resolve("_Migration").resolve("Schema.xsd");
         Path xmlDir = writer.outputPath.getParent();
-        if (xmlDir == null) return "_Migration/Schema.xsd";
+        if (xmlDir == null)
+            return "_Migration/Schema.xsd";
         try {
             return xmlDir.relativize(schemaPath).toString().replace('\\', '/');
         } catch (Exception e) {
@@ -151,8 +159,8 @@ public class XmlFormatHandler extends FormatHandler {
         }
 
         if (ctx.operation.monitor != null) {
-            ctx.operation.monitor.onStatusMessage(
-                "Exporting " + unreachedIds.size() + " unreached objects to _Migration/Extra.xml...");
+            String limitNote = (ctx.operation.maxObjectsPerClass != null) ? " (limited to " + ctx.operation.maxObjectsPerClass + " per class)" : "";
+            ctx.operation.monitor.onStatusMessage("Exporting " + unreachedIds.size() + " unreached objects to _Migration/Extra.xml..." + limitNote);
         }
 
         Path extraPath = ctx.basePath.resolve("_Migration").resolve("Extra.xml");
@@ -175,8 +183,10 @@ public class XmlFormatHandler extends FormatHandler {
 
             ObjectExporter objectExporter = new ObjectExporter(ctx, this);
             for (Long objectId : sortedIds) {
-                if (objectId == null || objectId <= 0) continue;
-                if (ctx.operation.monitor != null && ctx.operation.monitor.isCancelled()) break;
+                if (objectId == null || objectId <= 0)
+                    continue;
+                if (ctx.operation.monitor != null && ctx.operation.monitor.isCancelled())
+                    break;
                 objectExporter.exportObject(objectId, false);
             }
 
@@ -194,65 +204,66 @@ public class XmlFormatHandler extends FormatHandler {
 
     private Set<Long> collectReachedIds(ExportContext ctx) {
         Set<Long> reached = new HashSet<>();
-        if (ctx.statistics == null || ctx.statistics.exportedObjectIds == null) return reached;
+        if (ctx.statistics == null || ctx.statistics.exportedObjectIds == null)
+            return reached;
         for (List<Long> ids : ctx.statistics.exportedObjectIds.values()) {
-            if (ids != null) reached.addAll(ids);
+            if (ids != null)
+                reached.addAll(ids);
         }
         return reached;
     }
 
     private Set<Long> collectUnreachedIds(ExportContext ctx, Set<Long> reachedIds) {
         Set<Long> all = new HashSet<>();
-        if (ctx.operation.databaseSchema == null) return all;
+        if (ctx.operation.databaseSchema == null)
+            return all;
+        Integer limit = ctx.operation.maxObjectsPerClass;
         for (DOSchemaClass sc : ctx.operation.databaseSchema.getClasses()) {
-            long[] ids = (sc.uniqueObjectIds != null && sc.uniqueObjectIds.length > 0)
-                    ? sc.uniqueObjectIds : sc.objectIds;
-            if (ids == null) continue;
+            long[] ids = (sc.uniqueObjectIds != null && sc.uniqueObjectIds.length > 0) ? sc.uniqueObjectIds : sc.objectIds;
+            if (ids == null)
+                continue;
+            int classCount = 0;
             for (long id : ids) {
-                if (id > 0) all.add(id);
+                if (id <= 0 || reachedIds.contains(id))
+                    continue;
+                if (limit != null && classCount >= limit)
+                    break;
+                all.add(id);
+                classCount++;
             }
         }
-        all.removeAll(reachedIds);
         return all;
     }
 
     private void validateXmlFiles(ExportContext ctx) {
         try {
             if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage(
-                    "Validating " + exportedXMLFiles.size() + " XML files against schema...");
+                ctx.operation.monitor.onStatusMessage("Validating " + exportedXMLFiles.size() + " XML files against schema...");
             }
             Path xsdPath = ctx.basePath.resolve("_Migration").resolve("Schema.xsd");
-            migration4o.util.XMLValidator.ValidationResult result =
-                    migration4o.util.XMLValidator.validateMultiple(
-                            new ArrayList<>(exportedXMLFiles), xsdPath.toString());
+            migration4o.util.XMLValidator.ValidationResult result = migration4o.util.XMLValidator.validateMultiple(new ArrayList<>(exportedXMLFiles), xsdPath.toString());
 
             System.out.println();
             if (result.allValid()) {
                 System.out.println("=== OVERALL VALIDATION: PASS (" + result.getTotalCount() + " files) ===");
             } else {
-                System.out.println("=== OVERALL VALIDATION: FAIL (" + result.successCount
-                        + " passed, " + result.failedFiles.size() + " failed) ===");
+                System.out.println("=== OVERALL VALIDATION: FAIL (" + result.successCount + " passed, " + result.failedFiles.size() + " failed) ===");
             }
             System.out.println();
 
             if (ctx.operation.monitor != null) {
                 if (result.allValid()) {
-                    ctx.operation.monitor.onStatusMessage(
-                        "✓ All " + result.getTotalCount() + " XML files validated successfully");
+                    ctx.operation.monitor.onStatusMessage("✓ All " + result.getTotalCount() + " XML files validated successfully");
                 } else {
-                    ctx.operation.monitor.onStatusMessage("⚠ Validation: " + result.successCount
-                        + " passed, " + result.failedFiles.size() + " failed");
+                    ctx.operation.monitor.onStatusMessage("⚠ Validation: " + result.successCount + " passed, " + result.failedFiles.size() + " failed");
                     for (String failed : result.failedFiles) {
-                        ctx.operation.monitor.onStatusMessage(
-                            "  ✗ " + new java.io.File(failed).getName());
+                        ctx.operation.monitor.onStatusMessage("  ✗ " + new java.io.File(failed).getName());
                     }
                 }
             }
         } catch (Exception e) {
             if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage(
-                    "Warning: XML validation failed: " + e.getMessage());
+                ctx.operation.monitor.onStatusMessage("Warning: XML validation failed: " + e.getMessage());
             }
         }
     }

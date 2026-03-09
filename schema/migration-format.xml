@@ -72,17 +72,17 @@
         </module>
         <module name="Territoire" id="2-Territoire" icon="map" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Dossier adresse" id="DossierAdresse">
-                <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse">
+                <classRef sourceName="gest.dossPrev.DossPrev" title="Dossier adresse" destinationFile="DossierAdresse">
                     <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="A" cost="0.5"/>
                 </classRef>
                 <module name="Archives" id="Archives">
-                    <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-mobile">
+                    <classRef sourceName="gest.dossPrev.DossPrev" title="Dossier adresse - mobile" destinationFile="DossierAdresse-mobile">
                         <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
                         <unitCost priceList="" cost="0.0"/>
                     </classRef>
-                    <classRef sourceName="gest.dossPrev.DossPrev" destinationFile="DossierAdresse-autres">
+                    <classRef sourceName="gest.dossPrev.DossPrev" title="Dossier adresse - autres" destinationFile="DossierAdresse-autres">
                         <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
                         <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
                         <unitCost priceList="" cost="0.05"/>
@@ -90,7 +90,7 @@
                     <classRef sourceName="gest.dossPrev.DossPrevSuppr">
                         <unitCost priceList="" cost="0.05"/>
                     </classRef>
-                    <classRef sourceName="gest.dossPrev.HistoImportDossPrev"/>
+                    <classRef sourceName="gest.dossPrev.HistoImportDossPrev" title="Historique d&apos;import de dossier adresse"/>
                 </module>
                 <module name="Caractéristiques" id="Caracteristiques">
                     <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
