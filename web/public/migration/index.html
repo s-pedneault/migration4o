@@ -313,6 +313,14 @@
             margin-top: 12px;
             display: none;
             animation: fadeIn .2s ease;
+            cursor: pointer;
+            transition: background var(--trans), border-color var(--trans), box-shadow var(--trans);
+        }
+
+        #muni-result:hover {
+            background: #d0e2ff;
+            border-color: var(--blue);
+            box-shadow: 0 2px 12px rgba(26, 86, 219, .15);
         }
 
         #muni-result .muni-name {
@@ -325,6 +333,18 @@
             font-size: 13px;
             color: #1e40af;
             margin-top: 3px;
+        }
+
+        #muni-result .muni-arrow {
+            float: right;
+            font-size: 18px;
+            color: var(--blue);
+            margin-top: 2px;
+            transition: transform var(--trans);
+        }
+
+        #muni-result:hover .muni-arrow {
+            transform: translateX(4px);
         }
 
         #muni-not-found {
@@ -773,31 +793,39 @@
             gap: 6px;
             margin-top: 12px;
             font-size: 13px;
-            color: rgba(255,255,255,.92);
+            color: rgba(255, 255, 255, .92);
             cursor: pointer;
             text-decoration: none;
-            border-bottom: 1px dashed rgba(255,255,255,.45);
+            border-bottom: 1px dashed rgba(255, 255, 255, .45);
             padding-bottom: 1px;
             transition: color var(--trans), border-color var(--trans);
         }
-        .guide-link:hover { color: #fff; border-color: #fff; }
+
+        .guide-link:hover {
+            color: #fff;
+            border-color: #fff;
+        }
 
         /* ── Guide modal ──────────────────────────────────────────── */
         .guide-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,.55);
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .55);
             z-index: 9000;
             display: none;
             align-items: center;
             justify-content: center;
             animation: fadeIn .2s ease;
         }
-        .guide-overlay.open { display: flex; }
+
+        .guide-overlay.open {
+            display: flex;
+        }
 
         .guide-modal {
             background: #fff;
             border-radius: 16px;
-            box-shadow: 0 12px 48px rgba(0,0,0,.25);
+            box-shadow: 0 12px 48px rgba(0, 0, 0, .25);
             width: 94%;
             max-width: 520px;
             max-height: 88vh;
@@ -814,14 +842,25 @@
             justify-content: space-between;
             align-items: flex-start;
         }
-        .guide-modal-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
-        .guide-modal-header p  { font-size: 13px; opacity: .8; margin-top: 4px; }
+
+        .guide-modal-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .guide-modal-header p {
+            font-size: 13px;
+            opacity: .8;
+            margin-top: 4px;
+        }
 
         .guide-close {
-            background: rgba(255,255,255,.18);
+            background: rgba(255, 255, 255, .18);
             border: none;
             color: #fff;
-            width: 32px; height: 32px;
+            width: 32px;
+            height: 32px;
             border-radius: 8px;
             font-size: 18px;
             cursor: pointer;
@@ -831,10 +870,21 @@
             flex-shrink: 0;
             transition: background var(--trans);
         }
-        .guide-close:hover { background: rgba(255,255,255,.3); }
 
-        .guide-body { padding: 20px 24px 24px; min-height: 420px; display: flex; flex-direction: column; }
-        .guide-body .pl-mockup { flex: 1; }
+        .guide-close:hover {
+            background: rgba(255, 255, 255, .3);
+        }
+
+        .guide-body {
+            padding: 20px 24px 24px;
+            min-height: 420px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .guide-body .pl-mockup {
+            flex: 1;
+        }
 
         /* ── PL app visual mockup ─────────────────────────────────── */
         .pl-mockup {
@@ -842,7 +892,7 @@
             overflow: hidden;
             border: 2.5px solid #c2410c;
             background: #fef0e6;
-            box-shadow: 0 4px 20px rgba(234,88,12,.15);
+            box-shadow: 0 4px 20px rgba(234, 88, 12, .15);
         }
 
         .pl-titlebar {
@@ -853,7 +903,7 @@
             text-align: center;
             padding: 12px 0;
             letter-spacing: 2px;
-            text-shadow: 0 2px 4px rgba(0,0,0,.2);
+            text-shadow: 0 2px 4px rgba(0, 0, 0, .2);
         }
 
         .pl-menubar {
@@ -889,7 +939,7 @@
             background: #fff;
             border: 1px solid #d1d5db;
             border-radius: 0 0 4px 4px;
-            box-shadow: 0 2px 6px rgba(0,0,0,.1);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
             z-index: 2;
         }
 
@@ -1013,6 +1063,7 @@
         [data-gs] {
             transition: opacity .35s ease, max-height .4s ease, transform .35s ease;
         }
+
         [data-gs].gs-hidden {
             opacity: 0;
             max-height: 0 !important;
@@ -1020,8 +1071,9 @@
             pointer-events: none;
             transform: translateY(-4px);
         }
+
         [data-gs].gs-active {
-            box-shadow: 0 0 0 2.5px #ea580c, 0 0 12px rgba(234,88,12,.25);
+            box-shadow: 0 0 0 2.5px #ea580c, 0 0 12px rgba(234, 88, 12, .25);
             border-radius: 6px;
         }
 
@@ -1045,25 +1097,39 @@
             cursor: pointer;
             transition: background var(--trans), opacity var(--trans);
         }
-        .guide-nav-btn:hover { background: #1e40af; }
-        .guide-nav-btn:disabled { opacity: .35; cursor: default; }
+
+        .guide-nav-btn:hover {
+            background: #1e40af;
+        }
+
+        .guide-nav-btn:disabled {
+            opacity: .35;
+            cursor: default;
+        }
+
         .guide-nav-btn.outline {
             background: transparent;
             color: var(--blue);
             border: 1.5px solid var(--blue);
         }
-        .guide-nav-btn.outline:hover { background: var(--blue-lt); }
+
+        .guide-nav-btn.outline:hover {
+            background: var(--blue-lt);
+        }
 
         .guide-dots {
             display: flex;
             gap: 6px;
         }
+
         .guide-dot {
-            width: 9px; height: 9px;
+            width: 9px;
+            height: 9px;
             border-radius: 50%;
             background: #bfdbfe;
             transition: background var(--trans), transform var(--trans);
         }
+
         .guide-dot.active {
             background: var(--blue);
             transform: scale(1.3);
@@ -1080,7 +1146,10 @@
             border-radius: 10px;
         }
 
-        .guide-result-icon { font-size: 24px; flex-shrink: 0; }
+        .guide-result-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
 
         .guide-result-text {
             font-size: 13px;
@@ -1088,7 +1157,246 @@
             line-height: 1.5;
         }
 
-        .guide-result-file { font-weight: 700; color: #15803d; }
+        .guide-result-file {
+            font-weight: 700;
+            color: #15803d;
+        }
+
+        /* ── Upload + Encryption side-by-side ─────────────────────── */
+        .upload-row {
+            display: flex;
+            gap: 14px;
+            margin-bottom: 6px;
+        }
+
+        .upload-row>.drop-zone {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+        }
+
+        .upload-row>.encrypt-toggle {
+            flex: 0 0 220px;
+            margin: 0;
+        }
+
+        @media (max-width: 580px) {
+            .upload-row {
+                flex-direction: column;
+            }
+
+            .upload-row>.encrypt-toggle {
+                flex: none;
+            }
+        }
+
+        /* ── Encryption toggle ────────────────────────────────────── */
+        .encrypt-toggle {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 12px 16px;
+            background: var(--red-lt);
+            border: 2px solid #fca5a5;
+            border-radius: 8px;
+            transition: border-color var(--trans), background var(--trans);
+        }
+
+        .encrypt-toggle.enabled {
+            background: #eff6ff;
+            border-color: #93c5fd;
+        }
+
+        .encrypt-toggle input[type=checkbox] {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            flex-shrink: 0;
+            accent-color: var(--blue);
+            cursor: pointer;
+        }
+
+        .encrypt-toggle-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .encrypt-toggle-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            cursor: pointer;
+        }
+
+        .encrypt-toggle-desc {
+            font-size: 12px;
+            color: var(--gray);
+            margin-top: 3px;
+            line-height: 1.45;
+        }
+
+        .encrypt-badge {
+            font-size: 10px;
+            font-weight: 700;
+            background: var(--blue);
+            color: #fff;
+            padding: 2px 7px;
+            border-radius: 4px;
+            margin-left: 6px;
+            vertical-align: middle;
+            letter-spacing: .3px;
+        }
+
+        /* ── Encryption key display (confirmation step) ────────── */
+        .key-section {
+            display: none;
+            margin: 20px auto 0;
+            max-width: 480px;
+            text-align: left;
+        }
+
+        .key-section.visible {
+            display: block;
+        }
+
+        .key-warning {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            background: #fff7ed;
+            border: 1.5px solid #fdba74;
+            border-radius: 10px;
+            padding: 12px 16px;
+            margin-bottom: 14px;
+        }
+
+        .key-warning-icon {
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+
+        .key-warning-text {
+            font-size: 13px;
+            color: #9a3412;
+            line-height: 1.5;
+        }
+
+        .key-box {
+            background: #1e293b;
+            border-radius: 10px;
+            padding: 16px 18px;
+            position: relative;
+        }
+
+        .key-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #94a3b8;
+            text-transform: uppercase;
+            letter-spacing: .5px;
+            margin-bottom: 8px;
+        }
+
+        .key-value {
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: 13px;
+            color: #67e8f9;
+            word-break: break-all;
+            line-height: 1.6;
+            user-select: all;
+        }
+
+        .key-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .key-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 7px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            transition: background var(--trans);
+        }
+
+        .key-btn-copy {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .key-btn-copy:hover {
+            background: #1e40af;
+        }
+
+        .key-btn-download {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .key-btn-download:hover {
+            background: #475569;
+        }
+
+        .key-copied {
+            font-size: 12px;
+            color: var(--green);
+            font-weight: 600;
+            margin-left: 6px;
+            opacity: 0;
+            transition: opacity .2s;
+        }
+
+        .key-copied.show {
+            opacity: 1;
+        }
+
+        /* ── Encryption stop banner (confirmation step) ─────────── */
+        .encrypt-stop-banner {
+            display: none;
+            align-items: flex-start;
+            gap: 12px;
+            margin: 16px auto 20px;
+            max-width: 480px;
+            padding: 14px 18px;
+            background: #fef2f2;
+            border: 2px solid #f87171;
+            border-radius: 10px;
+            text-align: left;
+            animation: fadeIn .25s ease;
+        }
+
+        .encrypt-stop-banner.visible {
+            display: flex;
+        }
+
+        .encrypt-stop-banner-icon {
+            font-size: 24px;
+            flex-shrink: 0;
+        }
+
+        .encrypt-stop-banner-body {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .encrypt-stop-banner-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #b91c1c;
+            margin-bottom: 4px;
+        }
+
+        .encrypt-stop-banner-text {
+            font-size: 13px;
+            color: #991b1b;
+            line-height: 1.55;
+        }
     </style>
 </head>
 
@@ -1113,8 +1421,10 @@
             <!-- Card header -->
             <div class="card-header">
                 <h1 data-i18n="heading">Téléversement de base de données PL</h1>
-                <p data-i18n="subheading">Transmettez votre base de données PL de façon sécurisée pour qu'elle soit traitée avec Migration4o</p>
-                <a class="guide-link" onclick="openGuide()" data-i18n="guideLink">📋 Comment préparer votre fichier ?</a>
+                <p data-i18n="subheading">Transmettez votre base de données PL de façon sécurisée pour qu'elle soit
+                    traitée avec Migration4o</p>
+                <a class="guide-link" onclick="openGuide()" data-i18n="guideLink">📋 Comment préparer votre fichier
+                    ?</a>
             </div>
 
             <!-- Stepper -->
@@ -1150,13 +1460,16 @@
 
                 <!-- ── STEP 0 : Purpose ───────────────────────────────── -->
                 <div class="step-panel active" id="step-0">
-                    <p class="purpose-intro" data-i18n="purposeIntro">Veuillez sélectionner l'objectif de cette soumission.</p>
+                    <p class="purpose-intro" data-i18n="purposeIntro">Veuillez sélectionner l'objectif de cette
+                        soumission.</p>
                     <div class="purpose-grid">
                         <button class="purpose-tile" data-purpose="analyse" onclick="selectPurpose(this)">
                             <span class="purpose-tile-icon">🔍</span>
                             <span class="purpose-tile-body">
-                                <span class="purpose-tile-title" data-i18n="purposeOpt1">Analyse et estimation du prix</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt1Desc">Soumettre la base de données pour analyse préliminaire et soumission de prix.</span>
+                                <span class="purpose-tile-title" data-i18n="purposeOpt1">Analyse et estimation du
+                                    prix</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt1Desc">Soumettre la base de données
+                                    pour analyse préliminaire et soumission de prix.</span>
                             </span>
                             <span class="purpose-tile-check">✓</span>
                         </button>
@@ -1164,7 +1477,8 @@
                             <span class="purpose-tile-icon">🧪</span>
                             <span class="purpose-tile-body">
                                 <span class="purpose-tile-title" data-i18n="purposeOpt2">Extraction test</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt2Desc">Soumettre la base de données pour une extraction d'essai et validation des résultats.</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt2Desc">Soumettre la base de données
+                                    pour une extraction d'essai et validation des résultats.</span>
                             </span>
                             <span class="purpose-tile-check">✓</span>
                         </button>
@@ -1172,13 +1486,15 @@
                             <span class="purpose-tile-icon">🚀</span>
                             <span class="purpose-tile-body">
                                 <span class="purpose-tile-title" data-i18n="purposeOpt3">Migration finale</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt3Desc">Soumettre la base de données pour la migration officielle et définitive.</span>
+                                <span class="purpose-tile-desc" data-i18n="purposeOpt3Desc">Soumettre la base de données
+                                    pour la migration officielle et définitive.</span>
                             </span>
                             <span class="purpose-tile-check">✓</span>
                         </button>
                     </div>
                     <div class="nav-row">
-                        <button class="btn btn-next" id="next-0" onclick="goNext(0)" disabled data-i18n="btnNext">Suivant →</button>
+                        <button class="btn btn-next" id="next-0" onclick="goNext(0)" disabled
+                            data-i18n="btnNext">Suivant →</button>
                     </div>
                 </div>
 
@@ -1189,12 +1505,16 @@
                             <span data-i18n="muniLabel">Code de municipalité</span>
                             <span class="req">*</span>
                         </label>
-                        <input type="text" id="muni-code" maxlength="5" inputmode="numeric" placeholder="" autocomplete="off" />
-                        <p class="field-hint" data-i18n="muniHint">Entrez le code à 5 chiffres de votre municipalité.</p>
-                        <div class="field-error" id="muni-error" data-i18n="muniError">Veuillez entrer un code de municipalité valide.</div>
+                        <input type="text" id="muni-code" maxlength="5" inputmode="numeric" placeholder=""
+                            autocomplete="off" />
+                        <p class="field-hint" data-i18n="muniHint">Entrez le code à 5 chiffres de votre municipalité.
+                        </p>
+                        <div class="field-error" id="muni-error" data-i18n="muniError">Veuillez entrer un code de
+                            municipalité valide.</div>
                     </div>
 
-                    <div id="muni-result">
+                    <div id="muni-result" onclick="goNext(1)">
+                        <span class="muni-arrow">→</span>
                         <div class="muni-name" id="muni-name"></div>
                         <div class="muni-mrc" id="muni-mrc"></div>
                     </div>
@@ -1202,7 +1522,8 @@
                     <div id="muni-not-found" data-i18n="muniNotFound">Aucune municipalité trouvée pour ce code.</div>
 
                     <div class="nav-row">
-                        <button class="btn btn-next" id="next-1" onclick="goNext(1)" disabled data-i18n="btnNext">Suivant →</button>
+                        <button class="btn btn-next" id="next-1" onclick="goNext(1)" disabled
+                            data-i18n="btnNext">Suivant →</button>
                     </div>
                 </div>
 
@@ -1213,20 +1534,24 @@
                             <span data-i18n="emailLabel">Adresse courriel</span>
                             <span class="req">*</span>
                         </label>
-                        <input type="email" id="email1" data-i18n-placeholder="emailPlaceholder" placeholder="vous@exemple.com" autocomplete="email" />
+                        <input type="email" id="email1" data-i18n-placeholder="emailPlaceholder"
+                            placeholder="vous@exemple.com" autocomplete="email" />
                     </div>
                     <div class="field-group">
                         <label for="email2">
                             <span data-i18n="emailConfirmLabel">Confirmer le courriel</span>
                             <span class="req">*</span>
                         </label>
-                        <input type="email" id="email2" data-i18n-placeholder="emailConfirmPlaceholder" placeholder="vous@exemple.com" autocomplete="off" />
-                        <div class="field-error" id="email-error" data-i18n="emailMismatch">Les adresses courriel ne correspondent pas.</div>
+                        <input type="email" id="email2" data-i18n-placeholder="emailConfirmPlaceholder"
+                            placeholder="vous@exemple.com" autocomplete="off" />
+                        <div class="field-error" id="email-error" data-i18n="emailMismatch">Les adresses courriel ne
+                            correspondent pas.</div>
                     </div>
 
                     <div class="nav-row">
                         <button class="btn btn-prev" onclick="goPrev(2)" data-i18n="btnPrev">← Retour</button>
-                        <button class="btn btn-next" id="next-2" onclick="goNext(2)" data-i18n="btnNext">Suivant →</button>
+                        <button class="btn btn-next" id="next-2" onclick="goNext(2)" data-i18n="btnNext">Suivant
+                            →</button>
                     </div>
                 </div>
 
@@ -1237,20 +1562,33 @@
 
                         <!-- FR placeholder text — to be replaced by client -->
                         <div id="legal-text-fr">
-                            <p>Les présentes conditions encadrent la transmission et le traitement de votre base de données PL à des fins d'analyse et de planification du coût de traitement, et/ou d'extraction et de migration vers les formats universels visés.</p>
-                            <p>En soumettant votre fichier, vous confirmez être dûment autorisé(e) à partager ces données au nom de votre municipalité ou organisme.</p>
-                            <p>Le fichier transmis sera stocké de façon sécurisée et ne sera utilisé qu'aux fins de la conversion demandée. Il ne sera pas divulgué à des tiers sans votre consentement explicite.</p>
-                            <p>Les données seront conservées le temps nécessaire au traitement, puis supprimées de nos dossiers.</p>
-                            <p>Gestion Technologies se réserve le droit de refuser tout fichier non conforme ou dont le contenu serait inapproprié.</p>
+                            <p>Les présentes conditions encadrent la transmission et le traitement de votre base de
+                                données PL à des fins d'analyse et de planification du coût de traitement, et/ou
+                                d'extraction et de migration vers les formats universels visés.</p>
+                            <p>En soumettant votre fichier, vous confirmez être dûment autorisé(e) à partager ces
+                                données au nom de votre municipalité ou organisme.</p>
+                            <p>Le fichier transmis sera stocké de façon sécurisée et ne sera utilisé qu'aux fins de la
+                                conversion demandée. Il ne sera pas divulgué à des tiers sans votre consentement
+                                explicite.</p>
+                            <p>Les données seront conservées le temps nécessaire au traitement, puis supprimées de nos
+                                dossiers.</p>
+                            <p>Gestion Technologies se réserve le droit de refuser tout fichier non conforme ou dont le
+                                contenu serait inapproprié.</p>
                         </div>
 
                         <!-- EN placeholder text -->
                         <div id="legal-text-en" style="display:none">
-                            <p>These terms govern the transmission and processing of your PL database for analysis and cost planning purposes, and/or for extraction and migration to the targeted universal formats.</p>
-                            <p>By submitting your file, you confirm that you are duly authorized to share this data on behalf of your municipality or organization.</p>
-                            <p>The submitted file will be stored securely and used only for the requested conversion. It will not be disclosed to third parties without your explicit consent.</p>
-                            <p>Data will be retained as long as necessary for processing, then deleted from our records.</p>
-                            <p>Gestion Technologies reserves the right to refuse any non-conforming or inappropriate file.</p>
+                            <p>These terms govern the transmission and processing of your PL database for analysis and
+                                cost planning purposes, and/or for extraction and migration to the targeted universal
+                                formats.</p>
+                            <p>By submitting your file, you confirm that you are duly authorized to share this data on
+                                behalf of your municipality or organization.</p>
+                            <p>The submitted file will be stored securely and used only for the requested conversion. It
+                                will not be disclosed to third parties without your explicit consent.</p>
+                            <p>Data will be retained as long as necessary for processing, then deleted from our records.
+                            </p>
+                            <p>Gestion Technologies reserves the right to refuse any non-conforming or inappropriate
+                                file.</p>
                         </div>
                     </div>
 
@@ -1260,11 +1598,13 @@
                             J'ai lu et j'accepte les conditions ci-dessus.
                         </label>
                     </div>
-                    <div class="field-error" id="legal-error" data-i18n="legalError">Vous devez accepter les conditions pour continuer.</div>
+                    <div class="field-error" id="legal-error" data-i18n="legalError">Vous devez accepter les conditions
+                        pour continuer.</div>
 
                     <div class="nav-row">
                         <button class="btn btn-prev" onclick="goPrev(3)" data-i18n="btnPrev">← Retour</button>
-                        <button class="btn btn-next" id="next-3" onclick="goNext(3)" disabled data-i18n="btnNext">Suivant →</button>
+                        <button class="btn btn-next" id="next-3" onclick="goNext(3)" disabled
+                            data-i18n="btnNext">Suivant →</button>
                     </div>
                 </div>
 
@@ -1287,12 +1627,33 @@
                         </div>
                     </div>
 
-                    <!-- Drop zone -->
-                    <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-                        <input type="file" id="file-input" accept=".zip,.db,.db4o,.dat,.bak" onchange="onFileSelected(event)" />
-                        <span class="drop-icon">📂</span>
-                        <div class="drop-text" data-i18n="dropText">Glisser-déposer le fichier ici</div>
-                        <div class="drop-sub" data-i18n="dropSub">ou cliquer pour parcourir — .zip, .db, .db4o, .dat, .bak</div>
+                    <!-- Drop zone + Encryption side by side -->
+                    <div class="upload-row">
+                        <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)"
+                            ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+                            <input type="file" id="file-input" accept=".zip,.db,.db4o,.dat,.bak"
+                                onchange="onFileSelected(event)" />
+                            <span class="drop-icon">📂</span>
+                            <div class="drop-text" data-i18n="dropText">Glisser-déposer le fichier ici</div>
+                            <div class="drop-sub" data-i18n="dropSub">ou cliquer pour parcourir — .zip, .db, .db4o,
+                                .dat,
+                                .bak</div>
+                        </div>
+
+                        <!-- Encryption toggle -->
+                        <div class="encrypt-toggle" id="encrypt-toggle">
+                            <input type="checkbox" id="encrypt-check" onchange="onEncryptToggle(this.checked)" />
+                            <div class="encrypt-toggle-body">
+                                <label class="encrypt-toggle-label" for="encrypt-check">
+                                    <span data-i18n="encryptLabel">🔒 Chiffrer le fichier avant l'envoi</span>
+                                    <span class="encrypt-badge" data-i18n="encryptBadge">AES-256</span>
+                                </label>
+                                <div class="encrypt-toggle-desc" data-i18n="encryptDesc">
+                                    Le fichier sera chiffré dans votre navigateur avant d'être téléversé. Une clé de
+                                    déchiffrement vous sera remise à la fin.
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <div id="file-name-display"></div>
 
@@ -1310,10 +1671,12 @@
 
                     <div class="upload-error" id="upload-error"></div>
 
-                    <button class="btn btn-upload" id="btn-upload" onclick="startUpload()" disabled data-i18n="btnUpload">Téléverser le fichier</button>
+                    <button class="btn btn-upload" id="btn-upload" onclick="startUpload()" disabled
+                        data-i18n="btnUpload">Téléverser le fichier</button>
 
                     <div class="nav-row" style="border-top:none; padding-top:0; margin-top:10px;">
-                        <button class="btn btn-prev btn-sm" id="btn-prev-4" onclick="goPrev(4)" data-i18n="btnPrev">← Retour</button>
+                        <button class="btn btn-prev btn-sm" id="btn-prev-4" onclick="goPrev(4)" data-i18n="btnPrev">←
+                            Retour</button>
                     </div>
                 </div>
 
@@ -1322,10 +1685,51 @@
                     <div class="confirmation-panel">
                         <div class="success-icon">✅</div>
                         <h2 data-i18n="confirmTitle">Fichier reçu !</h2>
-                        <p data-i18n="confirmText">Votre base de données a été transmise avec succès. Notre équipe la traitera dans les prochains jours ouvrables.</p>
-                        <p data-i18n="confirmRef">Votre numéro de référence :</p>
-                        <div class="ref-chip" id="ref-number">—</div>
-                        <p data-i18n="confirmEmail">Un courriel de confirmation vous sera envoyé à l'adresse fournie.</p>
+
+                        <!-- Red stop banner — shown only when encryption was used -->
+                        <div class="encrypt-stop-banner" id="encrypt-stop-banner">
+                            <span class="encrypt-stop-banner-icon">🛑</span>
+                            <div class="encrypt-stop-banner-body">
+                                <div class="encrypt-stop-banner-title" data-i18n="encryptStopTitle">ARRÊTEZ !
+                                    Sauvegardez votre clé de chiffrement</div>
+                                <div class="encrypt-stop-banner-text" data-i18n="encryptStopText">
+                                    Votre fichier a été chiffré. Sauvegardez la clé ci-dessous maintenant, puis
+                                    transmettez-la-nous séparément afin que nous puissions déchiffrer votre fichier.
+                                </div>
+                            </div>
+                        </div>
+
+                        <p data-i18n="confirmText">Votre base de données a été transmise avec succès. Notre équipe la
+                            traitera dans les prochains jours ouvrables.</p>
+                        <p data-i18n="confirmEmail">Un courriel de confirmation vous sera envoyé à l'adresse fournie.
+                        </p>
+
+                        <!-- Encryption key display (shown only when encryption was used) -->
+                        <div class="key-section" id="key-section">
+                            <div class="key-warning">
+                                <span class="key-warning-icon">⚠️</span>
+                                <span class="key-warning-text" data-i18n="keyWarning">
+                                    Conservez cette clé précieusement ! Elle est indispensable pour déchiffrer votre
+                                    fichier. Elle ne sera plus affichée après avoir quitté cette page.
+                                </span>
+                            </div>
+                            <div class="key-box">
+                                <div class="key-label" data-i18n="keyLabel">Clé de déchiffrement</div>
+                                <div class="key-value" id="key-value"></div>
+                                <div class="key-actions">
+                                    <button class="key-btn key-btn-copy" onclick="copyKey()">
+                                        📋 <span data-i18n="keyCopy">Copier</span>
+                                    </button>
+                                    <button class="key-btn key-btn-download" onclick="downloadKeyFile()">
+                                        💾 <span data-i18n="keyDownload">Télécharger .txt</span>
+                                    </button>
+                                    <span class="key-copied" id="key-copied" data-i18n="keyCopied">Copié !</span>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- <p data-i18n="confirmRef">Votre numéro de référence :</p>
+                        <div class="ref-chip" id="ref-number">—</div> -->
+
                     </div>
                 </div>
 
@@ -1347,14 +1751,16 @@
 
                 <!-- Step navigation -->
                 <div class="guide-nav">
-                    <button class="guide-nav-btn outline" id="guide-prev" onclick="guideGoPrev()" data-i18n="btnPrev">← Retour</button>
+                    <button class="guide-nav-btn outline" id="guide-prev" onclick="guideGoPrev()" data-i18n="btnPrev">←
+                        Retour</button>
                     <div class="guide-dots" id="guide-dots">
                         <span class="guide-dot"></span>
                         <span class="guide-dot"></span>
                         <span class="guide-dot"></span>
                         <span class="guide-dot"></span>
                     </div>
-                    <button class="guide-nav-btn" id="guide-next" onclick="guideGoNext()" data-i18n="btnNext">Suivant →</button>
+                    <button class="guide-nav-btn" id="guide-next" onclick="guideGoNext()" data-i18n="btnNext">Suivant
+                        →</button>
                 </div>
 
                 <!-- Visual mockup of the PL application -->
@@ -1495,6 +1901,18 @@
                 guideCaption2: "Dans le panneau de gauche, naviguez vers <strong>Administration du système</strong> → <strong>Paramètres de base</strong>.",
                 guideCaption3: "Sélectionnez l'onglet <strong>Copie de sûreté</strong>, notez le <strong>Répertoire</strong>, puis cliquez sur <strong>Faire une copie MAINTENANT</strong>.",
                 guideCaption4: "Récupérez le fichier <strong>BackupManuel.zip</strong> dans le répertoire indiqué et téléversez-le ci-dessous.",
+                encryptLabel: "🔒 Chiffrer le fichier avant l'envoi",
+                encryptBadge: "AES-256",
+                encryptDesc: "Le fichier sera chiffré dans votre navigateur avant d'être téléversé. Une clé de déchiffrement vous sera remise à la fin.",
+                encryptingLabel: "Chiffrement en cours…",
+                encryptingDoneLabel: "Chiffrement terminé",
+                keyWarning: "Conservez cette clé précieusement ! Elle est indispensable pour déchiffrer votre fichier. Elle ne sera plus affichée après avoir quitté cette page.",
+                keyLabel: "Clé de déchiffrement",
+                keyCopy: "Copier",
+                keyDownload: "Télécharger .txt",
+                keyCopied: "Copié !",
+                encryptStopTitle: "ARRÊTEZ ! Sauvegardez votre clé de chiffrement",
+                encryptStopText: "Votre fichier a été chiffré. Sauvegardez la clé ci-dessous maintenant, puis transmettez-la-nous séparément afin que nous puissions déchiffrer votre fichier.",
             },
             en: {
                 pageTitle: "PL Database Upload — Migration4o",
@@ -1552,6 +1970,18 @@
                 guideCaption2: "In the left panel, navigate to <strong>Administration du système</strong> → <strong>Paramètres de base</strong>.",
                 guideCaption3: "Select the <strong>Copie de sûreté</strong> tab, note the <strong>Répertoire</strong> path, then click <strong>Faire une copie MAINTENANT</strong>.",
                 guideCaption4: "Collect the <strong>BackupManuel.zip</strong> file from that directory and upload it below.",
+                encryptLabel: "🔒 Encrypt file before upload",
+                encryptBadge: "AES-256",
+                encryptDesc: "The file will be encrypted in your browser before uploading. A decryption key will be provided at the end.",
+                encryptingLabel: "Encrypting…",
+                encryptingDoneLabel: "Encryption complete",
+                keyWarning: "Keep this key safe! It is required to decrypt your file. It will not be shown again after you leave this page.",
+                keyLabel: "Decryption key",
+                keyCopy: "Copy",
+                encryptStopTitle: "STOP! Save your encryption key",
+                encryptStopText: "Your file was encrypted. Save the key below now, then send it to us separately so we can decrypt your file.",
+                keyDownload: "Download .txt",
+                keyCopied: "Copied!",
             }
         };
 
@@ -1848,9 +2278,60 @@
 
             state.refNumber = generateRefNumber();
 
+            // Lock UI
+            document.getElementById('btn-upload').disabled = true;
+            document.getElementById('btn-prev-4').disabled = true;
+            document.getElementById('file-input').disabled = true;
+            document.getElementById('encrypt-check').disabled = true;
+            document.getElementById('upload-error').style.display = 'none';
+
+            const pw = document.getElementById('progress-wrapper');
+            pw.style.display = 'block';
+
+            if (encryptionEnabled) {
+                // Show encrypting status
+                document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('encryptingLabel');
+                document.getElementById('progress-fill').style.width = '0%';
+                document.getElementById('progress-pct').textContent = '0 %';
+
+                generateEncryptionKey().then(({ key, keyB64 }) => {
+                    lastEncryptionKeyB64 = keyB64;
+                    return encryptFile(state.file, key, (progress) => {
+                        const pct = Math.round(progress * 100);
+                        document.getElementById('progress-fill').style.width = pct + '%';
+                        document.getElementById('progress-pct').textContent = pct + ' %';
+                    }).then(encryptedBlob => {
+                        // Update progress to show encryption done
+                        document.getElementById('progress-fill').style.width = '100%';
+                        document.getElementById('progress-pct').textContent = '100 %';
+                        document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('encryptingDoneLabel');
+
+                        // Short pause then start upload
+                        setTimeout(() => {
+                            document.getElementById('progress-fill').style.width = '0%';
+                            document.getElementById('progress-pct').textContent = '0 %';
+                            doFirebaseUpload(encryptedBlob, true);
+                        }, 400);
+                    });
+                }).catch(err => {
+                    console.error('Encryption error:', err);
+                    document.getElementById('btn-upload').disabled = false;
+                    document.getElementById('btn-prev-4').disabled = false;
+                    document.getElementById('file-input').disabled = false;
+                    document.getElementById('encrypt-check').disabled = false;
+                    showUploadError(t('uploadErrGeneric') + ' (encryption)');
+                });
+            } else {
+                lastEncryptionKeyB64 = '';
+                doFirebaseUpload(state.file, false);
+            }
+        }
+
+        function doFirebaseUpload(fileOrBlob, encrypted) {
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
             const safeName = state.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const path = `${STORAGE_FOLDER}/${state.muniCode}/${state.email}/${timestamp}_${safeName}`;
+            const fileName = encrypted ? safeName + '.enc' : safeName;
+            const path = `${STORAGE_FOLDER}/${state.muniCode}/${state.email}/${timestamp}_${fileName}`;
 
             const storageRef = firebaseStorage.ref().child(path);
             const metadata = {
@@ -1860,21 +2341,15 @@
                     muniName: state.muniName,
                     email: state.email,
                     refNumber: state.refNumber,
-                    uploadedAt: new Date().toISOString()
+                    uploadedAt: new Date().toISOString(),
+                    encrypted: encrypted ? 'AES-256-GCM' : 'none',
+                    originalName: state.file.name
                 }
             };
 
-            // Lock UI
-            document.getElementById('btn-upload').disabled = true;
-            document.getElementById('btn-prev-4').disabled = true;
-            document.getElementById('file-input').disabled = true;
-            document.getElementById('upload-error').style.display = 'none';
-
-            const pw = document.getElementById('progress-wrapper');
-            pw.style.display = 'block';
             document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('progressLabel');
 
-            const uploadTask = storageRef.put(state.file, metadata);
+            const uploadTask = storageRef.put(fileOrBlob, metadata);
 
             uploadTask.on(
                 'state_changed',
@@ -1897,6 +2372,7 @@
                     document.getElementById('btn-upload').disabled = false;
                     document.getElementById('btn-prev-4').disabled = false;
                     document.getElementById('file-input').disabled = false;
+                    document.getElementById('encrypt-check').disabled = false;
                     showUploadError(t('uploadErrGeneric') + ' (' + err.code + ')');
                 },
 
@@ -1907,7 +2383,21 @@
                     document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent =
                         t('progressDoneLabel');
 
-                    document.getElementById('ref-number').textContent = state.refNumber;
+                    const refEl = document.getElementById('ref-number');
+                    if (refEl) refEl.textContent = state.refNumber;
+
+                    // Show encryption key if encryption was used
+                    const keySection = document.getElementById('key-section');
+                    const stopBanner = document.getElementById('encrypt-stop-banner');
+                    if (lastEncryptionKeyB64) {
+                        document.getElementById('key-value').textContent = lastEncryptionKeyB64;
+                        keySection.classList.add('visible');
+                        stopBanner.classList.add('visible');
+                    } else {
+                        keySection.classList.remove('visible');
+                        stopBanner.classList.remove('visible');
+                    }
+
                     setTimeout(() => showStep(5), 600);
                 }
             );
@@ -1917,6 +2407,139 @@
             const el = document.getElementById('upload-error');
             el.textContent = msg;
             el.style.display = 'block';
+        }
+
+        /* ════════════════════════════════════════════════════════════════
+           ENCRYPTION — Web Crypto API (AES-256-GCM)
+           ════════════════════════════════════════════════════════════════ */
+        let encryptionEnabled = false;
+        let lastEncryptionKeyB64 = '';
+
+        function onEncryptToggle(checked) {
+            encryptionEnabled = checked;
+            document.getElementById('encrypt-toggle').classList.toggle('enabled', checked);
+        }
+
+        /**
+         * Generate a random AES-256-GCM key and export it as Base64.
+         * Returns { key: CryptoKey, keyB64: string }
+         */
+        async function generateEncryptionKey() {
+            const key = await crypto.subtle.generateKey(
+                { name: 'AES-GCM', length: 256 },
+                true,   // extractable — needed to export
+                ['encrypt']
+            );
+            const raw = await crypto.subtle.exportKey('raw', key);
+            const keyB64 = btoa(String.fromCharCode(...new Uint8Array(raw)));
+            return { key, keyB64 };
+        }
+
+        /**
+         * Encrypt a File using AES-256-GCM in chunks to avoid memory issues.
+         *
+         * File format ("M4E1" — Migration4o Encrypted v1):
+         *   [4 bytes]  magic  "M4E1"
+         *   [4 bytes]  chunk size (uint32 BE) — plaintext size per chunk
+         *   [4 bytes]  total chunks (uint32 BE)
+         *   Per chunk:
+         *     [12 bytes] IV
+         *     [4 bytes]  ciphertext length (uint32 BE, includes 16-byte GCM tag)
+         *     [N bytes]  ciphertext
+         *
+         * @param {File} file
+         * @param {CryptoKey} cryptoKey
+         * @param {function(number)} onProgress — called with 0..1
+         * @returns {Promise<Blob>}
+         */
+        const CHUNK_SIZE = 64 * 1024 * 1024; // 64 MB
+
+        async function encryptFile(file, cryptoKey, onProgress) {
+            const totalChunks = Math.ceil(file.size / CHUNK_SIZE) || 1;
+            const parts = []; // ArrayBuffer parts assembled into a Blob at the end
+
+            // ── Header ──────────────────────────────────────────────
+            const header = new ArrayBuffer(12);
+            const hView = new DataView(header);
+            // Magic "M4E1"
+            hView.setUint8(0, 0x4D); // M
+            hView.setUint8(1, 0x34); // 4
+            hView.setUint8(2, 0x45); // E
+            hView.setUint8(3, 0x31); // 1
+            hView.setUint32(4, CHUNK_SIZE, false); // big-endian
+            hView.setUint32(8, totalChunks, false);
+            parts.push(header);
+
+            // ── Chunks ──────────────────────────────────────────────
+            for (let i = 0; i < totalChunks; i++) {
+                const start = i * CHUNK_SIZE;
+                const end = Math.min(start + CHUNK_SIZE, file.size);
+                const slice = file.slice(start, end);
+                const plaintext = await slice.arrayBuffer();
+
+                const iv = crypto.getRandomValues(new Uint8Array(12));
+                const ciphertext = await crypto.subtle.encrypt(
+                    { name: 'AES-GCM', iv: iv },
+                    cryptoKey,
+                    plaintext
+                );
+
+                // Chunk header: IV (12) + length (4)
+                const chunkHeader = new ArrayBuffer(16);
+                new Uint8Array(chunkHeader).set(iv, 0);
+                new DataView(chunkHeader).setUint32(12, ciphertext.byteLength, false);
+
+                parts.push(chunkHeader);
+                parts.push(ciphertext);
+
+                if (onProgress) onProgress((i + 1) / totalChunks);
+            }
+
+            return new Blob(parts, { type: 'application/octet-stream' });
+        }
+
+        /** Copy encryption key to clipboard */
+        function copyKey() {
+            navigator.clipboard.writeText(lastEncryptionKeyB64).then(() => {
+                const el = document.getElementById('key-copied');
+                el.classList.add('show');
+                setTimeout(() => el.classList.remove('show'), 2000);
+            });
+        }
+
+        /** Download encryption key as a .txt file */
+        function downloadKeyFile() {
+            const content = [
+                t('keyLabel'),
+                '═'.repeat(40),
+                '',
+                lastEncryptionKeyB64,
+                '',
+                'Reference: ' + state.refNumber,
+                'Municipality: ' + state.muniName + ' (' + state.muniCode + ')',
+                'Date: ' + new Date().toISOString(),
+                '',
+                'Algorithm: AES-256-GCM',
+                'Format: Base64-encoded 256-bit raw key',
+                'Chunk size: 64 MB (last chunk may be smaller)',
+                '',
+                'File layout (M4E1):',
+                '  [4 bytes]  magic "M4E1"',
+                '  [4 bytes]  chunk size (uint32 BE)',
+                '  [4 bytes]  total chunks (uint32 BE)',
+                '  Per chunk:',
+                '    [12 bytes] IV (random per chunk)',
+                '    [4 bytes]  ciphertext length (uint32 BE, includes 16-byte GCM tag)',
+                '    [N bytes]  ciphertext',
+            ].join('\n');
+
+            const blob = new Blob([content], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `decryption-key-${state.refNumber}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
         }
 
         /* ════════════════════════════════════════════════════════════════
@@ -1944,7 +2567,7 @@
         }
         function renderGuideStep() {
             // Show/hide mockup regions
-            document.querySelectorAll('[data-gs]').forEach(function(el) {
+            document.querySelectorAll('[data-gs]').forEach(function (el) {
                 var step = parseInt(el.getAttribute('data-gs'));
                 el.classList.toggle('gs-hidden', step > guideStep);
                 el.classList.toggle('gs-active', step === guideStep && step <= 3);
@@ -1958,12 +2581,12 @@
             if (resultEl) resultEl.innerHTML = I18N[currentLang]['guideResultText'] || '';
             // Dots
             var dots = document.querySelectorAll('#guide-dots .guide-dot');
-            dots.forEach(function(d, i) { d.classList.toggle('active', i < guideStep); });
+            dots.forEach(function (d, i) { d.classList.toggle('active', i < guideStep); });
             // Buttons
             document.getElementById('guide-prev').disabled = (guideStep === 1);
             document.getElementById('guide-next').disabled = (guideStep === GUIDE_STEPS);
         }
-        document.addEventListener('keydown', function(e) {
+        document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') closeGuide();
             var overlay = document.getElementById('guide-overlay');
             if (!overlay.classList.contains('open')) return;

@@ -15,7 +15,13 @@ service firebase.storage {
              filename.matches('.*\\.db$')   ||
              filename.matches('.*\\.db4o$') ||
              filename.matches('.*\\.dat$')  ||
-             filename.matches('.*\\.bak$')
+             filename.matches('.*\\.bak$')  ||
+             // Encrypted variants (.enc suffix)
+             filename.matches('.*\\.zip\\.enc$')  ||
+             filename.matches('.*\\.db\\.enc$')   ||
+             filename.matches('.*\\.db4o\\.enc$') ||
+             filename.matches('.*\\.dat\\.enc$')  ||
+             filename.matches('.*\\.bak\\.enc$')
            );
 
       // No client-side read or delete allowed

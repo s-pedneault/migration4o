@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>M4E1 File Decryptor — Migration4o</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --blue: #1a56db; --blue-lt: #e8f0fe;
+            --green: #057a55; --green-lt: #d5f0e8;
+            --red: #c81e1e; --red-lt: #fde8e8;
+            --gray: #6b7280; --gray-lt: #f3f4f6;
+            --border: #d1d5db; --text: #111827;
+            --radius: 10px; --shadow: 0 4px 24px rgba(0,0,0,.10);
+            --trans: .3s ease;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background: #f0f4f8;
+            min-height: 100vh;
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* ── Top bar ───────────────────────────────────────── */
+        header {
+            width: 100%;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky; top: 0; z-index: 100;
+            box-shadow: 0 1px 6px rgba(0,0,0,.06);
+        }
+        .brand { font-size: 15px; font-weight: 600; color: #19417c; letter-spacing: -.3px; }
+        .sidebar-logo {
+            width: 34px; height: 34px;
+            background: linear-gradient(135deg, #3b5ce0, #19417c);
+            border-radius: 10px;
+            display: inline-flex; align-items: center; justify-content: center;
+            color: #fff; font-weight: 800; font-size: 16px; flex-shrink: 0;
+            box-shadow: 0 2px 8px rgba(79,70,229,.25);
+            margin-right: 8px; vertical-align: middle;
+        }
+        .tool-badge {
+            font-size: 10px; font-weight: 700;
+            background: #1e293b; color: #67e8f9;
+            padding: 3px 8px; border-radius: 5px; margin-left: 8px;
+            letter-spacing: .3px; vertical-align: middle;
+        }
+
+        /* ── Main card ─────────────────────────────────────── */
+        main { width: 100%; max-width: 640px; padding: 40px 16px 60px; }
+        .card {
+            background: #fff; border-radius: var(--radius);
+            box-shadow: var(--shadow); overflow: hidden;
+        }
+        .card-header {
+            background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+            color: #fff; padding: 28px 32px 24px;
+        }
+        .card-header h1 { font-size: 21px; font-weight: 700; line-height: 1.25; margin-bottom: 6px; }
+        .card-header p { font-size: 14px; opacity: .84; line-height: 1.5; }
+        .card-body { padding: 28px 32px 32px; }
+
+        /* ── Form ──────────────────────────────────────────── */
+        label {
+            display: block; font-size: 13px; font-weight: 600;
+            margin-bottom: 6px; color: #374151;
+        }
+        label .req { color: var(--red); margin-left: 2px; }
+        .field-group { margin-bottom: 22px; }
+
+        /* ── Drop zone ─────────────────────────────────────── */
+        .drop-zone {
+            border: 2px dashed var(--border); border-radius: 10px;
+            padding: 28px 20px; text-align: center; cursor: pointer;
+            transition: border-color var(--trans), background var(--trans);
+            background: var(--gray-lt); position: relative;
+        }
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--blue); background: var(--blue-lt);
+        }
+        .drop-zone input[type=file] {
+            position: absolute; inset: 0; opacity: 0;
+            cursor: pointer; width: 100%; height: 100%;
+        }
+        .drop-icon { font-size: 36px; margin-bottom: 10px; display: block; }
+        .drop-text { font-size: 14px; font-weight: 600; color: #374151; }
+        .drop-sub { font-size: 12px; color: var(--gray); margin-top: 4px; }
+        .file-name {
+            margin-top: 10px; font-size: 13px; color: var(--blue);
+            font-weight: 600; word-break: break-all;
+        }
+
+        /* ── Key input ─────────────────────────────────────── */
+        .key-input-wrap { position: relative; }
+        .key-input {
+            width: 100%; padding: 12px 14px; font-size: 14px;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            outline: none; transition: border-color var(--trans), box-shadow var(--trans);
+            background: #fff; color: var(--text);
+        }
+        .key-input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(26,86,219,.12);
+        }
+        .key-input.valid { border-color: var(--green); }
+        .key-input.invalid { border-color: var(--red); box-shadow: 0 0 0 3px rgba(200,30,30,.10); }
+        .key-hint { font-size: 12px; color: var(--gray); margin-top: 5px; }
+        .key-or {
+            display: flex; align-items: center; gap: 10px;
+            margin: 10px 0; font-size: 12px; color: var(--gray);
+        }
+        .key-or::before, .key-or::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+        .btn-load-key {
+            display: inline-flex; align-items: center; gap: 5px;
+            padding: 7px 14px; font-size: 12px; font-weight: 600;
+            border-radius: 6px; cursor: pointer; border: 1.5px solid var(--border);
+            background: #fff; color: #374151; transition: all var(--trans);
+        }
+        .btn-load-key:hover { border-color: var(--blue); color: var(--blue); background: var(--blue-lt); }
+
+        /* ── Progress ──────────────────────────────────────── */
+        .progress-wrapper { margin-top: 0; display: none; margin-bottom: 18px; }
+        .progress-header {
+            display: flex; justify-content: space-between;
+            font-size: 13px; font-weight: 600; color: #374151; margin-bottom: 6px;
+        }
+        .progress-bar-track {
+            width: 100%; height: 12px; background: #e5e7eb;
+            border-radius: 999px; overflow: hidden;
+        }
+        .progress-bar-fill {
+            height: 100%; background: linear-gradient(90deg, #1e293b, #6366f1);
+            border-radius: 999px; width: 0%; transition: width .3s ease;
+        }
+        .progress-sub {
+            font-size: 12px; color: var(--gray); margin-top: 6px; text-align: right;
+        }
+
+        /* ── Buttons ───────────────────────────────────────── */
+        .btn-decrypt {
+            width: 100%; padding: 12px; font-size: 15px; font-weight: 600;
+            border-radius: 8px; cursor: pointer; border: none;
+            background: #1e293b; color: #fff; transition: background var(--trans);
+        }
+        .btn-decrypt:hover { background: #334155; }
+        .btn-decrypt:disabled { opacity: .5; cursor: not-allowed; }
+
+        /* ── Status messages ───────────────────────────────── */
+        .msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 14px; display: none; }
+        .msg-error { background: var(--red-lt); border: 1.5px solid #fca5a5; color: var(--red); }
+        .msg-success { background: var(--green-lt); border: 1.5px solid #86efac; color: var(--green); }
+
+        /* ── Result ─────────────────────────────────────────── */
+        .result-box {
+            display: none; margin-top: 18px;
+            background: var(--green-lt); border: 1.5px solid #86efac; border-radius: 10px;
+            padding: 18px 20px; text-align: center;
+        }
+        .result-icon { font-size: 36px; margin-bottom: 10px; }
+        .result-title { font-size: 17px; font-weight: 700; color: var(--green); margin-bottom: 6px; }
+        .result-text { font-size: 13px; color: #374151; margin-bottom: 14px; line-height: 1.5; }
+        .btn-download {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 10px 22px; font-size: 14px; font-weight: 600;
+            border-radius: 8px; cursor: pointer; border: none;
+            background: var(--green); color: #fff; transition: background var(--trans);
+        }
+        .btn-download:hover { background: #065f46; }
+
+        /* ── Format info ───────────────────────────────────── */
+        .format-info {
+            margin-top: 20px; padding: 14px 16px;
+            background: var(--gray-lt); border: 1px solid var(--border);
+            border-radius: 8px; font-size: 12px; color: var(--gray); line-height: 1.6;
+        }
+        .format-info summary {
+            cursor: pointer; font-weight: 600; font-size: 13px; color: #374151;
+        }
+        .format-info pre {
+            margin-top: 8px; font-size: 11px; color: #475569;
+            white-space: pre-wrap; font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        /* ── Responsive ────────────────────────────────────── */
+        @media (max-width: 480px) {
+            .card-header { padding: 22px 20px 18px; }
+            .card-body { padding: 22px 20px 24px; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <span>
+            <span class="sidebar-logo">G</span>
+            <span class="brand">Migration4o</span>
+            <span class="tool-badge">DECRYPT</span>
+        </span>
+    </header>
+
+    <main>
+        <div class="card">
+            <div class="card-header">
+                <h1>🔓 M4E1 File Decryptor</h1>
+                <p>Decrypt files that were encrypted with AES-256-GCM during upload. Everything runs locally in your browser — nothing is sent to any server.</p>
+            </div>
+
+            <div class="card-body">
+
+                <!-- Encrypted file -->
+                <div class="field-group">
+                    <label>Encrypted file <span class="req">*</span></label>
+                    <div class="drop-zone" id="drop-zone"
+                         ondragover="event.preventDefault(); this.classList.add('dragover')"
+                         ondragleave="this.classList.remove('dragover')"
+                         ondrop="event.preventDefault(); this.classList.remove('dragover'); handleFileDrop(event)">
+                        <input type="file" id="file-input" accept=".enc" onchange="handleFileSelect(event)" />
+                        <span class="drop-icon">📂</span>
+                        <div class="drop-text">Drop encrypted .enc file here</div>
+                        <div class="drop-sub">or click to browse</div>
+                    </div>
+                    <div class="file-name" id="file-name"></div>
+                </div>
+
+                <!-- Decryption key -->
+                <div class="field-group">
+                    <label>Decryption key <span class="req">*</span></label>
+                    <div class="key-input-wrap">
+                        <input type="text" class="key-input" id="key-input"
+                               placeholder="Paste Base64 key here (44 characters)"
+                               oninput="validateKey()" autocomplete="off" spellcheck="false" />
+                    </div>
+                    <div class="key-hint">The Base64 key you received after upload (or from the .txt file).</div>
+                    <div class="key-or">or</div>
+                    <button class="btn-load-key" onclick="loadKeyFromFile()">
+                        📄 Load from .txt key file
+                    </button>
+                    <input type="file" id="key-file-input" accept=".txt" style="display:none" onchange="readKeyFile(event)" />
+                </div>
+
+                <!-- Progress -->
+                <div class="progress-wrapper" id="progress-wrapper">
+                    <div class="progress-header">
+                        <span id="progress-label">Decrypting…</span>
+                        <span id="progress-pct">0 %</span>
+                    </div>
+                    <div class="progress-bar-track">
+                        <div class="progress-bar-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-sub" id="progress-sub"></div>
+                </div>
+
+                <!-- Decrypt button -->
+                <button class="btn-decrypt" id="btn-decrypt" onclick="startDecrypt()" disabled>
+                    🔓 Decrypt File
+                </button>
+
+                <!-- Messages -->
+                <div class="msg msg-error" id="msg-error"></div>
+                <div class="msg msg-success" id="msg-success"></div>
+
+                <!-- Result + download -->
+                <div class="result-box" id="result-box">
+                    <div class="result-icon">✅</div>
+                    <div class="result-title">Decryption successful!</div>
+                    <div class="result-text" id="result-text"></div>
+                    <button class="btn-download" id="btn-download" onclick="downloadResult()">
+                        💾 Download decrypted file
+                    </button>
+                </div>
+
+                <!-- Format details -->
+                <details class="format-info">
+                    <summary>M4E1 file format details</summary>
+                    <pre>
+Header (12 bytes):
+  [4 bytes]  Magic "M4E1"
+  [4 bytes]  Chunk size (uint32 BE) — plaintext bytes per chunk
+  [4 bytes]  Total chunks (uint32 BE)
+
+Per chunk:
+  [12 bytes] IV (random, unique per chunk)
+  [4 bytes]  Ciphertext length (uint32 BE, includes 16-byte GCM tag)
+  [N bytes]  Ciphertext (AES-256-GCM)
+
+Algorithm: AES-256-GCM
+Key: 256-bit, provided as Base64 (44 chars)
+                    </pre>
+                </details>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        /* ════════════════════════════════════════════════════════
+           STATE
+           ════════════════════════════════════════════════════════ */
+        let encFile = null;
+        let decryptedBlob = null;
+        let originalName = '';
+
+        /* ════════════════════════════════════════════════════════
+           FILE SELECTION
+           ════════════════════════════════════════════════════════ */
+        function handleFileSelect(evt) {
+            setFile(evt.target.files[0]);
+        }
+        function handleFileDrop(evt) {
+            setFile(evt.dataTransfer.files[0]);
+        }
+        function setFile(file) {
+            if (!file) return;
+            encFile = file;
+            const sizeMB = (file.size / 1024 / 1024).toFixed(1);
+            document.getElementById('file-name').textContent = `📄 ${file.name}  (${sizeMB} MB)`;
+
+            // Infer original name by stripping .enc
+            originalName = file.name.replace(/\.enc$/i, '');
+
+            hideMessages();
+            updateDecryptButton();
+        }
+
+        /* ════════════════════════════════════════════════════════
+           KEY INPUT
+           ════════════════════════════════════════════════════════ */
+        function validateKey() {
+            const input = document.getElementById('key-input');
+            const val = input.value.trim();
+            input.classList.remove('valid', 'invalid');
+
+            if (val.length === 0) { updateDecryptButton(); return; }
+
+            // Base64 for 32 bytes = 44 chars
+            const isValid = /^[A-Za-z0-9+/]{43}=?$/.test(val) || /^[A-Za-z0-9+/]{42}==$/.test(val);
+            input.classList.add(isValid ? 'valid' : 'invalid');
+            updateDecryptButton();
+        }
+
+        function loadKeyFromFile() {
+            document.getElementById('key-file-input').click();
+        }
+
+        function readKeyFile(evt) {
+            const file = evt.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function () {
+                const text = reader.result;
+                // Find the Base64 key: it's the longest Base64-like line
+                const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                const keyLine = lines.find(l => /^[A-Za-z0-9+/]{40,}={0,2}$/.test(l));
+                if (keyLine) {
+                    document.getElementById('key-input').value = keyLine;
+                    validateKey();
+                } else {
+                    showError('Could not find a valid Base64 key in the file.');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function updateDecryptButton() {
+            const hasFile = !!encFile;
+            const keyVal = document.getElementById('key-input').value.trim();
+            const keyOk = /^[A-Za-z0-9+/]{42,44}={0,2}$/.test(keyVal);
+            document.getElementById('btn-decrypt').disabled = !(hasFile && keyOk);
+        }
+
+        /* ════════════════════════════════════════════════════════
+           DECRYPTION
+           ════════════════════════════════════════════════════════ */
+        async function startDecrypt() {
+            hideMessages();
+            document.getElementById('result-box').style.display = 'none';
+            decryptedBlob = null;
+
+            const keyB64 = document.getElementById('key-input').value.trim();
+
+            // Import the key
+            let cryptoKey;
+            try {
+                const rawKey = Uint8Array.from(atob(keyB64), c => c.charCodeAt(0));
+                if (rawKey.length !== 32) throw new Error('Key must be 32 bytes (256 bits)');
+                cryptoKey = await crypto.subtle.importKey(
+                    'raw', rawKey,
+                    { name: 'AES-GCM', length: 256 },
+                    false, ['decrypt']
+                );
+            } catch (e) {
+                showError('Invalid decryption key: ' + e.message);
+                return;
+            }
+
+            // Lock UI
+            document.getElementById('btn-decrypt').disabled = true;
+
+            const pw = document.getElementById('progress-wrapper');
+            pw.style.display = 'block';
+            document.getElementById('progress-label').textContent = 'Decrypting…';
+            document.getElementById('progress-fill').style.width = '0%';
+            document.getElementById('progress-pct').textContent = '0 %';
+            document.getElementById('progress-sub').textContent = '';
+
+            try {
+                // ── Read header ──────────────────────────────
+                const headerBuf = await encFile.slice(0, 12).arrayBuffer();
+                const hView = new DataView(headerBuf);
+
+                const magic = String.fromCharCode(
+                    hView.getUint8(0), hView.getUint8(1),
+                    hView.getUint8(2), hView.getUint8(3)
+                );
+                if (magic !== 'M4E1') {
+                    throw new Error('Not a valid M4E1 encrypted file (bad magic: "' + magic + '")');
+                }
+
+                const chunkSize = hView.getUint32(4, false);
+                const totalChunks = hView.getUint32(8, false);
+
+                document.getElementById('progress-sub').textContent =
+                    totalChunks + ' chunk' + (totalChunks > 1 ? 's' : '') + ' to decrypt';
+
+                // ── Decrypt chunks ───────────────────────────
+                const parts = [];
+                let offset = 12; // past header
+
+                for (let i = 0; i < totalChunks; i++) {
+                    // Read chunk header: 12-byte IV + 4-byte length
+                    const chunkHeaderBuf = await encFile.slice(offset, offset + 16).arrayBuffer();
+                    const iv = new Uint8Array(chunkHeaderBuf, 0, 12);
+                    const ctLen = new DataView(chunkHeaderBuf).getUint32(12, false);
+                    offset += 16;
+
+                    // Read ciphertext
+                    const ctBuf = await encFile.slice(offset, offset + ctLen).arrayBuffer();
+                    offset += ctLen;
+
+                    // Decrypt
+                    const plaintext = await crypto.subtle.decrypt(
+                        { name: 'AES-GCM', iv: iv },
+                        cryptoKey,
+                        ctBuf
+                    );
+
+                    parts.push(plaintext);
+
+                    // Progress
+                    const pct = Math.round(((i + 1) / totalChunks) * 100);
+                    document.getElementById('progress-fill').style.width = pct + '%';
+                    document.getElementById('progress-pct').textContent = pct + ' %';
+
+                    const doneMB = (parts.reduce((s, p) => s + p.byteLength, 0) / 1024 / 1024).toFixed(1);
+                    document.getElementById('progress-sub').textContent =
+                        `Chunk ${i + 1}/${totalChunks} — ${doneMB} MB decrypted`;
+                }
+
+                // ── Assemble result ──────────────────────────
+                decryptedBlob = new Blob(parts, { type: 'application/octet-stream' });
+
+                document.getElementById('progress-label').textContent = 'Decryption complete';
+                document.getElementById('progress-fill').style.width = '100%';
+                document.getElementById('progress-pct').textContent = '100 %';
+
+                const totalMB = (decryptedBlob.size / 1024 / 1024).toFixed(1);
+                document.getElementById('progress-sub').textContent = totalMB + ' MB decrypted';
+
+                // Show result
+                document.getElementById('result-text').textContent =
+                    `File "${originalName}" (${totalMB} MB) is ready to download.`;
+                document.getElementById('result-box').style.display = 'block';
+
+            } catch (e) {
+                console.error('Decryption error:', e);
+                if (e.name === 'OperationError') {
+                    showError('Decryption failed — wrong key or corrupted file.');
+                } else {
+                    showError('Decryption error: ' + e.message);
+                }
+                pw.style.display = 'none';
+            }
+
+            document.getElementById('btn-decrypt').disabled = false;
+        }
+
+        /* ════════════════════════════════════════════════════════
+           DOWNLOAD
+           ════════════════════════════════════════════════════════ */
+        function downloadResult() {
+            if (!decryptedBlob) return;
+            const url = URL.createObjectURL(decryptedBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = originalName;
+            a.click();
+            setTimeout(() => URL.revokeObjectURL(url), 5000);
+        }
+
+        /* ════════════════════════════════════════════════════════
+           UI HELPERS
+           ════════════════════════════════════════════════════════ */
+        function showError(msg) {
+            const el = document.getElementById('msg-error');
+            el.textContent = msg;
+            el.style.display = 'block';
+        }
+        function hideMessages() {
+            document.getElementById('msg-error').style.display = 'none';
+            document.getElementById('msg-success').style.display = 'none';
+        }
+    </script>
+
+</body>
+</html>
