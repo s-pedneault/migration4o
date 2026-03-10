@@ -1859,8 +1859,24 @@
         if (!data || !ref) return null;
         return ref.split('.').reduce(function (obj, key) {
             if (obj == null) return null;
+            // Unwrap single-element arrays at every step
             if (Array.isArray(obj) && obj.length === 1) obj = obj[0];
-            return (typeof obj === 'object') ? obj[key] : null;
+            if (typeof obj !== 'object' || obj === null) return null;
+            // Direct lookup
+            if (obj[key] !== undefined) return obj[key];
+            // Look through single-key class-name wrapper objects
+            // e.g. adresse: [{Adresse: [{numeroCivique: [...]}]}]
+            // After unwrapping adresse we get {Adresse: [...]}, then we need to
+            // look inside Adresse to find numeroCivique.
+            var wrapKeys = Object.keys(obj);
+            if (wrapKeys.length === 1) {
+                var inner = obj[wrapKeys[0]];
+                if (Array.isArray(inner) && inner.length === 1) inner = inner[0];
+                if (typeof inner === 'object' && inner !== null && inner[key] !== undefined) {
+                    return inner[key];
+                }
+            }
+            return null;
         }, data);
     }
 
@@ -1963,8 +1979,12 @@
 
             case 'field': {
                 var val = resolveFieldValue(data, p.ref);
+                if (val === null || val === undefined) return '';
+                // Unwrap single-element arrays to their scalar value
+                var scalarVal = (Array.isArray(val) && val.length === 1) ? val[0] : val;
+                if (scalarVal === null || scalarVal === undefined || String(scalarVal).trim() === '') return '';
                 var label = p.label || displayFieldLabel(p.ref);
-                var formatted = fmtValueWithFormat(val, p.format, p.ref);
+                var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
                 return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label">' + esc(label)
                     + '</div><div class="field-value">' + formatted + '</div></div>';
             }

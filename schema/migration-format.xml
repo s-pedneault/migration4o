@@ -39,13 +39,40 @@
                     <classRef sourceName="gest.champPerso.TypeChampPerso"/>
                     <classRef sourceName="gest.fournisseur.Fournisseur">
                         <layout>
-                            <field label="Nom" ref="nom"/>
-                            <section collapsible="true" title="Interne">
-                                <field label="ID" ref="id"/>
-                                <field label="Dernière modification" ref="derniereModification"/>
+                            <field ref="id"/>
+                            <field ref="cellulaire"/>
+                            <field ref="courriel"/>
+                            <field ref="nom"/>
+                            <field ref="note"/>
+                            <field ref="teleavertisseur"/>
+                            <field ref="siteWeb"/>
+                            <field ref="telephoneTravail"/>
+                            <field ref="telephoneTravailExt"/>
+                            <field ref="idSSI"/>
+                            <field ref="derniereModification" format="longdate:yyyy-MM-dd HH:mm"/>
+                            <section title="Adresse" collapsible="true">
+                                <field ref="adresse.afficherSuite" format="bool:Oui,Non"/>
+                                <field ref="adresse.appartement"/>
+                                <field ref="adresse.arrondissement"/>
+                                <field ref="adresse.codeGeo"/>
+                                <field ref="adresse.codeLien"/>
+                                <field ref="adresse.codePostal"/>
+                                <field ref="adresse.extension"/>
+                                <field ref="adresse.telecopieur"/>
+                                <field ref="adresse.numeroCivique"/>
+                                <field ref="adresse.rue"/>
+                                <field ref="adresse.secteur"/>
+                                <field ref="adresse.suite"/>
+                                <field ref="adresse.telephoneAutre"/>
+                                <field ref="adresse.telephoneAutreExt"/>
+                                <field ref="adresse.telephone"/>
+                                <field ref="adresse.telephoneExtension"/>
+                                <field ref="adresse.typeRue"/>
+                                <field ref="adresse.typeSuite"/>
+                                <field ref="adresse.ville"/>
                             </section>
                             <divider/>
-                            <table ref="listePieceJointe"/>
+                            <table ref="listePieceJointe" columns="dateCreation,inclureDansRapportActivite,nom,photoParPage,formatImpression,idFichier,idGraph" columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph"/>
                         </layout>
                     </classRef>
                     <classRef sourceName="gest.listePerso.ListePerso"/>
