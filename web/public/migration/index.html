@@ -1913,6 +1913,10 @@
                 keyCopied: "Copié !",
                 encryptStopTitle: "ARRÊTEZ ! Sauvegardez votre clé de chiffrement",
                 encryptStopText: "Votre fichier a été chiffré. Sauvegardez la clé ci-dessous maintenant, puis transmettez-la-nous séparément afin que nous puissions déchiffrer votre fichier.",
+                encryptErrUnsupported: "Le chiffrement n'est pas disponible dans ce navigateur. Veuillez utiliser un navigateur récent (Chrome, Edge, Firefox, Safari) en HTTPS.",
+                encryptErrMemory: "Mémoire insuffisante pour chiffrer ce fichier. Essayez de fermer d'autres onglets ou utilisez un appareil avec plus de mémoire.",
+                encryptErrGeneric: "Erreur lors du chiffrement du fichier.",
+                encryptUnavailableDesc: "Le chiffrement n'est pas disponible dans ce navigateur.",
             },
             en: {
                 pageTitle: "PL Database Upload — Migration4o",
@@ -1982,6 +1986,10 @@
                 encryptStopText: "Your file was encrypted. Save the key below now, then send it to us separately so we can decrypt your file.",
                 keyDownload: "Download .txt",
                 keyCopied: "Copied!",
+                encryptErrUnsupported: "Encryption is not available in this browser. Please use a modern browser (Chrome, Edge, Firefox, Safari) over HTTPS.",
+                encryptErrMemory: "Not enough memory to encrypt this file. Try closing other tabs or use a device with more memory.",
+                encryptErrGeneric: "An error occurred while encrypting the file.",
+                encryptUnavailableDesc: "Encryption is not available in this browser.",
             }
         };
 
@@ -2101,6 +2109,7 @@
                 document.getElementById('sum-muni').textContent = `${state.muniName} (${state.muniCode})${mrc}`;
                 document.getElementById('sum-email').textContent = state.email;
                 initFirebase();
+                initEncryptionToggle();
             }
 
             showStep(fromStep + 1);
@@ -2294,6 +2303,16 @@
                 document.getElementById('progress-fill').style.width = '0%';
                 document.getElementById('progress-pct').textContent = '0 %';
 
+                // Pre-flight check: is Web Crypto available?
+                if (!isCryptoAvailable()) {
+                    document.getElementById('btn-upload').disabled = false;
+                    document.getElementById('btn-prev-4').disabled = false;
+                    document.getElementById('file-input').disabled = false;
+                    document.getElementById('encrypt-check').disabled = false;
+                    showUploadError(t('encryptErrUnsupported'));
+                    return;
+                }
+
                 generateEncryptionKey().then(({ key, keyB64 }) => {
                     lastEncryptionKeyB64 = keyB64;
                     return encryptFile(state.file, key, (progress) => {
@@ -2319,7 +2338,17 @@
                     document.getElementById('btn-prev-4').disabled = false;
                     document.getElementById('file-input').disabled = false;
                     document.getElementById('encrypt-check').disabled = false;
-                    showUploadError(t('uploadErrGeneric') + ' (encryption)');
+
+                    // Provide a specific, actionable error message
+                    let msg;
+                    if (err instanceof TypeError && /subtle|crypto/i.test(err.message)) {
+                        msg = t('encryptErrUnsupported');
+                    } else if (err.name === 'QuotaExceededError' || err.message?.includes('alloc') || err.message?.includes('memory') || err.message?.includes('ArrayBuffer')) {
+                        msg = t('encryptErrMemory');
+                    } else {
+                        msg = t('encryptErrGeneric') + ' (' + (err.message || err.name || 'unknown') + ')';
+                    }
+                    showUploadError(msg);
                 });
             } else {
                 lastEncryptionKeyB64 = '';
@@ -2415,7 +2444,34 @@
         let encryptionEnabled = false;
         let lastEncryptionKeyB64 = '';
 
+        /** Check whether the Web Crypto API is usable (requires secure context). */
+        function isCryptoAvailable() {
+            return typeof crypto !== 'undefined' &&
+                typeof crypto.subtle !== 'undefined' &&
+                typeof crypto.subtle.generateKey === 'function';
+        }
+
+        /** Disable the encryption toggle when crypto is not available. */
+        function initEncryptionToggle() {
+            if (!isCryptoAvailable()) {
+                const cb = document.getElementById('encrypt-check');
+                cb.disabled = true;
+                cb.checked = false;
+                encryptionEnabled = false;
+                const desc = document.querySelector('.encrypt-toggle-desc');
+                if (desc) desc.textContent = t('encryptUnavailableDesc');
+                document.getElementById('encrypt-toggle').style.opacity = '0.5';
+                console.warn('Web Crypto API not available — encryption disabled. Secure context:', window.isSecureContext);
+            }
+        }
+
         function onEncryptToggle(checked) {
+            if (checked && !isCryptoAvailable()) {
+                // Should not happen since the checkbox is disabled, but guard anyway
+                document.getElementById('encrypt-check').checked = false;
+                showUploadError(t('encryptErrUnsupported'));
+                return;
+            }
             encryptionEnabled = checked;
             document.getElementById('encrypt-toggle').classList.toggle('enabled', checked);
         }
