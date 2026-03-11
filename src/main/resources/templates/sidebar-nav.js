@@ -1001,13 +1001,13 @@
             return esc(getColumnLabel(col));
         }
         const parts = col.split('.');
-        const leafLabel = getColumnLabel(col); // human label for the leaf from discoveredFields
         let html = '<span class="col-hd">';
         for (let i = 0; i < parts.length - 1; i++) {
-            // Humanise the intermediate segment from the raw path key
-            const seg = parts[i].replace(/_/g, ' ').replace(/(?:^|\s)\S/g, (c) => c.toUpperCase());
+            const seg = schemaTitleForPath(parts[i]) || humanizeFieldName(parts[i]);
             html += `<span class="col-hd-prefix">${esc(seg)}</span>`;
         }
+        const leafKey = parts[parts.length - 1];
+        const leafLabel = schemaTitleForPath(leafKey) || humanizeFieldName(leafKey);
         html += `<span class="col-hd-leaf">${esc(leafLabel)}</span>`;
         html += '</span>';
         return html;
