@@ -792,6 +792,253 @@
         return html;
     }
 
+    // ── Hierarchical field picker ─────────────────────────────────────────
+
+    /**
+     * Build a tree from the flat discoveredFields list.
+     * Dot-separated paths become nested groups; leaves are selectable fields.
+     */
+    function _buildTreeLevel(items, depth) {
+        const leaves = [];
+        const groups = {};
+        items.forEach(function (item) {
+            if (depth >= item._seg.length - 1) {
+                // Use the pre-resolved label from discoveredFields (schema title with accents)
+                leaves.push({ path: item.path, label: item._label, type: item.type });
+            } else {
+                const key = item._seg[depth];
+                if (!groups[key]) groups[key] = [];
+                groups[key].push(item);
+            }
+        });
+        const nodes = [];
+        Object.keys(groups).sort(function (a, b) {
+            return (schemaTitleForPath(a) || humanizeFieldName(a)).localeCompare(schemaTitleForPath(b) || humanizeFieldName(b));
+        }).forEach(function (key) {
+            var children = _buildTreeLevel(groups[key], depth + 1);
+            nodes.push({ label: schemaTitleForPath(key) || humanizeFieldName(key), key: key, children: children });
+        });
+        leaves.sort(function (a, b) { return a.label.localeCompare(b.label); });
+        leaves.forEach(function (l) { nodes.push(l); });
+        return nodes;
+    }
+
+    function buildFieldTree(fields) {
+        return _buildTreeLevel(fields.map(function (f) {
+            // Resolve the leaf-only label for display: strip parent prefix from the
+            // full schema title, or look up the bare segment name.
+            var seg = f.path.split('.');
+            var leafKey = seg[seg.length - 1];
+            var leafLabel = schemaTitleForPath(leafKey) || humanizeFieldName(leafKey);
+            return { path: f.path, type: f.type, _seg: seg, _label: leafLabel };
+        }), 0);
+    }
+
+    function _countLeaves(nodes) {
+        var c = 0;
+        nodes.forEach(function (n) { c += n.children ? _countLeaves(n.children) : 1; });
+        return c;
+    }
+
+    function _filterTree(nodes, q) {
+        var out = [];
+        nodes.forEach(function (n) {
+            if (n.children) {
+                var filtered = _filterTree(n.children, q);
+                if (filtered.length > 0) {
+                    out.push({ label: n.label, key: n.key, children: filtered, _open: true });
+                } else if (n.label.toLowerCase().indexOf(q) >= 0) {
+                    out.push({ label: n.label, key: n.key, children: n.children, _open: true });
+                }
+            } else {
+                if (n.label.toLowerCase().indexOf(q) >= 0 || n.path.toLowerCase().indexOf(q) >= 0) {
+                    out.push(n);
+                }
+            }
+        });
+        return out;
+    }
+
+    /**
+     * Create a custom hierarchical field picker that replaces the flat select.
+     * Returns { element, getValue, setValue, refresh, destroy }.
+     */
+    function createFieldPicker(onFieldChange) {
+        var currentValue = '__all';
+        var isOpen = false;
+
+        var picker = document.createElement('div');
+        picker.className = 'field-picker';
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'field-picker-btn';
+
+        var btnText = document.createElement('span');
+        btnText.className = 'field-picker-text';
+        btnText.textContent = t('allFields');
+
+        var btnChevron = document.createElement('span');
+        btnChevron.className = 'field-picker-chevron';
+        btnChevron.textContent = '\u25be';
+
+        btn.appendChild(btnText);
+        btn.appendChild(btnChevron);
+
+        var popup = document.createElement('div');
+        popup.className = 'field-picker-popup';
+
+        var searchWrap = document.createElement('div');
+        searchWrap.className = 'fp-search-wrap';
+        var searchInput = document.createElement('input');
+        searchInput.type = 'text';
+        searchInput.className = 'fp-search';
+        searchInput.placeholder = t('fieldFilter');
+        searchInput.autocomplete = 'off';
+        searchInput.setAttribute('spellcheck', 'false');
+        searchWrap.appendChild(searchInput);
+
+        var listDiv = document.createElement('div');
+        listDiv.className = 'fp-list';
+
+        popup.appendChild(searchWrap);
+        popup.appendChild(listDiv);
+        picker.appendChild(btn);
+        picker.appendChild(popup);
+
+        /** Build display text for a selected field path, showing the full parent chain. */
+        function labelForValue(v) {
+            if (!v || v === '__all') return t('allFields');
+            var seg = v.split('.');
+            return seg.map(function (s) { return schemaTitleForPath(s) || humanizeFieldName(s); }).join(' \u203a ');
+        }
+
+        function selectField(path) {
+            currentValue = path || '__all';
+            btnText.textContent = labelForValue(currentValue);
+            btn.title = labelForValue(currentValue);
+            closePopup();
+            if (onFieldChange) onFieldChange(currentValue);
+        }
+
+        function renderTree(nodes, container, depth) {
+            nodes.forEach(function (node) {
+                if (node.children) {
+                    var group = document.createElement('div');
+                    group.className = 'fpt-group';
+
+                    var header = document.createElement('button');
+                    header.type = 'button';
+                    header.className = 'fpt-group-header';
+                    header.style.paddingLeft = (10 + depth * 16) + 'px';
+
+                    var chevron = document.createElement('span');
+                    chevron.className = 'fpt-chevron';
+                    chevron.textContent = node._open ? '\u25be' : '\u25b8';
+
+                    var lbl = document.createElement('span');
+                    lbl.className = 'fpt-group-label';
+                    lbl.textContent = node.label;
+
+                    var cnt = document.createElement('span');
+                    cnt.className = 'fpt-group-count';
+                    cnt.textContent = _countLeaves(node.children);
+
+                    header.appendChild(chevron);
+                    header.appendChild(lbl);
+                    header.appendChild(cnt);
+
+                    var body = document.createElement('div');
+                    body.className = 'fpt-group-body' + (node._open ? ' open' : '');
+
+                    renderTree(node.children, body, depth + 1);
+
+                    header.addEventListener('click', function () {
+                        var wasOpen = body.classList.contains('open');
+                        body.classList.toggle('open');
+                        chevron.textContent = wasOpen ? '\u25b8' : '\u25be';
+                    });
+
+                    group.appendChild(header);
+                    group.appendChild(body);
+                    container.appendChild(group);
+                } else {
+                    var item = document.createElement('button');
+                    item.type = 'button';
+                    item.className = 'fpt-item';
+                    item.style.paddingLeft = (26 + depth * 16) + 'px';
+                    item.setAttribute('data-path', node.path);
+                    item.textContent = node.label;
+                    if (node.path === currentValue) item.classList.add('selected');
+                    item.addEventListener('click', function () { selectField(node.path); });
+                    container.appendChild(item);
+                }
+            });
+        }
+
+        function refreshList(query) {
+            listDiv.innerHTML = '';
+            // "All fields" always on top
+            var allItem = document.createElement('button');
+            allItem.type = 'button';
+            allItem.className = 'fpt-item fpt-item--all';
+            allItem.textContent = t('allFields');
+            if (currentValue === '__all') allItem.classList.add('selected');
+            allItem.addEventListener('click', function () { selectField('__all'); });
+            listDiv.appendChild(allItem);
+
+            var tree = buildFieldTree(discoveredFields);
+            var display = query ? _filterTree(tree, query.toLowerCase()) : tree;
+            renderTree(display, listDiv, 0);
+        }
+
+        function openPopup() {
+            isOpen = true;
+            popup.classList.add('open');
+            refreshList('');
+            searchInput.value = '';
+            setTimeout(function () { searchInput.focus(); }, 30);
+        }
+
+        function closePopup() {
+            isOpen = false;
+            popup.classList.remove('open');
+        }
+
+        btn.addEventListener('click', function (e) {
+            e.stopPropagation();
+            if (isOpen) closePopup(); else openPopup();
+        });
+        popup.addEventListener('click', function (e) { e.stopPropagation(); });
+
+        var filterTimer;
+        searchInput.addEventListener('input', function () {
+            clearTimeout(filterTimer);
+            filterTimer = setTimeout(function () { refreshList(searchInput.value.trim()); }, 100);
+        });
+        searchInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') { e.preventDefault(); closePopup(); }
+        });
+
+        var closeHandler = function () { if (isOpen) closePopup(); };
+        document.addEventListener('click', closeHandler);
+
+        return {
+            element: picker,
+            getValue: function () { return currentValue; },
+            setValue: function (v) {
+                currentValue = v || '__all';
+                btnText.textContent = labelForValue(currentValue);
+            },
+            /** Re-translate labels after language change */
+            refresh: function () {
+                btnText.textContent = labelForValue(currentValue);
+                searchInput.placeholder = t('fieldFilter');
+            },
+            destroy: function () { document.removeEventListener('click', closeHandler); }
+        };
+    }
+
     function buildOperatorOptions(fieldType) {
         const ops = OPERATORS[fieldType] || OPERATORS.string;
         const labels = OPERATOR_LABELS[currentLanguage] || OPERATOR_LABELS.en;
@@ -812,56 +1059,51 @@
         const isFirst = conditionsContainer.children.length === 0;
         const row = document.createElement('div');
         row.className = 'search-condition';
-        row.innerHTML =
-            `<div class="condition-main">`
-            + `<span class="logic-label ${isFirst ? 'first' : ''}" title="${esc(t('toggleLogic'))}">${tLogic(globalLogicOperator)}</span>`
-            + `<input class="field-filter" type="text" placeholder="${esc(t('fieldFilter'))}" aria-label="Field filter">`
-            + `<select class="field-select">${buildFieldOptions()}</select>`
-            + `<select class="operator-select">${buildOperatorOptions('_all')}</select>`
-            + `<input class="value-input" type="text" placeholder="${esc(t('value'))}">`
-            + `<button class="remove-btn" type="button" title="${esc(t('remove'))}">×</button>`
-            + `</div>`;
 
-        conditionsContainer.appendChild(row);
+        const main = document.createElement('div');
+        main.className = 'condition-main';
 
-        const fieldSel = row.querySelector('.field-select');
-        const fieldFilter = row.querySelector('.field-filter');
-        const opSel = row.querySelector('.operator-select');
-        const valInput = row.querySelector('.value-input');
-        const removeBtn = row.querySelector('.remove-btn');
-        const logicLabel = row.querySelector('.logic-label');
+        // Logic label
+        const logicLabel = document.createElement('span');
+        logicLabel.className = 'logic-label' + (isFirst ? ' first' : '');
+        logicLabel.title = t('toggleLogic');
+        logicLabel.textContent = tLogic(globalLogicOperator);
 
-        function refreshFieldOptions(filterText, keepValue) {
-            const term = String(filterText || '').trim().toLowerCase();
-            const pool = term
-                ? discoveredFields.filter((f) => (f.label || f.path).toLowerCase().includes(term) || f.path.toLowerCase().includes(term))
-                : discoveredFields.slice();
+        // Operator select
+        const opSel = document.createElement('select');
+        opSel.className = 'operator-select';
+        opSel.innerHTML = buildOperatorOptions('_all');
 
-            let html = `<option value="__all">${esc(t('allFields'))}</option>`;
-            pool.forEach((f) => {
-                html += `<option value="${esc(f.path)}">${esc(f.label)}</option>`;
-            });
+        // Value input
+        const valInput = document.createElement('input');
+        valInput.type = 'text';
+        valInput.className = 'value-input';
+        valInput.placeholder = t('value');
 
-            const previous = keepValue ? fieldSel.value : null;
-            fieldSel.innerHTML = html;
-
-            if (previous && Array.from(fieldSel.options).some((opt) => opt.value === previous)) {
-                fieldSel.value = previous;
-            } else if (term && pool.length > 0) {
-                fieldSel.value = pool[0].path;
-            } else {
-                fieldSel.value = '__all';
-            }
-
-            opSel.innerHTML = buildOperatorOptions(getFieldType(fieldSel.value));
-            updateValueInput(opSel, valInput);
-        }
-
-        fieldSel.addEventListener('change', () => {
-            opSel.innerHTML = buildOperatorOptions(getFieldType(fieldSel.value));
+        // Field picker (hierarchical)
+        const picker = createFieldPicker(function (fieldPath) {
+            opSel.innerHTML = buildOperatorOptions(getFieldType(fieldPath));
             updateValueInput(opSel, valInput);
         });
-        fieldFilter.addEventListener('input', () => refreshFieldOptions(fieldFilter.value, false));
+
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
+        removeBtn.className = 'remove-btn';
+        removeBtn.title = t('remove');
+        removeBtn.textContent = '\u00d7';
+
+        main.appendChild(logicLabel);
+        main.appendChild(picker.element);
+        main.appendChild(opSel);
+        main.appendChild(valInput);
+        main.appendChild(removeBtn);
+        row.appendChild(main);
+        conditionsContainer.appendChild(row);
+
+        // Store picker reference on the row for getConditions / applyLanguage
+        row._fieldPicker = picker;
+
         opSel.addEventListener('change', () => updateValueInput(opSel, valInput));
         logicLabel.addEventListener('click', () => {
             if (logicLabel.classList.contains('first')) return;
@@ -869,6 +1111,7 @@
             document.querySelectorAll('.logic-label:not(.first)').forEach((lbl) => lbl.textContent = tLogic(globalLogicOperator));
         });
         removeBtn.addEventListener('click', () => {
+            picker.destroy();
             row.remove();
             const first = conditionsContainer.querySelector('.search-condition .logic-label');
             if (first) first.classList.add('first');
@@ -880,13 +1123,12 @@
             }
         });
 
-        refreshFieldOptions('', true);
         updateValueInput(opSel, valInput);
     }
 
     function getConditions() {
         return Array.from(conditionsContainer.querySelectorAll('.search-condition')).map((row) => ({
-            field: row.querySelector('.field-select').value,
+            field: row._fieldPicker ? row._fieldPicker.getValue() : '__all',
             operator: row.querySelector('.operator-select').value,
             value: row.querySelector('.value-input').value.trim()
         }));
@@ -2130,37 +2372,17 @@
         detailCloseBtn.setAttribute('aria-label', t('close'));
 
         document.querySelectorAll('.search-condition').forEach((row) => {
-            const fieldSel = row.querySelector('.field-select');
-            const fieldFilter = row.querySelector('.field-filter');
             const opSel = row.querySelector('.operator-select');
             const valInput = row.querySelector('.value-input');
             const removeBtn = row.querySelector('.remove-btn');
             const logicLabel = row.querySelector('.logic-label');
 
-            if (fieldFilter) {
-                fieldFilter.placeholder = t('fieldFilter');
-                const current = fieldSel ? fieldSel.value : '__all';
-                const term = fieldFilter.value || '';
-
-                const pool = term.trim()
-                    ? discoveredFields.filter((f) => (f.label || f.path).toLowerCase().includes(term.toLowerCase()) || f.path.toLowerCase().includes(term.toLowerCase()))
-                    : discoveredFields.slice();
-
-                let html = `<option value="__all">${esc(t('allFields'))}</option>`;
-                pool.forEach((f) => {
-                    html += `<option value="${esc(f.path)}">${esc(f.label)}</option>`;
-                });
-                if (fieldSel) {
-                    fieldSel.innerHTML = html;
-                    if (Array.from(fieldSel.options).some((opt) => opt.value === current)) {
-                        fieldSel.value = current;
-                    }
-                }
-            }
+            // Refresh the hierarchical field picker labels
+            if (row._fieldPicker) row._fieldPicker.refresh();
 
             if (opSel) {
                 const selected = opSel.value;
-                const fieldType = getFieldType(fieldSel ? fieldSel.value : '__all');
+                const fieldType = getFieldType(row._fieldPicker ? row._fieldPicker.getValue() : '__all');
                 opSel.innerHTML = buildOperatorOptions(fieldType);
                 if (selected && Array.from(opSel.options).some((opt) => opt.value === selected)) {
                     opSel.value = selected;
@@ -2197,6 +2419,10 @@
 
     addConditionBtn.addEventListener('click', addCondition);
     clearSearchBtn.addEventListener('click', () => {
+        // Destroy picker listeners before clearing
+        Array.from(conditionsContainer.querySelectorAll('.search-condition')).forEach((row) => {
+            if (row._fieldPicker) row._fieldPicker.destroy();
+        });
         conditionsContainer.innerHTML = '';
         searchApplied = false;
         filteredRecords = allRecords.slice();

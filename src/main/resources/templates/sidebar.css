@@ -1184,6 +1184,192 @@ body {
     color: var(--c-danger);
 }
 
+/* ── Hierarchical field picker ─────────────────────────────────────────── */
+
+.field-picker {
+    position: relative;
+    flex: 2;
+    min-width: 160px;
+}
+
+.field-picker-btn {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    background: var(--c-surface);
+    color: var(--c-text);
+    font-size: 13px;
+    font-family: var(--font);
+    cursor: pointer;
+    text-align: left;
+    gap: 6px;
+    transition: border-color .15s;
+}
+
+.field-picker-btn:hover {
+    border-color: var(--c-primary);
+}
+
+.field-picker-text {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.field-picker-chevron {
+    font-size: 11px;
+    color: var(--c-text-muted);
+    flex-shrink: 0;
+}
+
+.field-picker-popup {
+    display: none;
+    position: absolute;
+    top: calc(100% + 3px);
+    left: 0;
+    min-width: 280px;
+    max-height: 380px;
+    background: var(--c-surface);
+    border: 1px solid var(--c-border);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .12);
+    z-index: 1000;
+    flex-direction: column;
+}
+
+.field-picker-popup.open {
+    display: flex;
+}
+
+.fp-search-wrap {
+    padding: 6px;
+    border-bottom: 1px solid var(--c-border);
+    flex-shrink: 0;
+}
+
+.fp-search {
+    width: 100%;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--c-border);
+    border-radius: 5px;
+    font-size: 12px;
+    font-family: var(--font);
+    background: var(--c-bg);
+    color: var(--c-text);
+    box-sizing: border-box;
+}
+
+.fp-search:focus {
+    outline: none;
+    border-color: var(--c-primary);
+    box-shadow: 0 0 0 2px var(--c-primary-glow);
+}
+
+.fp-list {
+    overflow-y: auto;
+    flex: 1;
+    padding: 4px 0;
+}
+
+/* Group header */
+.fpt-group-header {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 5px 10px;
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-family: var(--font);
+    color: var(--c-text-secondary);
+    cursor: pointer;
+    gap: 5px;
+    text-align: left;
+    font-weight: 600;
+}
+
+.fpt-group-header:hover {
+    background: var(--c-bg);
+}
+
+.fpt-chevron {
+    font-size: 10px;
+    width: 12px;
+    text-align: center;
+    flex-shrink: 0;
+    color: var(--c-text-muted);
+}
+
+.fpt-group-label {
+    flex: 1;
+}
+
+.fpt-group-count {
+    font-size: 10px;
+    color: var(--c-text-muted);
+    font-weight: 400;
+    margin-left: auto;
+    padding-right: 4px;
+}
+
+.fpt-group-body {
+    display: none;
+}
+
+.fpt-group-body.open {
+    display: block;
+}
+
+/* Leaf item */
+.fpt-item {
+    display: block;
+    width: 100%;
+    padding: 4px 10px 4px 26px;
+    border: none;
+    background: none;
+    font-size: 12px;
+    font-family: var(--font);
+    color: var(--c-text);
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background .1s;
+}
+
+.fpt-item:hover {
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+}
+
+.fpt-item.selected {
+    background: var(--c-primary-light);
+    color: var(--c-primary);
+    font-weight: 600;
+}
+
+.fpt-item--all {
+    padding-left: 10px;
+    font-style: italic;
+    color: var(--c-text-muted);
+    border-bottom: 1px solid var(--c-border-light);
+    margin-bottom: 2px;
+    padding-bottom: 5px;
+}
+
+.fpt-item--all:hover,
+.fpt-item--all.selected {
+    color: var(--c-primary);
+}
+
 .btn {
     display: inline-flex;
     align-items: center;
@@ -1861,7 +2047,7 @@ body {
         flex-wrap: wrap;
     }
 
-    .condition-main .field-select,
+    .condition-main .field-picker,
     .condition-main .operator-select,
     .condition-main .value-input {
         min-width: 100%;
