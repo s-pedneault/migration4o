@@ -18,8 +18,8 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Designer for record detail view layouts.
- * Tree-based layout builder with field palette, property panel, and live HTML preview.
+ * Designer for record detail view layouts. Tree-based layout builder with field
+ * palette, property panel, and live HTML preview.
  */
 public class DetailLayoutDesigner extends JFrame {
 
@@ -803,7 +803,8 @@ public class DetailLayoutDesigner extends JFrame {
         for (String c : currentCols)
             enabledCols.add(c.trim());
 
-        // Build ordered list: enabled columns first (in their order), then remaining fields
+        // Build ordered list: enabled columns first (in their order), then
+        // remaining fields
         List<String> orderedNames = new ArrayList<>();
         for (String c : currentCols) {
             String name = c.trim();
@@ -820,7 +821,8 @@ public class DetailLayoutDesigner extends JFrame {
             labelsByFieldName.put(sf.destinationName, getFieldLabel(sf));
         }
 
-        // Column rows — each is a panel with: [grip] [checkbox] [name] [title field] [width field]
+        // Column rows — each is a panel with: [grip] [checkbox] [name] [title
+        // field] [width field]
         List<JPanel> rowPanels = new ArrayList<>();
         List<JCheckBox> checkboxes = new ArrayList<>();
         List<JTextField> titleFields = new ArrayList<>();
@@ -835,6 +837,7 @@ public class DetailLayoutDesigner extends JFrame {
             JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
             rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 28));
             rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            rowPanel.setOpaque(true);
 
             // Grip handle for DnD
             JLabel grip = new JLabel("\u2807");
@@ -878,8 +881,10 @@ public class DetailLayoutDesigner extends JFrame {
 
             // Helper: update row highlight during drag
             Runnable clearHighlights = () -> {
-                for (JPanel rp : rowPanels)
+                for (JPanel rp : rowPanels) {
                     rp.setBackground(UIManager.getColor("Panel.background"));
+                    rp.setBorder(null);
+                }
             };
 
             grip.addMouseListener(new MouseAdapter() {
@@ -888,6 +893,8 @@ public class DetailLayoutDesigner extends JFrame {
                     grip.putClientProperty("dragStart", rowIdx);
                     // Dim the row being dragged
                     rowPanel.setBackground(new Color(200, 210, 230));
+                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                    container.repaint();
                 }
 
                 @Override
@@ -911,8 +918,10 @@ public class DetailLayoutDesigner extends JFrame {
                     if (targetIdx < 0 || targetIdx == startIdx)
                         return;
                     // Move startIdx to targetIdx with proper insert-and-shift.
-                    // After removing the source item, indices above startIdx shift down
-                    // by 1, so we must compensate when the target was after the source.
+                    // After removing the source item, indices above startIdx
+                    // shift down
+                    // by 1, so we must compensate when the target was after the
+                    // source.
                     String movedName = fieldNames.remove(startIdx);
                     JPanel movedPanel = rowPanels.remove(startIdx);
                     JCheckBox movedCb = checkboxes.remove(startIdx);
@@ -940,21 +949,30 @@ public class DetailLayoutDesigner extends JFrame {
                     Object startObj = grip.getClientProperty("dragStart");
                     if (startObj == null)
                         return;
-                    // Find which row the cursor is currently over and highlight it
+                    // Find which row the cursor is currently over and highlight
+                    // it
                     Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), container);
                     clearHighlights.run();
-                    // Keep dragged row dimmed
+                    // Keep dragged row highlighted
                     rowPanel.setBackground(new Color(200, 210, 230));
+                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                    // Show insertion line at the drop target position
                     for (int r = 0; r < rowPanels.size(); r++) {
                         JPanel rp = rowPanels.get(r);
                         if (rp == rowPanel)
                             continue;
                         Rectangle bounds = rp.getBounds();
                         if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
-                            rp.setBackground(new Color(180, 220, 180));
+                            boolean above = (pt.y - bounds.y) < bounds.height / 2;
+                            if (above) {
+                                rp.setBorder(BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 120, 220)));
+                            } else {
+                                rp.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(60, 120, 220)));
+                            }
                             break;
                         }
                     }
+                    container.repaint();
                 }
             });
 
@@ -1622,7 +1640,10 @@ public class DetailLayoutDesigner extends JFrame {
 
     // ── DnD Handlers ───────────────────────────────────────────────
 
-    /** Drag handler for the field palette — creates COPY transfers of FieldPaletteItem. */
+    /**
+     * Drag handler for the field palette — creates COPY transfers of
+     * FieldPaletteItem.
+     */
     private class FieldPaletteDragHandler extends TransferHandler {
         @Override
         protected Transferable createTransferable(JComponent c) {
@@ -1642,10 +1663,9 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     /**
-     * Unified DnD handler for the layout tree.
-     * Supports:
-     *   - Drops from field palette (creates new FIELD/TABLE nodes)
-     *   - Internal tree rearrangement (move nodes via drag & drop)
+     * Unified DnD handler for the layout tree. Supports: - Drops from field
+     * palette (creates new FIELD/TABLE nodes) - Internal tree rearrangement
+     * (move nodes via drag & drop)
      */
     private class LayoutTreeDnDHandler extends TransferHandler {
 
@@ -1670,10 +1690,14 @@ public class DetailLayoutDesigner extends JFrame {
             if (support.isDataFlavorSupported(FIELD_FLAVOR))
                 return true;
             if (support.isDataFlavorSupported(LAYOUT_NODE_FLAVOR)) {
-                // Validate target — NOTE: do NOT call getTransferData() here; it is
-                // unreliable during the hover phase on some JVMs/platforms and will
-                // cause the entire drag to be rejected (canImport returns false).
-                // Instead we use the tree's current selection path to identify the
+                // Validate target — NOTE: do NOT call getTransferData() here;
+                // it is
+                // unreliable during the hover phase on some JVMs/platforms and
+                // will
+                // cause the entire drag to be rejected (canImport returns
+                // false).
+                // Instead we use the tree's current selection path to identify
+                // the
                 // dragged node, and defer full validation to importData.
                 if (support.isDrop()) {
                     JTree.DropLocation dl = (JTree.DropLocation) support.getDropLocation();
@@ -1764,8 +1788,10 @@ public class DetailLayoutDesigner extends JFrame {
             if (oldParentObj != null)
                 oldParentObj.children.remove(sourceObj);
 
-            // Compute the source node's index in the parent BEFORE removal so we
-            // can correctly adjust the insertion index when moving within the same parent.
+            // Compute the source node's index in the parent BEFORE removal so
+            // we
+            // can correctly adjust the insertion index when moving within the
+            // same parent.
             int sourceIdxInParent = (oldParent != null) ? oldParent.getIndex(sourceNode) : -1;
 
             // Save reference before removal
@@ -1783,8 +1809,10 @@ public class DetailLayoutDesigner extends JFrame {
             } else {
                 // Drop BETWEEN nodes.
                 // When the source and destination parent are the same node, the
-                // childIndex from the drop location was computed BEFORE the source
-                // was removed. If the source was positioned before the drop point
+                // childIndex from the drop location was computed BEFORE the
+                // source
+                // was removed. If the source was positioned before the drop
+                // point
                 // we must subtract 1 to obtain the correct post-removal index.
                 int adjustedIdx = childIndex;
                 if (destNode == oldParent && sourceIdxInParent >= 0 && sourceIdxInParent < childIndex)

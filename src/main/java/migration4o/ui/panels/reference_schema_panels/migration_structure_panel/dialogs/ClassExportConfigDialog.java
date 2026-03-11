@@ -36,7 +36,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     private JTable priceListTable;
     private DefaultTableModel priceListTableModel;
 
-    // ── Default Columns selector (HTML viewer) ────────────────────────────────
+    // ── Default Columns selector (HTML viewer)
+    // ────────────────────────────────
     private JPanel defaultColumnsContainer;
     private JTextField filterField;
     private final List<String> defaultColumnFieldNames = new ArrayList<>();
@@ -58,7 +59,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             loadConfiguration(initialConfig);
         }
 
-        // Build column selector rows now that schemaClass is set (was null during buildFormPanel)
+        // Build column selector rows now that schemaClass is set (was null
+        // during buildFormPanel)
         List<String> initialColumns = (existingConfig != null) ? new ArrayList<>(existingConfig.getDefaultColumns()) : Collections.emptyList();
         rebuildDefaultColumnsUI(initialColumns);
         pack();
@@ -308,9 +310,9 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     // ── Default Columns selector helpers ─────────────────────────────────────
 
     /**
-     * Rebuilds the column rows inside {@code defaultColumnsContainer}.
-     * Enabled columns (from {@code initialCols}) appear first in their configured
-     * order and are checked; remaining available fields follow, unchecked.
+     * Rebuilds the column rows inside {@code defaultColumnsContainer}. Enabled
+     * columns (from {@code initialCols}) appear first in their configured order
+     * and are checked; remaining available fields follow, unchecked.
      */
     private void rebuildDefaultColumnsUI(List<String> initialCols) {
         if (defaultColumnsContainer == null)
@@ -324,7 +326,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
 
         List<FieldInfo> available = collectAvailableColumns();
 
-        // Build ordered list: configured columns first, then remaining available
+        // Build ordered list: configured columns first, then remaining
+        // available
         List<String> orderedNames = new ArrayList<>();
         for (String col : initialCols) {
             if (!col.isBlank())
@@ -350,6 +353,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
             rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
             rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+            rowPanel.setOpaque(true);
 
             // Grip handle for drag-reorder
             JLabel grip = new JLabel("\u2807");
@@ -364,7 +368,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             nameLbl.setToolTipText(fname);
 
             if (!labelByPath.containsKey(fname)) {
-                nameLbl.setForeground(Color.GRAY); // unknown / no longer in schema
+                nameLbl.setForeground(Color.GRAY); // unknown / no longer in
+                                                   // schema
                 nameLbl.setToolTipText(fname + " (not found in schema)");
             }
 
@@ -380,8 +385,10 @@ public class ClassExportConfigDialog extends BaseFormDialog {
 
             // Drag reorder via mouse listeners on the grip
             Runnable clearHighlights = () -> {
-                for (JPanel rp : defaultColumnRowPanels)
+                for (JPanel rp : defaultColumnRowPanels) {
                     rp.setBackground(UIManager.getColor("Panel.background"));
+                    rp.setBorder(null);
+                }
             };
 
             grip.addMouseListener(new MouseAdapter() {
@@ -389,6 +396,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
                 public void mousePressed(MouseEvent e) {
                     grip.putClientProperty("dragStart", defaultColumnRowPanels.indexOf(rowPanel));
                     rowPanel.setBackground(new Color(200, 210, 230));
+                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                    defaultColumnsContainer.repaint();
                 }
 
                 @Override
@@ -433,18 +442,31 @@ public class ClassExportConfigDialog extends BaseFormDialog {
                     Object startObj = grip.getClientProperty("dragStart");
                     if (startObj == null)
                         return;
+                    int startIdx = (int) startObj;
                     Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), defaultColumnsContainer);
                     clearHighlights.run();
+                    // Highlight the row being dragged
                     rowPanel.setBackground(new Color(200, 210, 230));
-                    for (JPanel rp : defaultColumnRowPanels) {
+                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                    // Show insertion line at the drop target position
+                    for (int r = 0; r < defaultColumnRowPanels.size(); r++) {
+                        JPanel rp = defaultColumnRowPanels.get(r);
                         if (rp == rowPanel)
                             continue;
                         Rectangle bounds = rp.getBounds();
                         if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
-                            rp.setBackground(new Color(180, 220, 180));
+                            // Show a blue insertion line on the edge closest to
+                            // the cursor
+                            boolean above = (pt.y - bounds.y) < bounds.height / 2;
+                            if (above) {
+                                rp.setBorder(BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 120, 220)));
+                            } else {
+                                rp.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(60, 120, 220)));
+                            }
                             break;
                         }
                     }
+                    defaultColumnsContainer.repaint();
                 }
             });
         }
@@ -459,7 +481,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
 
     /**
      * Shows/hides column rows based on the text in {@code filterField}.
-     * Filtering is case-insensitive and matches against both the path and the display label.
+     * Filtering is case-insensitive and matches against both the path and the
+     * display label.
      */
     private void applyColumnFilter() {
         if (filterField == null || defaultColumnsContainer == null)
@@ -473,7 +496,10 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         defaultColumnsContainer.repaint();
     }
 
-    /** Collects all flat leaf field paths exported by this class, including embedded entities one level deep. */
+    /**
+     * Collects all flat leaf field paths exported by this class, including
+     * embedded entities one level deep.
+     */
     private List<FieldInfo> collectAvailableColumns() {
         if (schemaClass == null)
             return new ArrayList<>();
@@ -500,7 +526,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
                 continue;
 
             if (field.embedContents && !isPrimitiveType(field.type)) {
-                // Embedded entity: expose its leaf children as "parentName.childName"
+                // Embedded entity: expose its leaf children as
+                // "parentName.childName"
                 DOSchemaClass embClass = findClassByType(field.type, fRefSchema);
                 if (embClass != null) {
                     List<DOSchemaField> embFields = (fRefSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embClass, fRefSchema) : (embClass.fields != null ? Arrays.asList(embClass.fields) : new ArrayList<>());
@@ -527,7 +554,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
                     result.add(new FieldInfo(name, getFieldLabel(field)));
             }
         }
-        // Sort: direct fields first (alphabetically by label), then embedded (alphabetically by label,
+        // Sort: direct fields first (alphabetically by label), then embedded
+        // (alphabetically by label,
         // which groups them by parent since the label is "Parent › Child").
         result.sort((a, b) -> {
             boolean aDot = a.path.contains(".");
