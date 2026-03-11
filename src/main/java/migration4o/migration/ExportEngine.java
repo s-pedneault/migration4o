@@ -26,9 +26,9 @@ import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 /**
  * Orchestrates multi-format export operations via {@link FormatHandler} hooks.
  * <p>
- * The main entry point is {@link #exportModules}: it runs a class-to-class
- * loop so all format handlers write one class's file before moving to the
- * next class, keeping statistics and reference tracking shared across formats.
+ * The main entry point is {@link #exportModules}: it runs a class-to-class loop
+ * so all format handlers write one class's file before moving to the next
+ * class, keeping statistics and reference tracking shared across formats.
  */
 public class ExportEngine {
     public final ExportOperation operation;
@@ -36,10 +36,10 @@ public class ExportEngine {
     /**
      * Creates an export engine backed by the given database context.
      *
-     * @param schema         Reference schema
+     * @param schema Reference schema
      * @param databaseSchema Database schema
-     * @param databasePath   Database file path (for naming output folders)
-     * @param dbContext      Database context (holds the open container)
+     * @param databasePath Database file path (for naming output folders)
+     * @param dbContext Database context (holds the open container)
      */
     public ExportEngine(DOSchema schema, DOSchema databaseSchema, String databasePath, DODatabaseContext dbContext) {
         this.operation = new ExportOperation();
@@ -65,22 +65,22 @@ public class ExportEngine {
         }
     }
 
-    // ── Main entry point ──────────────────────────────────────────────────────
+    // ── Main entry point
+    // ──────────────────────────────────────────────────────
 
     /**
-     * Exports all modules to all requested formats via handler hooks.
-     * Runs a class-to-class loop: all handlers write one class's file before
-     * moving to the next class, so statistics and reference tracking are shared
-     * across formats.
+     * Exports all modules to all requested formats via handler hooks. Runs a
+     * class-to-class loop: all handlers write one class's file before moving to
+     * the next class, so statistics and reference tracking are shared across
+     * formats.
      *
-     * @param modules     Modules to export (in order)
+     * @param modules Modules to export (in order)
      * @param modulePaths Optional display-path prefix per module (used by
-     *                    {@code HtmlFormatHandler.init()} for the nav tree)
-     * @param handlers    Pre-created handler instances (one per format)
+     * {@code HtmlFormatHandler.init()} for the nav tree)
+     * @param handlers Pre-created handler instances (one per format)
      * @return shared export statistics
      */
-    public ExportStatistics exportModules(List<DOSchemaModule> modules, List<String> modulePaths,
-            List<FormatHandler> handlers) throws Exception {
+    public ExportStatistics exportModules(List<DOSchemaModule> modules, List<String> modulePaths, List<FormatHandler> handlers) throws Exception {
 
         operation.statistics = new ExportStatistics(operation.monitor);
 
@@ -109,7 +109,8 @@ public class ExportEngine {
             handler.init(ctx);
         }
 
-        // Register all module classes so referenced-class detection works correctly
+        // Register all module classes so referenced-class detection works
+        // correctly
         for (DOSchemaModule m : modules) {
             me.registerModuleClasses(m, ctx.referencedClassTracker);
         }
@@ -133,47 +134,48 @@ public class ExportEngine {
         }
 
         operation.statistics.schemaWarnings.clear();
-        operation.statistics.schemaWarnings.addAll(
-                operation.statistics.duplicationDetector.generateDuplicateWarnings());
+        operation.statistics.schemaWarnings.addAll(operation.statistics.duplicationDetector.generateDuplicateWarnings());
 
         if (operation.monitor != null) {
             if (exportError != null) {
                 String msg = exportError.getMessage() != null ? exportError.getMessage() : exportError.getClass().getSimpleName();
                 operation.monitor.onExportError("All modules", msg);
             } else {
-                operation.monitor.onExportComplete("All modules",
-                        operation.statistics.objectsSucceeded,
-                        operation.statistics.schemaWarnings.size());
+                operation.monitor.onExportComplete("All modules", operation.statistics.getUniqueExportedCount(), operation.statistics.schemaWarnings.size());
             }
         }
 
-        if (exportError instanceof Error) throw (Error) exportError;
-        if (exportError != null) throw (Exception) exportError;
+        if (exportError instanceof Error)
+            throw (Error) exportError;
+        if (exportError != null)
+            throw (Exception) exportError;
         return operation.statistics;
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ── Private helpers
+    // ───────────────────────────────────────────────────────
 
-    private void exportModuleRecursiveNew(ExportContext ctx, DOSchemaModule module,
-            List<FormatHandler> handlers) throws Exception {
+    private void exportModuleRecursiveNew(ExportContext ctx, DOSchemaModule module, List<FormatHandler> handlers) throws Exception {
         ctx.pushModule(module);
         try {
             if (operation.monitor != null) {
-                operation.monitor.onModuleStart(module.name, module.classConfigs.size(),
-                        ctx.moduleChain.size() - 1);
+                operation.monitor.onModuleStart(module.name, module.classConfigs.size(), ctx.moduleChain.size() - 1);
             }
 
             Path moduleDir = ctx.modulePath();
             Files.createDirectories(moduleDir);
 
             for (ClassExportConfig config : module.classConfigs) {
-                if (operation.monitor != null && operation.monitor.isCancelled()) break;
+                if (operation.monitor != null && operation.monitor.isCancelled())
+                    break;
 
                 String className = config.getClassName();
                 DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
-                if (schemaClass == null) continue;
+                if (schemaClass == null)
+                    continue;
                 DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
-                if (dbSchemaClass == null) continue;
+                if (dbSchemaClass == null)
+                    continue;
 
                 ctx.setClass(schemaClass, config);
                 try {
@@ -194,7 +196,8 @@ public class ExportEngine {
             }
 
             for (DOSchemaModule child : module.children) {
-                if (operation.monitor != null && operation.monitor.isCancelled()) break;
+                if (operation.monitor != null && operation.monitor.isCancelled())
+                    break;
                 exportModuleRecursiveNew(ctx, child, handlers);
             }
 
@@ -206,15 +209,12 @@ public class ExportEngine {
         }
     }
 
-    private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass,
-            Path moduleDir, List<FormatHandler> handlers) throws Exception {
+    private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, Path moduleDir, List<FormatHandler> handlers) throws Exception {
         String className = dbSchemaClass.source;
         for (FormatHandler handler : handlers) {
-            Path filePath = moduleDir.resolve(
-                    ctx.exportConfig.getDestinationFileName() + handler.extension());
+            Path filePath = moduleDir.resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
             if (operation.monitor != null) {
-                operation.monitor.onStatusMessage(
-                        "Exporting " + handler.displayName() + ": " + className);
+                operation.monitor.onStatusMessage("Exporting " + handler.displayName() + ": " + className);
             }
             handler.openWriter(filePath);
             try {
@@ -223,31 +223,26 @@ public class ExportEngine {
             } finally {
                 try {
                     if (operation.monitor != null) {
-                        operation.monitor.onStatusMessage(
-                                "Writing " + handler.displayName() + " file: " + filePath.getFileName());
+                        operation.monitor.onStatusMessage("Writing " + handler.displayName() + " file: " + filePath.getFileName());
                     }
                     handler.close(ctx);
                 } catch (Throwable t) {
                     String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
-                    System.err.println("[Export error] handler.close() ["
-                            + handler.displayName() + "] " + className + ": " + msg);
+                    System.err.println("[Export error] handler.close() [" + handler.displayName() + "] " + className + ": " + msg);
                     if (operation.statistics != null) {
-                        Exception wrapped = t instanceof Exception ? (Exception) t
-                                : new RuntimeException(msg, t);
-                        operation.statistics.addError(-1, className,
-                                handler.displayName() + " write failed: " + msg, wrapped);
+                        Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(msg, t);
+                        operation.statistics.addError(-1, className, handler.displayName() + " write failed: " + msg, wrapped);
                     }
                     if (operation.monitor != null) {
-                        operation.monitor.onStatusMessage(
-                                "[ERROR] " + handler.displayName() + " write failed for "
-                                        + className + ": " + msg);
+                        operation.monitor.onStatusMessage("[ERROR] " + handler.displayName() + " write failed for " + className + ": " + msg);
                     }
                 }
             }
         }
     }
 
-    // ── Utilities ─────────────────────────────────────────────────────────────
+    // ── Utilities
+    // ─────────────────────────────────────────────────────────────
 
     public static StructuredWriterMetadata getMetadata(String module, String type, int objects) {
         StructuredWriterMetadata metadata = new StructuredWriterMetadata();

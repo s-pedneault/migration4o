@@ -88,24 +88,25 @@ public class ObjectExportLoop {
         }
 
         if (operation.monitor != null) {
-            operation.monitor.onClassComplete(schemaClass.source, operation.statistics.objectsSucceeded);
+            operation.monitor.onClassComplete(schemaClass.source, operation.statistics.getUniqueExportedCount());
         }
     }
 
     /**
-     * New-path variant: iterates {@code dbSchemaClass.objectIds} and exports each
-     * via {@link ObjectExporter#exportObject}. The reference schema class is taken
-     * from {@code ctx.schemaClass} (set by the caller before invoking this method).
+     * New-path variant: iterates {@code dbSchemaClass.objectIds} and exports
+     * each via {@link ObjectExporter#exportObject}. The reference schema class
+     * is taken from {@code ctx.schemaClass} (set by the caller before invoking
+     * this method).
      *
      * @param dbSchemaClass Database-schema class (carries object IDs)
      */
     public void run(DOSchemaClass dbSchemaClass) throws Exception {
         long[] objectIds = dbSchemaClass.objectIds;
         int objectCount = (objectIds != null ? objectIds.length : 0);
-        int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass)
-                ? operation.maxObjectsPerClass : objectCount;
+        int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) ? operation.maxObjectsPerClass : objectCount;
 
-        // Snapshot the loop class now — exportObject nulls ctx.schemaClass in its finally block
+        // Snapshot the loop class now — exportObject nulls ctx.schemaClass in
+        // its finally block
         migration4o.models.schema.DOSchemaClass loopClass = ctx.schemaClass;
 
         if (operation.monitor != null && loopClass != null) {
@@ -119,8 +120,10 @@ public class ObjectExportLoop {
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
             int exportedCount = 0;
             for (long objectId : objectIds) {
-                if (operation.monitor != null && operation.monitor.isCancelled()) break;
-                if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass) break;
+                if (operation.monitor != null && operation.monitor.isCancelled())
+                    break;
+                if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass)
+                    break;
                 try {
                     objectExporter.exportObject(objectId, false);
                 } catch (Throwable t) {
@@ -146,7 +149,7 @@ public class ObjectExportLoop {
         }
 
         if (operation.monitor != null && loopClass != null) {
-            int succeeded = ctx.statistics != null ? ctx.statistics.objectsSucceeded : 0;
+            int succeeded = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : 0;
             operation.monitor.onClassComplete(loopClass.source, succeeded);
         }
     }

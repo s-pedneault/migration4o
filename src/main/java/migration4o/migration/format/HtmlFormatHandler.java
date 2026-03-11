@@ -27,22 +27,30 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
  * script in the full HTML template and writes the single {@code .html} file.
  * <p>
  * Own state: {@code cachedNavJson}, {@code idEntiteTargetCache},
- * {@code idEntiteSummaryCache}.
- * Overrides four hooks: {@code init}, {@code onObject}, {@code onField},
- * {@code close}.
+ * {@code idEntiteSummaryCache}. Overrides four hooks: {@code init},
+ * {@code onObject}, {@code onField}, {@code close}.
  */
 public class HtmlFormatHandler extends FormatHandler {
 
     private String cachedNavJson = "[]";
     private final Map<String, Long> idEntiteTargetCache = new HashMap<>();
     private final Map<Long, String> idEntiteSummaryCache = new HashMap<>();
-    /** Captured in {@link #open} so {@link #close} has the class even after exportObject nulls ctx.schemaClass. */
+    /**
+     * Captured in {@link #open} so {@link #close} has the class even after
+     * exportObject nulls ctx.schemaClass.
+     */
     private migration4o.models.schema.DOSchemaClass currentSchemaClass;
     /** Captured in {@link #open} — classRef title override (may be null). */
     private String currentConfigTitle;
-    /** Captured in {@link #open} — default columns JSON ("null" when not configured). */
+    /**
+     * Captured in {@link #open} — default columns JSON ("null" when not
+     * configured).
+     */
     private String currentDefaultColumnsJson;
-    /** Temp file path for streaming JS data to disk; cleaned up in {@link #close}. */
+    /**
+     * Temp file path for streaming JS data to disk; cleaned up in
+     * {@link #close}.
+     */
     private Path currentTempJsPath;
 
     public HtmlFormatHandler() {
@@ -62,8 +70,8 @@ public class HtmlFormatHandler extends FormatHandler {
     /**
      * Creates a disk-backed writer that streams JS data to a temp file
      * ({@code baseName.js.tmp}) so large exports never accumulate in memory.
-     * {@link #close(ExportContext)} assembles the final HTML by streaming
-     * the temp file into the template, then deletes it.
+     * {@link #close(ExportContext)} assembles the final HTML by streaming the
+     * temp file into the template, then deletes it.
      */
     @Override
     protected StructuredWriter createWriter(Path filePath) throws IOException {
@@ -87,14 +95,18 @@ public class HtmlFormatHandler extends FormatHandler {
         if (ctx.operation.exportModules != null && !ctx.operation.exportModules.isEmpty()) {
             // Enable welcome-page generation in NavTreeBuilder
             ctx.operation.generateHtmlViewer = true;
-            // NavTreeBuilder stores results in operation.navTree / cachedNavJson;
+            // NavTreeBuilder stores results in operation.navTree /
+            // cachedNavJson;
             // we copy cachedNavJson to our own field.
             new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, ctx.operation.baseOutputPath);
             cachedNavJson = ctx.operation.cachedNavJson;
         }
     }
 
-    /** Captures the class and config title so {@link #close} can use them after exportObject nulls ctx. */
+    /**
+     * Captures the class and config title so {@link #close} can use them after
+     * exportObject nulls ctx.
+     */
     @Override
     public void open(ExportContext ctx) throws Exception {
         this.currentSchemaClass = ctx.schemaClass;
@@ -124,7 +136,8 @@ public class HtmlFormatHandler extends FormatHandler {
             // No label resolved — fall through to default structure export
         }
 
-        // Default: open a structure with optional native id and summary attributes
+        // Default: open a structure with optional native id and summary
+        // attributes
         Map<String, String> attrs = null;
         if (ctx.operation.exportNativeIds || hasSummary(ctx.schemaClass)) {
             attrs = new java.util.LinkedHashMap<>();
@@ -171,8 +184,9 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Flushes and closes the temp JS file, then streams it into the HTML template
-     * (never loading the full JS data into memory). Deletes the temp file when done.
+     * Flushes and closes the temp JS file, then streams it into the HTML
+     * template (never loading the full JS data into memory). Deletes the temp
+     * file when done.
      */
     @Override
     public void close(ExportContext ctx) throws Exception {
@@ -219,14 +233,15 @@ public class HtmlFormatHandler extends FormatHandler {
         try {
             java.nio.file.Path base = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath);
             String dbName = ctx.operation.getDatabaseFolderName();
-            int objectCount = this.exportedIds.size();
+            int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
             JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.operation.htmlWelcomeModuleCount, ctx.operation.htmlWelcomeClassCount, objectCount);
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ── Private helpers
+    // ───────────────────────────────────────────────────────
 
     private static boolean hasSummary(DOSchemaClass sc) {
         return sc != null && sc.summary != null && !sc.summary.isEmpty();

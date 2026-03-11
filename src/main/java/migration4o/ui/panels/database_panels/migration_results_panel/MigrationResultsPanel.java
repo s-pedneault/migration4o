@@ -104,23 +104,25 @@ public class MigrationResultsPanel extends JPanel {
         panel.add(Box.createVerticalStrut(15));
 
         // Statistics panel with color coding
-        int statBoxCount = !result.schemaWarnings.isEmpty() ? 4 : 3;
+        boolean hasWarnings = !result.schemaWarnings.isEmpty();
+        int statBoxCount = hasWarnings ? 4 : 3;
         JPanel statsPanel = new JPanel(new GridLayout(1, statBoxCount, 15, 0));
         statsPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
         statsPanel.setMaximumSize(new Dimension(800, 80));
 
-        // Attempted
-        statsPanel.add(createStatBox("Objects Attempted", String.valueOf(result.objectsAttempted), new Color(100, 100, 100)));
+        // Unique objects exported (deduplicated across all depths)
+        statsPanel.add(createStatBox("Objects Exported", String.valueOf(result.getUniqueExportedCount()), new Color(34, 197, 94))); // Green
 
-        // Succeeded
-        statsPanel.add(createStatBox("Objects Succeeded", String.valueOf(result.objectsSucceeded), new Color(34, 197, 94))); // Green
+        // Total object writes (may include duplicates from multiple embedding
+        // paths)
+        statsPanel.add(createStatBox("Total Writes", String.valueOf(result.objectsSucceeded), new Color(100, 100, 100)));
 
         // Failed
         Color failedColor = !result.errors.isEmpty() ? new Color(239, 68, 68) : new Color(100, 100, 100);
         statsPanel.add(createStatBox("Objects Failed", String.valueOf(result.errors.size()), failedColor));
 
         // Warnings (only show if there are warnings)
-        if (!result.schemaWarnings.isEmpty()) {
+        if (hasWarnings) {
             statsPanel.add(createStatBox("Schema Warnings", String.valueOf(result.schemaWarnings.size()), new Color(234, 179, 8))); // Yellow/amber
         }
 
@@ -527,8 +529,8 @@ public class MigrationResultsPanel extends JPanel {
         sb.append("=".repeat(80)).append("\n");
         sb.append("Export: ").append(result.exportName).append("\n");
         sb.append("Output: ").append(result.outputPath).append("\n");
-        sb.append("Objects Attempted: ").append(result.objectsAttempted).append("\n");
-        sb.append("Objects Succeeded: ").append(result.objectsSucceeded).append("\n");
+        sb.append("Objects Exported: ").append(result.getUniqueExportedCount()).append("\n");
+        sb.append("Total Writes: ").append(result.objectsSucceeded).append("\n");
         sb.append("Objects Failed: ").append(result.errors.size()).append("\n\n");
 
         // Group errors by message

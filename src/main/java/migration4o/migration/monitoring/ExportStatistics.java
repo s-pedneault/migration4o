@@ -13,8 +13,8 @@ import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.SchemaUtil;
 
 /**
- * Tracks statistics and errors during export operations.
- * Also serves as the export result.
+ * Tracks statistics and errors during export operations. Also serves as the
+ * export result.
  */
 public class ExportStatistics {
     public String exportName = "";
@@ -22,6 +22,8 @@ public class ExportStatistics {
     public int objectsAttempted = 0;
     public int objectsSucceeded = 0;
     public int objectsFiltered = 0;
+    /** Unique object IDs successfully exported (root + embedded). */
+    public final Set<Long> allExportedObjectIds = new HashSet<>();
     public final List<ExportError> errors = new ArrayList<>();
     public final List<ExportWarning> schemaWarnings = new ArrayList<>();
     public final Map<String, Integer> exportedClassCounts = new java.util.HashMap<>();
@@ -35,7 +37,10 @@ public class ExportStatistics {
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public int currentClassTotal = 0;
-    /** Resets to 0 each time {@link #setCurrentClass} is called; counts every activation attempt, including embedded objects. */
+    /**
+     * Resets to 0 each time {@link #setCurrentClass} is called; counts every
+     * activation attempt, including embedded objects.
+     */
     public int currentClassAttempted = 0;
 
     public ExportStatistics() {
@@ -62,6 +67,20 @@ public class ExportStatistics {
 
     public void incrementSucceeded() {
         objectsSucceeded++;
+    }
+
+    /**
+     * Records a unique exported object ID. Because DB4O object IDs are globally
+     * unique, using a set naturally deduplicates across classes and embedding
+     * depths.
+     */
+    public void recordExportedObjectId(long objectId) {
+        allExportedObjectIds.add(objectId);
+    }
+
+    /** Returns the count of unique objects exported (root + embedded). */
+    public int getUniqueExportedCount() {
+        return allExportedObjectIds.size();
     }
 
     public void incrementFiltered() {
@@ -136,10 +155,10 @@ public class ExportStatistics {
     }
 
     /**
-     * Records an object as reached for coverage tracking without counting it as a
-     * successfully exported object in progress metrics.
-     * Used for objects encountered during resolution flows (e.g. IDEntite) where
-     * another resolved object may be exported instead.
+     * Records an object as reached for coverage tracking without counting it as
+     * a successfully exported object in progress metrics. Used for objects
+     * encountered during resolution flows (e.g. IDEntite) where another
+     * resolved object may be exported instead.
      */
     public void recordReachedOnly(DOSchemaClass schemaClass, long objectId) {
         recordReachedOnly(schemaClass, objectId, null);

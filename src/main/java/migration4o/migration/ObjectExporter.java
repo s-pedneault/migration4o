@@ -35,7 +35,10 @@ public class ObjectExporter {
     // New-path fields (null when using old constructor)
     private final ExportContext ctx;
     private final FormatHandler handler;
-    /** Tracks objects currently on the export call stack to detect circular references. */
+    /**
+     * Tracks objects currently on the export call stack to detect circular
+     * references.
+     */
     private final Set<Long> inProgressIds = new HashSet<>();
 
     public ObjectExporter(ExportOperation operation, StructuredWriter xmlWriter, XSDBuilder xsdBuilder) {
@@ -50,7 +53,10 @@ public class ObjectExporter {
         this.fieldExporter = new FieldExporter(operation, xmlWriter, xsdBuilder);
     }
 
-    /** New-path constructor: uses FormatHandler hooks instead of raw writer/XSD builder. */
+    /**
+     * New-path constructor: uses FormatHandler hooks instead of raw writer/XSD
+     * builder.
+     */
     public ObjectExporter(ExportContext ctx, FormatHandler handler) {
         this.ctx = ctx;
         this.handler = handler;
@@ -67,17 +73,24 @@ public class ObjectExporter {
      * XmlFormatHandler.done() for the unreached-objects pass.
      */
     public void exportObject(long objectId, boolean isEmbedded) throws Exception {
-        // For root objects: check without marking yet, so criteria-filtered objects
-        // are not consumed from exportedIds (they must remain available for other
+        // For root objects: check without marking yet, so criteria-filtered
+        // objects
+        // are not consumed from exportedIds (they must remain available for
+        // other
         // criteria-based config passes of the same class).
-        if (!isEmbedded && handler.exportedIds.contains(objectId)) return;
-        if (ctx.allowedObjectIds != null && !ctx.allowedObjectIds.contains(objectId)) return;
-        // Cycle guard: embedded objects bypass exportedIds, so track the active call stack separately
-        if (isEmbedded && !inProgressIds.add(objectId)) return;
+        if (!isEmbedded && handler.exportedIds.contains(objectId))
+            return;
+        if (ctx.allowedObjectIds != null && !ctx.allowedObjectIds.contains(objectId))
+            return;
+        // Cycle guard: embedded objects bypass exportedIds, so track the active
+        // call stack separately
+        if (isEmbedded && !inProgressIds.add(objectId))
+            return;
 
         try {
             ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(ctx.operation.container, objectId);
-            if (activation == null) return;
+            if (activation == null)
+                return;
 
             if (ctx.statistics != null) {
                 ctx.statistics.incrementAttempted();
@@ -86,22 +99,22 @@ public class ObjectExporter {
             Object obj = activation.object;
             String className = activation.className;
 
-            // Apply criteria filter for root objects before marking as exported.
+            // Apply criteria filter for root objects before marking as
+            // exported.
             // If filtered, return without adding to exportedIds so the next
             // criteria-based config pass can still pick up this object.
             if (!isEmbedded && ctx.operation.applyExportCriteriaFilters && ctx.exportConfig != null) {
-                if (!ExportCriteriaFilter.shouldExport(ctx.operation.container, obj, className,
-                        false, true, ctx.exportConfig, ctx.statistics, ctx.operation.referenceSchema)) {
+                if (!ExportCriteriaFilter.shouldExport(ctx.operation.container, obj, className, false, true, ctx.exportConfig, ctx.statistics, ctx.operation.referenceSchema)) {
                     return;
                 }
             }
 
             // Mark as exported only after criteria pass
-            if (!isEmbedded) handler.exportedIds.add(objectId);
+            if (!isEmbedded)
+                handler.exportedIds.add(objectId);
 
             DOSchemaClass schemaClass = SchemaElementMapper.getSchemaClass(className, ctx.operation.referenceSchema);
-            String elementName = schemaClass != null ? schemaClass.destinationName
-                    : SchemaElementMapper.getElementName(className, ctx.operation.referenceSchema);
+            String elementName = schemaClass != null ? schemaClass.destinationName : SchemaElementMapper.getElementName(className, ctx.operation.referenceSchema);
 
             ctx.schemaClass = schemaClass;
             ctx.pushObject(obj, objectId);
@@ -111,12 +124,9 @@ public class ObjectExporter {
                 if (!handled) {
                     try {
                         if (obj instanceof GenericObject && schemaClass != null) {
-                            int fieldsToExport = GenericObjectExporter.countFieldsToExport(
-                                    ctx.operation.container, (GenericObject) obj,
-                                    schemaClass, objectId, fieldExporter, ctx.operation.referenceSchema);
+                            int fieldsToExport = GenericObjectExporter.countFieldsToExport(ctx.operation.container, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.operation.referenceSchema);
                             if (fieldsToExport > 0) {
-                                GenericObjectExporter.exportIfGenericObject(
-                                        ctx.operation.container, obj, schemaClass, objectId, fieldExporter, 0);
+                                GenericObjectExporter.exportIfGenericObject(ctx.operation.container, obj, schemaClass, objectId, fieldExporter, 0);
                             }
                         }
                     } finally {
@@ -125,6 +135,7 @@ public class ObjectExporter {
                 }
                 if (ctx.statistics != null) {
                     ctx.statistics.incrementSucceeded();
+                    ctx.statistics.recordExportedObjectId(objectId);
                     if (schemaClass != null) {
                         ctx.statistics.recordClassExport(schemaClass, objectId, ctx.operation.referenceSchema);
                     } else {
@@ -143,7 +154,8 @@ public class ObjectExporter {
                 ctx.schemaClass = null;
             }
         } finally {
-            if (isEmbedded) inProgressIds.remove(objectId);
+            if (isEmbedded)
+                inProgressIds.remove(objectId);
         }
     }
 
@@ -157,8 +169,8 @@ public class ObjectExporter {
     }
 
     /**
-     * Resets the state for a new export operation. Only clears state if not using
-     * shared tracking.
+     * Resets the state for a new export operation. Only clears state if not
+     * using shared tracking.
      */
     public void reset() {
         if (!operation.useSharedTracking) {
@@ -173,8 +185,8 @@ public class ObjectExporter {
      * Recursively exports an object and all its referenced objects. This is the
      * main entry point - assumes objects are NOT embedded by default. For root
      * objects (those directly from a class's objectIds array), the shared
-     * deduplication set is NOT checked, allowing the same object to be exported in
-     * multiple criteria-based exports of the same class.
+     * deduplication set is NOT checked, allowing the same object to be exported
+     * in multiple criteria-based exports of the same class.
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel) throws IOException {
         exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true, null);
@@ -183,24 +195,25 @@ public class ObjectExporter {
     /**
      * Recursively exports an object and all its referenced objects.
      * 
-     * @param isEmbedded                true if this object is embedded in a parent
-     *                                  field (not a top-level export)
-     * @param fieldName                 the name of the field this object is
-     *                                  embedded in (for warning messages)
-     * @param containingClassName       the name of the class that contains the
-     *                                  field (for warning messages)
-     * @param sourceFieldName           the source field name from schema (e.g.,
-     *                                  mVectCompartiment)
+     * @param isEmbedded true if this object is embedded in a parent field (not
+     * a top-level export)
+     * @param fieldName the name of the field this object is embedded in (for
+     * warning messages)
+     * @param containingClassName the name of the class that contains the field
+     * (for warning messages)
+     * @param sourceFieldName the source field name from schema (e.g.,
+     * mVectCompartiment)
      * @param sourceContainingClassName the source class name from schema (e.g.,
-     *                                  gest.vehicule.Vehicule)
-     * @param isRootObject              true if this is a root object (from class's
-     *                                  objectIds), false if referenced
-     * @param parentObjectId            the ID of the parent object containing the
-     *                                  field that references this object
+     * gest.vehicule.Vehicule)
+     * @param isRootObject true if this is a root object (from class's
+     * objectIds), false if referenced
+     * @param parentObjectId the ID of the parent object containing the field
+     * that references this object
      */
     public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel, boolean isEmbedded, String fieldName, String containingClassName, String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId) throws IOException {
 
-        // New-path bridge: when running under a FormatHandler, delegate to exportObject
+        // New-path bridge: when running under a FormatHandler, delegate to
+        // exportObject
         if (handler != null) {
             try {
                 exportObject(objectId, isEmbedded);
@@ -287,22 +300,27 @@ public class ObjectExporter {
                     if (!skippedBecauseReasons.isEmpty()) {
                         attributes.put("skippedBecause", String.join("; ", skippedBecauseReasons));
                     }
-                    // For JS exports: embed a server-side summary when the schema class has a summary template
+                    // For JS exports: embed a server-side summary when the
+                    // schema class has a summary template
                     if ("JS".equalsIgnoreCase(operation.outputFormat) && schemaClass != null && schemaClass.summary != null && !schemaClass.summary.isEmpty()) {
                         String summaryValue = SummaryGenerator.generate(container, obj, schemaClass, operation.referenceSchema);
                         if (summaryValue != null && !summaryValue.isBlank()) {
                             attributes.put("_summary", summaryValue);
                         }
                     }
-                    // For JS exports: when exporting an IDEntite as a structure, replace the
-                    // nested object with a flat human-readable label, stripping the "ID" prefix
-                    // from the element name so the column reads as the entity name, not the ID class.
+                    // For JS exports: when exporting an IDEntite as a
+                    // structure, replace the
+                    // nested object with a flat human-readable label, stripping
+                    // the "ID" prefix
+                    // from the element name so the column reads as the entity
+                    // name, not the ID class.
                     if ("JS".equalsIgnoreCase(operation.outputFormat) && schemaClass != null && schemaClass.isIDEntite(operation.databaseSchema)) {
                         String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, obj, schemaClass, operation.referenceSchema, operation.databaseSchema, operation.idEntiteTargetCache, operation.idEntiteSummaryCache);
                         if (refLabel != null && !refLabel.isBlank()) {
                             String displayName = stripIdPrefix(elementName);
                             xmlWriter.elementWithContent(displayName, attributes.isEmpty() ? null : attributes, refLabel, false);
-                            // Written as flat content — skip the structure open/field export/close below
+                            // Written as flat content — skip the structure
+                            // open/field export/close below
                         } else {
                             xmlWriter.openStructure(elementName, attributes.isEmpty() ? null : attributes);
                             openedStructure = true;
@@ -333,6 +351,7 @@ public class ObjectExporter {
             // fields
             if (operation.statistics != null) {
                 operation.statistics.incrementSucceeded();
+                operation.statistics.recordExportedObjectId(objectId);
                 if (schemaClass != null) {
                     operation.statistics.recordClassExport(schemaClass, objectId, operation.referenceSchema);
                 } else {
@@ -343,16 +362,18 @@ public class ObjectExporter {
             String errorMsg = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
             if (operation.statistics != null) {
                 operation.statistics.addError(objectId, className, errorMsg, e);
-                // Object was seen (activated) even though export failed — mark as reached
+                // Object was seen (activated) even though export failed — mark
+                // as reached
                 operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
             }
         }
     }
 
     /**
-     * Strips a leading "id" or "ID" prefix (optionally followed by a space) from an
-     * element name, lowercasing the new first character if it was uppercase.
-     * E.g. "IDTypeChampPerso" → "typeChampPerso",  "id type" → "type".
+     * Strips a leading "id" or "ID" prefix (optionally followed by a space)
+     * from an element name, lowercasing the new first character if it was
+     * uppercase. E.g. "IDTypeChampPerso" → "typeChampPerso", "id type" →
+     * "type".
      */
     private static String stripIdPrefix(String name) {
         if (name == null || name.isEmpty())

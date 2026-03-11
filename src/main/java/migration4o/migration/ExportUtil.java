@@ -55,6 +55,10 @@ public class ExportUtil {
         result.objectsAttempted = totalObjectsAttempted;
         result.objectsSucceeded = totalObjectsSucceeded;
         result.objectsFiltered = 0;
+        // Merge unique exported object IDs from all modules
+        for (ExportStatistics moduleResult : results) {
+            result.allExportedObjectIds.addAll(moduleResult.allExportedObjectIds);
+        }
         result.errors.addAll(allErrors);
         result.schemaWarnings.addAll(allWarnings);
         result.exportedClassCounts.putAll(allClassCounts);
