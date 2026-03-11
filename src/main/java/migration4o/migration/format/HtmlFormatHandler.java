@@ -40,6 +40,8 @@ public class HtmlFormatHandler extends FormatHandler {
     private migration4o.models.schema.DOSchemaClass currentSchemaClass;
     /** Captured in {@link #open} — classRef title override (may be null). */
     private String currentConfigTitle;
+    /** Captured in {@link #open} — default columns JSON ("null" when not configured). */
+    private String currentDefaultColumnsJson;
     /** Temp file path for streaming JS data to disk; cleaned up in {@link #close}. */
     private Path currentTempJsPath;
 
@@ -97,6 +99,7 @@ public class HtmlFormatHandler extends FormatHandler {
     public void open(ExportContext ctx) throws Exception {
         this.currentSchemaClass = ctx.schemaClass;
         this.currentConfigTitle = (ctx.exportConfig != null) ? ctx.exportConfig.getTitle() : null;
+        this.currentDefaultColumnsJson = (ctx.exportConfig != null && ctx.exportConfig.hasDefaultColumns()) ? ctx.exportConfig.getDefaultColumnsJson() : "null";
         super.open(ctx);
     }
 
@@ -189,7 +192,7 @@ public class HtmlFormatHandler extends FormatHandler {
         try {
             if (outputPath != null && currentTempJsPath != null) {
                 Files.createDirectories(outputPath.getParent());
-                JsViewerHtmlGenerator.writeViewerFromTempFile(outputPath, currentSchemaClass, currentConfigTitle, cachedNavJson, baseHref, layoutJson, currentTempJsPath);
+                JsViewerHtmlGenerator.writeViewerFromTempFile(outputPath, currentSchemaClass, currentConfigTitle, currentDefaultColumnsJson, cachedNavJson, baseHref, layoutJson, currentTempJsPath);
             }
         } finally {
             if (currentTempJsPath != null) {
@@ -201,6 +204,7 @@ public class HtmlFormatHandler extends FormatHandler {
             }
             this.currentSchemaClass = null;
             this.currentConfigTitle = null;
+            this.currentDefaultColumnsJson = null;
         }
     }
 

@@ -870,16 +870,29 @@ public class DetailLayoutDesigner extends JFrame {
 
             container.add(rowPanel);
 
-            // Drag reorder via mouse listeners on the grip
+            // Drag reorder via mouse listeners on the grip.
+            // dragState[0] = startIdx (-1 when not dragging)
+            // dragState[1] = last highlighted row index (-1 when none)
+            // These are shared across all grips via the outer-scope arrays.
             final int rowIdx = i;
+
+            // Helper: update row highlight during drag
+            Runnable clearHighlights = () -> {
+                for (JPanel rp : rowPanels)
+                    rp.setBackground(UIManager.getColor("Panel.background"));
+            };
+
             grip.addMouseListener(new MouseAdapter() {
                 @Override
                 public void mousePressed(MouseEvent e) {
                     grip.putClientProperty("dragStart", rowIdx);
+                    // Dim the row being dragged
+                    rowPanel.setBackground(new Color(200, 210, 230));
                 }
 
                 @Override
                 public void mouseReleased(MouseEvent e) {
+                    clearHighlights.run();
                     Object startObj = grip.getClientProperty("dragStart");
                     if (startObj == null)
                         return;
@@ -894,22 +907,54 @@ public class DetailLayoutDesigner extends JFrame {
                             break;
                         }
                     }
-                    if (targetIdx >= 0 && targetIdx != startIdx) {
-                        // Swap in all parallel lists
-                        Collections.swap(fieldNames, startIdx, targetIdx);
-                        Collections.swap(rowPanels, startIdx, targetIdx);
-                        Collections.swap(checkboxes, startIdx, targetIdx);
-                        Collections.swap(titleFields, startIdx, targetIdx);
-                        Collections.swap(widthFields, startIdx, targetIdx);
-                        // Rebuild UI
-                        container.removeAll();
-                        for (JPanel rp : rowPanels)
-                            container.add(rp);
-                        container.revalidate();
-                        container.repaint();
-                        serializeTableColumns(node, fieldNames, checkboxes, titleFields, widthFields);
-                    }
                     grip.putClientProperty("dragStart", null);
+                    if (targetIdx < 0 || targetIdx == startIdx)
+                        return;
+                    // Move startIdx to targetIdx with proper insert-and-shift.
+                    // After removing the source item, indices above startIdx shift down
+                    // by 1, so we must compensate when the target was after the source.
+                    String movedName = fieldNames.remove(startIdx);
+                    JPanel movedPanel = rowPanels.remove(startIdx);
+                    JCheckBox movedCb = checkboxes.remove(startIdx);
+                    JTextField movedTitle = titleFields.remove(startIdx);
+                    JTextField movedWidth = widthFields.remove(startIdx);
+                    int insertAt = targetIdx > startIdx ? targetIdx - 1 : targetIdx;
+                    fieldNames.add(insertAt, movedName);
+                    rowPanels.add(insertAt, movedPanel);
+                    checkboxes.add(insertAt, movedCb);
+                    titleFields.add(insertAt, movedTitle);
+                    widthFields.add(insertAt, movedWidth);
+                    // Rebuild UI
+                    container.removeAll();
+                    for (JPanel rp : rowPanels)
+                        container.add(rp);
+                    container.revalidate();
+                    container.repaint();
+                    serializeTableColumns(node, fieldNames, checkboxes, titleFields, widthFields);
+                }
+            });
+
+            grip.addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    Object startObj = grip.getClientProperty("dragStart");
+                    if (startObj == null)
+                        return;
+                    // Find which row the cursor is currently over and highlight it
+                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), container);
+                    clearHighlights.run();
+                    // Keep dragged row dimmed
+                    rowPanel.setBackground(new Color(200, 210, 230));
+                    for (int r = 0; r < rowPanels.size(); r++) {
+                        JPanel rp = rowPanels.get(r);
+                        if (rp == rowPanel)
+                            continue;
+                        Rectangle bounds = rp.getBounds();
+                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                            rp.setBackground(new Color(180, 220, 180));
+                            break;
+                        }
+                    }
                 }
             });
 
@@ -1625,7 +1670,11 @@ public class DetailLayoutDesigner extends JFrame {
             if (support.isDataFlavorSupported(FIELD_FLAVOR))
                 return true;
             if (support.isDataFlavorSupported(LAYOUT_NODE_FLAVOR)) {
-                // Validate target
+                // Validate target — NOTE: do NOT call getTransferData() here; it is
+                // unreliable during the hover phase on some JVMs/platforms and will
+                // cause the entire drag to be rejected (canImport returns false).
+                // Instead we use the tree's current selection path to identify the
+                // dragged node, and defer full validation to importData.
                 if (support.isDrop()) {
                     JTree.DropLocation dl = (JTree.DropLocation) support.getDropLocation();
                     TreePath destPath = dl.getPath();
@@ -1633,33 +1682,26 @@ public class DetailLayoutDesigner extends JFrame {
                         return false;
                     DefaultMutableTreeNode destNode = (DefaultMutableTreeNode) destPath.getLastPathComponent();
 
-                    try {
-                        DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) support.getTransferable().getTransferData(LAYOUT_NODE_FLAVOR);
+                    // Use the selection path to identify the source node safely
+                    TreePath selPath = layoutTree.getSelectionPath();
+                    if (selPath != null) {
+                        DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) selPath.getLastPathComponent();
                         // Don't allow dropping onto self or descendants
                         if (sourceNode == destNode)
                             return false;
-                        TreeNode[] sourcePath = sourceNode.getPath();
                         TreeNode[] targetPath = destNode.getPath();
                         for (TreeNode tp : targetPath) {
                             if (tp == sourceNode)
                                 return false;
                         }
-                    } catch (Exception e) {
-                        return false;
-                    }
-
-                    // Check parent compatibility if dropping ON a node
-                    if (dl.getChildIndex() == -1) {
-                        LayoutNode destObj = getLayoutNodeFromTreeNode(destNode);
-                        if (destObj == null)
-                            return true; // root
-                        try {
-                            DefaultMutableTreeNode sourceNode = (DefaultMutableTreeNode) support.getTransferable().getTransferData(LAYOUT_NODE_FLAVOR);
-                            LayoutNode sourceObj = getLayoutNodeFromTreeNode(sourceNode);
-                            if (sourceObj != null)
-                                return canContainChild(destObj.type, sourceObj.type);
-                        } catch (Exception e) {
-                            return false;
+                        // Check parent compatibility when dropping ON a node
+                        if (dl.getChildIndex() == -1) {
+                            LayoutNode destObj = getLayoutNodeFromTreeNode(destNode);
+                            if (destObj != null) {
+                                LayoutNode sourceObj = getLayoutNodeFromTreeNode(sourceNode);
+                                if (sourceObj != null)
+                                    return canContainChild(destObj.type, sourceObj.type);
+                            }
                         }
                     }
                 }
@@ -1722,6 +1764,10 @@ public class DetailLayoutDesigner extends JFrame {
             if (oldParentObj != null)
                 oldParentObj.children.remove(sourceObj);
 
+            // Compute the source node's index in the parent BEFORE removal so we
+            // can correctly adjust the insertion index when moving within the same parent.
+            int sourceIdxInParent = (oldParent != null) ? oldParent.getIndex(sourceNode) : -1;
+
             // Save reference before removal
             DefaultMutableTreeNode movedNode = sourceNode;
             layoutModel.removeNodeFromParent(movedNode);
@@ -1735,12 +1781,20 @@ public class DetailLayoutDesigner extends JFrame {
                 }
                 layoutModel.insertNodeInto(movedNode, destNode, destNode.getChildCount());
             } else {
-                // Drop BETWEEN nodes
+                // Drop BETWEEN nodes.
+                // When the source and destination parent are the same node, the
+                // childIndex from the drop location was computed BEFORE the source
+                // was removed. If the source was positioned before the drop point
+                // we must subtract 1 to obtain the correct post-removal index.
+                int adjustedIdx = childIndex;
+                if (destNode == oldParent && sourceIdxInParent >= 0 && sourceIdxInParent < childIndex)
+                    adjustedIdx = childIndex - 1;
+
                 if (destObj != null) {
-                    int insertIdx = Math.min(childIndex, destObj.children.size());
+                    int insertIdx = Math.min(adjustedIdx, destObj.children.size());
                     destObj.children.add(insertIdx, sourceObj);
                 }
-                int treeIdx = Math.min(childIndex, destNode.getChildCount());
+                int treeIdx = Math.min(adjustedIdx, destNode.getChildCount());
                 layoutModel.insertNodeInto(movedNode, destNode, treeIdx);
             }
 

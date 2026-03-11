@@ -97,6 +97,11 @@ public class DOModuleStructureWriter {
             writer.write(" description=\"" + escapeXml(config.getDescription()) + "\"");
         }
 
+        // Add default columns if set (comma-separated list of field paths)
+        if (config.hasDefaultColumns()) {
+            writer.write(" defaultColumns=\"" + escapeXml(String.join(",", config.getDefaultColumns())) + "\"");
+        }
+
         // If there are criteria, unit costs, or layout, use child elements;
         // otherwise self-close
         if (config.hasCriteria() || !config.getUnitCosts().isEmpty() || config.hasLayout()) {

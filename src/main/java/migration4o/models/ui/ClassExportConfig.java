@@ -30,6 +30,7 @@ public class ClassExportConfig {
     private final Map<String, Float> unitCosts; // Price list: key -> unit cost
     private DetailLayout layout; // Optional detail view layout
     private String title; // Optional display title override (from classRef title="..."), overrides schema class title
+    private List<String> defaultColumns; // Optional ordered list of column field paths shown by default in HTML viewer search table
 
     /**
      * Creates a simple config with just the class name (backward compatibility).
@@ -134,6 +135,35 @@ public class ClassExportConfig {
 
     public boolean hasTitle() {
         return title != null && !title.isBlank();
+    }
+
+    public List<String> getDefaultColumns() {
+        return defaultColumns != null ? Collections.unmodifiableList(defaultColumns) : Collections.emptyList();
+    }
+
+    public void setDefaultColumns(List<String> cols) {
+        this.defaultColumns = (cols != null && !cols.isEmpty()) ? new ArrayList<>(cols) : null;
+    }
+
+    public boolean hasDefaultColumns() {
+        return defaultColumns != null && !defaultColumns.isEmpty();
+    }
+
+    /**
+     * Returns default columns as a JSON array string for HTML embedding, e.g. ["col1","col2"].
+     * Returns "null" when no default columns are configured.
+     */
+    public String getDefaultColumnsJson() {
+        if (!hasDefaultColumns())
+            return "null";
+        StringBuilder sb = new StringBuilder("[");
+        for (int i = 0; i < defaultColumns.size(); i++) {
+            if (i > 0)
+                sb.append(',');
+            sb.append('"').append(defaultColumns.get(i).replace("\\", "\\\\").replace("\"", "\\\"")).append('"');
+        }
+        sb.append(']');
+        return sb.toString();
     }
 
     /**

@@ -456,7 +456,9 @@
     let searchApplied = false;
     let globalLogicOperator = 'AND';
     let currentLanguage = 'fr';
-    let selectedColumns = ['__id', '__summary'];
+    let selectedColumns = (typeof DEFAULT_COLUMNS !== 'undefined' && Array.isArray(DEFAULT_COLUMNS) && DEFAULT_COLUMNS.length > 0)
+        ? DEFAULT_COLUMNS.slice()
+        : ['__id', '__summary'];
     let collectionViewState = {};
     let collectionIdCounter = 1;
     const schemaFields = (typeof SCHEMA_FIELDS !== 'undefined' && Array.isArray(SCHEMA_FIELDS)) ? SCHEMA_FIELDS : [];
@@ -988,10 +990,33 @@
         });
     }
 
+    /**
+     * Returns the inner HTML for a results-table column header.
+     * Composite paths (e.g. "adresse.rue") are rendered with each
+     * path segment on its own line; all segments except the last use
+     * a smaller text style so the leaf name stands out.
+     */
+    function renderColumnHeader(col) {
+        if (col === '__id' || col === '__summary' || !col.includes('.')) {
+            return esc(getColumnLabel(col));
+        }
+        const parts = col.split('.');
+        const leafLabel = getColumnLabel(col); // human label for the leaf from discoveredFields
+        let html = '<span class="col-hd">';
+        for (let i = 0; i < parts.length - 1; i++) {
+            // Humanise the intermediate segment from the raw path key
+            const seg = parts[i].replace(/_/g, ' ').replace(/(?:^|\s)\S/g, (c) => c.toUpperCase());
+            html += `<span class="col-hd-prefix">${esc(seg)}</span>`;
+        }
+        html += `<span class="col-hd-leaf">${esc(leafLabel)}</span>`;
+        html += '</span>';
+        return html;
+    }
+
     function renderResultsHead() {
         const cols = getVisibleColumns();
         let head = `<tr><th style="width:55px">${esc(t('colRow'))}</th>`;
-        cols.forEach((c) => head += `<th>${esc(getColumnLabel(c))}</th>`);
+        cols.forEach((c) => head += `<th>${renderColumnHeader(c)}</th>`);
         head += '</tr>';
         resultsHead.innerHTML = head;
     }

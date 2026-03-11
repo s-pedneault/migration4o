@@ -175,6 +175,18 @@ public class DOModuleStructureReader {
             config.setTitle(title);
         }
 
+        // Parse default columns (comma-separated list of field paths)
+        String defaultColumnsAttr = classRefElement.getAttribute("defaultColumns");
+        if (defaultColumnsAttr != null && !defaultColumnsAttr.isEmpty()) {
+            List<String> cols = new ArrayList<>();
+            for (String c : defaultColumnsAttr.split(",")) {
+                String trimmed = c.trim();
+                if (!trimmed.isEmpty())
+                    cols.add(trimmed);
+            }
+            config.setDefaultColumns(cols);
+        }
+
         // Parse layout if present
         NodeList layoutNodes = classRefElement.getChildNodes();
         for (int i = 0; i < layoutNodes.getLength(); i++) {

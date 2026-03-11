@@ -1268,6 +1268,7 @@ body {
     border-bottom: 1px solid var(--c-border);
     z-index: 2;
     white-space: nowrap;
+    vertical-align: bottom;
 }
 
 .results-table tbody td {
@@ -1283,6 +1284,25 @@ body {
 .results-table tbody tr {
     cursor: pointer;
     transition: background .1s;
+}
+
+/* Composite column header (e.g. adresse.rue → ADRESSE stacked above RUE) */
+.col-hd {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    white-space: normal;
+}
+
+.col-hd-prefix {
+    font-size: 0.68em;
+    opacity: 0.6;
+    line-height: 1.3;
+    font-weight: 600;
+}
+
+.col-hd-leaf {
+    /* inherits th font-size / weight */
 }
 
 .results-table tbody tr:hover {

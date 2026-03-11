@@ -74,7 +74,7 @@ public final class JsViewerHtmlGenerator {
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (outputPath.getParent() != null) {
             Files.createDirectories(outputPath.getParent());
@@ -106,7 +106,7 @@ public final class JsViewerHtmlGenerator {
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -168,6 +168,16 @@ public final class JsViewerHtmlGenerator {
      * @param configTitle   display title from {@code classRef title="…"} (highest priority); may be null
      */
     public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String configTitle, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
+        return writeViewerFromTempFile(outputPath, schemaClass, configTitle, "null", navItemsJson, baseHref, layoutJson, jsDataFile);
+    }
+
+    /**
+     * Streaming HTML assembler with title override and default columns.
+     *
+     * @param configTitle        display title from {@code classRef title="…"} (highest priority); may be null
+     * @param defaultColumnsJson JSON array of default column field paths, e.g. {@code ["name","adresse.rue"]}, or {@code "null"}
+     */
+    public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String configTitle, String defaultColumnsJson, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
         if (outputPath == null)
             throw new IllegalArgumentException("outputPath must not be null");
         if (jsDataFile == null)
@@ -184,10 +194,11 @@ public final class JsViewerHtmlGenerator {
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
+        String defaultCols = (defaultColumnsJson != null && !defaultColumnsJson.isBlank()) ? defaultColumnsJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         // Build the full template with all substitutions EXCEPT __EMBEDDED_JS_DATA__
-        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
+        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
         final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";

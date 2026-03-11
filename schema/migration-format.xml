@@ -49,9 +49,9 @@
                             <field ref="telephoneTravail"/>
                             <field ref="telephoneTravailExt"/>
                             <field ref="idSSI"/>
-                            <field ref="derniereModification" format="longdate:yyyy-MM-dd HH:mm"/>
-                            <section title="Adresse" collapsible="true">
-                                <field ref="adresse.afficherSuite" format="bool:Oui,Non"/>
+                            <field format="longdate:yyyy-MM-dd HH:mm" ref="derniereModification"/>
+                            <section collapsible="true" title="Adresse">
+                                <field format="bool:Oui,Non" ref="adresse.afficherSuite"/>
                                 <field ref="adresse.appartement"/>
                                 <field ref="adresse.arrondissement"/>
                                 <field ref="adresse.codeGeo"/>
@@ -72,7 +72,7 @@
                                 <field ref="adresse.ville"/>
                             </section>
                             <divider/>
-                            <table ref="listePieceJointe" columns="dateCreation,inclureDansRapportActivite,nom,photoParPage,formatImpression,idFichier,idGraph" columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph"/>
+                            <table columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph" columns="dateCreation,inclureDansRapportActivite,nom,photoParPage,formatImpression,idFichier,idGraph" ref="listePieceJointe"/>
                         </layout>
                     </classRef>
                     <classRef sourceName="gest.listePerso.ListePerso"/>
@@ -99,7 +99,7 @@
         </module>
         <module name="Territoire" id="2-Territoire" icon="map" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Dossier adresse" id="DossierAdresse">
-                <classRef sourceName="gest.dossPrev.DossPrev" title="Dossier adresse" destinationFile="DossierAdresse">
+                <classRef sourceName="gest.dossPrev.DossPrev" title="Dossier adresse" destinationFile="DossierAdresse" defaultColumns="adresse.rue,adresse.numeroCivique,adresse.extension,subdivision,raisonSociale">
                     <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="A" cost="0.5"/>

@@ -1,17 +1,21 @@
 package migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs;
 
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
 import migration4o.ui.common.dialogs.BaseFormDialog;
+import migration4o.util.DatabaseUtil;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.HashMap;
+import java.awt.event.*;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Dialog for editing ClassExportConfig - destination file name and export
@@ -32,6 +36,14 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     private JTable priceListTable;
     private DefaultTableModel priceListTableModel;
 
+    // ── Default Columns selector (HTML viewer) ────────────────────────────────
+    private JPanel defaultColumnsContainer;
+    private JTextField filterField;
+    private final List<String> defaultColumnFieldNames = new ArrayList<>();
+    private final List<String> defaultColumnLabels = new ArrayList<>();
+    private final List<JCheckBox> defaultColumnCheckboxes = new ArrayList<>();
+    private final List<JPanel> defaultColumnRowPanels = new ArrayList<>();
+
     private ClassExportConfig result;
     private ClassExportConfig initialConfig;
 
@@ -45,6 +57,11 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         if (initialConfig != null) {
             loadConfiguration(initialConfig);
         }
+
+        // Build column selector rows now that schemaClass is set (was null during buildFormPanel)
+        List<String> initialColumns = (existingConfig != null) ? new ArrayList<>(existingConfig.getDefaultColumns()) : Collections.emptyList();
+        rebuildDefaultColumnsUI(initialColumns);
+        pack();
     }
 
     @Override
@@ -109,6 +126,47 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         centerPanel.add(pricePanel);
 
         panel.add(centerPanel, BorderLayout.CENTER);
+
+        // South panel: Default Columns selector for HTML viewer
+        JPanel columnsSection = new JPanel(new BorderLayout(5, 5));
+        columnsSection.setBorder(BorderFactory.createTitledBorder("Default Columns (HTML Viewer)"));
+
+        defaultColumnsContainer = new JPanel();
+        defaultColumnsContainer.setLayout(new BoxLayout(defaultColumnsContainer, BoxLayout.Y_AXIS));
+
+        // Filter row above the scroll pane
+        JPanel filterRow = new JPanel(new BorderLayout(5, 0));
+        filterRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 3, 0));
+        filterRow.add(new JLabel("Filter: "), BorderLayout.WEST);
+        filterField = new JTextField();
+        filterField.setToolTipText("Type to filter the list of available columns");
+        filterField.getDocument().addDocumentListener(new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) {
+                applyColumnFilter();
+            }
+
+            public void removeUpdate(DocumentEvent e) {
+                applyColumnFilter();
+            }
+
+            public void changedUpdate(DocumentEvent e) {
+                applyColumnFilter();
+            }
+        });
+        filterRow.add(filterField, BorderLayout.CENTER);
+        columnsSection.add(filterRow, BorderLayout.NORTH);
+
+        JScrollPane columnsScroll = new JScrollPane(defaultColumnsContainer);
+        columnsScroll.setPreferredSize(new Dimension(550, 160));
+        columnsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        columnsSection.add(columnsScroll, BorderLayout.CENTER);
+
+        JLabel columnsHint = new JLabel("Select and order the columns shown by default in the HTML viewer search results. Drag \u2807 to reorder.");
+        columnsHint.setFont(columnsHint.getFont().deriveFont(Font.ITALIC, 11f));
+        columnsHint.setForeground(Color.GRAY);
+        columnsSection.add(columnsHint, BorderLayout.SOUTH);
+
+        panel.add(columnsSection, BorderLayout.SOUTH);
 
         return panel;
     }
@@ -245,6 +303,296 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         });
 
         return pricePanel;
+    }
+
+    // ── Default Columns selector helpers ─────────────────────────────────────
+
+    /**
+     * Rebuilds the column rows inside {@code defaultColumnsContainer}.
+     * Enabled columns (from {@code initialCols}) appear first in their configured
+     * order and are checked; remaining available fields follow, unchecked.
+     */
+    private void rebuildDefaultColumnsUI(List<String> initialCols) {
+        if (defaultColumnsContainer == null)
+            return;
+
+        defaultColumnFieldNames.clear();
+        defaultColumnLabels.clear();
+        defaultColumnCheckboxes.clear();
+        defaultColumnRowPanels.clear();
+        defaultColumnsContainer.removeAll();
+
+        List<FieldInfo> available = collectAvailableColumns();
+
+        // Build ordered list: configured columns first, then remaining available
+        List<String> orderedNames = new ArrayList<>();
+        for (String col : initialCols) {
+            if (!col.isBlank())
+                orderedNames.add(col);
+        }
+        for (FieldInfo fi : available) {
+            if (!orderedNames.contains(fi.path))
+                orderedNames.add(fi.path);
+        }
+
+        // Build label map
+        Map<String, String> labelByPath = new LinkedHashMap<>();
+        for (FieldInfo fi : available)
+            labelByPath.put(fi.path, fi.label);
+
+        Set<String> enabledSet = new LinkedHashSet<>(initialCols);
+
+        for (int i = 0; i < orderedNames.size(); i++) {
+            String fname = orderedNames.get(i);
+            boolean enabled = enabledSet.contains(fname);
+            String label = labelByPath.getOrDefault(fname, humanizeColumnName(fname));
+
+            JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
+            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+            rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+            // Grip handle for drag-reorder
+            JLabel grip = new JLabel("\u2807");
+            grip.setForeground(Color.GRAY);
+            grip.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+            grip.setToolTipText("Drag to reorder");
+
+            JCheckBox cb = new JCheckBox("", enabled);
+
+            JLabel nameLbl = new JLabel(label);
+            nameLbl.setPreferredSize(new Dimension(150, 20));
+            nameLbl.setToolTipText(fname);
+
+            if (!labelByPath.containsKey(fname)) {
+                nameLbl.setForeground(Color.GRAY); // unknown / no longer in schema
+                nameLbl.setToolTipText(fname + " (not found in schema)");
+            }
+
+            rowPanel.add(grip);
+            rowPanel.add(cb);
+            rowPanel.add(nameLbl);
+
+            defaultColumnFieldNames.add(fname);
+            defaultColumnLabels.add(label);
+            defaultColumnCheckboxes.add(cb);
+            defaultColumnRowPanels.add(rowPanel);
+            defaultColumnsContainer.add(rowPanel);
+
+            // Drag reorder via mouse listeners on the grip
+            Runnable clearHighlights = () -> {
+                for (JPanel rp : defaultColumnRowPanels)
+                    rp.setBackground(UIManager.getColor("Panel.background"));
+            };
+
+            grip.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent e) {
+                    grip.putClientProperty("dragStart", defaultColumnRowPanels.indexOf(rowPanel));
+                    rowPanel.setBackground(new Color(200, 210, 230));
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent e) {
+                    clearHighlights.run();
+                    Object startObj = grip.getClientProperty("dragStart");
+                    if (startObj == null)
+                        return;
+                    int startIdx = (int) startObj;
+                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), defaultColumnsContainer);
+                    int targetIdx = -1;
+                    for (int r = 0; r < defaultColumnRowPanels.size(); r++) {
+                        Rectangle bounds = defaultColumnRowPanels.get(r).getBounds();
+                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                            targetIdx = r;
+                            break;
+                        }
+                    }
+                    grip.putClientProperty("dragStart", null);
+                    if (targetIdx < 0 || targetIdx == startIdx)
+                        return;
+
+                    String movedName = defaultColumnFieldNames.remove(startIdx);
+                    JPanel movedPanel = defaultColumnRowPanels.remove(startIdx);
+                    JCheckBox movedCb = defaultColumnCheckboxes.remove(startIdx);
+                    int insertAt = targetIdx > startIdx ? targetIdx - 1 : targetIdx;
+                    defaultColumnFieldNames.add(insertAt, movedName);
+                    defaultColumnRowPanels.add(insertAt, movedPanel);
+                    defaultColumnCheckboxes.add(insertAt, movedCb);
+
+                    defaultColumnsContainer.removeAll();
+                    for (JPanel rp : defaultColumnRowPanels)
+                        defaultColumnsContainer.add(rp);
+                    defaultColumnsContainer.revalidate();
+                    defaultColumnsContainer.repaint();
+                }
+            });
+
+            grip.addMouseMotionListener(new MouseMotionAdapter() {
+                @Override
+                public void mouseDragged(MouseEvent e) {
+                    Object startObj = grip.getClientProperty("dragStart");
+                    if (startObj == null)
+                        return;
+                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), defaultColumnsContainer);
+                    clearHighlights.run();
+                    rowPanel.setBackground(new Color(200, 210, 230));
+                    for (JPanel rp : defaultColumnRowPanels) {
+                        if (rp == rowPanel)
+                            continue;
+                        Rectangle bounds = rp.getBounds();
+                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                            rp.setBackground(new Color(180, 220, 180));
+                            break;
+                        }
+                    }
+                }
+            });
+        }
+
+        defaultColumnsContainer.revalidate();
+        defaultColumnsContainer.repaint();
+
+        // Re-apply any active filter after rebuilding
+        if (filterField != null && !filterField.getText().isBlank())
+            applyColumnFilter();
+    }
+
+    /**
+     * Shows/hides column rows based on the text in {@code filterField}.
+     * Filtering is case-insensitive and matches against both the path and the display label.
+     */
+    private void applyColumnFilter() {
+        if (filterField == null || defaultColumnsContainer == null)
+            return;
+        String filter = filterField.getText().trim().toLowerCase(Locale.ROOT);
+        for (int i = 0; i < defaultColumnRowPanels.size(); i++) {
+            boolean show = filter.isEmpty() || defaultColumnFieldNames.get(i).toLowerCase(Locale.ROOT).contains(filter) || (i < defaultColumnLabels.size() && defaultColumnLabels.get(i).toLowerCase(Locale.ROOT).contains(filter));
+            defaultColumnRowPanels.get(i).setVisible(show);
+        }
+        defaultColumnsContainer.revalidate();
+        defaultColumnsContainer.repaint();
+    }
+
+    /** Collects all flat leaf field paths exported by this class, including embedded entities one level deep. */
+    private List<FieldInfo> collectAvailableColumns() {
+        if (schemaClass == null)
+            return new ArrayList<>();
+
+        DOSchema refSchema = null;
+        try {
+            refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
+        } catch (Exception ignored) {
+        }
+
+        List<DOSchemaField> allFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema) : (schemaClass.fields != null ? Arrays.asList(schemaClass.fields) : new ArrayList<>());
+
+        List<FieldInfo> result = new ArrayList<>();
+        Set<String> seenPaths = new LinkedHashSet<>();
+        final DOSchema fRefSchema = refSchema;
+
+        for (DOSchemaField field : allFields) {
+            if (!field.isExported)
+                continue;
+            String name = field.destinationName != null ? field.destinationName : field.source;
+            if (name == null || name.isBlank())
+                continue;
+            if (field.isCollection)
+                continue;
+
+            if (field.embedContents && !isPrimitiveType(field.type)) {
+                // Embedded entity: expose its leaf children as "parentName.childName"
+                DOSchemaClass embClass = findClassByType(field.type, fRefSchema);
+                if (embClass != null) {
+                    List<DOSchemaField> embFields = (fRefSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embClass, fRefSchema) : (embClass.fields != null ? Arrays.asList(embClass.fields) : new ArrayList<>());
+                    for (DOSchemaField ef : embFields) {
+                        if (!ef.isExported || ef.isCollection)
+                            continue;
+                        String eName = ef.destinationName != null ? ef.destinationName : ef.source;
+                        if (eName == null || eName.isBlank())
+                            continue;
+                        String path = name + "." + eName;
+                        if (seenPaths.add(path)) {
+                            String parentLabel = getFieldLabel(field);
+                            String childLabel = getFieldLabel(ef);
+                            String fullLabel = parentLabel.isBlank() ? childLabel : childLabel.isBlank() ? parentLabel : parentLabel + " \u203a " + childLabel;
+                            result.add(new FieldInfo(path, fullLabel));
+                        }
+                    }
+                } else {
+                    if (seenPaths.add(name))
+                        result.add(new FieldInfo(name, getFieldLabel(field)));
+                }
+            } else {
+                if (seenPaths.add(name))
+                    result.add(new FieldInfo(name, getFieldLabel(field)));
+            }
+        }
+        // Sort: direct fields first (alphabetically by label), then embedded (alphabetically by label,
+        // which groups them by parent since the label is "Parent › Child").
+        result.sort((a, b) -> {
+            boolean aDot = a.path.contains(".");
+            boolean bDot = b.path.contains(".");
+            if (aDot != bDot)
+                return aDot ? 1 : -1;
+            return a.label.compareToIgnoreCase(b.label);
+        });
+        return result;
+    }
+
+    private DOSchemaClass findClassByType(String typeName, DOSchema refSchema) {
+        if (typeName == null || refSchema == null)
+            return null;
+        DOSchemaClass cls = refSchema.findClassByName(typeName);
+        if (cls != null)
+            return cls;
+        String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
+        for (DOSchemaClass c : refSchema.getClasses()) {
+            if (c.source != null && c.source.endsWith("." + shortName))
+                return c;
+        }
+        return null;
+    }
+
+    private boolean isPrimitiveType(String type) {
+        if (type == null)
+            return true;
+        return type.equals("string") || type.equals("int") || type.equals("long") || type.equals("float") || type.equals("double") || type.equals("boolean") || type.equals("date") || type.equals("byte") || type.equals("short") || type.equals("char") || type.startsWith("java.lang.") || type.startsWith("java.util.Date") || type.equals("java.util.Date") || type.equals("java.sql.Date") || type.equals("java.sql.Timestamp");
+    }
+
+    private String getFieldLabel(DOSchemaField field) {
+        if (field == null)
+            return "";
+        if (field.title != null && !field.title.isBlank())
+            return field.title.trim();
+        if (field.destinationName != null && !field.destinationName.isBlank())
+            return humanizeColumnName(field.destinationName.trim());
+        if (field.source != null && !field.source.isBlank())
+            return humanizeColumnName(field.source.trim());
+        return "";
+    }
+
+    private String humanizeColumnName(String name) {
+        if (name == null || name.isBlank())
+            return "";
+        // Handle dot-path: use last segment
+        int dot = name.lastIndexOf('.');
+        String base = dot >= 0 ? name.substring(dot + 1) : name;
+        // Insert space before uppercase letters
+        String spaced = base.replaceAll("([A-Z])", " $1").trim();
+        if (spaced.isEmpty())
+            return base;
+        return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
+    }
+
+    /** Simple (path, label) pair for available column fields. */
+    private static class FieldInfo {
+        final String path;
+        final String label;
+
+        FieldInfo(String path, String label) {
+            this.path = path;
+            this.label = label;
+        }
     }
 
     private String getDefaultFileName() {
@@ -421,6 +769,16 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         if (initialConfig != null && initialConfig.hasLayout()) {
             result.setLayout(initialConfig.getLayout());
         }
+
+        // Collect selected default columns (in the order they appear in the UI)
+        List<String> selectedColumns = new ArrayList<>();
+        for (int i = 0; i < defaultColumnFieldNames.size(); i++) {
+            if (defaultColumnCheckboxes.get(i).isSelected()) {
+                selectedColumns.add(defaultColumnFieldNames.get(i));
+            }
+        }
+        result.setDefaultColumns(selectedColumns.isEmpty() ? null : selectedColumns);
+
         return true;
     }
 
