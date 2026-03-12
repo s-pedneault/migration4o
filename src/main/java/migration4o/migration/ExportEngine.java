@@ -221,7 +221,13 @@ public class ExportEngine {
 
     private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, Path moduleDir, List<FormatHandler> handlers) throws Exception {
         String className = dbSchemaClass.source;
+        // ObjectExporter nulls ctx.schemaClass in its finally block after each handler's loop.
+        // Snapshot here and restore at the top of every iteration so every format handler
+        // (HTML, etc.) sees the correct class identity in onClassStart / onObjectProgress.
+        DOSchemaClass refClass = ctx.schemaClass;
+        ClassExportConfig refConfig = ctx.exportConfig;
         for (int i = 0; i < handlers.size(); i++) {
+            ctx.setClass(refClass, refConfig); // restore after previous handler's ObjectExporter nulled it
             FormatHandler handler = handlers.get(i);
             Path filePath = moduleDir.resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
             if (operation.monitor != null) {

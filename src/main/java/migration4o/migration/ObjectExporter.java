@@ -92,7 +92,11 @@ public class ObjectExporter {
             if (activation == null)
                 return;
 
-            if (ctx.statistics != null) {
+            // Only count root-level objects toward per-class progress so that
+            // currentClassAttempted tracks the same thing as currentClassTotal
+            // (both based on root objectIds). Embedded objects are part of the
+            // root object's data, not separate entries in the progress bar.
+            if (ctx.statistics != null && !isEmbedded) {
                 ctx.statistics.incrementAttempted();
             }
 

@@ -44,24 +44,22 @@ import javax.swing.tree.TreePath;
 
 import org.jdesktop.swingx.JXTreeTable;
 
-import migration4o.database.DODatabaseService;
 import migration4o.migration.ExportHistory;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.CategorizedClasses;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
-import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
-import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.DetailLayoutDesigner;
 import migration4o.ui.dialogs.ExportConfirmationDialog;
 import migration4o.ui.main.MainWindow;
-import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ClassExportConfigDialog;
+import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.DetailLayoutDesigner;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 
 /**

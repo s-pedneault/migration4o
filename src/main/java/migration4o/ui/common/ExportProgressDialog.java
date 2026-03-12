@@ -9,6 +9,10 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -18,7 +22,6 @@ import javax.swing.JPanel;
 import javax.swing.JProgressBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextArea;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 
 /**
@@ -30,11 +33,10 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
 
     // UI Components
     private JLabel titleLabel;
-    private JLabel currentOperationLabel;
     private JProgressBar overallProgressBar;
-    private JProgressBar classProgressBar;
     private JLabel overallStatsLabel;
-    private JLabel classStatsLabel;
+    private JPanel formatRowsPanel;
+    private int formatRowsNextRow = 0;
     private JLabel warningsLabel;
     private JTextArea logArea;
     private JButton cancelButton;
@@ -43,11 +45,24 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
     private boolean cancelled = false;
     private int totalClasses = 0;
     private int completedClasses = 0;
-    private int totalObjects = 0;
     private int exportedObjects = 0;
     private int warningCount = 0;
     private int errorCount = 0;
-    private String currentClassName = "";
+
+    // Per-format progress tracking
+    private final Map<String, FormatRow> formatRows = new LinkedHashMap<>();
+    private final List<String> seenFormatList = new ArrayList<>();
+
+    /** Holds UI widgets for one export format's compact progress row. */
+    private static class FormatRow {
+        final JLabel infoLabel;
+        final JProgressBar progressBar;
+
+        FormatRow(JLabel info, JProgressBar bar) {
+            this.infoLabel = info;
+            this.progressBar = bar;
+        }
+    }
 
     /**
      * Creates an export progress dialog.
@@ -102,32 +117,18 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
         gbc.insets = new Insets(5, 0, 10, 0);
         topPanel.add(overallProgressBar, gbc);
 
-        // Current operation label
-        currentOperationLabel = new JLabel(" ");
-        currentOperationLabel.setFont(currentOperationLabel.getFont().deriveFont(Font.ITALIC));
+        // Per-format progress rows (compact two-column table: info | bar)
+        formatRowsPanel = new JPanel(new GridBagLayout());
+        formatRowsPanel.setBorder(BorderFactory.createTitledBorder("Class Progress"));
         gbc.gridy = 3;
-        gbc.insets = new Insets(5, 0, 2, 0);
-        topPanel.add(currentOperationLabel, gbc);
-
-        // Class progress label
-        classStatsLabel = new JLabel("Class Progress: 0 / 0 objects");
-        gbc.gridy = 4;
-        gbc.insets = new Insets(2, 0, 2, 0);
-        topPanel.add(classStatsLabel, gbc);
-
-        // Class progress bar
-        classProgressBar = new JProgressBar(0, 100);
-        classProgressBar.setStringPainted(true);
-        classProgressBar.setPreferredSize(new Dimension(600, 20));
-        gbc.gridy = 5;
-        gbc.insets = new Insets(2, 0, 5, 0);
-        topPanel.add(classProgressBar, gbc);
+        gbc.insets = new Insets(4, 0, 2, 0);
+        topPanel.add(formatRowsPanel, gbc);
 
         // Stats panel
         JPanel statsPanel = new JPanel();
         warningsLabel = new JLabel("Exported: 0 | Warnings: 0 | Errors: 0");
         statsPanel.add(warningsLabel);
-        gbc.gridy = 6;
+        gbc.gridy = 4;
         gbc.insets = new Insets(5, 0, 0, 0);
         topPanel.add(statsPanel, gbc);
 
@@ -147,6 +148,48 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
         cancelButton.addActionListener(e -> cancel());
         bottomPanel.add(cancelButton);
         add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    /**
+     * Creates and registers a new format progress row inside {@code formatRowsPanel}.
+     * Must be called on the EDT.
+     */
+    private FormatRow createFormatRow(String formatName) {
+        JLabel infoLabel = new JLabel();
+        infoLabel.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+        infoLabel.setPreferredSize(new Dimension(260, 18));
+
+        JProgressBar bar = new JProgressBar(0, 1);
+        bar.setStringPainted(true);
+        bar.setPreferredSize(new Dimension(260, 18));
+
+        GridBagConstraints rowGbc = new GridBagConstraints();
+        rowGbc.gridy = formatRowsNextRow++;
+        rowGbc.insets = new Insets(2, 4, 2, 4);
+        rowGbc.anchor = GridBagConstraints.WEST;
+
+        rowGbc.gridx = 0;
+        rowGbc.fill = GridBagConstraints.NONE;
+        rowGbc.weightx = 0;
+        formatRowsPanel.add(infoLabel, rowGbc);
+
+        rowGbc.gridx = 1;
+        rowGbc.fill = GridBagConstraints.HORIZONTAL;
+        rowGbc.weightx = 1.0;
+        formatRowsPanel.add(bar, rowGbc);
+
+        formatRowsPanel.revalidate();
+        formatRowsPanel.repaint();
+
+        FormatRow row = new FormatRow(infoLabel, bar);
+        formatRows.put(formatName, row);
+        return row;
+    }
+
+    /** Builds the compact info text shown to the left of each format's progress bar. */
+    private static String buildInfoText(String formatName, String simpleName, int current, int total) {
+        String badge = formatName.isEmpty() ? "[---]" : String.format("[%-4s]", formatName);
+        return String.format("%s %-22s %,d / %,d", badge, simpleName, current, total);
     }
 
     private void cancel() {
@@ -184,7 +227,13 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
             overallStatsLabel.setText(String.format("Overall Progress: 0 / %,d classes", totalClasses));
             overallProgressBar.setValue(0);
             overallProgressBar.setMaximum(totalClasses);
-            classProgressBar.setValue(0);
+            // Reset per-format rows
+            seenFormatList.clear();
+            formatRows.clear();
+            formatRowsNextRow = 0;
+            formatRowsPanel.removeAll();
+            formatRowsPanel.revalidate();
+            formatRowsPanel.repaint();
             updateStats();
         });
 
@@ -196,7 +245,6 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
     public void onExportComplete(String exportName, int objectsExported, int warnings) {
         SwingUtilities.invokeLater(() -> {
             titleLabel.setText("Export Complete: " + exportName);
-            currentOperationLabel.setText("Export finished successfully");
             cancelButton.setText("Close");
             cancelButton.setEnabled(true);
         });
@@ -214,7 +262,6 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
 
         SwingUtilities.invokeLater(() -> {
             titleLabel.setText("Export Failed: " + exportName);
-            currentOperationLabel.setText("ERROR: " + error);
             cancelButton.setText("Close");
             cancelButton.setEnabled(true);
         });
@@ -227,10 +274,6 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
     public void onModuleStart(String moduleName, int classCount, int depth) {
         String indent = "  ".repeat(depth);
         appendLog(String.format("%s▶ Module: %s (%,d classes)\n", indent, moduleName, classCount));
-
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Processing module: " + moduleName);
-        });
     }
 
     @Override
@@ -239,37 +282,50 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
     }
 
     @Override
-    public void onClassStart(String className, String simpleName, int objectCount) {
-        this.currentClassName = simpleName;
-        this.totalObjects = objectCount;
-
+    public void onClassStart(String className, String simpleName, int objectCount, String formatName) {
         SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Exporting: " + simpleName);
-            classStatsLabel.setText(String.format("Class Progress: 0 / %,d objects", objectCount));
-            classProgressBar.setValue(0);
-            classProgressBar.setMaximum(Math.max(objectCount, 1));
+            // When a new format is seen, expand the overall bar's maximum
+            if (!formatName.isEmpty() && !seenFormatList.contains(formatName)) {
+                seenFormatList.add(formatName);
+                overallProgressBar.setMaximum(totalClasses * seenFormatList.size());
+            }
+            // Get or create the row for this format
+            FormatRow row = formatRows.get(formatName);
+            if (row == null) {
+                row = createFormatRow(formatName);
+            }
+            row.infoLabel.setText(buildInfoText(formatName, simpleName, 0, objectCount));
+            row.progressBar.setValue(0);
+            row.progressBar.setMaximum(Math.max(objectCount, 1));
         });
 
-        appendLog(String.format("  → %s (%,d objects)... ", simpleName, objectCount));
+        appendLog(String.format("  \u2192 [%s] %s (%,d objects)... ", formatName, simpleName, objectCount));
     }
 
     @Override
-    public void onClassComplete(String className, int objectsExported) {
+    public void onClassComplete(String className, int objectsExported, String formatName) {
         completedClasses++;
 
         SwingUtilities.invokeLater(() -> {
-            overallStatsLabel.setText(String.format("Overall Progress: %,d / %,d classes", completedClasses, totalClasses));
-            overallProgressBar.setValue(completedClasses);
+            int numFormats = Math.max(1, seenFormatList.size());
+            int total = totalClasses * numFormats;
+            int clamped = Math.min(completedClasses, total);
+            overallStatsLabel.setText(String.format("Overall Progress: %,d / %,d classes", clamped, total));
+            overallProgressBar.setValue(clamped);
         });
 
         appendLog(String.format("✓ (%,d objects)\n", objectsExported));
     }
 
     @Override
-    public void onObjectProgress(String className, int current, int total) {
+    public void onObjectProgress(String className, String simpleName, int current, int total, String formatName) {
         SwingUtilities.invokeLater(() -> {
-            classStatsLabel.setText(String.format("Class Progress: %,d / %,d objects", current, total));
-            classProgressBar.setValue(current);
+            FormatRow row = formatRows.get(formatName);
+            if (row != null) {
+                row.infoLabel.setText(buildInfoText(formatName, simpleName, current, total));
+                row.progressBar.setMaximum(Math.max(total, 1));
+                row.progressBar.setValue(Math.min(current, total));
+            }
         });
     }
 
@@ -309,9 +365,6 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
 
     @Override
     public void onXSDGenerationStart(String schemaPath) {
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Generating XSD schema...");
-        });
         appendLog(String.format("\nGenerating XSD schema: %s\n", schemaPath));
     }
 
@@ -322,9 +375,6 @@ public class ExportProgressDialog extends JDialog implements DOExportMonitor {
 
     @Override
     public void onStatusMessage(String message) {
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText(message);
-        });
         appendLog(message + "\n");
     }
 

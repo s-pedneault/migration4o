@@ -6,6 +6,10 @@ import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.JButton;
@@ -27,11 +31,10 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     // UI Components
     private JLabel titleLabel;
-    private JLabel currentOperationLabel;
     private JProgressBar overallProgressBar;
-    private JProgressBar classProgressBar;
     private JLabel overallStatsLabel;
-    private JLabel classStatsLabel;
+    private JPanel formatRowsPanel;
+    private int formatRowsNextRow = 0;
     private JLabel warningsLabel;
     private JTextArea logArea;
     private JButton clearButton;
@@ -44,6 +47,21 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     private int warningCount = 0;
     private int errorCount = 0;
 
+    // Per-format progress tracking
+    private final Map<String, FormatRow> formatRows = new LinkedHashMap<>();
+    private final List<String> seenFormatList = new ArrayList<>();
+
+    /** Holds UI widgets for one export format's compact progress row. */
+    private static class FormatRow {
+        final JLabel infoLabel;
+        final JProgressBar progressBar;
+
+        FormatRow(JLabel info, JProgressBar bar) {
+            this.infoLabel = info;
+            this.progressBar = bar;
+        }
+    }
+
     public MigrationReportPanel() {
         initComponents();
         showEmptyState();
@@ -53,8 +71,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
      * Shows a message when no export has been run yet.
      */
     private void showEmptyState() {
-        logArea.setText(
-                "Migration Report\n\nNo export has been run yet.\nUse the Migration structure tab in the Schema section to configure and run an export.\n\nThis panel will show real-time progress when an export is running.");
+        logArea.setText("Migration Report\n\nNo export has been run yet.\nUse the Migration structure tab in the Schema section to configure and run an export.\n\nThis panel will show real-time progress when an export is running.");
     }
 
     private void initComponents() {
@@ -88,32 +105,18 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         gbc.insets = new Insets(5, 0, 10, 0);
         topPanel.add(overallProgressBar, gbc);
 
-        // Current operation label
-        currentOperationLabel = new JLabel(" ");
-        currentOperationLabel.setFont(currentOperationLabel.getFont().deriveFont(Font.ITALIC));
+        // Per-format progress rows (compact two-column table: info | bar)
+        formatRowsPanel = new JPanel(new GridBagLayout());
+        formatRowsPanel.setBorder(BorderFactory.createTitledBorder("Class Progress"));
         gbc.gridy = 3;
-        gbc.insets = new Insets(5, 0, 2, 0);
-        topPanel.add(currentOperationLabel, gbc);
-
-        // Class progress label
-        classStatsLabel = new JLabel("Class Progress: 0 / 0 objects");
-        gbc.gridy = 4;
-        gbc.insets = new Insets(2, 0, 2, 0);
-        topPanel.add(classStatsLabel, gbc);
-
-        // Class progress bar
-        classProgressBar = new JProgressBar(0, 100);
-        classProgressBar.setStringPainted(true);
-        classProgressBar.setPreferredSize(new Dimension(600, 20));
-        gbc.gridy = 5;
-        gbc.insets = new Insets(2, 0, 5, 0);
-        topPanel.add(classProgressBar, gbc);
+        gbc.insets = new Insets(4, 0, 2, 0);
+        topPanel.add(formatRowsPanel, gbc);
 
         // Stats panel
         JPanel statsPanel = new JPanel();
         warningsLabel = new JLabel("Exported: 0 | Warnings: 0 | Errors: 0");
         statsPanel.add(warningsLabel);
-        gbc.gridy = 6;
+        gbc.gridy = 4;
         gbc.insets = new Insets(5, 0, 0, 0);
         topPanel.add(statsPanel, gbc);
 
@@ -140,19 +143,66 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         showEmptyState();
     }
 
+    /**
+     * Creates and registers a new format progress row. Must be called on the EDT.
+     */
+    private FormatRow createFormatRow(String formatName) {
+        JLabel infoLabel = new JLabel();
+        infoLabel.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
+
+        JProgressBar bar = new JProgressBar(0, 1);
+        bar.setStringPainted(true);
+        bar.setPreferredSize(new Dimension(0, 18));
+
+        GridBagConstraints rowGbc = new GridBagConstraints();
+        rowGbc.gridy = formatRowsNextRow++;
+        rowGbc.insets = new Insets(2, 4, 2, 4);
+        rowGbc.anchor = GridBagConstraints.WEST;
+        rowGbc.fill = GridBagConstraints.HORIZONTAL;
+
+        rowGbc.gridx = 0;
+        rowGbc.weightx = 0.5;
+        formatRowsPanel.add(infoLabel, rowGbc);
+
+        rowGbc.gridx = 1;
+        rowGbc.weightx = 0.5;
+        formatRowsPanel.add(bar, rowGbc);
+
+        formatRowsPanel.revalidate();
+        formatRowsPanel.repaint();
+
+        FormatRow row = new FormatRow(infoLabel, bar);
+        formatRows.put(formatName, row);
+        return row;
+    }
+
+    private static String buildInfoText(String formatName, String simpleName, int current, int total) {
+        String badge = formatName.isEmpty() ? "[---]" : String.format("[%-4s]", formatName);
+        return String.format("%s %s    %,d / %,d", badge, simpleName, current, total);
+    }
+
+    /**
+     * Resets only the row for the format that is starting a new class.
+     * Other format rows keep their last state until that format itself
+     * starts a new class — otherwise the XML row wipes the HTML row's
+     * in-progress display before the timer can paint it.
+     */
+    private void resetFormatRow(String formatName) {
+        FormatRow row = formatRows.get(formatName);
+        if (row != null) {
+            row.progressBar.setValue(0);
+            String badge = formatName.isEmpty() ? "[---]" : String.format("[%-4s]", formatName);
+            row.infoLabel.setText(badge + " —");
+        }
+    }
+
     private void appendLog(String message) {
-        SwingUtilities.invokeLater(() -> {
-            logArea.append(message);
-            logArea.setCaretPosition(logArea.getDocument().getLength());
-        });
+        logArea.append(message);
+        logArea.setCaretPosition(logArea.getDocument().getLength());
     }
 
     private void updateStats() {
-        SwingUtilities.invokeLater(() -> {
-            warningsLabel.setText(String.format(
-                    "Exported: %,d | Warnings: %,d | Errors: %,d",
-                    exportedObjects, warningCount, errorCount));
-        });
+        warningsLabel.setText(String.format("Exported: %,d | Warnings: %,d | Errors: %,d", exportedObjects, warningCount, errorCount));
     }
 
     /**
@@ -166,16 +216,17 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         warningCount = 0;
         errorCount = 0;
 
-        SwingUtilities.invokeLater(() -> {
-            logArea.setText("");
-            titleLabel.setText("Ready to export");
-            currentOperationLabel.setText(" ");
-            overallStatsLabel.setText("Overall Progress: 0 / 0 classes");
-            classStatsLabel.setText("Class Progress: 0 / 0 objects");
-            overallProgressBar.setValue(0);
-            classProgressBar.setValue(0);
-            updateStats();
-        });
+        logArea.setText("");
+        titleLabel.setText("Ready to export");
+        overallStatsLabel.setText("Overall Progress: 0 / 0 classes");
+        overallProgressBar.setValue(0);
+        seenFormatList.clear();
+        formatRows.clear();
+        formatRowsNextRow = 0;
+        formatRowsPanel.removeAll();
+        formatRowsPanel.revalidate();
+        formatRowsPanel.repaint();
+        updateStats();
     }
 
     // ========== DOExportMonitor Implementation ==========
@@ -188,14 +239,17 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         this.warningCount = 0;
         this.errorCount = 0;
 
-        SwingUtilities.invokeLater(() -> {
-            titleLabel.setText("Exporting: " + exportName);
-            overallStatsLabel.setText(String.format("Overall Progress: 0 / %,d classes", totalClasses));
-            overallProgressBar.setValue(0);
-            overallProgressBar.setMaximum(totalClasses);
-            classProgressBar.setValue(0);
-            updateStats();
-        });
+        titleLabel.setText("Exporting: " + exportName);
+        overallStatsLabel.setText(String.format("Overall Progress: 0 / %,d classes", totalClasses));
+        overallProgressBar.setValue(0);
+        overallProgressBar.setMaximum(totalClasses);
+        seenFormatList.clear();
+        formatRows.clear();
+        formatRowsNextRow = 0;
+        formatRowsPanel.removeAll();
+        formatRowsPanel.revalidate();
+        formatRowsPanel.repaint();
+        updateStats();
 
         appendLog(String.format("=== EXPORT STARTED: %s ===\n", exportName));
         appendLog(String.format("Total classes to export: %,d\n\n", totalClasses));
@@ -203,10 +257,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     @Override
     public void onExportComplete(String exportName, int objectsExported, int warnings) {
-        SwingUtilities.invokeLater(() -> {
-            titleLabel.setText("Export Complete: " + exportName);
-            currentOperationLabel.setText("Export finished successfully");
-        });
+        titleLabel.setText("Export Complete: " + exportName);
 
         appendLog(String.format("\n=== EXPORT COMPLETED ===\n"));
         appendLog(String.format("Total objects exported: %,d\n", objectsExported));
@@ -218,11 +269,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     public void onExportError(String exportName, String error) {
         errorCount++;
         updateStats();
-
-        SwingUtilities.invokeLater(() -> {
-            titleLabel.setText("Export Failed: " + exportName);
-            currentOperationLabel.setText("ERROR: " + error);
-        });
+        titleLabel.setText("Export Failed: " + exportName);
 
         appendLog(String.format("\n!!! EXPORT FAILED !!!\n"));
         appendLog(String.format("Error: %s\n", error));
@@ -232,10 +279,6 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     public void onModuleStart(String moduleName, int classCount, int depth) {
         String indent = "  ".repeat(depth);
         appendLog(String.format("%s▶ Module: %s (%,d classes)\n", indent, moduleName, classCount));
-
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Processing module: " + moduleName);
-        });
     }
 
     @Override
@@ -244,36 +287,51 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     }
 
     @Override
-    public void onClassStart(String className, String simpleName, int objectCount) {
+    public void onClassStart(String className, String simpleName, int objectCount, String formatName) {
         SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Exporting: " + simpleName);
-            classStatsLabel.setText(String.format("Class Progress: 0 / %,d objects", objectCount));
-            classProgressBar.setValue(0);
-            classProgressBar.setMaximum(Math.max(objectCount, 1));
+            if (!formatName.isEmpty() && !seenFormatList.contains(formatName)) {
+                seenFormatList.add(formatName);
+                overallProgressBar.setMaximum(totalClasses * seenFormatList.size());
+            }
+            FormatRow row = formatRows.get(formatName);
+            if (row == null) {
+                row = createFormatRow(formatName);
+            }
+            row.infoLabel.setText(buildInfoText(formatName, simpleName, 0, objectCount));
+            row.progressBar.setValue(0);
+            row.progressBar.setMaximum(Math.max(objectCount, 1));
         });
-
-        appendLog(String.format("  → %s (%,d objects)... ", simpleName, objectCount));
+        appendLog(String.format("  → [%s] %s (%,d objects)... ", formatName, simpleName, objectCount));
     }
 
     @Override
-    public void onClassComplete(String className, int objectsExported) {
+    public void onClassComplete(String className, int objectsExported, String formatName) {
         completedClasses++;
-
+        final int cc = completedClasses;
         SwingUtilities.invokeLater(() -> {
-            overallStatsLabel.setText(String.format(
-                    "Overall Progress: %,d / %,d classes",
-                    completedClasses, totalClasses));
-            overallProgressBar.setValue(completedClasses);
+            int numFormats = Math.max(1, seenFormatList.size());
+            int total = totalClasses * numFormats;
+            int clamped = Math.min(cc, total);
+            overallStatsLabel.setText(String.format("Overall Progress: %,d / %,d classes", clamped, total));
+            overallProgressBar.setValue(clamped);
+            resetFormatRow(formatName);
         });
 
         appendLog(String.format("✓ (%,d objects)\n", objectsExported));
     }
 
     @Override
-    public void onObjectProgress(String className, int current, int total) {
+    public void onObjectProgress(String className, String simpleName, int current, int total, String formatName) {
+        // simpleName is passed directly from the exporter at call time — never stale.
+        // invokeLater ensures this runs AFTER onClassStart's invokeLater (same EDT queue, FIFO),
+        // so the row is guaranteed to exist when we look it up.
         SwingUtilities.invokeLater(() -> {
-            classStatsLabel.setText(String.format("Class Progress: %,d / %,d objects", current, total));
-            classProgressBar.setValue(current);
+            FormatRow row = formatRows.get(formatName);
+            if (row != null) {
+                row.infoLabel.setText(buildInfoText(formatName, simpleName, current, total));
+                row.progressBar.setMaximum(Math.max(total, 1));
+                row.progressBar.setValue(Math.min(current, total));
+            }
         });
     }
 
@@ -313,9 +371,6 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     @Override
     public void onXSDGenerationStart(String schemaPath) {
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText("Generating XSD schema...");
-        });
         appendLog(String.format("\nGenerating XSD schema: %s\n", schemaPath));
     }
 
@@ -326,9 +381,6 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     @Override
     public void onStatusMessage(String message) {
-        SwingUtilities.invokeLater(() -> {
-            currentOperationLabel.setText(message);
-        });
         appendLog(message + "\n");
     }
 

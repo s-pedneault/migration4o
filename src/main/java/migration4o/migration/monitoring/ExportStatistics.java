@@ -55,6 +55,7 @@ public class ExportStatistics {
     public boolean fullTracking = true;
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
+    public String currentFormatName = "";
     public int currentClassTotal = 0;
     /**
      * Resets to 0 each time {@link #setCurrentClass} is called; counts every
@@ -76,12 +77,15 @@ public class ExportStatistics {
         this.currentClassAttempted = 0;
     }
 
+    public void setCurrentFormatName(String formatName) {
+        this.currentFormatName = formatName != null ? formatName : "";
+    }
+
     public void incrementAttempted() {
         objectsAttempted++;
         currentClassAttempted++;
-        if (monitor != null && currentClassAttempted % 10 == 0 && currentClassTotal > 0) {
-            monitor.onObjectProgress(currentClassName, currentClassAttempted, currentClassTotal);
-        }
+        // onObjectProgress is fired directly from ObjectExportLoop, which has
+        // the correct per-format count and format name without shared state.
     }
 
     public void incrementSucceeded() {

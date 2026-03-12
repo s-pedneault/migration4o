@@ -7,7 +7,7 @@ package migration4o.ui.common;
  * Similar to DODatabaseMonitor but specialized for export operations.
  */
 public interface DOExportMonitor {
-    
+
     /**
      * Called when export operation begins.
      * 
@@ -15,7 +15,7 @@ public interface DOExportMonitor {
      * @param totalClasses The total number of classes to be exported
      */
     void onExportStart(String exportName, int totalClasses);
-    
+
     /**
      * Called when export operation completes successfully.
      * 
@@ -24,7 +24,7 @@ public interface DOExportMonitor {
      * @param warnings Total number of warnings encountered
      */
     void onExportComplete(String exportName, int objectsExported, int warnings);
-    
+
     /**
      * Called when export operation fails.
      * 
@@ -32,7 +32,7 @@ public interface DOExportMonitor {
      * @param error The error that caused the failure
      */
     void onExportError(String exportName, String error);
-    
+
     /**
      * Called when a module export begins.
      * 
@@ -41,40 +41,44 @@ public interface DOExportMonitor {
      * @param depth Nesting depth (0 = root module)
      */
     void onModuleStart(String moduleName, int classCount, int depth);
-    
+
     /**
      * Called when a module export completes.
      * 
      * @param moduleName The name of the module
      */
     void onModuleComplete(String moduleName);
-    
+
     /**
      * Called when a class export begins.
      * 
      * @param className The full class name
      * @param simpleName The simple class name (for display)
      * @param objectCount Number of objects to export for this class
+     * @param formatName The export format name (e.g. "XML", "HTML")
      */
-    void onClassStart(String className, String simpleName, int objectCount);
-    
+    void onClassStart(String className, String simpleName, int objectCount, String formatName);
+
     /**
      * Called when a class export completes.
      * 
      * @param className The full class name
      * @param objectsExported Number of objects successfully exported
+     * @param formatName The export format name (e.g. "XML", "HTML")
      */
-    void onClassComplete(String className, int objectsExported);
-    
+    void onClassComplete(String className, int objectsExported, String formatName);
+
     /**
      * Called periodically during object export to report progress.
-     * 
+     *
      * @param className The class being exported
+     * @param simpleName Display name for the class
      * @param current Current object number
      * @param total Total objects for this class
+     * @param formatName The export format name (e.g. "XML", "HTML")
      */
-    void onObjectProgress(String className, int current, int total);
-    
+    void onObjectProgress(String className, String simpleName, int current, int total, String formatName);
+
     /**
      * Called when an object export succeeds.
      * 
@@ -82,7 +86,7 @@ public interface DOExportMonitor {
      * @param objectId The object ID
      */
     void onObjectExported(String className, long objectId);
-    
+
     /**
      * Called when an object export fails.
      * 
@@ -91,7 +95,7 @@ public interface DOExportMonitor {
      * @param error Error message
      */
     void onObjectError(String className, long objectId, String error);
-    
+
     /**
      * Called when a warning is encountered during export.
      * 
@@ -100,28 +104,28 @@ public interface DOExportMonitor {
      * @param message Warning message
      */
     void onWarning(String warningType, String className, String message);
-    
+
     /**
      * Called when XSD schema generation begins.
      * 
      * @param schemaPath Path where XSD will be written
      */
     void onXSDGenerationStart(String schemaPath);
-    
+
     /**
      * Called when XSD schema generation completes.
      * 
      * @param schemaPath Path where XSD was written
      */
     void onXSDGenerationComplete(String schemaPath);
-    
+
     /**
      * Called with general status messages during export.
      * 
      * @param message Status message
      */
     void onStatusMessage(String message);
-    
+
     /**
      * Returns true if the export should be cancelled.
      * 

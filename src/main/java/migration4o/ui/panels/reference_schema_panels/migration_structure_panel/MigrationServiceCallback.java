@@ -83,6 +83,15 @@ public class MigrationServiceCallback {
         // Switch to Migration report tab
         showMigrationReportTab();
 
+        // Save export options immediately before starting, so --repeat-export
+        // always reflects the most recently launched configuration.
+        List<String> moduleNames = new ArrayList<>();
+        for (DOSchemaModule module : modules) {
+            moduleNames.add(module.name);
+        }
+        String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
+        ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, options.getOutputPath(), new ArrayList<>(), moduleNames, options.getMaxObjectsPerClass(), options.isExportNativeIds(), ExportOutputOption.toPersistedOptions(options.getOutputOptions()), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
+
         // Run export in background
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
@@ -93,21 +102,7 @@ public class MigrationServiceCallback {
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
-                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
-
-                // Extract module names
-                List<String> moduleNames = new ArrayList<>();
-                for (DOSchemaModule module : modules) {
-                    moduleNames.add(module.name);
-                }
-
-                // Save to history if successful
-                if (result.errors.isEmpty()) {
-                    String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
-                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, options.getOutputPath(), new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, options.getMaxObjectsPerClass(), options.isExportNativeIds(), ExportOutputOption.toPersistedOptions(options.getOutputOptions()), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
-                }
-
-                return result;
+                return exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
             }
 
             @Override

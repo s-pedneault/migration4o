@@ -57,11 +57,12 @@ public class ObjectExportLoop {
         int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) ? operation.maxObjectsPerClass : objectCount;
 
         if (operation.monitor != null) {
-            operation.monitor.onClassStart(schemaClass.source, schemaClass.destinationName, actualCount);
+            operation.monitor.onClassStart(schemaClass.source, schemaClass.destinationName, actualCount, "");
         }
 
         if (objectIds != null) {
             operation.statistics.setCurrentClass(schemaClass.source, actualCount);
+            operation.statistics.setCurrentFormatName("");
             int exportedCount = 0;
 
             for (long objectId : objectIds) {
@@ -77,6 +78,9 @@ public class ObjectExportLoop {
 
                 objectExporter.exportObjectRecursively(operation.container, objectId, 2);
                 exportedCount++;
+                if (operation.monitor != null && exportedCount % 10 == 0 && actualCount > 0) {
+                    operation.monitor.onObjectProgress(schemaClass.source, schemaClass.destinationName, exportedCount, actualCount, "");
+                }
             }
         }
 
@@ -88,7 +92,7 @@ public class ObjectExportLoop {
         }
 
         if (operation.monitor != null) {
-            operation.monitor.onClassComplete(schemaClass.source, operation.statistics.getUniqueExportedCount());
+            operation.monitor.onClassComplete(schemaClass.source, operation.statistics.getUniqueExportedCount(), "");
         }
     }
 
@@ -110,15 +114,17 @@ public class ObjectExportLoop {
         migration4o.models.schema.DOSchemaClass loopClass = ctx.schemaClass;
 
         if (operation.monitor != null && loopClass != null) {
-            operation.monitor.onClassStart(loopClass.source, loopClass.destinationName, actualCount);
+            operation.monitor.onClassStart(loopClass.source, loopClass.destinationName, actualCount, handler != null ? handler.displayName() : "");
         }
 
         if (objectIds != null) {
             if (ctx.statistics != null && loopClass != null) {
                 ctx.statistics.setCurrentClass(loopClass.source, actualCount);
+                ctx.statistics.setCurrentFormatName(handler != null ? handler.displayName() : "");
             }
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
             int exportedCount = 0;
+            String formatName = handler != null ? handler.displayName() : "";
             for (long objectId : objectIds) {
                 if (operation.monitor != null && operation.monitor.isCancelled())
                     break;
@@ -138,6 +144,12 @@ public class ObjectExportLoop {
                     }
                 }
                 exportedCount++;
+                // Fire progress directly from the loop — this is the only place
+                // that knows the exact per-format count, class total, AND format
+                // name simultaneously, with no shared mutable state.
+                if (operation.monitor != null && exportedCount % 10 == 0 && actualCount > 0) {
+                    operation.monitor.onObjectProgress(loopClass != null ? loopClass.source : "", loopClass != null ? loopClass.destinationName : "", exportedCount, actualCount, formatName);
+                }
             }
 
             // Propagate newly discovered references to the shared tracker
@@ -150,7 +162,7 @@ public class ObjectExportLoop {
 
         if (operation.monitor != null && loopClass != null) {
             int succeeded = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : 0;
-            operation.monitor.onClassComplete(loopClass.source, succeeded);
+            operation.monitor.onClassComplete(loopClass.source, succeeded, handler != null ? handler.displayName() : "");
         }
     }
 }

@@ -173,6 +173,18 @@ public class XmlFormatHandler extends FormatHandler {
 
         this.writer = createWriter(extraPath);
         ctx.allowedObjectIds = new HashSet<>(unreachedIds);
+
+        int extraCount = unreachedIds.size();
+        // Initialise per-class statistics so incrementAttempted() tracks
+        // progress against the correct total (not the last regular class).
+        if (ctx.statistics != null) {
+            ctx.statistics.setCurrentClass("Extra", extraCount);
+            ctx.statistics.setCurrentFormatName(displayName());
+        }
+        if (ctx.operation.monitor != null) {
+            ctx.operation.monitor.onClassStart("Extra", "Extra", extraCount, displayName());
+        }
+
         try {
             // Open with null schemaClass (mixed types, no metadata)
             writer.openRootStructure("export", computeSchemaLocation(ctx));
@@ -182,12 +194,17 @@ public class XmlFormatHandler extends FormatHandler {
             Collections.sort(sortedIds);
 
             ObjectExporter objectExporter = new ObjectExporter(ctx, this);
+            int extraExported = 0;
             for (Long objectId : sortedIds) {
                 if (objectId == null || objectId <= 0)
                     continue;
                 if (ctx.operation.monitor != null && ctx.operation.monitor.isCancelled())
                     break;
                 objectExporter.exportObject(objectId, false);
+                extraExported++;
+                if (ctx.operation.monitor != null && extraExported % 100 == 0 && extraCount > 0) {
+                    ctx.operation.monitor.onObjectProgress("Extra", "Extra", extraExported, extraCount, displayName());
+                }
             }
 
             writer.closeStructure("objects");
@@ -198,15 +215,21 @@ public class XmlFormatHandler extends FormatHandler {
         }
 
         if (ctx.operation.monitor != null) {
+            int exported = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : 0;
+            ctx.operation.monitor.onClassComplete("Extra", exported, displayName());
             ctx.operation.monitor.onModuleComplete("_Migration");
         }
     }
 
     private Set<Long> collectReachedIds(ExportContext ctx) {
         Set<Long> reached = new HashSet<>();
-        if (ctx.statistics == null || ctx.statistics.exportedObjectIds == null)
+        if (ctx.statistics == null)
             return reached;
-        for (List<Long> ids : ctx.statistics.exportedObjectIds.values()) {
+        // exportedObjectIdsSet is always populated regardless of fullTracking.
+        // exportedObjectIds is only a copy made when fullTracking=true, so we
+        // must not use it here — otherwise the Extra pass would treat every
+        // object as unreached when "Full tracking & analysis" is disabled.
+        for (java.util.Set<Long> ids : ctx.statistics.exportedObjectIdsSet.values()) {
             if (ids != null)
                 reached.addAll(ids);
         }
