@@ -43,6 +43,16 @@ public class ExportStatistics {
      * diagnostics while still tracking progress counters.
      */
     public boolean skipDiagnostics = false;
+
+    /**
+     * When {@code false}, all expensive analytical tracking is disabled:
+     * {@link #allExportedObjectIds} is not populated, per-object decision notes
+     * and relationship notes are not collected, and {@link #exportedObjectIds}
+     * is not built in {@link #setExportInfo}. {@link #exportedClassCounts} is
+     * always maintained for the count column in the coverage panel. Defaults to
+     * {@code true} for full backwards-compatible behaviour.
+     */
+    public boolean fullTracking = true;
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public int currentClassTotal = 0;
@@ -82,9 +92,13 @@ public class ExportStatistics {
      * Records a unique exported object ID. Because DB4O object IDs are globally
      * unique, using a set naturally deduplicates across classes and embedding
      * depths.
+     * <p>No-op when {@link #fullTracking} is {@code false} — the global ID set
+     * is only used for reachability coverage analysis.</p>
      */
     public void recordExportedObjectId(long objectId) {
-        allExportedObjectIds.add(objectId);
+        if (fullTracking) {
+            allExportedObjectIds.add(objectId);
+        }
     }
 
     /** Returns the count of unique objects exported (root + embedded). */
@@ -97,7 +111,7 @@ public class ExportStatistics {
     }
 
     public void recordObjectDecision(long objectId, String className, String decision) {
-        if (skipDiagnostics)
+        if (skipDiagnostics || !fullTracking)
             return;
         if (objectId <= 0 || decision == null || decision.trim().isEmpty()) {
             return;
@@ -108,7 +122,7 @@ public class ExportStatistics {
     }
 
     public void recordRelationshipExported(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String detail) {
-        if (skipDiagnostics)
+        if (skipDiagnostics || !fullTracking)
             return;
         if (parentObjectId <= 0 || childObjectId <= 0) {
             return;
@@ -118,7 +132,7 @@ public class ExportStatistics {
     }
 
     public void recordRelationshipSkipped(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String reason) {
-        if (skipDiagnostics)
+        if (skipDiagnostics || !fullTracking)
             return;
         if (parentObjectId <= 0 || childObjectId <= 0 || reason == null || reason.trim().isEmpty()) {
             return;
@@ -233,9 +247,13 @@ public class ExportStatistics {
     public void setExportInfo(String exportName, String outputPath) {
         this.exportName = exportName;
         this.outputPath = outputPath;
-        exportedObjectIds.clear();
-        for (Map.Entry<String, Set<Long>> entry : exportedObjectIdsSet.entrySet()) {
-            exportedObjectIds.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+        // Only build the per-class ID lists (used for coverage drilldown) when
+        // full tracking is enabled; skipping them saves memory on large exports.
+        if (fullTracking) {
+            exportedObjectIds.clear();
+            for (Map.Entry<String, Set<Long>> entry : exportedObjectIdsSet.entrySet()) {
+                exportedObjectIds.put(entry.getKey(), new ArrayList<>(entry.getValue()));
+            }
         }
     }
 

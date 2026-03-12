@@ -916,6 +916,19 @@ public class MainWindow extends JFrame {
     }
 
     /**
+     * Enables or disables the migration coverage panel. Should be called after
+     * an export completes: pass {@code true} when the export ran with full
+     * tracking, {@code false} otherwise. When disabled, all interactive
+     * controls in the panel are greyed out because the data required for
+     * coverage analysis was not collected.
+     */
+    public void setCoveragePanelEnabled(boolean enabled) {
+        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
+            migrationCoverageTab.setEnabled(enabled);
+        }
+    }
+
+    /**
      * Updates the migration results tab with new export statistics. Also
      * switches to the Database tab and Warnings & errors sub-tab.
      * 

@@ -24,6 +24,7 @@ public class ExportHistory {
     private static final String PROP_APPLY_SKIP_WHEN_CONDITIONS = "export.applySkipWhenConditions";
     private static final String PROP_APPLY_EXPORT_CRITERIA_FILTERS = "export.applyExportCriteriaFilters";
     private static final String PROP_SKIP_OBJECTS_WITHOUT_EXPORTABLE_FIELDS = "export.skipObjectsWithoutExportableFields";
+    private static final String PROP_FULL_TRACKING = "export.fullTracking";
 
     public enum ExportType {
         CLASS, MODULE
@@ -62,6 +63,13 @@ public class ExportHistory {
      * Saves export parameters with conditional exclusion settings.
      */
     public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
+        saveExport(type, targetName, outputPath, classNames, moduleNames, maxObjectsPerClass, exportNativeIds, outputFormat, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true);
+    }
+
+    /**
+     * Saves export parameters with all settings including full-tracking flag.
+     */
+    public static void saveExport(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking) {
         Properties props = new Properties();
         props.setProperty(PROP_TYPE, type.name());
         props.setProperty(PROP_TARGET, targetName);
@@ -86,6 +94,7 @@ public class ExportHistory {
         props.setProperty(PROP_APPLY_SKIP_WHEN_CONDITIONS, String.valueOf(applySkipWhenConditions));
         props.setProperty(PROP_APPLY_EXPORT_CRITERIA_FILTERS, String.valueOf(applyExportCriteriaFilters));
         props.setProperty(PROP_SKIP_OBJECTS_WITHOUT_EXPORTABLE_FIELDS, String.valueOf(skipObjectsWithoutExportableFields));
+        props.setProperty(PROP_FULL_TRACKING, String.valueOf(fullTracking));
 
         try (FileWriter writer = new FileWriter(HISTORY_FILE)) {
             props.store(writer, "Last export operation - automatically generated");
@@ -119,6 +128,7 @@ public class ExportHistory {
             boolean applySkipWhenConditions = Boolean.parseBoolean(props.getProperty(PROP_APPLY_SKIP_WHEN_CONDITIONS, "true"));
             boolean applyExportCriteriaFilters = Boolean.parseBoolean(props.getProperty(PROP_APPLY_EXPORT_CRITERIA_FILTERS, "true"));
             boolean skipObjectsWithoutExportableFields = Boolean.parseBoolean(props.getProperty(PROP_SKIP_OBJECTS_WITHOUT_EXPORTABLE_FIELDS, "true"));
+            boolean fullTracking = Boolean.parseBoolean(props.getProperty(PROP_FULL_TRACKING, "true"));
 
             if (type == ExportType.MODULE) {
                 String classNamesStr = props.getProperty(PROP_CLASS_NAMES);
@@ -143,7 +153,7 @@ public class ExportHistory {
 
             boolean exportNativeIds = Boolean.parseBoolean(props.getProperty(PROP_EXPORT_NATIVE_IDS, "false"));
 
-            return new ExportParams(type, target, output, classNames, moduleNames, timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass, exportNativeIds, outputFormat, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields);
+            return new ExportParams(type, target, output, classNames, moduleNames, timestamp != null ? Long.parseLong(timestamp) : 0, maxObjectsPerClass, exportNativeIds, outputFormat, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking);
         } catch (IOException | IllegalArgumentException e) {
             System.err.println("Warning: Could not load export history: " + e.getMessage());
             return null;
@@ -174,8 +184,14 @@ public class ExportHistory {
         public final boolean applySkipWhenConditions;
         public final boolean applyExportCriteriaFilters;
         public final boolean skipObjectsWithoutExportableFields;
+        /** Whether full tracking & analysis was enabled for this export. */
+        public final boolean fullTracking;
 
         public ExportParams(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, long timestamp, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
+            this(type, targetName, outputPath, classNames, moduleNames, timestamp, maxObjectsPerClass, exportNativeIds, outputFormat, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true);
+        }
+
+        public ExportParams(ExportType type, String targetName, String outputPath, List<String> classNames, List<String> moduleNames, long timestamp, Integer maxObjectsPerClass, boolean exportNativeIds, String outputFormat, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking) {
             this.type = type;
             this.targetName = targetName;
             this.outputPath = outputPath;
@@ -189,6 +205,7 @@ public class ExportHistory {
             this.applySkipWhenConditions = applySkipWhenConditions;
             this.applyExportCriteriaFilters = applyExportCriteriaFilters;
             this.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
+            this.fullTracking = fullTracking;
         }
 
         public String getDescription() {

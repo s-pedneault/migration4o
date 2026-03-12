@@ -19,8 +19,16 @@ public class ExportOptions {
     private final boolean applySkipWhenConditions;
     private final boolean applyExportCriteriaFilters;
     private final boolean skipObjectsWithoutExportableFields;
+    /** When {@code false}, expensive per-object diagnostic tracking and
+     * reachability ID collection are skipped, speeding up the export at the
+     * cost of disabling the coverage analysis panel. */
+    private final boolean fullTracking;
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
+        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true);
+    }
+
+    public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking) {
         this.maxObjectsPerClass = maxObjectsPerClass;
         this.exportNativeIds = exportNativeIds;
         this.selectedSkipOptions = selectedSkipOptions;
@@ -30,6 +38,7 @@ public class ExportOptions {
         this.applySkipWhenConditions = applySkipWhenConditions;
         this.applyExportCriteriaFilters = applyExportCriteriaFilters;
         this.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
+        this.fullTracking = fullTracking;
     }
 
     public Integer getMaxObjectsPerClass() {
@@ -74,5 +83,9 @@ public class ExportOptions {
 
     public boolean isSkipObjectsWithoutExportableFields() {
         return skipObjectsWithoutExportableFields;
+    }
+
+    public boolean isFullTracking() {
+        return fullTracking;
     }
 }

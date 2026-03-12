@@ -26,6 +26,7 @@ public class ExportConfirmationDialog extends JDialog {
     private boolean applySkipWhenConditions = true;
     private boolean applyExportCriteriaFilters = true;
     private boolean skipObjectsWithoutExportableFields = true;
+    private boolean fullTracking = true;
 
     private JRadioButton allObjectsRadio;
     private JRadioButton limitObjectsRadio;
@@ -37,6 +38,7 @@ public class ExportConfirmationDialog extends JDialog {
     private JCheckBox applySkipWhenConditionsCheckbox;
     private JCheckBox applyExportCriteriaFiltersCheckbox;
     private JCheckBox skipObjectsWithoutExportableFieldsCheckbox;
+    private JCheckBox fullTrackingCheckbox;
 
     /**
      * Creates a new export confirmation dialog.
@@ -47,8 +49,25 @@ public class ExportConfirmationDialog extends JDialog {
      * selected)
      * @param availableSkipOptions List of fields that can be skipped by user
      * choice
+     * @param defaultOutputFormat Previously used output format string
      */
     public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit, List<DOSchemaField> availableSkipOptions, String defaultOutputFormat) {
+        this(parent, moduleCount, defaultLimit, availableSkipOptions, defaultOutputFormat, true);
+    }
+
+    /**
+     * Creates a new export confirmation dialog.
+     * 
+     * @param parent Parent frame
+     * @param moduleCount Number of modules to export
+     * @param defaultLimit Default limit value (used when "Max N objects" is
+     * selected)
+     * @param availableSkipOptions List of fields that can be skipped by user
+     * choice
+     * @param defaultOutputFormat Previously used output format string
+     * @param defaultFullTracking Initial state of the "Full tracking &amp; analysis" checkbox
+     */
+    public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit, List<DOSchemaField> availableSkipOptions, String defaultOutputFormat, boolean defaultFullTracking) {
         super(parent, "Confirm Bulk Export", true);
 
         if (defaultLimit == null || defaultLimit <= 0) {
@@ -57,6 +76,7 @@ public class ExportConfirmationDialog extends JDialog {
 
         this.availableSkipOptions = availableSkipOptions != null ? availableSkipOptions : new ArrayList<>();
         this.selectedOutputOptions = ExportOutputOption.parsePersistedOptions(defaultOutputFormat);
+        this.fullTracking = defaultFullTracking;
 
         initComponents(moduleCount, defaultLimit);
         pack();
@@ -139,6 +159,13 @@ public class ExportConfirmationDialog extends JDialog {
         additionalPanel.add(exportNativeIdsCheckbox);
 
         additionalPanel.add(Box.createVerticalStrut(8));
+
+        fullTrackingCheckbox = new JCheckBox("Full tracking & analysis (enables coverage panel; slower on large databases)");
+        fullTrackingCheckbox.setSelected(fullTracking);
+        fullTrackingCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
+        additionalPanel.add(fullTrackingCheckbox);
+
+        additionalPanel.add(Box.createVerticalStrut(8));
         additionalPanel.add(createFieldExclusionsSection());
         additionalPanel.add(Box.createVerticalStrut(8));
         additionalPanel.add(createConditionalExclusionsSection());
@@ -215,6 +242,7 @@ public class ExportConfirmationDialog extends JDialog {
             applySkipWhenConditions = applySkipWhenConditionsCheckbox.isSelected();
             applyExportCriteriaFilters = applyExportCriteriaFiltersCheckbox.isSelected();
             skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFieldsCheckbox.isSelected();
+            fullTracking = fullTrackingCheckbox.isSelected();
 
             selectedOutputOptions = new ArrayList<>();
             for (Map.Entry<String, JCheckBox> entry : outputOptionCheckboxes.entrySet()) {
@@ -314,6 +342,10 @@ public class ExportConfirmationDialog extends JDialog {
 
     public boolean isSkipObjectsWithoutExportableFields() {
         return skipObjectsWithoutExportableFields;
+    }
+
+    public boolean isFullTracking() {
+        return fullTracking;
     }
 
     /**

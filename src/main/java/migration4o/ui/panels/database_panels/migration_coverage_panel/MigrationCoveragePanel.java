@@ -220,6 +220,26 @@ public class MigrationCoveragePanel extends JPanel {
     }
 
     /**
+     * Propagates the enabled state to every child component so the panel
+     * appears fully greyed-out when disabled (e.g. after a non-full-tracking
+     * export where coverage analysis data is unavailable).
+     */
+    @Override
+    public void setEnabled(boolean enabled) {
+        super.setEnabled(enabled);
+        setChildrenEnabled(this, enabled);
+    }
+
+    private static void setChildrenEnabled(java.awt.Container container, boolean enabled) {
+        for (java.awt.Component c : container.getComponents()) {
+            c.setEnabled(enabled);
+            if (c instanceof java.awt.Container) {
+                setChildrenEnabled((java.awt.Container) c, enabled);
+            }
+        }
+    }
+
+    /**
      * Reset all reached values to 0 for all classes in the database schema.
      * Should be called before starting a new export to avoid accumulating values.
      */

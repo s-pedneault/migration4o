@@ -59,6 +59,9 @@ public class ExportOperation {
     // Export configuration flags
     public boolean saveToHistory = true;
     public boolean useSharedTracking = false;
+    /** When {@code false}, expensive per-object ID sets and diagnostic
+     * relationship notes are not collected, speeding up large exports. */
+    public boolean fullTracking = true;
 
     // Shared export state (across multiple ObjectExporter instances)
     public Set<Long> exportedObjectIds = new HashSet<>();

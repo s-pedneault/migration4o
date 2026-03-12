@@ -1016,6 +1016,7 @@ public class MigrationStructurePanel extends JPanel {
         if (lastExport != null && lastExport.outputFormat != null && !lastExport.outputFormat.isBlank()) {
             defaultOutputFormat = lastExport.outputFormat;
         }
+        boolean defaultFullTracking = lastExport == null || lastExport.fullTracking;
 
         // Show confirmation dialog with object limit options
         Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
@@ -1025,7 +1026,7 @@ public class MigrationStructurePanel extends JPanel {
         // Collect available skip options from the schema
         java.util.List<migration4o.models.schema.DOSchemaField> availableSkipOptions = migration4o.util.SchemaUtil.collectSkipUserOptions(referenceSchema);
 
-        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions, defaultOutputFormat);
+        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions, defaultOutputFormat, defaultFullTracking);
         confirmDialog.showDialog();
 
         if (!confirmDialog.isConfirmed()) {
@@ -1037,7 +1038,7 @@ public class MigrationStructurePanel extends JPanel {
         java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = confirmDialog.getSelectedSkipOptions();
         List<String> outputOptions = confirmDialog.getSelectedOutputOptions();
         String outputPath = "output";
-        ExportOptions exportOptions = new ExportOptions(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, confirmDialog.isApplyUserSelectedFieldExclusions(), confirmDialog.isApplySkipWhenConditions(), confirmDialog.isApplyExportCriteriaFilters(), confirmDialog.isSkipObjectsWithoutExportableFields());
+        ExportOptions exportOptions = new ExportOptions(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, confirmDialog.isApplyUserSelectedFieldExclusions(), confirmDialog.isApplySkipWhenConditions(), confirmDialog.isApplyExportCriteriaFilters(), confirmDialog.isSkipObjectsWithoutExportableFields(), confirmDialog.isFullTracking());
 
         // Use orchestrator to run export asynchronously
         exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);

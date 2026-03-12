@@ -83,6 +83,7 @@ public class ExportEngine {
     public ExportStatistics exportModules(List<DOSchemaModule> modules, List<String> modulePaths, List<FormatHandler> handlers) throws Exception {
 
         operation.statistics = new ExportStatistics(operation.monitor);
+        operation.statistics.fullTracking = operation.fullTracking;
 
         ExportContext ctx = new ExportContext(operation);
         ctx.basePath = operation.getBaseOutputPath(operation.baseOutputPath);

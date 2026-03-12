@@ -32,27 +32,24 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext,
-            List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath,
-            DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds,
-            List<migration4o.models.schema.DOSchemaField> selectedSkipOptions,
-            List<String> outputOptions, boolean applyUserSelectedFieldExclusions,
-            boolean applySkipWhenConditions, boolean applyExportCriteriaFilters,
-            boolean skipObjectsWithoutExportableFields) throws Exception {
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) throws Exception {
+        return exportModules(dbContext, modules, modulePaths, baseOutputPath, monitor, maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true);
+    }
+
+    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking) throws Exception {
 
         DOSchema referenceSchema = schemaService.getReferenceSchema();
         DOSchema databaseSchema = dbContext.databaseSchema;
 
-        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema,
-                dbContext.databaseFilePath, dbContext);
+        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, dbContext.databaseFilePath, dbContext);
         exporter.operation.maxObjectsPerClass = maxObjectsPerClass;
         exporter.operation.exportNativeIds = exportNativeIds;
-        exporter.operation.selectedSkipUserOptions = selectedSkipOptions != null
-                ? new ArrayList<>(selectedSkipOptions) : new ArrayList<>();
+        exporter.operation.selectedSkipUserOptions = selectedSkipOptions != null ? new ArrayList<>(selectedSkipOptions) : new ArrayList<>();
         exporter.operation.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
         exporter.operation.applySkipWhenConditions = applySkipWhenConditions;
         exporter.operation.applyExportCriteriaFilters = applyExportCriteriaFilters;
         exporter.operation.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
+        exporter.operation.fullTracking = fullTracking;
         exporter.operation.baseOutputPath = baseOutputPath;
         exporter.operation.monitor = monitor;
 
@@ -94,7 +91,7 @@ public class MigrationExportService {
             // Build full hierarchical path for the module
             modulePaths.add(ExportUtil.findModulePathByName(params.targetName));
         }
-        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, ExportOutputOption.parsePersistedOptions(params.outputFormat), params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields);
+        return exportModules(dbContext, modules, modulePaths, baseOutput, monitor, params.maxObjectsPerClass, params.exportNativeIds, null, ExportOutputOption.parsePersistedOptions(params.outputFormat), params.applyUserSelectedFieldExclusions, params.applySkipWhenConditions, params.applyExportCriteriaFilters, params.skipObjectsWithoutExportableFields, params.fullTracking);
     }
 
 }

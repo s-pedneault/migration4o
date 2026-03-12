@@ -63,6 +63,8 @@ public class MigrationServiceCallback {
         // Reset reached values before starting export
         resetReachedValuesInCoveragePanel();
 
+        final boolean fullTracking = options.isFullTracking();
+
         // Extract modules and paths
         List<DOSchemaModule> modules = new ArrayList<>();
         List<String> modulePaths = new ArrayList<>();
@@ -91,7 +93,7 @@ public class MigrationServiceCallback {
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
-                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields());
+                ExportStatistics result = exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
 
                 // Extract module names
                 List<String> moduleNames = new ArrayList<>();
@@ -102,7 +104,7 @@ public class MigrationServiceCallback {
                 // Save to history if successful
                 if (result.errors.isEmpty()) {
                     String targetName = moduleNames.size() == 1 ? moduleNames.get(0) : moduleNames.size() + " modules";
-                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, options.getOutputPath(), new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, options.getMaxObjectsPerClass(), options.isExportNativeIds(), ExportOutputOption.toPersistedOptions(options.getOutputOptions()), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields());
+                    ExportHistory.saveExport(ExportHistory.ExportType.MODULE, targetName, options.getOutputPath(), new ArrayList<>(result.exportedClassCounts.keySet()), moduleNames, options.getMaxObjectsPerClass(), options.isExportNativeIds(), ExportOutputOption.toPersistedOptions(options.getOutputOptions()), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking);
                 }
 
                 return result;
@@ -112,7 +114,7 @@ public class MigrationServiceCallback {
             protected void done() {
                 try {
                     ExportStatistics result = get();
-                    handleExportCompleted(result, dbContext);
+                    handleExportCompleted(result, dbContext, fullTracking);
                 } catch (Exception e) {
                     handleExportError(e);
                 }
@@ -144,6 +146,11 @@ public class MigrationServiceCallback {
         // Switch to Migration report tab
         showMigrationReportTab();
 
+        final boolean fullTracking = params.fullTracking;
+
+        // Reset reached values before starting export
+        resetReachedValuesInCoveragePanel();
+
         // Run export in background
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
@@ -155,7 +162,7 @@ public class MigrationServiceCallback {
             protected void done() {
                 try {
                     ExportStatistics result = get();
-                    handleExportCompleted(result, dbContext);
+                    handleExportCompleted(result, dbContext, fullTracking);
                 } catch (Exception e) {
                     handleExportError(e);
                 }
@@ -185,12 +192,24 @@ public class MigrationServiceCallback {
      * Handles successful export completion.
      */
     private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext) {
+        handleExportCompleted(result, dbContext, true);
+    }
+
+    /**
+     * Handles successful export completion.
+     *
+     * @param fullTracking whether full tracking was enabled for this export;
+     *        when {@code false} the coverage panel is disabled after completion
+     */
+    private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext, boolean fullTracking) {
         // Show results in the Migration results tab instead of a dialog
         if (parentComponent != null) {
             java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
             if (window instanceof migration4o.ui.main.MainWindow) {
                 migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
                 mainWindow.showMigrationResults(result);
+                // Enable/disable coverage panel depending on tracking mode
+                mainWindow.setCoveragePanelEnabled(fullTracking);
             }
         }
 
