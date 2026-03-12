@@ -6,6 +6,7 @@ import javax.swing.UIManager;
 
 import migration4o.application.ApplicationService;
 import migration4o.ui.main.MainWindow;
+import migration4o.ui.theme.ThemeManager;
 
 /**
  * Main entry point for the Migration4o UI application.
@@ -36,16 +37,14 @@ public class Migration4oUI {
         } catch (Exception e) {
             System.err.println("Failed to initialize application services: " + e.getMessage());
             e.printStackTrace();
-            JOptionPane.showMessageDialog(null,
-                    "Failed to initialize application:\n" + e.getMessage(),
-                    "Initialization Error",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(null, "Failed to initialize application:\n" + e.getMessage(), "Initialization Error", JOptionPane.ERROR_MESSAGE);
             System.exit(1);
         }
 
         // Set look and feel before creating any UI components
         SwingUtilities.invokeLater(() -> {
             try {
+                ThemeManager.getInstance().applyToUIManager();
                 UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
             } catch (Exception e) {
                 e.printStackTrace();
