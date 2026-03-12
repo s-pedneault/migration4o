@@ -41,11 +41,12 @@ public class ExportConfirmationDialog extends JDialog {
     /**
      * Creates a new export confirmation dialog.
      * 
-     * @param parent               Parent frame
-     * @param moduleCount          Number of modules to export
-     * @param defaultLimit         Default limit value (used when "Max N objects" is
-     *                             selected)
-     * @param availableSkipOptions List of fields that can be skipped by user choice
+     * @param parent Parent frame
+     * @param moduleCount Number of modules to export
+     * @param defaultLimit Default limit value (used when "Max N objects" is
+     * selected)
+     * @param availableSkipOptions List of fields that can be skipped by user
+     * choice
      */
     public ExportConfirmationDialog(Frame parent, int moduleCount, Integer defaultLimit, List<DOSchemaField> availableSkipOptions, String defaultOutputFormat) {
         super(parent, "Confirm Bulk Export", true);
@@ -158,6 +159,23 @@ public class ExportConfirmationDialog extends JDialog {
             optionCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
             outputOptionCheckboxes.put(option, optionCheckbox);
             formatPanel.add(optionCheckbox);
+        }
+
+        // HTML requires XML: when HTML is checked, auto-check XML;
+        // when XML is unchecked, also uncheck HTML.
+        JCheckBox htmlCb = outputOptionCheckboxes.get(ExportOutputOption.HTML_JS);
+        JCheckBox xmlCb = outputOptionCheckboxes.get(ExportOutputOption.XML_XSD);
+        if (htmlCb != null && xmlCb != null) {
+            htmlCb.addActionListener(e -> {
+                if (htmlCb.isSelected() && !xmlCb.isSelected()) {
+                    xmlCb.setSelected(true);
+                }
+            });
+            xmlCb.addActionListener(e -> {
+                if (!xmlCb.isSelected() && htmlCb.isSelected()) {
+                    htmlCb.setSelected(false);
+                }
+            });
         }
 
         mainPanel.add(formatPanel);
@@ -455,8 +473,8 @@ public class ExportConfirmationDialog extends JDialog {
     }
 
     /**
-     * Shows the dialog and returns the result. Convenience method that shows the
-     * dialog modally.
+     * Shows the dialog and returns the result. Convenience method that shows
+     * the dialog modally.
      */
     public void showDialog() {
         setVisible(true);

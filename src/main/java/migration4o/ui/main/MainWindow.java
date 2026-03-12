@@ -730,7 +730,7 @@ public class MainWindow extends JFrame {
      */
     private void createCostTab(DatabaseSession session) {
         // Create cost panel
-        CostPanel costPanel = new CostPanel(session.databaseSchema);
+        CostPanel costPanel = new CostPanel(session.databaseSchema, session.context.container);
 
         // Store and add processing costs tab to Database section
         session.costTab = costPanel;

@@ -67,6 +67,15 @@ public final class ExportOutputOption {
             normalized.add(XML_XSD);
         }
 
+        // HTML export requires XML: ensure XML + XSD comes first so that the
+        // primary handler (which records full diagnostics) is always XML.
+        if (normalized.contains(HTML_JS) && !normalized.contains(XML_XSD)) {
+            Set<String> withXml = new LinkedHashSet<>();
+            withXml.add(XML_XSD);
+            withXml.addAll(normalized);
+            normalized = withXml;
+        }
+
         return new ArrayList<>(normalized);
     }
 
@@ -99,10 +108,14 @@ public final class ExportOutputOption {
         List<String> normalized = normalize(options);
         List<ExportFormat> formats = new ArrayList<>();
         for (String opt : normalized) {
-            if (XML_XSD.equalsIgnoreCase(opt)) formats.add(ExportFormat.XML);
-            else if (HTML_JS.equalsIgnoreCase(opt)) formats.add(ExportFormat.HTML);
-            else if (JSON.equalsIgnoreCase(opt)) formats.add(ExportFormat.JSON);
-            else if (EXCEL.equalsIgnoreCase(opt)) formats.add(ExportFormat.EXCEL);
+            if (XML_XSD.equalsIgnoreCase(opt))
+                formats.add(ExportFormat.XML);
+            else if (HTML_JS.equalsIgnoreCase(opt))
+                formats.add(ExportFormat.HTML);
+            else if (JSON.equalsIgnoreCase(opt))
+                formats.add(ExportFormat.JSON);
+            else if (EXCEL.equalsIgnoreCase(opt))
+                formats.add(ExportFormat.EXCEL);
         }
         return formats;
     }

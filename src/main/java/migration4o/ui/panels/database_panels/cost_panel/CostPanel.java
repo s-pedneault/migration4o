@@ -1,5 +1,7 @@
 package migration4o.ui.panels.database_panels.cost_panel;
 
+import com.db4o.ext.ExtObjectContainer;
+
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -26,6 +28,8 @@ import java.util.List;
 public class CostPanel extends JPanel {
 
     private final DOSchema databaseSchema;
+    private final ExtObjectContainer container; // needed for criteria
+                                                // evaluation
 
     private JComboBox<String> priceListCombo;
     private JTable costTable;
@@ -39,8 +43,9 @@ public class CostPanel extends JPanel {
     // Construction
     // -------------------------------------------------------------------------
 
-    public CostPanel(DOSchema databaseSchema) {
+    public CostPanel(DOSchema databaseSchema, ExtObjectContainer container) {
         this.databaseSchema = databaseSchema;
+        this.container = container;
         initializeUI();
         refresh();
     }
@@ -195,12 +200,16 @@ public class CostPanel extends JPanel {
             for (ClassExportConfig config : module.classConfigs) {
                 float unitCost = config.getUnitCost(priceListKey);
                 if (unitCost > 0f) {
-                    int units = getObjectCount(config.getClassName());
+                    int units = getObjectCount(config);
                     float subtotal = unitCost * units;
 
-                    // Use title from reference schema, then description, then
+                    // Use config title first (user-specified per-config title),
+                    // then reference schema class title, then description, then
                     // destination file name
-                    String displayName = getReferenceClassTitle(config.getClassName());
+                    String displayName = config.hasTitle() ? config.getTitle() : null;
+                    if (displayName == null || displayName.isEmpty()) {
+                        displayName = getReferenceClassTitle(config.getClassName());
+                    }
                     if (displayName == null || displayName.isEmpty()) {
                         displayName = config.getDescription();
                     }
@@ -228,16 +237,27 @@ public class CostPanel extends JPanel {
         return (cls != null && cls.title != null && !cls.title.isEmpty()) ? cls.title : null;
     }
 
-    /** Returns the object count for a class name from the database schema. */
-    private int getObjectCount(String className) {
+    /**
+     * Returns the object count for a config, applying criteria filtering when
+     * the config has criteria defined. This prevents over-billing when the same
+     * class appears multiple times with different criteria.
+     */
+    private int getObjectCount(ClassExportConfig config) {
         if (databaseSchema == null) {
             return 0;
         }
-        DOSchemaClass cls = databaseSchema.findClassByName(className);
-        if (cls == null) {
+        DOSchemaClass cls = databaseSchema.findClassByName(config.getClassName());
+        if (cls == null || cls.objectIds == null || cls.objectIds.length == 0) {
             return 0;
         }
-        return cls.objectIds != null ? cls.objectIds.length : 0;
+
+        // When the config has criteria and we have a database container,
+        // count only the objects that match all criteria
+        if (config.hasCriteria() && container != null && !container.ext().isClosed()) {
+            return config.countMatchingObjects(container, cls.objectIds);
+        }
+
+        return cls.objectIds.length;
     }
 
     // -------------------------------------------------------------------------

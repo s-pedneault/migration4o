@@ -34,6 +34,15 @@ public class ExportStatistics {
 
     public final DOExportMonitor monitor;
     public final ObjectDuplicationDetector duplicationDetector = new ObjectDuplicationDetector();
+
+    /**
+     * When {@code true}, expensive per-object diagnostic tracking
+     * ({@link #recordObjectDecision}, {@link #recordRelationshipExported},
+     * {@link #recordRelationshipSkipped}) is skipped. Set by the export engine
+     * on non-primary format-handler passes to avoid accumulating duplicate
+     * diagnostics while still tracking progress counters.
+     */
+    public boolean skipDiagnostics = false;
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public int currentClassTotal = 0;
@@ -88,6 +97,8 @@ public class ExportStatistics {
     }
 
     public void recordObjectDecision(long objectId, String className, String decision) {
+        if (skipDiagnostics)
+            return;
         if (objectId <= 0 || decision == null || decision.trim().isEmpty()) {
             return;
         }
@@ -97,6 +108,8 @@ public class ExportStatistics {
     }
 
     public void recordRelationshipExported(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String detail) {
+        if (skipDiagnostics)
+            return;
         if (parentObjectId <= 0 || childObjectId <= 0) {
             return;
         }
@@ -105,6 +118,8 @@ public class ExportStatistics {
     }
 
     public void recordRelationshipSkipped(long parentObjectId, long childObjectId, String sourceContainingClass, String sourceFieldName, String reason) {
+        if (skipDiagnostics)
+            return;
         if (parentObjectId <= 0 || childObjectId <= 0 || reason == null || reason.trim().isEmpty()) {
             return;
         }

@@ -123,8 +123,17 @@ public class ExportEngine {
             }
 
             // referenced-class pass and final done hook
-            for (FormatHandler handler : handlers) {
-                handler.onReferencedClasses(ctx);
+            for (int i = 0; i < handlers.size(); i++) {
+                if (i > 0 && operation.statistics != null) {
+                    operation.statistics.skipDiagnostics = true;
+                }
+                try {
+                    handlers.get(i).onReferencedClasses(ctx);
+                } finally {
+                    if (operation.statistics != null) {
+                        operation.statistics.skipDiagnostics = false;
+                    }
+                }
             }
             for (FormatHandler handler : handlers) {
                 handler.done(ctx);
@@ -211,12 +220,21 @@ public class ExportEngine {
 
     private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, Path moduleDir, List<FormatHandler> handlers) throws Exception {
         String className = dbSchemaClass.source;
-        for (FormatHandler handler : handlers) {
+        for (int i = 0; i < handlers.size(); i++) {
+            FormatHandler handler = handlers.get(i);
             Path filePath = moduleDir.resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
             if (operation.monitor != null) {
                 operation.monitor.onStatusMessage("Exporting " + handler.displayName() + ": " + className);
             }
             handler.openWriter(filePath);
+            // Skip expensive diagnostics on non-primary handlers to avoid
+            // accumulating duplicate relationship/decision tracking data.
+            // The first handler (usually XML) records full diagnostics;
+            // subsequent handlers (e.g. HTML) still traverse the objects
+            // (already cached in memory) but skip the map-heavy tracking.
+            if (i > 0 && operation.statistics != null) {
+                operation.statistics.skipDiagnostics = true;
+            }
             try {
                 handler.open(ctx);
                 new ObjectExportLoop(ctx, handler).run(dbSchemaClass);
@@ -235,6 +253,10 @@ public class ExportEngine {
                     }
                     if (operation.monitor != null) {
                         operation.monitor.onStatusMessage("[ERROR] " + handler.displayName() + " write failed for " + className + ": " + msg);
+                    }
+                } finally {
+                    if (operation.statistics != null) {
+                        operation.statistics.skipDiagnostics = false;
                     }
                 }
             }

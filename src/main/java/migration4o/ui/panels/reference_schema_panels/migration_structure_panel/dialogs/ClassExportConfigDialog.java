@@ -1,16 +1,12 @@
 package migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs;
 
-import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ExportCriteria;
+import migration4o.ui.common.FieldSelectorPanel;
 import migration4o.ui.common.dialogs.BaseFormDialog;
-import migration4o.util.DatabaseUtil;
 
 import javax.swing.*;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.*;
@@ -38,12 +34,11 @@ public class ClassExportConfigDialog extends BaseFormDialog {
 
     // ── Default Columns selector (HTML viewer)
     // ────────────────────────────────
-    private JPanel defaultColumnsContainer;
-    private JTextField filterField;
-    private final List<String> defaultColumnFieldNames = new ArrayList<>();
-    private final List<String> defaultColumnLabels = new ArrayList<>();
-    private final List<JCheckBox> defaultColumnCheckboxes = new ArrayList<>();
-    private final List<JPanel> defaultColumnRowPanels = new ArrayList<>();
+    private FieldSelectorPanel fieldSelectorPanel;
+    private JPanel selectedColumnsContainer;
+    private final List<String> selectedColumnPaths = new ArrayList<>();
+    private final List<String> selectedColumnLabels = new ArrayList<>();
+    private final List<JPanel> selectedColumnRowPanels = new ArrayList<>();
 
     private ClassExportConfig result;
     private ClassExportConfig initialConfig;
@@ -59,10 +54,14 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             loadConfiguration(initialConfig);
         }
 
-        // Build column selector rows now that schemaClass is set (was null
+        // Populate selected columns now that schemaClass is set (was null
         // during buildFormPanel)
         List<String> initialColumns = (existingConfig != null) ? new ArrayList<>(existingConfig.getDefaultColumns()) : Collections.emptyList();
-        rebuildDefaultColumnsUI(initialColumns);
+        rebuildSelectedColumnsUI(initialColumns);
+        // Update the field selector to show which fields are already selected
+        if (fieldSelectorPanel != null) {
+            fieldSelectorPanel.setSelectedPaths(selectedColumnPaths);
+        }
         pack();
     }
 
@@ -133,40 +132,36 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         JPanel columnsSection = new JPanel(new BorderLayout(5, 5));
         columnsSection.setBorder(BorderFactory.createTitledBorder("Default Columns (HTML Viewer)"));
 
-        defaultColumnsContainer = new JPanel();
-        defaultColumnsContainer.setLayout(new BoxLayout(defaultColumnsContainer, BoxLayout.Y_AXIS));
+        JSplitPane columnsSplit = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        columnsSplit.setResizeWeight(0.5);
+        columnsSplit.setBorder(null);
 
-        // Filter row above the scroll pane
-        JPanel filterRow = new JPanel(new BorderLayout(5, 0));
-        filterRow.setBorder(BorderFactory.createEmptyBorder(0, 0, 3, 0));
-        filterRow.add(new JLabel("Filter: "), BorderLayout.WEST);
-        filterField = new JTextField();
-        filterField.setToolTipText("Type to filter the list of available columns");
-        filterField.getDocument().addDocumentListener(new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) {
-                applyColumnFilter();
-            }
-
-            public void removeUpdate(DocumentEvent e) {
-                applyColumnFilter();
-            }
-
-            public void changedUpdate(DocumentEvent e) {
-                applyColumnFilter();
-            }
+        // Left: field selector tree (populated after schemaClass is available)
+        fieldSelectorPanel = new FieldSelectorPanel(schemaClass, null, (fieldPath, fieldLabel) -> {
+            addSelectedColumn(fieldPath, fieldLabel);
         });
-        filterRow.add(filterField, BorderLayout.CENTER);
-        columnsSection.add(filterRow, BorderLayout.NORTH);
+        fieldSelectorPanel.setBorder(BorderFactory.createTitledBorder("Available Fields"));
+        columnsSplit.setLeftComponent(fieldSelectorPanel);
 
-        JScrollPane columnsScroll = new JScrollPane(defaultColumnsContainer);
-        columnsScroll.setPreferredSize(new Dimension(550, 160));
-        columnsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
-        columnsSection.add(columnsScroll, BorderLayout.CENTER);
+        // Right: selected columns list with drag-reorder & remove
+        JPanel selectedPanel = new JPanel(new BorderLayout(5, 5));
+        selectedPanel.setBorder(BorderFactory.createTitledBorder("Selected Columns"));
 
-        JLabel columnsHint = new JLabel("Select and order the columns shown by default in the HTML viewer search results. Drag \u2807 to reorder.");
+        selectedColumnsContainer = new JPanel();
+        selectedColumnsContainer.setLayout(new BoxLayout(selectedColumnsContainer, BoxLayout.Y_AXIS));
+
+        JScrollPane selectedScroll = new JScrollPane(selectedColumnsContainer);
+        selectedScroll.setPreferredSize(new Dimension(250, 160));
+        selectedScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        selectedPanel.add(selectedScroll, BorderLayout.CENTER);
+
+        JLabel columnsHint = new JLabel("Double-click a field to add it. Drag \u2807 to reorder.");
         columnsHint.setFont(columnsHint.getFont().deriveFont(Font.ITALIC, 11f));
         columnsHint.setForeground(Color.GRAY);
-        columnsSection.add(columnsHint, BorderLayout.SOUTH);
+        selectedPanel.add(columnsHint, BorderLayout.SOUTH);
+
+        columnsSplit.setRightComponent(selectedPanel);
+        columnsSection.add(columnsSplit, BorderLayout.CENTER);
 
         panel.add(columnsSection, BorderLayout.SOUTH);
 
@@ -307,320 +302,221 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         return pricePanel;
     }
 
-    // ── Default Columns selector helpers ─────────────────────────────────────
+    // ── Default Columns: selected columns helpers ────────────────────────────
 
     /**
-     * Rebuilds the column rows inside {@code defaultColumnsContainer}. Enabled
-     * columns (from {@code initialCols}) appear first in their configured order
-     * and are checked; remaining available fields follow, unchecked.
+     * Rebuilds the selected-columns list from the given initial column paths.
+     * For each path we resolve a human-readable label via the
+     * FieldSelectorPanel tree (falling back to a simple humanization).
      */
-    private void rebuildDefaultColumnsUI(List<String> initialCols) {
-        if (defaultColumnsContainer == null)
+    private void rebuildSelectedColumnsUI(List<String> initialCols) {
+        if (selectedColumnsContainer == null)
             return;
 
-        defaultColumnFieldNames.clear();
-        defaultColumnLabels.clear();
-        defaultColumnCheckboxes.clear();
-        defaultColumnRowPanels.clear();
-        defaultColumnsContainer.removeAll();
+        selectedColumnPaths.clear();
+        selectedColumnLabels.clear();
+        selectedColumnRowPanels.clear();
+        selectedColumnsContainer.removeAll();
 
-        List<FieldInfo> available = collectAvailableColumns();
-
-        // Build ordered list: configured columns first, then remaining
-        // available
-        List<String> orderedNames = new ArrayList<>();
         for (String col : initialCols) {
-            if (!col.isBlank())
-                orderedNames.add(col);
-        }
-        for (FieldInfo fi : available) {
-            if (!orderedNames.contains(fi.path))
-                orderedNames.add(fi.path);
+            if (col == null || col.isBlank())
+                continue;
+            String label = humanizeColumnPath(col);
+            addSelectedColumnRow(col, label);
         }
 
-        // Build label map
-        Map<String, String> labelByPath = new LinkedHashMap<>();
-        for (FieldInfo fi : available)
-            labelByPath.put(fi.path, fi.label);
-
-        Set<String> enabledSet = new LinkedHashSet<>(initialCols);
-
-        for (int i = 0; i < orderedNames.size(); i++) {
-            String fname = orderedNames.get(i);
-            boolean enabled = enabledSet.contains(fname);
-            String label = labelByPath.getOrDefault(fname, humanizeColumnName(fname));
-
-            JPanel rowPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
-            rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
-            rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
-            rowPanel.setOpaque(true);
-
-            // Grip handle for drag-reorder
-            JLabel grip = new JLabel("\u2807");
-            grip.setForeground(Color.GRAY);
-            grip.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-            grip.setToolTipText("Drag to reorder");
-
-            JCheckBox cb = new JCheckBox("", enabled);
-
-            JLabel nameLbl = new JLabel(label);
-            nameLbl.setPreferredSize(new Dimension(150, 20));
-            nameLbl.setToolTipText(fname);
-
-            if (!labelByPath.containsKey(fname)) {
-                nameLbl.setForeground(Color.GRAY); // unknown / no longer in
-                                                   // schema
-                nameLbl.setToolTipText(fname + " (not found in schema)");
-            }
-
-            rowPanel.add(grip);
-            rowPanel.add(cb);
-            rowPanel.add(nameLbl);
-
-            defaultColumnFieldNames.add(fname);
-            defaultColumnLabels.add(label);
-            defaultColumnCheckboxes.add(cb);
-            defaultColumnRowPanels.add(rowPanel);
-            defaultColumnsContainer.add(rowPanel);
-
-            // Drag reorder via mouse listeners on the grip
-            Runnable clearHighlights = () -> {
-                for (JPanel rp : defaultColumnRowPanels) {
-                    rp.setBackground(UIManager.getColor("Panel.background"));
-                    rp.setBorder(null);
-                }
-            };
-
-            grip.addMouseListener(new MouseAdapter() {
-                @Override
-                public void mousePressed(MouseEvent e) {
-                    grip.putClientProperty("dragStart", defaultColumnRowPanels.indexOf(rowPanel));
-                    rowPanel.setBackground(new Color(200, 210, 230));
-                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
-                    defaultColumnsContainer.repaint();
-                }
-
-                @Override
-                public void mouseReleased(MouseEvent e) {
-                    clearHighlights.run();
-                    Object startObj = grip.getClientProperty("dragStart");
-                    if (startObj == null)
-                        return;
-                    int startIdx = (int) startObj;
-                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), defaultColumnsContainer);
-                    int targetIdx = -1;
-                    for (int r = 0; r < defaultColumnRowPanels.size(); r++) {
-                        Rectangle bounds = defaultColumnRowPanels.get(r).getBounds();
-                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
-                            targetIdx = r;
-                            break;
-                        }
-                    }
-                    grip.putClientProperty("dragStart", null);
-                    if (targetIdx < 0 || targetIdx == startIdx)
-                        return;
-
-                    String movedName = defaultColumnFieldNames.remove(startIdx);
-                    JPanel movedPanel = defaultColumnRowPanels.remove(startIdx);
-                    JCheckBox movedCb = defaultColumnCheckboxes.remove(startIdx);
-                    int insertAt = targetIdx > startIdx ? targetIdx - 1 : targetIdx;
-                    defaultColumnFieldNames.add(insertAt, movedName);
-                    defaultColumnRowPanels.add(insertAt, movedPanel);
-                    defaultColumnCheckboxes.add(insertAt, movedCb);
-
-                    defaultColumnsContainer.removeAll();
-                    for (JPanel rp : defaultColumnRowPanels)
-                        defaultColumnsContainer.add(rp);
-                    defaultColumnsContainer.revalidate();
-                    defaultColumnsContainer.repaint();
-                }
-            });
-
-            grip.addMouseMotionListener(new MouseMotionAdapter() {
-                @Override
-                public void mouseDragged(MouseEvent e) {
-                    Object startObj = grip.getClientProperty("dragStart");
-                    if (startObj == null)
-                        return;
-                    int startIdx = (int) startObj;
-                    Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), defaultColumnsContainer);
-                    clearHighlights.run();
-                    // Highlight the row being dragged
-                    rowPanel.setBackground(new Color(200, 210, 230));
-                    rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
-                    // Show insertion line at the drop target position
-                    for (int r = 0; r < defaultColumnRowPanels.size(); r++) {
-                        JPanel rp = defaultColumnRowPanels.get(r);
-                        if (rp == rowPanel)
-                            continue;
-                        Rectangle bounds = rp.getBounds();
-                        if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
-                            // Show a blue insertion line on the edge closest to
-                            // the cursor
-                            boolean above = (pt.y - bounds.y) < bounds.height / 2;
-                            if (above) {
-                                rp.setBorder(BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 120, 220)));
-                            } else {
-                                rp.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(60, 120, 220)));
-                            }
-                            break;
-                        }
-                    }
-                    defaultColumnsContainer.repaint();
-                }
-            });
-        }
-
-        defaultColumnsContainer.revalidate();
-        defaultColumnsContainer.repaint();
-
-        // Re-apply any active filter after rebuilding
-        if (filterField != null && !filterField.getText().isBlank())
-            applyColumnFilter();
+        selectedColumnsContainer.revalidate();
+        selectedColumnsContainer.repaint();
     }
 
     /**
-     * Shows/hides column rows based on the text in {@code filterField}.
-     * Filtering is case-insensitive and matches against both the path and the
-     * display label.
+     * Adds a field to the selected columns list (called from FieldSelectorPanel
+     * double-click callback). Duplicates are silently ignored.
      */
-    private void applyColumnFilter() {
-        if (filterField == null || defaultColumnsContainer == null)
+    private void addSelectedColumn(String path, String label) {
+        if (path == null || path.isBlank())
             return;
-        String filter = filterField.getText().trim().toLowerCase(Locale.ROOT);
-        for (int i = 0; i < defaultColumnRowPanels.size(); i++) {
-            boolean show = filter.isEmpty() || defaultColumnFieldNames.get(i).toLowerCase(Locale.ROOT).contains(filter) || (i < defaultColumnLabels.size() && defaultColumnLabels.get(i).toLowerCase(Locale.ROOT).contains(filter));
-            defaultColumnRowPanels.get(i).setVisible(show);
+        if (selectedColumnPaths.contains(path))
+            return; // already selected
+
+        addSelectedColumnRow(path, label);
+        selectedColumnsContainer.revalidate();
+        selectedColumnsContainer.repaint();
+
+        // Update the field selector's visual indicators
+        if (fieldSelectorPanel != null) {
+            fieldSelectorPanel.setSelectedPaths(selectedColumnPaths);
         }
-        defaultColumnsContainer.revalidate();
-        defaultColumnsContainer.repaint();
     }
 
     /**
-     * Collects all flat leaf field paths exported by this class, including
-     * embedded entities one level deep.
+     * Removes a field from the selected columns list and refreshes the UI.
      */
-    private List<FieldInfo> collectAvailableColumns() {
-        if (schemaClass == null)
-            return new ArrayList<>();
+    private void removeSelectedColumn(int index) {
+        if (index < 0 || index >= selectedColumnPaths.size())
+            return;
 
-        DOSchema refSchema = null;
-        try {
-            refSchema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
-        } catch (Exception ignored) {
+        selectedColumnPaths.remove(index);
+        selectedColumnLabels.remove(index);
+        JPanel removed = selectedColumnRowPanels.remove(index);
+        selectedColumnsContainer.remove(removed);
+        selectedColumnsContainer.revalidate();
+        selectedColumnsContainer.repaint();
+
+        // Update the field selector's visual indicators
+        if (fieldSelectorPanel != null) {
+            fieldSelectorPanel.setSelectedPaths(selectedColumnPaths);
         }
+    }
 
-        List<DOSchemaField> allFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema) : (schemaClass.fields != null ? Arrays.asList(schemaClass.fields) : new ArrayList<>());
+    /**
+     * Creates a single row in the selected-columns list with a grip handle for
+     * drag-reorder, a label, and a remove button.
+     */
+    private void addSelectedColumnRow(String path, String label) {
+        JPanel rowPanel = new JPanel(new BorderLayout(3, 0));
+        rowPanel.setMaximumSize(new Dimension(Integer.MAX_VALUE, 26));
+        rowPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        rowPanel.setOpaque(true);
 
-        List<FieldInfo> result = new ArrayList<>();
-        Set<String> seenPaths = new LinkedHashSet<>();
-        final DOSchema fRefSchema = refSchema;
+        // Left: grip + label
+        JPanel leftPart = new JPanel(new FlowLayout(FlowLayout.LEFT, 3, 1));
+        leftPart.setOpaque(false);
 
-        for (DOSchemaField field : allFields) {
-            if (!field.isExported)
-                continue;
-            String name = field.destinationName != null ? field.destinationName : field.source;
-            if (name == null || name.isBlank())
-                continue;
-            if (field.isCollection)
-                continue;
+        JLabel grip = new JLabel("\u2807");
+        grip.setForeground(Color.GRAY);
+        grip.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        grip.setToolTipText("Drag to reorder");
 
-            if (field.embedContents && !isPrimitiveType(field.type)) {
-                // Embedded entity: expose its leaf children as
-                // "parentName.childName"
-                DOSchemaClass embClass = findClassByType(field.type, fRefSchema);
-                if (embClass != null) {
-                    List<DOSchemaField> embFields = (fRefSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embClass, fRefSchema) : (embClass.fields != null ? Arrays.asList(embClass.fields) : new ArrayList<>());
-                    for (DOSchemaField ef : embFields) {
-                        if (!ef.isExported || ef.isCollection)
-                            continue;
-                        String eName = ef.destinationName != null ? ef.destinationName : ef.source;
-                        if (eName == null || eName.isBlank())
-                            continue;
-                        String path = name + "." + eName;
-                        if (seenPaths.add(path)) {
-                            String parentLabel = getFieldLabel(field);
-                            String childLabel = getFieldLabel(ef);
-                            String fullLabel = parentLabel.isBlank() ? childLabel : childLabel.isBlank() ? parentLabel : parentLabel + " \u203a " + childLabel;
-                            result.add(new FieldInfo(path, fullLabel));
-                        }
-                    }
-                } else {
-                    if (seenPaths.add(name))
-                        result.add(new FieldInfo(name, getFieldLabel(field)));
-                }
-            } else {
-                if (seenPaths.add(name))
-                    result.add(new FieldInfo(name, getFieldLabel(field)));
-            }
-        }
-        // Sort: direct fields first (alphabetically by label), then embedded
-        // (alphabetically by label,
-        // which groups them by parent since the label is "Parent › Child").
-        result.sort((a, b) -> {
-            boolean aDot = a.path.contains(".");
-            boolean bDot = b.path.contains(".");
-            if (aDot != bDot)
-                return aDot ? 1 : -1;
-            return a.label.compareToIgnoreCase(b.label);
+        JLabel nameLbl = new JLabel(label);
+        nameLbl.setToolTipText(path);
+
+        leftPart.add(grip);
+        leftPart.add(nameLbl);
+        rowPanel.add(leftPart, BorderLayout.CENTER);
+
+        // Right: remove button
+        JButton removeBtn = new JButton("\u2715");
+        removeBtn.setMargin(new Insets(0, 4, 0, 4));
+        removeBtn.setFont(removeBtn.getFont().deriveFont(10f));
+        removeBtn.setToolTipText("Remove");
+        removeBtn.setFocusPainted(false);
+        removeBtn.addActionListener(e -> {
+            int idx = selectedColumnRowPanels.indexOf(rowPanel);
+            if (idx >= 0)
+                removeSelectedColumn(idx);
         });
-        return result;
+        rowPanel.add(removeBtn, BorderLayout.EAST);
+
+        selectedColumnPaths.add(path);
+        selectedColumnLabels.add(label);
+        selectedColumnRowPanels.add(rowPanel);
+        selectedColumnsContainer.add(rowPanel);
+
+        // Drag reorder via mouse listeners on the grip
+        Runnable clearHighlights = () -> {
+            for (JPanel rp : selectedColumnRowPanels) {
+                rp.setBackground(UIManager.getColor("Panel.background"));
+                rp.setBorder(null);
+            }
+        };
+
+        grip.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                grip.putClientProperty("dragStart", selectedColumnRowPanels.indexOf(rowPanel));
+                rowPanel.setBackground(new Color(200, 210, 230));
+                rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                selectedColumnsContainer.repaint();
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                clearHighlights.run();
+                Object startObj = grip.getClientProperty("dragStart");
+                if (startObj == null)
+                    return;
+                int startIdx = (int) startObj;
+                Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), selectedColumnsContainer);
+                int targetIdx = -1;
+                for (int r = 0; r < selectedColumnRowPanels.size(); r++) {
+                    Rectangle bounds = selectedColumnRowPanels.get(r).getBounds();
+                    if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                        targetIdx = r;
+                        break;
+                    }
+                }
+                grip.putClientProperty("dragStart", null);
+                if (targetIdx < 0 || targetIdx == startIdx)
+                    return;
+
+                // Reorder all parallel lists
+                String movedPath = selectedColumnPaths.remove(startIdx);
+                String movedLabel = selectedColumnLabels.remove(startIdx);
+                JPanel movedPanel = selectedColumnRowPanels.remove(startIdx);
+                int insertAt = targetIdx > startIdx ? targetIdx - 1 : targetIdx;
+                selectedColumnPaths.add(insertAt, movedPath);
+                selectedColumnLabels.add(insertAt, movedLabel);
+                selectedColumnRowPanels.add(insertAt, movedPanel);
+
+                selectedColumnsContainer.removeAll();
+                for (JPanel rp : selectedColumnRowPanels)
+                    selectedColumnsContainer.add(rp);
+                selectedColumnsContainer.revalidate();
+                selectedColumnsContainer.repaint();
+            }
+        });
+
+        grip.addMouseMotionListener(new MouseMotionAdapter() {
+            @Override
+            public void mouseDragged(MouseEvent e) {
+                Object startObj = grip.getClientProperty("dragStart");
+                if (startObj == null)
+                    return;
+                Point pt = SwingUtilities.convertPoint(grip, e.getPoint(), selectedColumnsContainer);
+                clearHighlights.run();
+                rowPanel.setBackground(new Color(200, 210, 230));
+                rowPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 140, 200), 1));
+                for (int r = 0; r < selectedColumnRowPanels.size(); r++) {
+                    JPanel rp = selectedColumnRowPanels.get(r);
+                    if (rp == rowPanel)
+                        continue;
+                    Rectangle bounds = rp.getBounds();
+                    if (pt.y >= bounds.y && pt.y < bounds.y + bounds.height) {
+                        boolean above = (pt.y - bounds.y) < bounds.height / 2;
+                        if (above) {
+                            rp.setBorder(BorderFactory.createMatteBorder(2, 0, 0, 0, new Color(60, 120, 220)));
+                        } else {
+                            rp.setBorder(BorderFactory.createMatteBorder(0, 0, 2, 0, new Color(60, 120, 220)));
+                        }
+                        break;
+                    }
+                }
+                selectedColumnsContainer.repaint();
+            }
+        });
     }
 
-    private DOSchemaClass findClassByType(String typeName, DOSchema refSchema) {
-        if (typeName == null || refSchema == null)
-            return null;
-        DOSchemaClass cls = refSchema.findClassByName(typeName);
-        if (cls != null)
-            return cls;
-        String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
-        for (DOSchemaClass c : refSchema.getClasses()) {
-            if (c.source != null && c.source.endsWith("." + shortName))
-                return c;
-        }
-        return null;
-    }
-
-    private boolean isPrimitiveType(String type) {
-        if (type == null)
-            return true;
-        return type.equals("string") || type.equals("int") || type.equals("long") || type.equals("float") || type.equals("double") || type.equals("boolean") || type.equals("date") || type.equals("byte") || type.equals("short") || type.equals("char") || type.startsWith("java.lang.") || type.startsWith("java.util.Date") || type.equals("java.util.Date") || type.equals("java.sql.Date") || type.equals("java.sql.Timestamp");
-    }
-
-    private String getFieldLabel(DOSchemaField field) {
-        if (field == null)
+    private String humanizeColumnPath(String path) {
+        if (path == null || path.isBlank())
             return "";
-        if (field.title != null && !field.title.isBlank())
-            return field.title.trim();
-        if (field.destinationName != null && !field.destinationName.isBlank())
-            return humanizeColumnName(field.destinationName.trim());
-        if (field.source != null && !field.source.isBlank())
-            return humanizeColumnName(field.source.trim());
-        return "";
+        String[] segments = path.split("\\.");
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < segments.length; i++) {
+            if (i > 0)
+                sb.append(" \u203a ");
+            sb.append(humanizeColumnName(segments[i]));
+        }
+        return sb.toString();
     }
 
     private String humanizeColumnName(String name) {
         if (name == null || name.isBlank())
             return "";
-        // Handle dot-path: use last segment
-        int dot = name.lastIndexOf('.');
-        String base = dot >= 0 ? name.substring(dot + 1) : name;
-        // Insert space before uppercase letters
-        String spaced = base.replaceAll("([A-Z])", " $1").trim();
+        String spaced = name.replaceAll("([A-Z])", " $1").trim();
         if (spaced.isEmpty())
-            return base;
+            return name;
         return Character.toUpperCase(spaced.charAt(0)) + spaced.substring(1);
-    }
-
-    /** Simple (path, label) pair for available column fields. */
-    private static class FieldInfo {
-        final String path;
-        final String label;
-
-        FieldInfo(String path, String label) {
-            this.path = path;
-            this.label = label;
-        }
     }
 
     private String getDefaultFileName() {
@@ -799,13 +695,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         }
 
         // Collect selected default columns (in the order they appear in the UI)
-        List<String> selectedColumns = new ArrayList<>();
-        for (int i = 0; i < defaultColumnFieldNames.size(); i++) {
-            if (defaultColumnCheckboxes.get(i).isSelected()) {
-                selectedColumns.add(defaultColumnFieldNames.get(i));
-            }
-        }
-        result.setDefaultColumns(selectedColumns.isEmpty() ? null : selectedColumns);
+        result.setDefaultColumns(selectedColumnPaths.isEmpty() ? null : new ArrayList<>(selectedColumnPaths));
 
         return true;
     }
