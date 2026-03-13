@@ -1023,6 +1023,33 @@ body {
     padding: 16px 20px 14px;
     border-bottom: 1px solid var(--c-border);
     background: var(--c-surface);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.entity-xml-btn {
+    border: 1px solid var(--c-border);
+    background: var(--c-surface);
+    color: var(--c-text-secondary);
+    border-radius: 8px;
+    height: 30px;
+    padding: 0 10px;
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .15s, color .15s;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+}
+
+.entity-xml-btn:hover {
+    background: var(--c-bg);
+    color: var(--c-text);
 }
 
 .entity-title {

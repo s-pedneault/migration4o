@@ -40,6 +40,7 @@ import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.models.schema.analysis.DOSchemaAnomaly;
 import migration4o.models.ui.ColumnDefinition;
 import migration4o.models.schema.DOSchemaModule;
@@ -1555,7 +1556,7 @@ public class SchemaEditorPanel extends JPanel {
             newFieldWithData.title = dialog.getFieldTitle();
             newFieldWithData.description = dialog.getFieldDescription();
             newFieldWithData.pointsTo = dialog.getFieldPointsTo();
-            newFieldWithData.valueMap = dialog.getValueMappings();
+            newFieldWithData.valueMap = DOSchemaValueMap.copyOf(dialog.getValueMappings());
             newFieldWithData.childrenSchemaClass = null;
 
             // Add the new field to the table
@@ -1622,7 +1623,7 @@ public class SchemaEditorPanel extends JPanel {
             field.description = dialog.getFieldDescription();
             field.pointsTo = dialog.getFieldPointsTo();
             field.format = dialog.getFieldFormat();
-            field.valueMap = dialog.getValueMappings();
+            field.valueMap = DOSchemaValueMap.copyOf(dialog.getValueMappings());
             field.skipUserOption = dialog.getFieldSkipUserOption();
             field.definitionId = dialog.getFieldDefinitionId();
 
@@ -1721,7 +1722,7 @@ public class SchemaEditorPanel extends JPanel {
             String format = null;
             String skipUserOption = null;
             String definitionId = null;
-            java.util.Map<String, String> valueMap = null;
+            DOSchemaValueMap valueMap = null;
             DOSchemaField originalField = originalFieldsMap.get(source);
             if (originalField != null) {
                 title = originalField.title;

@@ -81,6 +81,7 @@ public class HtmlFormatHandler extends FormatHandler {
         if (dot > 0)
             baseName = baseName.substring(0, dot);
         this.currentTempJsPath = filePath.resolveSibling(baseName + ".js.tmp");
+        Files.createDirectories(filePath.getParent());
         java.io.Writer fileWriter = Files.newBufferedWriter(currentTempJsPath, StandardCharsets.UTF_8);
         return new StructuredWriter(new StructuredWriterJS(), fileWriter, filePath);
     }
@@ -95,10 +96,10 @@ public class HtmlFormatHandler extends FormatHandler {
         if (ctx.operation.exportModules != null && !ctx.operation.exportModules.isEmpty()) {
             // Enable welcome-page generation in NavTreeBuilder
             ctx.operation.generateHtmlViewer = true;
-            // NavTreeBuilder stores results in operation.navTree /
-            // cachedNavJson;
-            // we copy cachedNavJson to our own field.
-            new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, ctx.operation.baseOutputPath);
+            // Build nav tree rooted at the html/ sub-folder so that hrefs are
+            // correct relative to the index.html and viewer files placed there.
+            Path htmlBase = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
+            new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, htmlBase);
             cachedNavJson = ctx.operation.cachedNavJson;
         }
     }
@@ -231,7 +232,7 @@ public class HtmlFormatHandler extends FormatHandler {
         if (!ctx.operation.generateHtmlViewer)
             return;
         try {
-            java.nio.file.Path base = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath);
+            java.nio.file.Path base = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
             String dbName = ctx.operation.getDatabaseFolderName();
             int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
             JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.operation.htmlWelcomeModuleCount, ctx.operation.htmlWelcomeClassCount, objectCount);

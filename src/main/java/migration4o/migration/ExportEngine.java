@@ -13,6 +13,7 @@ import migration4o.migration.format.ExportContext;
 import migration4o.migration.format.FormatHandler;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ReferencedClassTracker;
+import migration4o.migration.tasks.ExportSelectionAdvisor;
 import migration4o.migration.tasks.ModuleExporter;
 import migration4o.migration.tasks.ModulePathUtil;
 import migration4o.migration.tasks.ObjectExportLoop;
@@ -96,6 +97,20 @@ public class ExportEngine {
 
         Files.createDirectories(ctx.basePath);
 
+        // When a per-class cap is active, run a pre-flight analysis to pick the
+        // most mutually-referenced N objects per class rather than just the first N.
+        if (operation.maxObjectsPerClass != null && operation.maxObjectsPerClass > 0) {
+            if (operation.monitor != null) {
+                operation.monitor.onStatusMessage("Smart selection: analysing cross-class relationships…");
+            }
+            ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.container, operation.referenceSchema, operation.databaseSchema, operation.maxObjectsPerClass);
+            operation.preselectedObjectIds = advisor.computeSelection(modules, operation.monitor);
+            if (operation.monitor != null) {
+                int affected = operation.preselectedObjectIds != null ? operation.preselectedObjectIds.size() : 0;
+                operation.monitor.onStatusMessage("Smart selection complete — " + affected + " class(es) with optimised selection.");
+            }
+        }
+
         ModuleExporter me = new ModuleExporter(operation);
         int totalClasses = 0;
         for (DOSchemaModule m : modules) {
@@ -172,9 +187,6 @@ public class ExportEngine {
                 operation.monitor.onModuleStart(module.name, module.classConfigs.size(), ctx.moduleChain.size() - 1);
             }
 
-            Path moduleDir = ctx.modulePath();
-            Files.createDirectories(moduleDir);
-
             for (ClassExportConfig config : module.classConfigs) {
                 if (operation.monitor != null && operation.monitor.isCancelled())
                     break;
@@ -189,7 +201,7 @@ public class ExportEngine {
 
                 ctx.setClass(schemaClass, config);
                 try {
-                    exportClassToAllHandlers(ctx, dbSchemaClass, moduleDir, handlers);
+                    exportClassToAllHandlers(ctx, dbSchemaClass, handlers);
                 } catch (Throwable t) {
                     String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
                     System.err.println("[Export error] class " + className + ": " + msg);
@@ -219,17 +231,18 @@ public class ExportEngine {
         }
     }
 
-    private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, Path moduleDir, List<FormatHandler> handlers) throws Exception {
+    private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, List<FormatHandler> handlers) throws Exception {
         String className = dbSchemaClass.source;
         // ObjectExporter nulls ctx.schemaClass in its finally block after each handler's loop.
         // Snapshot here and restore at the top of every iteration so every format handler
         // (HTML, etc.) sees the correct class identity in onClassStart / onObjectProgress.
         DOSchemaClass refClass = ctx.schemaClass;
         ClassExportConfig refConfig = ctx.exportConfig;
+        Path moduleRelPath = ctx.moduleRelativePath();
         for (int i = 0; i < handlers.size(); i++) {
             ctx.setClass(refClass, refConfig); // restore after previous handler's ObjectExporter nulled it
             FormatHandler handler = handlers.get(i);
-            Path filePath = moduleDir.resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
+            Path filePath = ctx.basePath.resolve(handler.folderName()).resolve(moduleRelPath).resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
             if (operation.monitor != null) {
                 operation.monitor.onStatusMessage("Exporting " + handler.displayName() + ": " + className);
             }

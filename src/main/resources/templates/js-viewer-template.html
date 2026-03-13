@@ -49,6 +49,7 @@
                 <div class="panel-left">
                     <div class="entity-header">
                         <h2 class="entity-title">__ENTITY_NAME__</h2>
+                        <a class="entity-xml-btn" id="entityXmlBtn" href="#" target="_blank" title="Ouvrir le fichier XML source">XML</a>
                     </div>
                     <div class="search-section">
                         <div class="search-header">
@@ -130,10 +131,11 @@
     <script>__SIDEBAR_NAV_JS__</script>
     <script>
             (function () {
-                var btn = document.getElementById('detailXmlBtn');
-                if (btn) {
-                    btn.href = window.location.href.replace(/\.html(\?.*)?$/, '.xml$1');
-                }
+                var xmlHref = window.location.href.replace(/\/html\//, '/xml/').replace(/\.html(\?.*)?$/, '.xml$1');
+                var detailBtn = document.getElementById('detailXmlBtn');
+                if (detailBtn) { detailBtn.href = xmlHref; }
+                var entityBtn = document.getElementById('entityXmlBtn');
+                if (entityBtn) { entityBtn.href = xmlHref; }
             })();
     </script>
 </body>

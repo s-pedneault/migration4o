@@ -33,15 +33,26 @@ public class NavTreeBuilder {
      * Pre-builds the hierarchical nav tree and serializes it to JSON. Must be
      * called before export starts. Also writes the welcome page when
      * {@code operation.generateHtmlViewer} is {@code true}.
+     * <p>
+     * Delegates to {@link #build(List, List, Path)} using
+     * {@code operation.getBaseOutputPath(baseOutputDir)} as the base.
      */
     public void build(List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputDir) {
+        build(modules, modulePaths, operation.getBaseOutputPath(baseOutputDir));
+    }
+
+    /**
+     * Pre-builds the hierarchical nav tree and serializes it to JSON using an
+     * explicit {@code base} path. Use this overload when the nav root does not
+     * match {@code operation.getBaseOutputPath()} (e.g. a format-specific
+     * sub-folder such as {@code html/}).
+     */
+    public void build(List<DOSchemaModule> modules, List<String> modulePaths, Path base) {
         operation.navTree.clear();
         operation.cachedNavJson = "[]";
         if (modules == null || modules.isEmpty()) {
             return;
         }
-
-        Path base = operation.getBaseOutputPath(baseOutputDir);
         LinkedHashMap<String, NavNode> prefixGroups = new LinkedHashMap<>();
 
         for (int i = 0; i < modules.size(); i++) {

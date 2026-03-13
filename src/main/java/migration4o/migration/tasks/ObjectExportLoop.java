@@ -105,7 +105,14 @@ public class ObjectExportLoop {
      * @param dbSchemaClass Database-schema class (carries object IDs)
      */
     public void run(DOSchemaClass dbSchemaClass) throws Exception {
+        // Use pre-computed smart selection when available for this class
         long[] objectIds = dbSchemaClass.objectIds;
+        if (operation.preselectedObjectIds != null) {
+            long[] preselected = operation.preselectedObjectIds.get(dbSchemaClass.source);
+            if (preselected != null) {
+                objectIds = preselected;
+            }
+        }
         int objectCount = (objectIds != null ? objectIds.length : 0);
         int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) ? operation.maxObjectsPerClass : objectCount;
 
@@ -128,8 +135,11 @@ public class ObjectExportLoop {
             for (long objectId : objectIds) {
                 if (operation.monitor != null && operation.monitor.isCancelled())
                     break;
+                // Cap is applied per export file (per ClassExportConfig), counting only
+                // objects that actually passed criteria and were written to this file.
                 if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass)
                     break;
+                boolean wasAlreadyExported = handler != null && handler.exportedIds.contains(objectId);
                 try {
                     objectExporter.exportObject(objectId, false);
                 } catch (Throwable t) {
@@ -143,12 +153,19 @@ public class ObjectExportLoop {
                         operation.monitor.onObjectError(loopClass != null ? loopClass.source : "unknown", objectId, msg);
                     }
                 }
-                exportedCount++;
-                // Fire progress directly from the loop — this is the only place
-                // that knows the exact per-format count, class total, AND format
-                // name simultaneously, with no shared mutable state.
-                if (operation.monitor != null && exportedCount % 10 == 0 && actualCount > 0) {
-                    operation.monitor.onObjectProgress(loopClass != null ? loopClass.source : "", loopClass != null ? loopClass.destinationName : "", exportedCount, actualCount, formatName);
+                // Only count objects that were newly written to this file (passed criteria
+                // and were not already exported in a previous pass). Criteria-filtered
+                // objects are never added to handler.exportedIds, so they do not reduce
+                // the remaining cap for this destination file.
+                boolean wasJustExported = handler != null && !wasAlreadyExported && handler.exportedIds.contains(objectId);
+                if (wasJustExported) {
+                    exportedCount++;
+                    // Fire progress directly from the loop — this is the only place
+                    // that knows the exact per-format count, class total, AND format
+                    // name simultaneously, with no shared mutable state.
+                    if (operation.monitor != null && exportedCount % 10 == 0 && actualCount > 0) {
+                        operation.monitor.onObjectProgress(loopClass != null ? loopClass.source : "", loopClass != null ? loopClass.destinationName : "", exportedCount, actualCount, formatName);
+                    }
                 }
             }
 

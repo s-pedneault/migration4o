@@ -15,6 +15,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.models.schema.DOFieldCriteria;
 import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
@@ -278,7 +279,10 @@ public class DOReferenceSchemaReader {
                 String fromValue = mappingElement.getAttribute("from");
                 String toValue = mappingElement.getAttribute("to");
                 if (!fromValue.isEmpty() && !toValue.isEmpty()) {
-                    field.addValueMapping(fromValue, toValue);
+                    if (field.valueMap == null) {
+                        field.valueMap = new DOSchemaValueMap();
+                    }
+                    field.valueMap.add(fromValue, toValue);
                 }
             }
         }

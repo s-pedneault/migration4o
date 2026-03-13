@@ -3,6 +3,7 @@ package migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dia
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.util.TypeUtil;
 
@@ -812,7 +813,7 @@ public class FieldEditorDialog extends JDialog {
         field.title = getFieldTitle();
         field.description = getFieldDescription();
         field.pointsTo = getFieldPointsTo();
-        field.valueMap = getValueMappings();
+        field.valueMap = DOSchemaValueMap.copyOf(getValueMappings());
         field.definitionId = originalFieldDefinitionId; // Preserve the shared
                                                         // field ID
         return field;

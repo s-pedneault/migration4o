@@ -380,11 +380,17 @@ public class DatabaseUtil {
         if (storedClass == null) {
             return null;
         }
-        StoredField field = storedClass.storedField(fieldName, null);
-        if (field == null) {
-            return null;
+        // Walk up the stored class hierarchy so fields declared on a parent class
+        // (e.g. mIDDossPrev on EntiteContientID) are found even when obj is a subclass.
+        StoredClass current = storedClass;
+        while (current != null) {
+            StoredField field = current.storedField(fieldName, null);
+            if (field != null) {
+                return field.get(obj);
+            }
+            current = current.getParentStoredClass();
         }
-        return field.get(obj);
+        return null;
     }
 
     /**

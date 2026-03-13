@@ -42,6 +42,13 @@ public class ExportOperation {
     // Export limits and options
     public Integer maxObjectsPerClass;
     public boolean exportNativeIds = false;
+    /**
+     * Pre-computed object-ID selections per class (keyed by source class name).
+     * When non-null, {@code ObjectExportLoop} iterates these IDs instead of
+     * {@code dbSchemaClass.objectIds}. Populated by {@code ExportSelectionAdvisor}
+     * before the export loop when a cap is active.
+     */
+    public java.util.Map<String, long[]> preselectedObjectIds;
     public boolean applyUserSelectedFieldExclusions = true;
     public boolean applySkipWhenConditions = true;
     public boolean applyExportCriteriaFilters = true;
@@ -146,11 +153,20 @@ public class ExportOperation {
     }
 
     /**
-     * Gets the base output directory for the current database. Returns:
-     * output/&lt;database-folder&gt;/
+     * Returns the max-objects sub-folder name for the current export:
+     * {@code "all"} when no limit is set, {@code "maxN"} otherwise.
+     */
+    public String getMaxObjectsFolder() {
+        return maxObjectsPerClass != null ? "max" + maxObjectsPerClass : "all";
+    }
+
+    /**
+     * Gets the base output directory for the current database, including the
+     * max-objects sub-folder. Returns:
+     * output/&lt;database-folder&gt;/&lt;max-objects-folder&gt;/
      */
     public Path getBaseOutputPath(String baseOutputDir) {
-        return Paths.get(baseOutputDir).resolve(getDatabaseFolderName());
+        return Paths.get(baseOutputDir).resolve(getDatabaseFolderName()).resolve(getMaxObjectsFolder());
     }
 
 }

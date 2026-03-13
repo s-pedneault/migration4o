@@ -116,7 +116,7 @@ public class XmlFormatHandler extends FormatHandler {
         exportUnreachedObjects(ctx);
 
         if (generateXsd && liveXsdBuilder != null) {
-            Path xsdPath = ctx.basePath.resolve("_Migration").resolve("Schema.xsd");
+            Path xsdPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
             Files.createDirectories(xsdPath.getParent());
             if (ctx.operation.monitor != null) {
                 ctx.operation.monitor.onStatusMessage("Generating comprehensive XSD schema...");
@@ -137,7 +137,7 @@ public class XmlFormatHandler extends FormatHandler {
     private String computeSchemaLocation(ExportContext ctx) {
         if (writer == null || writer.outputPath == null)
             return null;
-        Path schemaPath = ctx.basePath.resolve("_Migration").resolve("Schema.xsd");
+        Path schemaPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
         Path xmlDir = writer.outputPath.getParent();
         if (xmlDir == null)
             return "_Migration/Schema.xsd";
@@ -163,7 +163,7 @@ public class XmlFormatHandler extends FormatHandler {
             ctx.operation.monitor.onStatusMessage("Exporting " + unreachedIds.size() + " unreached objects to _Migration/Extra.xml..." + limitNote);
         }
 
-        Path extraPath = ctx.basePath.resolve("_Migration").resolve("Extra.xml");
+        Path extraPath = formatBasePath(ctx).resolve("_Migration").resolve("Extra.xml");
         Files.createDirectories(extraPath.getParent());
         exportedXMLFiles.add(extraPath.toString());
 
@@ -263,7 +263,7 @@ public class XmlFormatHandler extends FormatHandler {
             if (ctx.operation.monitor != null) {
                 ctx.operation.monitor.onStatusMessage("Validating " + exportedXMLFiles.size() + " XML files against schema...");
             }
-            Path xsdPath = ctx.basePath.resolve("_Migration").resolve("Schema.xsd");
+            Path xsdPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
             migration4o.util.XMLValidator.ValidationResult result = migration4o.util.XMLValidator.validateMultiple(new ArrayList<>(exportedXMLFiles), xsdPath.toString());
 
             System.out.println();

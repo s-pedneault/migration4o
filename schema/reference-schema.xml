@@ -2193,8 +2193,9 @@
         </field>
     </class>
     <class source="gest.actionCondition.GroupeActionCondition" destinationName="GroupeActionCondition" isExported="true" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.activite.ActionCondition" field="mIDGroupeAction" />
         <field source="mNom" definition="mNom" />
-        <field source="mVectActionCondition" destinationName="listeActionCondition" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="java.lang.Object" title="Liste d'actions-conditions" />
+        <field source="mVectActionCondition" destinationName="listeActionCondition" isExported="true" skipWhen="DEFAULT" type="java.util.Vector" collection="true" childrenType="java.lang.Object" title="Liste d&apos;actions-conditions" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -6086,7 +6087,7 @@
         <field source="mIDRappForm" destinationName="idRapportFormulaire" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" title="ID de rapport formulaire" />
         <field source="mIDRappFormDefaut" destinationName="idRapportFormulaireDefaut" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" title="ID de rapport formulaire defaut" />
     </class>
-    <class source="gest.prevention.Prevention" destinationName="Prevention" isExported="true" title="Prevention" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.prevention.Prevention" destinationName="Prevention" isExported="true" title="Prevention" summary="[idTypePrevention] | [dateActivite] - [idDossierAdresse]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.prevention.Prevention" field="mIDPrevAvisAssoc" />
         <reference class="gest.prevention.Prevention" field="mIDPrevSrc" />
         <field source="mID" definition="mID" />
@@ -7579,7 +7580,7 @@
         <field source="mNote" destinationName="note" isExported="true" skipWhen="DEFAULT" type="string" title="Note" />
         <field source="mDateReport" destinationName="dateReport" isExported="true" skipWhen="DEFAULT" type="date" title="Date de report" />
     </class>
-    <class source="gest.raisonReport.IDRaisonReport" destinationName="IDRaisonReport" isExported="true" parentClass="gest.gen.IDEntite">
+    <class source="gest.raisonReport.IDRaisonReport" destinationName="IDRaisonReport" isExported="true" parentClass="gest.gen.IDEntite" pointsTo="gest.raisonReport.RaisonReport">
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.rci.Accumul" destinationName="Accumulation" isExported="true" title="Accumulation" parentClass="gest.gen.Entite">

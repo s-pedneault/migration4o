@@ -2,9 +2,7 @@
 package migration4o.models.schema;
 
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 public class DOSchemaField {
     public String source;
@@ -21,8 +19,7 @@ public class DOSchemaField {
     public String title;
     public String description;
     public String pointsTo;
-    public Map<String, String> valueMap; // Maps database values to export
-                                         // values
+    public DOSchemaValueMap valueMap; // Maps database values to export values
 
     // Shared field definition support
     public String definitionId; // If set, this field references a shared
@@ -38,27 +35,6 @@ public class DOSchemaField {
     public DOSchemaClass parentClass; // The class that contains this field
 
     public DOSchemaField() {
-    }
-
-    /**
-     * Gets the mapped value for the given database value, or returns the
-     * original value if no mapping exists.
-     */
-    public String getMappedValue(String databaseValue) {
-        if (valueMap == null || valueMap.isEmpty() || databaseValue == null) {
-            return databaseValue;
-        }
-        return valueMap.getOrDefault(databaseValue, databaseValue);
-    }
-
-    /**
-     * Adds a value mapping.
-     */
-    public void addValueMapping(String fromValue, String toValue) {
-        if (valueMap == null) {
-            valueMap = new LinkedHashMap<>();
-        }
-        valueMap.put(fromValue, toValue);
     }
 
     /**
@@ -120,7 +96,7 @@ public class DOSchemaField {
 
         // Deep copy value map
         if (this.valueMap != null) {
-            copy.valueMap = new LinkedHashMap<>(this.valueMap);
+            copy.valueMap = this.valueMap.copy();
         }
 
         // Note: childrenSchemaClass and parentClass are not copied as they're

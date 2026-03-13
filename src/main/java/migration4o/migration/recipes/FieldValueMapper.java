@@ -25,7 +25,7 @@ public class FieldValueMapper {
             return value;
         }
 
-        String mappedValue = schemaField.getMappedValue(value);
+        String mappedValue = schemaField.valueMap.getMappedValue(value);
         return mappedValue != null ? mappedValue : value;
     }
 

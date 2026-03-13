@@ -11,6 +11,7 @@ import migration4o.migration.monitoring.ExportStatistics.ExportError;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.schema.DOSchemaService;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 
@@ -519,7 +520,7 @@ public class ExportResultDialog extends JFrame {
             field.title = dialog.getFieldTitle();
             field.description = dialog.getFieldDescription();
             field.pointsTo = dialog.getFieldPointsTo();
-            field.valueMap = dialog.getValueMappings();
+            field.valueMap = DOSchemaValueMap.copyOf(dialog.getValueMappings());
 
             // Mark this row as edited (highlight in green)
             editedRows.add(row);

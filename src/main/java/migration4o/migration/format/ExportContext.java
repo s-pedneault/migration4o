@@ -141,9 +141,25 @@ public class ExportContext {
     /**
      * Absolute path to the directory for the current module chain,
      * derived from {@code basePath} and each module's ID bottom-to-top.
+     * Does <em>not</em> include any per-format sub-folder — use
+     * {@link #modulePath(String)} or {@link #moduleRelativePath()} for
+     * format-specific paths.
      */
     public Path modulePath() {
         Path path = basePath;
+        for (DOSchemaModule m : moduleChain) {
+            path = path.resolve(ModulePathUtil.moduleId(m));
+        }
+        return path;
+    }
+
+    /**
+     * Returns the module chain as a relative path (no {@code basePath}
+     * prefix). Used by the export engine to build per-format file paths:
+     * {@code basePath / formatFolder / moduleRelativePath / fileName}.
+     */
+    public java.nio.file.Path moduleRelativePath() {
+        java.nio.file.Path path = java.nio.file.Paths.get("");
         for (DOSchemaModule m : moduleChain) {
             path = path.resolve(ModulePathUtil.moduleId(m));
         }
@@ -157,7 +173,8 @@ public class ExportContext {
     public String moduleDisplayName() {
         StringBuilder sb = new StringBuilder();
         for (DOSchemaModule m : moduleChain) {
-            if (sb.length() > 0) sb.append('/');
+            if (sb.length() > 0)
+                sb.append('/');
             sb.append(m.name != null ? m.name : "");
         }
         return sb.toString();

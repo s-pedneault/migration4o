@@ -73,6 +73,23 @@ public abstract class FormatHandler {
     protected abstract StructuredWriter createWriter(Path filePath) throws IOException;
 
     /**
+     * Returns the format-specific output sub-folder name, e.g. {@code "xml"},
+     * {@code "html"}, {@code "json"}, {@code "excel"}. Defaults to
+     * {@code format.name().toLowerCase()}.
+     */
+    public String folderName() {
+        return format.name().toLowerCase();
+    }
+
+    /**
+     * Returns the root output directory for this format:
+     * {@code ctx.basePath / folderName()}.
+     */
+    public Path formatBasePath(ExportContext ctx) {
+        return ctx.basePath.resolve(folderName());
+    }
+
+    /**
      * Public facade: creates a writer for {@code filePath} and assigns it to
      * {@link #writer}. Called by the engine before each {@code open} call.
      */
@@ -129,7 +146,8 @@ public abstract class FormatHandler {
      * field loop.
      */
     public boolean onObject(ExportContext ctx) throws Exception {
-        if (ctx.schemaClass == null) return true; // no schema match — skip object safely
+        if (ctx.schemaClass == null)
+            return true; // no schema match — skip object safely
         Map<String, String> attrs = null;
         if (ctx.operation.exportNativeIds) {
             attrs = Map.of("id", String.valueOf(ctx.currentObject().objectId));
@@ -182,22 +200,26 @@ public abstract class FormatHandler {
      * post-processing (HTML viewer, XSD registration) applies automatically.
      */
     public void onReferencedClasses(ExportContext ctx) throws Exception {
-        if (ctx.referencedClassTracker == null) return;
+        if (ctx.referencedClassTracker == null)
+            return;
         Set<String> toExport = ctx.referencedClassTracker.getReferencedClasses();
-        if (toExport.isEmpty()) return;
+        if (toExport.isEmpty())
+            return;
 
-        Path referencedPath = ctx.basePath.resolve("Referenced");
+        Path referencedPath = formatBasePath(ctx).resolve("Referenced");
         Files.createDirectories(referencedPath);
 
         ReferencedClassTracker saved = ctx.referencedClassTracker;
         ctx.referencedClassTracker = null;
         try {
             for (String className : toExport) {
-                if (saved.isReferencedClassExported(className)) continue;
+                if (saved.isReferencedClassExported(className))
+                    continue;
 
                 DOSchemaClass schemaClass = ctx.operation.referenceSchema.findClassByName(className);
                 DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(className);
-                if (schemaClass == null || dbSchemaClass == null) continue;
+                if (schemaClass == null || dbSchemaClass == null)
+                    continue;
 
                 ctx.setClass(schemaClass, null);
                 Path filePath = referencedPath.resolve(schemaClass.destinationName + extension());
@@ -233,10 +255,10 @@ public abstract class FormatHandler {
         List<FormatHandler> handlers = new ArrayList<>();
         for (ExportFormat format : formats) {
             switch (format) {
-                case XML  -> handlers.add(new XmlFormatHandler(generateXsd));
-                case HTML -> handlers.add(new HtmlFormatHandler());
-                case JSON -> handlers.add(new JsonFormatHandler());
-                case EXCEL -> handlers.add(new ExcelFormatHandler());
+            case XML -> handlers.add(new XmlFormatHandler(generateXsd));
+            case HTML -> handlers.add(new HtmlFormatHandler());
+            case JSON -> handlers.add(new JsonFormatHandler());
+            case EXCEL -> handlers.add(new ExcelFormatHandler());
             }
         }
         return handlers;

@@ -7,6 +7,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
+import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.util.FileUtil;
 
 /**
@@ -301,7 +302,7 @@ public class DOReferenceSchemaWriter {
         writer.write(indent + "</criterias>\n");
     }
 
-    private void writeValueMap(FileWriter writer, java.util.Map<String, String> valueMap, int indentLevel) throws IOException {
+    private void writeValueMap(FileWriter writer, DOSchemaValueMap valueMap, int indentLevel) throws IOException {
         String indent = getIndent(indentLevel);
         writer.write(indent + "<valueMap>\n");
 
