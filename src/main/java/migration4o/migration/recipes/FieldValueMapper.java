@@ -52,8 +52,6 @@ public class FieldValueMapper {
      * @return true if the field has value mappings, false otherwise
      */
     public static boolean hasMapping(DOSchemaField schemaField) {
-        return schemaField != null
-                && schemaField.valueMap != null
-                && !schemaField.valueMap.isEmpty();
+        return schemaField != null && schemaField.valueMap != null && !schemaField.valueMap.isEmpty();
     }
 }
