@@ -111,6 +111,10 @@ public class ObjectExportLoop {
             long[] preselected = operation.preselectedObjectIds.get(dbSchemaClass.source);
             if (preselected != null) {
                 objectIds = preselected;
+                System.out.println("[ExportLoop] using preselection for '" + dbSchemaClass.source + "': " + preselected.length + " objects");
+            } else if (!operation.preselectedObjectIds.isEmpty()) {
+                // Key mismatch diagnostic — only log when there IS a preselection map but this class isn't in it
+                System.out.println("[ExportLoop] no preselection found for key='" + dbSchemaClass.source + "'; available keys: " + operation.preselectedObjectIds.keySet());
             }
         }
         int objectCount = (objectIds != null ? objectIds.length : 0);
@@ -129,15 +133,29 @@ public class ObjectExportLoop {
                 ctx.statistics.setCurrentClass(loopClass.source, actualCount);
                 ctx.statistics.setCurrentFormatName(handler != null ? handler.displayName() : "");
             }
+            // Number of leading IDs in objectIds that are "required" (closure-driven
+            // by ExportSelectionAdvisor) and must be exported regardless of the cap.
+            int requiredCount = 0;
+            if (operation.preselectedRequiredCounts != null) {
+                Integer rc = operation.preselectedRequiredCounts.get(dbSchemaClass.source);
+                if (rc != null)
+                    requiredCount = rc;
+            }
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
             int exportedCount = 0;
+            int idIndex = 0;
             String formatName = handler != null ? handler.displayName() : "";
             for (long objectId : objectIds) {
                 if (operation.monitor != null && operation.monitor.isCancelled())
                     break;
+                // Required objects (at the front of the ranked array) are cap-exempt:
+                // they are always exported to guarantee referential integrity.
+                // Seed-fill and fallback objects are subject to the normal cap.
+                boolean isRequired = idIndex < requiredCount;
+                idIndex++;
                 // Cap is applied per export file (per ClassExportConfig), counting only
                 // objects that actually passed criteria and were written to this file.
-                if (operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass)
+                if (!isRequired && operation.maxObjectsPerClass != null && exportedCount >= operation.maxObjectsPerClass)
                     break;
                 boolean wasAlreadyExported = handler != null && handler.exportedIds.contains(objectId);
                 try {

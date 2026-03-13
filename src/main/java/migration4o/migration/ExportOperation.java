@@ -49,6 +49,14 @@ public class ExportOperation {
      * before the export loop when a cap is active.
      */
     public java.util.Map<String, long[]> preselectedObjectIds;
+    /**
+     * Number of "required" (closure-driven) objects at the front of each
+     * preselected array.  These are exported unconditionally — the cap check
+     * is skipped for them.  Objects after this index are optional fill.
+     * Populated alongside {@code preselectedObjectIds} by
+     * {@code ExportSelectionAdvisor}.
+     */
+    public java.util.Map<String, Integer> preselectedRequiredCounts;
     public boolean applyUserSelectedFieldExclusions = true;
     public boolean applySkipWhenConditions = true;
     public boolean applyExportCriteriaFilters = true;

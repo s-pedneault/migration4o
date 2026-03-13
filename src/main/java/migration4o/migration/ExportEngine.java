@@ -104,7 +104,9 @@ public class ExportEngine {
                 operation.monitor.onStatusMessage("Smart selection: analysing cross-class relationships…");
             }
             ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.container, operation.referenceSchema, operation.databaseSchema, operation.maxObjectsPerClass);
-            operation.preselectedObjectIds = advisor.computeSelection(modules, operation.monitor);
+            ExportSelectionAdvisor.SelectionResult sel = advisor.computeSelection(modules, operation.monitor);
+            operation.preselectedObjectIds = sel.rankedIds;
+            operation.preselectedRequiredCounts = sel.requiredCounts;
             if (operation.monitor != null) {
                 int affected = operation.preselectedObjectIds != null ? operation.preselectedObjectIds.size() : 0;
                 operation.monitor.onStatusMessage("Smart selection complete — " + affected + " class(es) with optimised selection.");
