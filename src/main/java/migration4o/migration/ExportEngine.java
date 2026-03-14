@@ -117,7 +117,8 @@ public class ExportEngine {
             }
         }
         // When a per-class cap is active, run a pre-flight analysis to pick the
-        // most mutually-referenced N objects per class rather than just the first N.
+        // most mutually-referenced N objects per class rather than just the
+        // first N.
         else if (operation.maxObjectsPerClass != null && operation.maxObjectsPerClass > 0) {
             System.out.println("[DEBUG-DossPrev] ExportEngine: CAP branch entered (no seeds) — maxObjectsPerClass=" + operation.maxObjectsPerClass);
             if (operation.monitor != null) {
@@ -215,11 +216,23 @@ public class ExportEngine {
 
                 String className = config.getClassName();
                 DOSchemaClass schemaClass = operation.referenceSchema.findClassByName(className);
-                if (schemaClass == null)
+                if (schemaClass == null) {
+                    // Fire onClassComplete so the progress counter advances
+                    // even for classes that only exist in module config.
+                    for (FormatHandler h : handlers) {
+                        if (operation.monitor != null)
+                            operation.monitor.onClassComplete(className, 0, h.displayName());
+                    }
                     continue;
+                }
                 DOSchemaClass dbSchemaClass = operation.databaseSchema.findClassByName(className);
-                if (dbSchemaClass == null)
+                if (dbSchemaClass == null) {
+                    for (FormatHandler h : handlers) {
+                        if (operation.monitor != null)
+                            operation.monitor.onClassComplete(className, 0, h.displayName());
+                    }
                     continue;
+                }
 
                 ctx.setClass(schemaClass, config);
                 try {
@@ -255,14 +268,19 @@ public class ExportEngine {
 
     private void exportClassToAllHandlers(ExportContext ctx, DOSchemaClass dbSchemaClass, List<FormatHandler> handlers) throws Exception {
         String className = dbSchemaClass.source;
-        // ObjectExporter nulls ctx.schemaClass in its finally block after each handler's loop.
-        // Snapshot here and restore at the top of every iteration so every format handler
-        // (HTML, etc.) sees the correct class identity in onClassStart / onObjectProgress.
+        // ObjectExporter nulls ctx.schemaClass in its finally block after each
+        // handler's loop.
+        // Snapshot here and restore at the top of every iteration so every
+        // format handler
+        // (HTML, etc.) sees the correct class identity in onClassStart /
+        // onObjectProgress.
         DOSchemaClass refClass = ctx.schemaClass;
         ClassExportConfig refConfig = ctx.exportConfig;
         Path moduleRelPath = ctx.moduleRelativePath();
         for (int i = 0; i < handlers.size(); i++) {
-            ctx.setClass(refClass, refConfig); // restore after previous handler's ObjectExporter nulled it
+            ctx.setClass(refClass, refConfig); // restore after previous
+                                               // handler's ObjectExporter
+                                               // nulled it
             FormatHandler handler = handlers.get(i);
             Path filePath = ctx.basePath.resolve(handler.folderName()).resolve(moduleRelPath).resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
             if (operation.monitor != null) {

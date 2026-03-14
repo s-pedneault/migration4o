@@ -96,8 +96,10 @@ public class ExportStatistics {
      * Records a unique exported object ID. Because DB4O object IDs are globally
      * unique, using a set naturally deduplicates across classes and embedding
      * depths.
-     * <p>No-op when {@link #fullTracking} is {@code false} — the global ID set
-     * is only used for reachability coverage analysis.</p>
+     * <p>
+     * No-op when {@link #fullTracking} is {@code false} — the global ID set is
+     * only used for reachability coverage analysis.
+     * </p>
      */
     public void recordExportedObjectId(long objectId) {
         if (fullTracking) {
@@ -105,9 +107,22 @@ public class ExportStatistics {
         }
     }
 
-    /** Returns the count of unique objects exported (root + embedded). */
+    /**
+     * Returns the count of unique objects exported (root + embedded). When
+     * {@link #fullTracking} is off, falls back to the always-populated
+     * {@link #exportedObjectIdsSet} totals.
+     */
     public int getUniqueExportedCount() {
-        return allExportedObjectIds.size();
+        if (!allExportedObjectIds.isEmpty()) {
+            return allExportedObjectIds.size();
+        }
+        // fullTracking=false: allExportedObjectIds is never populated,
+        // but exportedObjectIdsSet is always maintained.
+        int total = 0;
+        for (Set<Long> ids : exportedObjectIdsSet.values()) {
+            total += ids.size();
+        }
+        return total;
     }
 
     public void incrementFiltered() {
@@ -252,7 +267,8 @@ public class ExportStatistics {
         this.exportName = exportName;
         this.outputPath = outputPath;
         // Only build the per-class ID lists (used for coverage drilldown) when
-        // full tracking is enabled; skipping them saves memory on large exports.
+        // full tracking is enabled; skipping them saves memory on large
+        // exports.
         if (fullTracking) {
             exportedObjectIds.clear();
             for (Map.Entry<String, Set<Long>> entry : exportedObjectIdsSet.entrySet()) {

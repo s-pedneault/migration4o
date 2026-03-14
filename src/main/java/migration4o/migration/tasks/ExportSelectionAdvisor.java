@@ -34,17 +34,17 @@ import migration4o.util.TypeUtil;
  * <li>Find <em>reference edges</em> by reading each exported class's
  * {@code DOSchemaClass.schemaReferences} — populated at startup by
  * {@code DOReferenceDetector}, which already resolves IDEntite indirection.
- * Each edge carries whether it is IDEntite-mediated so the DB scan below
- * can choose the right resolution path.</li>
+ * Each edge carries whether it is IDEntite-mediated so the DB scan below can
+ * choose the right resolution path.</li>
  * <li>Scan every source-class object: read the relevant field via
- * {@link DatabaseUtil#getStoredFieldValue}, then resolve to the target
- * object ID — directly via {@code container.ext().getID()} for plain
- * references, or via {@link ReferenceUtil#resolveIDEntiteReference} for
- * IDEntite-mediated ones.</li>
- * <li>Run iterative scoring passes (source pass then target pass) until
- * stable, keeping the top-N objects per class at each step.</li>
- * <li>Return the final selections as {@code Map<className, long[]>} in
- * original DB order for deterministic output.</li>
+ * {@link DatabaseUtil#getStoredFieldValue}, then resolve to the target object
+ * ID — directly via {@code container.ext().getID()} for plain references, or
+ * via {@link ReferenceUtil#resolveIDEntiteReference} for IDEntite-mediated
+ * ones.</li>
+ * <li>Run iterative scoring passes (source pass then target pass) until stable,
+ * keeping the top-N objects per class at each step.</li>
+ * <li>Return the final selections as {@code Map<className, long[]>} in original
+ * DB order for deterministic output.</li>
  * </ol>
  */
 public class ExportSelectionAdvisor {
@@ -53,9 +53,11 @@ public class ExportSelectionAdvisor {
 
     static final class ReferenceEdge {
         final String sourceClass; // fully-qualified source class name
-        final String fieldName; // DB4O / source field name (from schema field.source)
+        final String fieldName; // DB4O / source field name (from schema
+                                // field.source)
         final String targetClass; // fully-qualified target class name
-        final boolean isIDEntite; // true → resolve via ReferenceUtil.resolveIDEntiteReference
+        final boolean isIDEntite; // true → resolve via
+                                  // ReferenceUtil.resolveIDEntiteReference
 
         ReferenceEdge(String sourceClass, String fieldName, String targetClass, boolean isIDEntite) {
             this.sourceClass = sourceClass;
@@ -70,9 +72,9 @@ public class ExportSelectionAdvisor {
     /**
      * Holds both outputs of {@link #computeSelection}:
      * <ul>
-     *   <li>{@code rankedIds} — full per-class ID arrays, required objects first.
-     *   <li>{@code requiredCounts} — how many leading IDs in each array are
-     *       "required" (closure-driven) and must be exported unconditionally.
+     * <li>{@code rankedIds} — full per-class ID arrays, required objects first.
+     * <li>{@code requiredCounts} — how many leading IDs in each array are
+     * "required" (closure-driven) and must be exported unconditionally.
      * </ul>
      */
     public static final class SelectionResult {
@@ -105,8 +107,8 @@ public class ExportSelectionAdvisor {
 
     /**
      * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0,
-     * seed query results are limited to that many objects per seed class
-     * before closure propagation.
+     * seed query results are limited to that many objects per seed class before
+     * closure propagation.
      */
     public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
         this.container = container;
@@ -123,8 +125,8 @@ public class ExportSelectionAdvisor {
      * containing per-class ranked ID arrays (required objects first) and the
      * count of required objects at the front of each array.
      *
-     * @param modules  modules that will be exported
-     * @param monitor  optional progress monitor (may be null)
+     * @param modules modules that will be exported
+     * @param monitor optional progress monitor (may be null)
      * @return selection result; maps are empty when no actionable edges exist
      */
     public SelectionResult computeSelection(List<DOSchemaModule> modules, DOExportMonitor monitor) {
@@ -139,7 +141,8 @@ public class ExportSelectionAdvisor {
 
         Set<String> exportedNames = classObjectIds.keySet();
 
-        // Step 2 – find reference edges using the pre-built schemaReferences graph
+        // Step 2 – find reference edges using the pre-built schemaReferences
+        // graph
         List<ReferenceEdge> edges = findReferenceEdges(exportedNames);
         if (edges.isEmpty()) {
             return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
@@ -148,7 +151,8 @@ public class ExportSelectionAdvisor {
         // Step 3 – scan DB objects to resolve actual object-ID relationships
         status(monitor, "Smart selection: scanning object references\u2026");
         Map<ReferenceEdge, Map<Long, Long>> edgeData = scanReferences(edges, classObjectIds, monitor);
-        // Step 4 \u2013 closure propagation: guarantee every referenced object is included
+        // Step 4 \u2013 closure propagation: guarantee every referenced object
+        // is included
         status(monitor, "Smart selection: propagating referential closure\u2026");
         SelectionResult result = buildRankedOrder(classObjectIds, edges, edgeData);
         return result;
@@ -158,16 +162,26 @@ public class ExportSelectionAdvisor {
 
     /**
      * Seed-based selection: executes user-defined queries to find initial
-     * objects, then follows schema references <b>bidirectionally</b> to
-     * build a complete export set.
+     * objects, then examines each seed class's {@code schemaReferences} to
+     * discover objects in other classes that reference the seed objects.
      *
-     * @param modules  modules that will be exported
-     * @param monitor  optional progress monitor (may be null)
-     * @return selection result with seed objects and their closure
+     * <h3>Algorithm</h3>
+     * <ol>
+     * <li>Execute seed queries to find matching objects.</li>
+     * <li>For each seed class, read its {@code schemaReferences} to find which
+     * exported classes reference it.</li>
+     * <li>Scan those referencing classes to find the specific objects that
+     * point to seed objects — these become <em>required</em> (cap-exempt).</li>
+     * <li>All other classes are left without preselection, so the normal cap
+     * applies at export time via {@link ObjectExportLoop}.</li>
+     * </ol>
+     *
+     * @param modules modules that will be exported
+     * @param monitor optional progress monitor (may be null)
+     * @return selection result with seed objects and their related references
      */
     public SelectionResult computeSeedSelection(List<DOSchemaModule> modules, DOExportMonitor monitor) {
         if (seedQueries == null || seedQueries.isEmpty()) {
-
             return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
         }
 
@@ -186,7 +200,7 @@ public class ExportSelectionAdvisor {
         status(monitor, "Seed selection: executing seed queries\u2026");
         Map<String, Set<Long>> seedObjects = executeSeedQueries(classObjectIds, monitor);
 
-        // Apply per-class cap to seed matches before closure propagation
+        // Apply per-class cap to seed matches before reference scan
         if (cap > 0) {
             for (Map.Entry<String, Set<Long>> entry : seedObjects.entrySet()) {
                 Set<Long> matches = entry.getValue();
@@ -210,23 +224,25 @@ public class ExportSelectionAdvisor {
             return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
         }
 
-        // Step 3 – find reference edges
-        List<ReferenceEdge> edges = findReferenceEdges(exportedNames);
+        // Step 3 – for each seed class, find objects in other classes that
+        // reference the seed objects (via schemaReferences)
+        status(monitor, "Seed selection: finding objects that reference seed objects\u2026");
+        Map<String, Set<Long>> relatedObjects = findObjectsReferencingSeeds(classObjectIds, exportedNames, seedObjects, monitor);
 
-        // Step 4 – scan DB to resolve actual references
-        status(monitor, "Seed selection: scanning object references\u2026");
-        Map<ReferenceEdge, Map<Long, Long>> edgeData = scanReferences(edges, classObjectIds, monitor);
-
-        // Step 5 – bidirectional closure propagation from seed objects
-        status(monitor, "Seed selection: propagating bidirectional closure\u2026");
-        SelectionResult result = buildSeedClosure(classObjectIds, edges, edgeData, seedObjects);
-        return result;
+        // Step 4 – build output:
+        // - Seed classes: ONLY seed-matched objects, all required
+        // - Referencing classes: related objects required (cap-exempt), then
+        // fill
+        // - Other classes: no preselection (cap applies normally at export
+        // time)
+        return buildSeedResult(classObjectIds, seedObjects, relatedObjects);
     }
 
     // ── Seed query execution ────────────────────────────────────────────────
 
     /**
-     * Executes each SeedQuery against the database and collects matching object IDs.
+     * Executes each SeedQuery against the database and collects matching object
+     * IDs.
      */
     private Map<String, Set<Long>> executeSeedQueries(Map<String, long[]> classObjectIds, DOExportMonitor monitor) {
         Map<String, Set<Long>> result = new LinkedHashMap<>();
@@ -245,7 +261,8 @@ public class ExportSelectionAdvisor {
 
             System.out.println("[DEBUG-DossPrev] SeedQuery for '" + className + "': conditions=" + (conditions != null ? conditions.size() : "null") + ", objectIds=" + objectIds.length);
 
-            // Pre-translate all condition destinationName paths to DB source paths
+            // Pre-translate all condition destinationName paths to DB source
+            // paths
             List<String> sourceFieldPaths = new ArrayList<>();
             boolean isDossPrev = className.contains("DossPrev");
             if (conditions != null) {
@@ -306,150 +323,177 @@ public class ExportSelectionAdvisor {
         return result;
     }
 
-    // ── Bidirectional closure ────────────────────────────────────────────────
+    // ── Seed reference scan ────────────────────────────────────────────────
 
     /**
-     * Builds a selection using bidirectional closure from seed objects.
-     * Unlike the cap-based buildRankedOrder, this starts with ONLY seed-matched
-     * objects and propagates both forward (S→T) and backward (T→S).
+     * For each seed class, examines its {@code schemaReferences} to find which
+     * exported classes reference it, then scans those classes to find the
+     * specific objects that point to seed objects.
+     *
+     * @return map of className → set of object IDs that reference seed objects
      */
-    private SelectionResult buildSeedClosure(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData, Map<String, Set<Long>> seedObjects) {
+    private Map<String, Set<Long>> findObjectsReferencingSeeds(Map<String, long[]> classObjectIds, Set<String> exportedNames, Map<String, Set<Long>> seedObjects, DOExportMonitor monitor) {
 
-        // Build the initial selected set from seeds only
-        Map<String, Set<Long>> selected = new LinkedHashMap<>();
-        for (String cls : classObjectIds.keySet()) {
-            Set<Long> seeds = seedObjects.get(cls);
-            selected.put(cls, seeds != null ? new LinkedHashSet<>(seeds) : new LinkedHashSet<>());
+        Map<String, Set<Long>> relatedObjects = new LinkedHashMap<>();
+
+        // Pre-collect exported DOSchemaClass objects for descendant expansion
+        List<DOSchemaClass> exportedClasses = new ArrayList<>();
+        for (String name : exportedNames) {
+            DOSchemaClass cls = referenceSchema.findClassByName(name);
+            if (cls != null)
+                exportedClasses.add(cls);
         }
 
-        // Collect seed class names so backward propagation skips them.
-        // This prevents the chain reaction where seed class A → shared entity →
-        // ALL objects referencing that entity get pulled back into class A.
-        Set<String> seedClassNames = new LinkedHashSet<>(seedObjects.keySet());
+        for (String seedClassName : seedObjects.keySet()) {
+            Set<Long> seedIds = seedObjects.get(seedClassName);
+            if (seedIds == null || seedIds.isEmpty())
+                continue;
 
-        // Also build a reversed edge-data index for backward propagation:
-        // For edge S→T with { srcId → tgtId }, build reverse: { tgtId → [srcId,...] }
-        Map<ReferenceEdge, Map<Long, List<Long>>> reverseEdgeData = new LinkedHashMap<>();
-        for (ReferenceEdge edge : edges) {
-            Map<Long, List<Long>> reverse = new LinkedHashMap<>();
-            Map<Long, Long> forward = edgeData.get(edge);
-            if (forward != null) {
-                for (Map.Entry<Long, Long> entry : forward.entrySet()) {
-                    reverse.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
-                }
+            DOSchemaClass seedClass = referenceSchema.findClassByName(seedClassName);
+            if (seedClass == null || seedClass.schemaReferences == null) {
+                System.out.println("[Seed] No schemaReferences on seed class '" + seedClassName + "'");
+                continue;
             }
-            reverseEdgeData.put(edge, reverse);
-        }
 
-        // Iterative bidirectional closure
-        final int MAX_ITERATIONS = 20;
-        for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
-            boolean changed = false;
+            System.out.println("[Seed] Seed class '" + simpleClassName(seedClassName) + "' has " + seedClass.schemaReferences.length + " schema reference(s), " + seedIds.size() + " seed object(s)");
 
-            for (ReferenceEdge edge : edges) {
-                Set<Long> srcSelected = selected.get(edge.sourceClass);
-                Set<Long> tgtSelected = selected.get(edge.targetClass);
-                if (srcSelected == null || tgtSelected == null)
+            // Build edges from classes that reference this seed class
+            List<ReferenceEdge> seedEdges = new ArrayList<>();
+            for (DOSchemaReference ref : seedClass.schemaReferences) {
+                String declaringClass = ref.className;
+                if (declaringClass.equals(seedClassName))
                     continue;
 
-                Map<Long, Long> forward = edgeData.get(edge);
-                Map<Long, List<Long>> reverse = reverseEdgeData.get(edge);
-
-                // Forward pass: selected source → add target
-                // Skip forward propagation into seed classes — seed classes
-                // are frozen at their initial seed-matched set.
-                if (forward != null && !seedClassNames.contains(edge.targetClass)) {
-                    List<Long> toAdd = new ArrayList<>();
-                    for (Long srcId : srcSelected) {
-                        Long tgtId = forward.get(srcId);
-                        if (tgtId != null && !tgtSelected.contains(tgtId)) {
-                            toAdd.add(tgtId);
-                        }
-                    }
-                    if (!toAdd.isEmpty()) {
-                        int before = tgtSelected.size();
-                        tgtSelected.addAll(toAdd);
-                        int added = tgtSelected.size() - before;
-                        if (added > 0) {
-
-                            changed = true;
+                // Resolve concrete exported source classes (handle inherited
+                // fields)
+                List<String> srcNames = new ArrayList<>();
+                if (exportedNames.contains(declaringClass)) {
+                    srcNames.add(declaringClass);
+                } else {
+                    for (DOSchemaClass candidate : exportedClasses) {
+                        if (!candidate.source.equals(seedClassName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                            srcNames.add(candidate.source);
                         }
                     }
                 }
 
-                // Backward pass: selected target → add source
-                // Skip backward propagation into seed classes to prevent
-                // chain-reaction blowup (seed → shared entity → all referrers).
-                if (reverse != null && !seedClassNames.contains(edge.sourceClass)) {
-                    List<Long> toAdd = new ArrayList<>();
-                    for (Long tgtId : tgtSelected) {
-                        List<Long> srcIds = reverse.get(tgtId);
-                        if (srcIds != null) {
-                            for (Long srcId : srcIds) {
-                                if (!srcSelected.contains(srcId)) {
-                                    toAdd.add(srcId);
-                                }
-                            }
-                        }
-                    }
-                    if (!toAdd.isEmpty()) {
-                        int before = srcSelected.size();
-                        srcSelected.addAll(toAdd);
-                        int added = srcSelected.size() - before;
-                        if (added > 0) {
+                for (String srcName : srcNames) {
+                    // Skip if source is also a seed class (its selection
+                    // is determined by its own seed query)
+                    if (seedObjects.containsKey(srcName) && !seedObjects.get(srcName).isEmpty())
+                        continue;
 
-                            changed = true;
-                        }
+                    DOSchemaClass srcClass = referenceSchema.findClassByName(srcName);
+                    if (srcClass == null)
+                        continue;
+                    DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(srcClass, ref.fieldName, referenceSchema);
+                    DOSchemaField effectiveField = schemaField;
+                    if (schemaField != null && schemaField.isSharedField()) {
+                        DOSchemaField def = referenceSchema.sharedFields.get(schemaField.definitionId);
+                        if (def != null)
+                            effectiveField = def;
+                    }
+                    if (effectiveField != null && !effectiveField.isExported)
+                        continue;
+
+                    boolean isIDEntite = effectiveField != null && TypeUtil.isIDEntiteField(effectiveField, referenceSchema);
+
+                    if (!containsEdge(seedEdges, srcName, ref.fieldName, seedClassName)) {
+                        seedEdges.add(new ReferenceEdge(srcName, ref.fieldName, seedClassName, isIDEntite));
+                        System.out.println("[Seed]   Edge: " + simpleClassName(srcName) + "." + ref.fieldName + " \u2192 " + simpleClassName(seedClassName) + (isIDEntite ? " (IDEntite)" : " (direct)"));
                     }
                 }
             }
 
-            if (!changed) {
-                break;
+            if (seedEdges.isEmpty()) {
+                System.out.println("[Seed]   No applicable edges for seed class '" + simpleClassName(seedClassName) + "'");
+                continue;
+            }
+
+            // Scan the referencing classes to find which objects reference seed
+            // objects
+            Map<ReferenceEdge, Map<Long, Long>> edgeData = scanReferences(seedEdges, classObjectIds, monitor);
+
+            for (ReferenceEdge edge : seedEdges) {
+                Map<Long, Long> links = edgeData.get(edge);
+                if (links == null)
+                    continue;
+
+                int linkedCount = 0;
+                for (Map.Entry<Long, Long> link : links.entrySet()) {
+                    Long srcId = link.getKey();
+                    Long tgtId = link.getValue();
+                    if (seedIds.contains(tgtId)) {
+                        relatedObjects.computeIfAbsent(edge.sourceClass, k -> new LinkedHashSet<>()).add(srcId);
+                        linkedCount++;
+                    }
+                }
+                if (linkedCount > 0) {
+                    System.out.println("[Seed]   Found " + linkedCount + " " + simpleClassName(edge.sourceClass) + " object(s) referencing seed " + simpleClassName(seedClassName) + " via " + edge.fieldName);
+                }
             }
         }
+        return relatedObjects;
+    }
 
-        // Build output: selected objects first (as "required"), then unselected
+    /**
+     * Builds the final {@link SelectionResult} from seed objects and their
+     * related objects.
+     * <ul>
+     * <li><b>Seed classes</b>: export ONLY seed-matched objects (all required,
+     * cap-exempt).</li>
+     * <li><b>Referencing classes</b>: related objects are required (cap-exempt)
+     * and placed first, then remaining objects fill up to cap.</li>
+     * <li><b>Other classes</b>: not included in preselection — the normal cap
+     * applies at export time via {@link ObjectExportLoop}.</li>
+     * </ul>
+     */
+    private SelectionResult buildSeedResult(Map<String, long[]> classObjectIds, Map<String, Set<Long>> seedObjects, Map<String, Set<Long>> relatedObjects) {
+
         Map<String, long[]> rankedIds = new LinkedHashMap<>();
         Map<String, Integer> requiredCounts = new LinkedHashMap<>();
 
         for (Map.Entry<String, long[]> e : classObjectIds.entrySet()) {
             String cls = e.getKey();
             long[] allIds = e.getValue();
-            Set<Long> sel = selected.get(cls);
-            if (sel == null || sel.isEmpty())
-                continue;
 
             boolean isSeedClass = seedObjects.containsKey(cls) && seedObjects.get(cls) != null && !seedObjects.get(cls).isEmpty();
+            Set<Long> related = relatedObjects.get(cls);
+            boolean hasRelated = related != null && !related.isEmpty();
 
             if (isSeedClass) {
-                // Seed classes: export ONLY matched/closure objects — no fill
-                long[] ranked = new long[sel.size()];
+                // Seed classes: export ONLY matched objects, all required
+                Set<Long> seedIds = seedObjects.get(cls);
+                long[] ranked = new long[seedIds.size()];
                 int idx = 0;
                 for (long id : allIds) {
-                    if (sel.contains(id))
+                    if (seedIds.contains(id))
                         ranked[idx++] = id;
                 }
                 rankedIds.put(cls, ranked);
                 requiredCounts.put(cls, idx);
+                System.out.println("[Seed] Result: " + simpleClassName(cls) + " \u2192 " + idx + " seed object(s) (all required)");
 
-            } else {
-                // Related classes: closure objects first (prioritized), then fill.
-                // requiredCount is 0 so the normal cap still applies — closure
-                // objects are favoured by ordering, not by being cap-exempt.
+            } else if (hasRelated) {
+                // Referencing classes: related objects first
+                // (required/cap-exempt), then fill
                 long[] ranked = new long[allIds.length];
                 int idx = 0;
                 for (long id : allIds) {
-                    if (sel.contains(id))
+                    if (related.contains(id))
                         ranked[idx++] = id;
                 }
+                int reqCount = idx;
                 for (long id : allIds) {
-                    if (!sel.contains(id))
+                    if (!related.contains(id))
                         ranked[idx++] = id;
                 }
                 rankedIds.put(cls, ranked);
-                requiredCounts.put(cls, 0);
+                requiredCounts.put(cls, reqCount);
+                System.out.println("[Seed] Result: " + simpleClassName(cls) + " \u2192 " + reqCount + " required + " + (allIds.length - reqCount) + " fill (total " + allIds.length + ")");
             }
+            // Other classes: not included in preselection → cap applies
+            // normally
         }
         return new SelectionResult(rankedIds, requiredCounts);
     }
@@ -460,8 +504,10 @@ public class ExportSelectionAdvisor {
         for (ClassExportConfig cfg : module.classConfigs) {
             String name = cfg.getClassName();
             if (!out.containsKey(name)) {
-                // IMPORTANT: objectIds are populated only on the *database* schema
-                // (from storedClass.getIDs()). The reference schema never has them.
+                // IMPORTANT: objectIds are populated only on the *database*
+                // schema
+                // (from storedClass.getIDs()). The reference schema never has
+                // them.
                 DOSchemaClass dbClass = databaseSchema.findClassByName(name);
                 if (dbClass != null && dbClass.objectIds != null && dbClass.objectIds.length > 0) {
                     out.put(name, dbClass.objectIds);
@@ -478,17 +524,19 @@ public class ExportSelectionAdvisor {
 
     /**
      * Builds the edge list from the pre-built {@code schemaReferences} graph.
-     * {@code DOReferenceDetector} populates {@code schemaClass.schemaReferences}
-     * at startup and already resolves IDEntite indirection, so we don't need to
-     * re-scan fields manually.
+     * {@code DOReferenceDetector} populates
+     * {@code schemaClass.schemaReferences} at startup and already resolves
+     * IDEntite indirection, so we don't need to re-scan fields manually.
      *
-     * <p><b>Inherited-field expansion:</b> {@code DOReferenceDetector} records
-     * the <em>declaring</em> class of each field as the reference source (e.g.
+     * <p>
+     * <b>Inherited-field expansion:</b> {@code DOReferenceDetector} records the
+     * <em>declaring</em> class of each field as the reference source (e.g.
      * {@code gest.gen.EntiteContientID} for the inherited {@code mIDDossPrev}
-     * field).  When that declaring class is not itself exported, we expand the
+     * field). When that declaring class is not itself exported, we expand the
      * edge to every exported subclass of the declaring class — for example
      * {@code Prevention}, {@code Intervention}, etc. — so that each concrete
-     * exported class that inherits the field is properly connected to its target.
+     * exported class that inherits the field is properly connected to its
+     * target.
      */
     private List<ReferenceEdge> findReferenceEdges(Set<String> exportedNames) {
         List<ReferenceEdge> edges = new ArrayList<>();
@@ -512,10 +560,11 @@ public class ExportSelectionAdvisor {
                 if (declaringClass.equals(tgtName))
                     continue;
 
-                // Collect the concrete exported source classes for this reference.
+                // Collect the concrete exported source classes for this
+                // reference.
                 // Case A: the declaring class is itself exported → single edge.
                 // Case B: the declaring class is a base class → expand to all
-                //         exported subclasses that inherit the field.
+                // exported subclasses that inherit the field.
                 List<String> srcNames = new ArrayList<>();
                 if (exportedNames.contains(declaringClass)) {
                     srcNames.add(declaringClass);
@@ -528,20 +577,24 @@ public class ExportSelectionAdvisor {
                 }
 
                 for (String srcName : srcNames) {
-                    // Locate the schema field (walking ancestors) to get IDEntite status.
+                    // Locate the schema field (walking ancestors) to get
+                    // IDEntite status.
                     DOSchemaClass srcClass = referenceSchema.findClassByName(srcName);
                     if (srcClass == null)
                         continue;
                     DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(srcClass, ref.fieldName, referenceSchema);
-                    // Resolve shared field definition — a reference-only field (definition="...")
-                    // carries no inline type or isExported flag; those live in the shared definition.
+                    // Resolve shared field definition — a reference-only field
+                    // (definition="...")
+                    // carries no inline type or isExported flag; those live in
+                    // the shared definition.
                     DOSchemaField effectiveField = schemaField;
                     if (schemaField != null && schemaField.isSharedField()) {
                         DOSchemaField def = referenceSchema.sharedFields.get(schemaField.definitionId);
                         if (def != null)
                             effectiveField = def;
                     }
-                    // Skip if the effective field is explicitly marked not exported.
+                    // Skip if the effective field is explicitly marked not
+                    // exported.
                     if (effectiveField != null && !effectiveField.isExported)
                         continue;
 
@@ -567,9 +620,10 @@ public class ExportSelectionAdvisor {
     // ── Step 3a: build mID → objectId index for IDEntite target classes ──────
 
     /**
-     * Pre-builds a lookup map {@code targetClassName → (mID → objectId)} for every
-     * class that is the target of an IDEntite edge.  This avoids O(n²) linear scans
-     * inside {@link ReferenceUtil#findObjectByMID} per source object.
+     * Pre-builds a lookup map {@code targetClassName → (mID → objectId)} for
+     * every class that is the target of an IDEntite edge. This avoids O(n²)
+     * linear scans inside {@link ReferenceUtil#findObjectByMID} per source
+     * object.
      */
     private Map<String, Map<Long, Long>> buildMIDIndex(List<ReferenceEdge> edges) {
         // Collect the IDEntite target class names we care about.
@@ -609,11 +663,12 @@ public class ExportSelectionAdvisor {
         return index;
     }
 
-    // ── Step 3b: scan DB objects ──────────────────────────────────────────────
+    // ── Step 3b: scan DB objects
+    // ──────────────────────────────────────────────
 
     /**
-     * For each edge, builds a map {@code sourceObjectId → targetObjectId}.
-     * Uses {@link ObjectActivator#getAndActivate} for retrieval,
+     * For each edge, builds a map {@code sourceObjectId → targetObjectId}. Uses
+     * {@link ObjectActivator#getAndActivate} for retrieval,
      * {@link DatabaseUtil#getAllFieldsIncludingAncestors} for field reading,
      * and {@link ObjectResolverUtil} for target ID resolution.
      */
@@ -643,15 +698,18 @@ public class ExportSelectionAdvisor {
 
             for (long objectId : objectIds) {
                 try {
-                    // Use ObjectActivator — the proven recipe for object retrieval
+                    // Use ObjectActivator — the proven recipe for object
+                    // retrieval
                     ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objectId);
                     if (activation == null)
                         continue;
                     Object obj = activation.object;
 
                     for (ReferenceEdge edge : classEdges) {
-                        // Read the field using the proven FieldExporter pattern:
-                        // DatabaseUtil.getAllFieldsIncludingAncestors + name match
+                        // Read the field using the proven FieldExporter
+                        // pattern:
+                        // DatabaseUtil.getAllFieldsIncludingAncestors + name
+                        // match
                         Object fv = DatabaseUtil.getStoredFieldValue(container, obj, edge.fieldName);
                         if (fv == null)
                             continue;
@@ -667,7 +725,8 @@ public class ExportSelectionAdvisor {
                             long mid = ((Number) midVal).longValue();
                             if (mid <= 0)
                                 continue;
-                            // Look up the target object ID from the pre-built index
+                            // Look up the target object ID from the pre-built
+                            // index
                             Map<Long, Long> idx = midIndex.get(edge.targetClass);
                             targetId = idx != null ? idx.get(mid) : null;
                         } else {
@@ -692,33 +751,33 @@ public class ExportSelectionAdvisor {
     /**
      * Builds the final per-class selection using two-phase referential closure.
      *
-     * <h3>Phase 1 — Seed</h3>
-     * Each class is seeded with the first {@code min(cap, total)} object IDs in
-     * original DB order.
+     * <h3>Phase 1 — Seed</h3> Each class is seeded with the first
+     * {@code min(cap, total)} object IDs in original DB order.
      *
-     * <h3>Phase 2 — Closure propagation</h3>
-     * For every reference edge {@code S → T}, every target object that is actually
-     * referenced by a currently-selected source object is unconditionally added to
+     * <h3>Phase 2 — Closure propagation</h3> For every reference edge
+     * {@code S → T}, every target object that is actually referenced by a
+     * currently-selected source object is unconditionally added to
      * {@code required[T]}, even if that pushes the count above {@code cap}.
      * Iteration continues until stable, naturally covering multi-hop chains.
      *
-     * <h3>Phase 3 — Ranked output</h3>
-     * The FULL object-ID array is returned for each class with this ordering:
+     * <h3>Phase 3 — Ranked output</h3> The FULL object-ID array is returned for
+     * each class with this ordering:
      * <ol>
-     *   <li><b>Required</b> objects (added by closure) in original DB order —
-     *       these appear first regardless of their DB position, and are exempt
-     *       from the cap check in {@link ObjectExportLoop}.</li>
-     *   <li><b>Seed-only</b> objects (seeded but not required) in original DB
-     *       order — fill available cap slots after required.</li>
-     *   <li><b>Unselected</b> objects in original DB order — fallback pool for
-     *       criteria-filtered objects that eat into the cap.</li>
+     * <li><b>Required</b> objects (added by closure) in original DB order —
+     * these appear first regardless of their DB position, and are exempt from
+     * the cap check in {@link ObjectExportLoop}.</li>
+     * <li><b>Seed-only</b> objects (seeded but not required) in original DB
+     * order — fill available cap slots after required.</li>
+     * <li><b>Unselected</b> objects in original DB order — fallback pool for
+     * criteria-filtered objects that eat into the cap.</li>
      * </ol>
-     * The required count is recorded so {@link ObjectExportLoop} can skip the cap
-     * check for the leading required IDs.
+     * The required count is recorded so {@link ObjectExportLoop} can skip the
+     * cap check for the leading required IDs.
      */
     private SelectionResult buildRankedOrder(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData) {
 
-        // ── Phase 1: seed with first min(cap, total) IDs in DB order ──────────
+        // ── Phase 1: seed with first min(cap, total) IDs in DB order
+        // ──────────
 
         // seed: objects selected purely because they're first in DB order
         Map<String, Set<Long>> seed = new LinkedHashMap<>();
@@ -735,12 +794,14 @@ public class ExportSelectionAdvisor {
         for (Map.Entry<String, Set<Long>> e : seed.entrySet())
             selected.put(e.getKey(), new LinkedHashSet<>(e.getValue()));
 
-        // required: objects added SOLELY by closure (not part of the initial seed)
+        // required: objects added SOLELY by closure (not part of the initial
+        // seed)
         Map<String, Set<Long>> required = new LinkedHashMap<>();
         for (String cls : classObjectIds.keySet())
             required.put(cls, new LinkedHashSet<>());
 
-        // ── Phase 2: closure propagation ──────────────────────────────────────
+        // ── Phase 2: closure propagation
+        // ──────────────────────────────────────
 
         final int MAX_ITERATIONS = 20;
         for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
@@ -757,7 +818,8 @@ public class ExportSelectionAdvisor {
                 if (links == null || links.isEmpty())
                     continue;
 
-                // For every currently-selected source object, mark its referenced
+                // For every currently-selected source object, mark its
+                // referenced
                 // target as required and add it to the target's selected set.
                 List<Long> toAdd = new ArrayList<>();
                 for (Long srcId : srcSelected) {
@@ -783,7 +845,8 @@ public class ExportSelectionAdvisor {
             }
         }
 
-        // ── Phase 3: build required-first ranked arrays ───────────────────────
+        // ── Phase 3: build required-first ranked arrays
+        // ───────────────────────
 
         Map<String, long[]> rankedIds = new LinkedHashMap<>();
         Map<String, Integer> requiredCounts = new LinkedHashMap<>();
@@ -802,9 +865,10 @@ public class ExportSelectionAdvisor {
                 continue;
 
             // Build output:
-            //   1. Required objects first (in original DB order)
-            //   2. Seed-only objects (seeded but NOT required) in original DB order
-            //   3. Unselected objects in original DB order
+            // 1. Required objects first (in original DB order)
+            // 2. Seed-only objects (seeded but NOT required) in original DB
+            // order
+            // 3. Unselected objects in original DB order
             long[] ranked = new long[allIds.length];
             int idx = 0;
             // Pass 1: required
@@ -812,7 +876,8 @@ public class ExportSelectionAdvisor {
                 if (req != null && req.contains(id))
                     ranked[idx++] = id;
             }
-            int actualRequiredCount = idx; // required objects occupy [0..actualRequiredCount-1]
+            int actualRequiredCount = idx; // required objects occupy
+                                           // [0..actualRequiredCount-1]
             // Pass 2: seed-only (selected but not required)
             for (long id : allIds) {
                 if (sel.contains(id) && (req == null || !req.contains(id)))
@@ -837,8 +902,9 @@ public class ExportSelectionAdvisor {
      * the corresponding DB4O source field path (e.g. "mAdresse.mRue") by
      * walking the reference schema class hierarchy.
      *
-     * @param className  fully-qualified class name (e.g. "gest.dossPrev.DossPrev")
-     * @param destPath   dot-separated destinationName path from the UI
+     * @param className fully-qualified class name (e.g.
+     * "gest.dossPrev.DossPrev")
+     * @param destPath dot-separated destinationName path from the UI
      * @return dot-separated source field path, or null if resolution fails
      */
     private String resolveDestinationPathToSourcePath(String className, String destPath) {
@@ -869,7 +935,8 @@ public class ExportSelectionAdvisor {
                 sourcePath.append(".");
             sourcePath.append(field.source);
 
-            // If there are more segments, resolve the embedded type for the next level
+            // If there are more segments, resolve the embedded type for the
+            // next level
             if (i < segments.length - 1) {
                 String typeName = field.isCollection ? field.childrenType : field.type;
                 currentClass = (typeName != null) ? referenceSchema.findClassByName(typeName) : null;
@@ -878,7 +945,8 @@ public class ExportSelectionAdvisor {
         return sourcePath.toString();
     }
 
-    // ── Helpers ───────────────────────────────────────────────────────────────
+    // ── Helpers
+    // ───────────────────────────────────────────────────────────────
 
     private static String simpleClassName(String fqn) {
         int dot = fqn.lastIndexOf('.');
