@@ -44,19 +44,19 @@ import javax.swing.tree.TreePath;
 
 import org.jdesktop.swingx.JXTreeTable;
 
-import migration4o.migration.ExportHistory;
+import migration4o.migration.ExportConfigPersistence;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.CategorizedClasses;
+import migration4o.models.ui.ExportConfig;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.ui.ClassTransferable;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
-import migration4o.ui.dialogs.ExportConfirmationDialog;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ClassExportConfigDialog;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.DetailLayoutDesigner;
@@ -921,7 +921,7 @@ public class MigrationStructurePanel extends JPanel {
             }
 
             // Always use the same export method - handles 1 or multiple modules
-            String menuText = moduleCount > 1 ? "Export " + moduleCount + " Modules to XML..." : "Export Module to XML...";
+            String menuText = "Go to Export...";
             JMenuItem exportModuleItem = new JMenuItem(menuText);
             exportModuleItem.addActionListener(evt -> exportSelectedModules(activeContext));
             contextMenu.add(exportModuleItem);
@@ -967,35 +967,9 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Exports all currently selected modules in the export tree.
+     * Redirects to the Export tab where the user can configure and launch exports.
      */
     private void exportSelectedModules(migration4o.database.DODatabaseContext dbContext) {
-        TreePath[] selectedPaths = getSelectedTreePaths();
-
-        if (selectedPaths == null || selectedPaths.length == 0) {
-            JOptionPane.showMessageDialog(this, "Please select one or more modules to export.", "No Selection", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        // Collect selected modules using util
-        List<MigrationStructurePanelUtil.ModuleTreeInfo> moduleInfos = MigrationStructurePanelUtil.collectModulesFromSelection(selectedPaths);
-
-        // Build modules for export using util
-        List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
-        for (MigrationStructurePanelUtil.ModuleTreeInfo info : moduleInfos) {
-            DOSchemaModule module = MigrationStructurePanelUtil.buildModuleFromTree(info.treeNode, info.moduleNode);
-            if (!module.classConfigs.isEmpty() || !module.children.isEmpty()) {
-                // Build full hierarchical path (e.g., "Activités/Intervention")
-                String fullPath = MigrationStructurePanelUtil.buildFullModulePath(info.treeNode);
-                modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(info.moduleNode.name, module, fullPath));
-            }
-        }
-
-        if (modulesToExport.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No valid modules selected. Please select modules (not classes).", "No Modules", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
         // Validate prerequisites
         ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
 
@@ -1004,77 +978,14 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Get previous export limit from history (for default value)
-        Integer defaultLimit = 50; // default
-        String defaultOutputFormat = "XML";
-        ExportHistory.ExportParams lastExport = ExportHistory.loadLastExport();
-        if (lastExport != null && lastExport.maxObjectsPerClass != null) {
-            defaultLimit = lastExport.maxObjectsPerClass;
-        }
-        if (lastExport != null && lastExport.outputFormat != null && !lastExport.outputFormat.isBlank()) {
-            defaultOutputFormat = lastExport.outputFormat;
-        }
-        boolean defaultFullTracking = lastExport == null || lastExport.fullTracking;
-
-        // Show confirmation dialog with object limit options
-        Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
-
-        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-
-        // Collect available skip options from the schema
-        java.util.List<migration4o.models.schema.DOSchemaField> availableSkipOptions = migration4o.util.SchemaUtil.collectSkipUserOptions(referenceSchema);
-
-        ExportConfirmationDialog confirmDialog = new ExportConfirmationDialog(parentFrame, modulesToExport.size(), defaultLimit, availableSkipOptions, defaultOutputFormat, defaultFullTracking);
-        confirmDialog.showDialog();
-
-        if (!confirmDialog.isConfirmed()) {
-            return;
-        }
-
-        Integer maxObjectsPerClass = confirmDialog.getMaxObjectsPerClass();
-        boolean exportNativeIds = confirmDialog.getExportNativeIds();
-        java.util.List<migration4o.models.schema.DOSchemaField> selectedSkipOptions = confirmDialog.getSelectedSkipOptions();
-        List<String> outputOptions = confirmDialog.getSelectedOutputOptions();
-        String outputPath = "output";
-        ExportOptions exportOptions = new ExportOptions(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, confirmDialog.isApplyUserSelectedFieldExclusions(), confirmDialog.isApplySkipWhenConditions(), confirmDialog.isApplyExportCriteriaFilters(), confirmDialog.isSkipObjectsWithoutExportableFields(), confirmDialog.isFullTracking());
-
-        // Use orchestrator to run export asynchronously
-        exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);
+        // Navigate to the Export tab instead of showing the old dialog
+        MainWindow.getInstance().navigateToExportTab();
     }
 
     /**
-     * Exports all modules in the migration structure.
+     * Redirects to the Export tab for all-modules export.
      */
     private void exportAllModules(migration4o.database.DODatabaseContext dbContext) {
-        // Get the root node of the export tree
-        DefaultMutableTreeNode root = getExportRoot();
-
-        // Collect only root-level module nodes (not nested ones)
-        List<TreePath> rootModulePaths = new ArrayList<>();
-        MigrationStructurePanelUtil.collectRootModulePaths(root, new TreePath(root), rootModulePaths);
-
-        if (rootModulePaths.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "No modules found in the migration structure.", "No Modules", JOptionPane.INFORMATION_MESSAGE);
-            return;
-        }
-
-        // Select all root module paths (nested modules will be exported as part
-        // of
-        // their parents)
-        TreePath[] paths = rootModulePaths.toArray(new TreePath[0]);
-        if (paths.length > 0) {
-            int[] rows = new int[paths.length];
-            for (int i = 0; i < paths.length; i++) {
-                rows[i] = exportTreeTable.getRowForPath(paths[i]);
-            }
-            for (int row : rows) {
-                if (row >= 0) {
-                    exportTreeTable.addRowSelectionInterval(row, row);
-                }
-            }
-        }
-
-        // Call the existing export selected modules method
         exportSelectedModules(dbContext);
     }
 
@@ -1138,19 +1049,40 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Repeats the last export operation if history exists.
+     * Repeats the last export using the persisted {@link ExportConfig}.
+     * This follows the exact same code path as the UI Export button.
      */
     public void repeatLastExport() {
         // Validate export prerequisites
         ValidationResult validation = exportOrchestrator.validateExportPrerequisites();
-
         if (!validation.isValid()) {
             JOptionPane.showMessageDialog(this, validation.getErrorMessage(), validation.getErrorTitle(), JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Use orchestrator to repeat last export
-        exportOrchestrator.repeatLastExportAsync(activeContext);
+        if (activeContext == null || activeContext.databaseFilePath == null) {
+            JOptionPane.showMessageDialog(this, "No database is open.", "No Database", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        // Load persisted config (same file the Export tab auto-saves before each export)
+        ExportConfig config = ExportConfigPersistence.load(activeContext.databaseFilePath);
+        ExportOptions options = ExportOptions.fromConfig(config);
+
+        // Collect all modules — same as the Export button
+        List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
+        if (modules.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "No modules found.", "No Modules", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
+        for (DOSchemaModule module : modules) {
+            modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(module.name, module, module.name));
+        }
+
+        // Same call as the Export button
+        exportOrchestrator.exportModulesAsync(activeContext, modulesToExport, options);
     }
 
     /**

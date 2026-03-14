@@ -318,16 +318,11 @@ public class MainWindow extends JFrame {
     }
 
     public void triggerMigrateAllModules(migration4o.database.DODatabaseContext dbContext) {
-        if (migrationStructurePanel == null) {
-            JOptionPane.showMessageDialog(this, "Migration structure is not initialized yet.", "Migration Unavailable", JOptionPane.WARNING_MESSAGE);
-            return;
-        }
-
         if (dbContext != null) {
             selectDatabaseByPath(dbContext.databaseFilePath);
         }
 
-        migrationStructurePanel.triggerExportAllModules(dbContext);
+        navigateToExportTab();
     }
 
     private void addTabs() {
@@ -518,8 +513,8 @@ public class MainWindow extends JFrame {
         tabbedPane.addTab(session.tabTitle, session.tabContainer);
         databaseTabPathByContainer.put(session.tabContainer, session.databasePath);
 
-        migration4o.ui.panels.database_panels.database_overview_panel.DatabaseOverviewPanel overviewPanel = new migration4o.ui.panels.database_panels.database_overview_panel.DatabaseOverviewPanel(session.databasePath, session.context);
-        session.tabPane.addTab("Overview", overviewPanel);
+        migration4o.ui.panels.database_panels.database_export_panel.DatabaseExportPanel exportPanel = new migration4o.ui.panels.database_panels.database_export_panel.DatabaseExportPanel(session.databasePath, session.context);
+        session.tabPane.addTab("Export", exportPanel);
 
         SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName(), session.context);
         schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
@@ -957,6 +952,19 @@ public class MainWindow extends JFrame {
 
             // Switch to Migration report sub-tab
             databaseTabPane.setSelectedComponent(migrationReportPanel);
+        }
+    }
+
+    /**
+     * Switches to the Export tab in the active database session.
+     */
+    public void navigateToExportTab() {
+        if (databaseTabPane != null && databaseTabContainer != null) {
+            tabbedPane.setSelectedComponent(databaseTabContainer);
+            // Export tab is always at index 0
+            if (databaseTabPane.getTabCount() > 0) {
+                databaseTabPane.setSelectedIndex(0);
+            }
         }
     }
 

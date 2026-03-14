@@ -111,14 +111,30 @@ public class ObjectExportLoop {
             long[] preselected = operation.preselectedObjectIds.get(dbSchemaClass.source);
             if (preselected != null) {
                 objectIds = preselected;
-                System.out.println("[ExportLoop] using preselection for '" + dbSchemaClass.source + "': " + preselected.length + " objects");
-            } else if (!operation.preselectedObjectIds.isEmpty()) {
-                // Key mismatch diagnostic — only log when there IS a preselection map but this class isn't in it
-                System.out.println("[ExportLoop] no preselection found for key='" + dbSchemaClass.source + "'; available keys: " + operation.preselectedObjectIds.keySet());
+                if (dbSchemaClass.source.contains("DossPrev")) {
+                    System.out.println("[DEBUG-DossPrev] ObjectExportLoop: preselection for '" + dbSchemaClass.source + "': " + preselected.length + " objects (was " + (dbSchemaClass.objectIds != null ? dbSchemaClass.objectIds.length : 0) + ")");
+                }
             }
         }
         int objectCount = (objectIds != null ? objectIds.length : 0);
-        int actualCount = (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) ? operation.maxObjectsPerClass : objectCount;
+
+        // Number of leading IDs in objectIds that are "required" (seed-matched,
+        // closure-driven) and must be exported regardless of the cap.
+        int requiredCount = 0;
+        if (operation.preselectedRequiredCounts != null) {
+            Integer rc = operation.preselectedRequiredCounts.get(dbSchemaClass.source);
+            if (rc != null)
+                requiredCount = rc;
+        }
+
+        // Compute the true expected export count: the greater of the cap and
+        // the required count (required objects bypass the cap).
+        int actualCount;
+        if (operation.maxObjectsPerClass != null && objectCount > operation.maxObjectsPerClass) {
+            actualCount = Math.max(operation.maxObjectsPerClass, requiredCount);
+        } else {
+            actualCount = objectCount;
+        }
 
         // Snapshot the loop class now — exportObject nulls ctx.schemaClass in
         // its finally block
@@ -132,14 +148,6 @@ public class ObjectExportLoop {
             if (ctx.statistics != null && loopClass != null) {
                 ctx.statistics.setCurrentClass(loopClass.source, actualCount);
                 ctx.statistics.setCurrentFormatName(handler != null ? handler.displayName() : "");
-            }
-            // Number of leading IDs in objectIds that are "required" (closure-driven
-            // by ExportSelectionAdvisor) and must be exported regardless of the cap.
-            int requiredCount = 0;
-            if (operation.preselectedRequiredCounts != null) {
-                Integer rc = operation.preselectedRequiredCounts.get(dbSchemaClass.source);
-                if (rc != null)
-                    requiredCount = rc;
             }
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
             int exportedCount = 0;

@@ -16,6 +16,7 @@ import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ClassExportConfig;
+import migration4o.models.ui.SeedQuery;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -34,6 +35,9 @@ public class ExportOperation {
 
     // Output configuration
     public String baseOutputPath;
+    /** Explicit output branch folder name (e.g. "all", "max50", "custom").
+     *  When set, overrides the computed {@link #getMaxObjectsFolder()} value. */
+    public String outputBranch;
     public DOExportMonitor monitor;
     public String outputFormat = "XML";
     public List<String> outputOptions = new ArrayList<>(List.of("XML + XSD"));
@@ -91,6 +95,10 @@ public class ExportOperation {
 
     public ArrayList<DOSchemaField> availableSkipUserOptions;
     public ArrayList<DOSchemaField> selectedSkipUserOptions;
+
+    /** Seed queries for seed-based selection mode. When non-empty, the export
+     *  engine uses seed-based selection instead of cap-based selection. */
+    public List<SeedQuery> seedQueries = new ArrayList<>();
 
     // ── IDEntite label resolution caches (JS export only) ────────────────────
     /**
@@ -174,7 +182,8 @@ public class ExportOperation {
      * output/&lt;database-folder&gt;/&lt;max-objects-folder&gt;/
      */
     public Path getBaseOutputPath(String baseOutputDir) {
-        return Paths.get(baseOutputDir).resolve(getDatabaseFolderName()).resolve(getMaxObjectsFolder());
+        String branch = (outputBranch != null && !outputBranch.isBlank()) ? outputBranch : getMaxObjectsFolder();
+        return Paths.get(baseOutputDir).resolve(getDatabaseFolderName()).resolve(branch);
     }
 
 }

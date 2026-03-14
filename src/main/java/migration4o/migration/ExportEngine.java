@@ -97,9 +97,29 @@ public class ExportEngine {
 
         Files.createDirectories(ctx.basePath);
 
+        // When seed queries are defined, run seed-based selection to pick
+        // objects matching the queries and their bidirectional closure.
+        if (operation.seedQueries != null && !operation.seedQueries.isEmpty()) {
+            System.out.println("[DEBUG-DossPrev] ExportEngine: SEED branch entered — " + operation.seedQueries.size() + " seed query(ies)");
+            for (var sq : operation.seedQueries) {
+                System.out.println("[DEBUG-DossPrev]   query: class=" + sq.getClassName() + ", conditions=" + (sq.getConditions() != null ? sq.getConditions().size() : 0));
+            }
+            if (operation.monitor != null) {
+                operation.monitor.onStatusMessage("Seed-based selection: finding matching objects and related closure…");
+            }
+            ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.container, operation.referenceSchema, operation.databaseSchema, operation.seedQueries, operation.maxObjectsPerClass);
+            ExportSelectionAdvisor.SelectionResult sel = advisor.computeSeedSelection(modules, operation.monitor);
+            operation.preselectedObjectIds = sel.rankedIds;
+            operation.preselectedRequiredCounts = sel.requiredCounts;
+            if (operation.monitor != null) {
+                int affected = operation.preselectedObjectIds != null ? operation.preselectedObjectIds.size() : 0;
+                operation.monitor.onStatusMessage("Seed selection complete — " + affected + " class(es) with selected objects.");
+            }
+        }
         // When a per-class cap is active, run a pre-flight analysis to pick the
         // most mutually-referenced N objects per class rather than just the first N.
-        if (operation.maxObjectsPerClass != null && operation.maxObjectsPerClass > 0) {
+        else if (operation.maxObjectsPerClass != null && operation.maxObjectsPerClass > 0) {
+            System.out.println("[DEBUG-DossPrev] ExportEngine: CAP branch entered (no seeds) — maxObjectsPerClass=" + operation.maxObjectsPerClass);
             if (operation.monitor != null) {
                 operation.monitor.onStatusMessage("Smart selection: analysing cross-class relationships…");
             }

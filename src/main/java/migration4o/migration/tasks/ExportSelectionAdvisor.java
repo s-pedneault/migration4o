@@ -10,9 +10,6 @@ import java.util.Map;
 import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
-import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
-import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.models.schema.DOSchema;
@@ -81,6 +78,7 @@ public class ExportSelectionAdvisor {
     public static final class SelectionResult {
         public final Map<String, long[]> rankedIds;
         public final Map<String, Integer> requiredCounts;
+
         SelectionResult(Map<String, long[]> rankedIds, Map<String, Integer> requiredCounts) {
             this.rankedIds = rankedIds;
             this.requiredCounts = requiredCounts;
@@ -93,14 +91,29 @@ public class ExportSelectionAdvisor {
     private final DOSchema referenceSchema;
     private final DOSchema databaseSchema;
     private final int cap;
+    private final List<migration4o.models.ui.SeedQuery> seedQueries;
 
-    // ── Constructor ──────────────────────────────────────────────────────────
+    // ── Constructors ─────────────────────────────────────────────────────────
 
     public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, int cap) {
         this.container = container;
         this.referenceSchema = referenceSchema;
         this.databaseSchema = databaseSchema;
         this.cap = cap;
+        this.seedQueries = null;
+    }
+
+    /**
+     * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0,
+     * seed query results are limited to that many objects per seed class
+     * before closure propagation.
+     */
+    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
+        this.container = container;
+        this.referenceSchema = referenceSchema;
+        this.databaseSchema = databaseSchema;
+        this.cap = (seedCap != null && seedCap > 0) ? seedCap : 0;
+        this.seedQueries = seedQueries;
     }
 
     // ── Public entry point ───────────────────────────────────────────────────
@@ -120,9 +133,7 @@ public class ExportSelectionAdvisor {
         for (DOSchemaModule m : modules) {
             collectClasses(m, classObjectIds);
         }
-        System.out.println("[Advisor] computeSelection: " + classObjectIds.size() + " classes collected, cap=" + cap);
         if (classObjectIds.isEmpty()) {
-            System.out.println("[Advisor] No classes collected \u2014 advisor inactive");
             return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
         }
 
@@ -130,33 +141,317 @@ public class ExportSelectionAdvisor {
 
         // Step 2 – find reference edges using the pre-built schemaReferences graph
         List<ReferenceEdge> edges = findReferenceEdges(exportedNames);
-        System.out.println("[Advisor] Found " + edges.size() + " reference edges:");
-        for (ReferenceEdge e : edges) {
-            System.out.println("  " + simpleClassName(e.sourceClass) + "." + e.fieldName + " -> " + simpleClassName(e.targetClass) + (e.isIDEntite ? " (IDEntite)" : " (direct)"));
-        }
         if (edges.isEmpty()) {
-            System.out.println("[Advisor] No edges found — skipping smart selection");
-            return new SelectionResult(Collections.emptyMap(), Collections.emptyMap()); // nothing to optimise
+            return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
         }
 
         // Step 3 – scan DB objects to resolve actual object-ID relationships
         status(monitor, "Smart selection: scanning object references\u2026");
         Map<ReferenceEdge, Map<Long, Long>> edgeData = scanReferences(edges, classObjectIds, monitor);
-        int totalLinks = 0;
-        for (Map<Long, Long> m : edgeData.values())
-            totalLinks += m.size();
-        System.out.println("[Advisor] scanReferences: " + totalLinks + " total source\u2192target links found");
-
-        // Step 4 – closure propagation: guarantee every referenced object is included
+        // Step 4 \u2013 closure propagation: guarantee every referenced object is included
         status(monitor, "Smart selection: propagating referential closure\u2026");
         SelectionResult result = buildRankedOrder(classObjectIds, edges, edgeData);
-        System.out.println("[Advisor] Final preselection: " + result.rankedIds.size() + " class(es) reordered:");
-        for (Map.Entry<String, long[]> e : result.rankedIds.entrySet()) {
-            int req = result.requiredCounts.getOrDefault(e.getKey(), 0);
-            System.out.println("  " + simpleClassName(e.getKey()) + ": " + e.getValue().length
-                    + " objects total, " + req + " required (cap-exempt) at front");
+        return result;
+    }
+
+    // ── Seed-based entry point ───────────────────────────────────────────────
+
+    /**
+     * Seed-based selection: executes user-defined queries to find initial
+     * objects, then follows schema references <b>bidirectionally</b> to
+     * build a complete export set.
+     *
+     * @param modules  modules that will be exported
+     * @param monitor  optional progress monitor (may be null)
+     * @return selection result with seed objects and their closure
+     */
+    public SelectionResult computeSeedSelection(List<DOSchemaModule> modules, DOExportMonitor monitor) {
+        if (seedQueries == null || seedQueries.isEmpty()) {
+
+            return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
+        }
+
+        // Step 1 – collect all exported classes
+        Map<String, long[]> classObjectIds = new LinkedHashMap<>();
+        for (DOSchemaModule m : modules) {
+            collectClasses(m, classObjectIds);
+        }
+        if (classObjectIds.isEmpty()) {
+            return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
+        }
+
+        Set<String> exportedNames = classObjectIds.keySet();
+
+        // Step 2 – execute seed queries to find initial matching objects
+        status(monitor, "Seed selection: executing seed queries\u2026");
+        Map<String, Set<Long>> seedObjects = executeSeedQueries(classObjectIds, monitor);
+
+        // Apply per-class cap to seed matches before closure propagation
+        if (cap > 0) {
+            for (Map.Entry<String, Set<Long>> entry : seedObjects.entrySet()) {
+                Set<Long> matches = entry.getValue();
+                if (matches.size() > cap) {
+                    Set<Long> capped = new LinkedHashSet<>();
+                    int count = 0;
+                    for (Long id : matches) {
+                        if (count++ >= cap)
+                            break;
+                        capped.add(id);
+                    }
+                    entry.setValue(capped);
+                }
+            }
+        }
+
+        int totalSeeds = 0;
+        for (Set<Long> s : seedObjects.values())
+            totalSeeds += s.size();
+        if (totalSeeds == 0) {
+            return new SelectionResult(Collections.emptyMap(), Collections.emptyMap());
+        }
+
+        // Step 3 – find reference edges
+        List<ReferenceEdge> edges = findReferenceEdges(exportedNames);
+
+        // Step 4 – scan DB to resolve actual references
+        status(monitor, "Seed selection: scanning object references\u2026");
+        Map<ReferenceEdge, Map<Long, Long>> edgeData = scanReferences(edges, classObjectIds, monitor);
+
+        // Step 5 – bidirectional closure propagation from seed objects
+        status(monitor, "Seed selection: propagating bidirectional closure\u2026");
+        SelectionResult result = buildSeedClosure(classObjectIds, edges, edgeData, seedObjects);
+        return result;
+    }
+
+    // ── Seed query execution ────────────────────────────────────────────────
+
+    /**
+     * Executes each SeedQuery against the database and collects matching object IDs.
+     */
+    private Map<String, Set<Long>> executeSeedQueries(Map<String, long[]> classObjectIds, DOExportMonitor monitor) {
+        Map<String, Set<Long>> result = new LinkedHashMap<>();
+
+        for (migration4o.models.ui.SeedQuery query : seedQueries) {
+            String className = query.getClassName();
+            long[] objectIds = classObjectIds.get(className);
+            if (objectIds == null) {
+                continue;
+            }
+
+            status(monitor, "Seed selection: querying " + simpleClassName(className) + " (" + objectIds.length + " objects)\u2026");
+
+            Set<Long> matches = result.computeIfAbsent(className, k -> new LinkedHashSet<>());
+            List<migration4o.models.ui.SeedCondition> conditions = query.getConditions();
+
+            System.out.println("[DEBUG-DossPrev] SeedQuery for '" + className + "': conditions=" + (conditions != null ? conditions.size() : "null") + ", objectIds=" + objectIds.length);
+
+            // Pre-translate all condition destinationName paths to DB source paths
+            List<String> sourceFieldPaths = new ArrayList<>();
+            boolean isDossPrev = className.contains("DossPrev");
+            if (conditions != null) {
+                for (migration4o.models.ui.SeedCondition cond : conditions) {
+                    String sourcePath = resolveDestinationPathToSourcePath(className, cond.getFieldPath());
+                    sourceFieldPaths.add(sourcePath);
+                    if (isDossPrev) {
+                        System.out.println("[DEBUG-DossPrev] executeSeedQueries: fieldPath='" + cond.getFieldPath() + "' -> sourcePath='" + sourcePath + "', operator=" + cond.getOperator() + ", value='" + cond.getValue() + "'");
+                    }
+                }
+            }
+
+            int matchCount = 0;
+            int nullFieldCount = 0;
+            int samplesPrinted = 0;
+            final int MAX_SAMPLES = 5;
+
+            for (long objId : objectIds) {
+                try {
+                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objId);
+                    if (activation == null)
+                        continue;
+
+                    boolean allMatch = true;
+                    if (conditions != null && !conditions.isEmpty()) {
+                        for (int i = 0; i < conditions.size(); i++) {
+                            String sourcePath = sourceFieldPaths.get(i);
+                            if (sourcePath == null) {
+                                allMatch = false;
+                                break;
+                            }
+                            Object fieldValue = DatabaseUtil.getFieldValueByPath(container, activation.object, sourcePath);
+                            if (isDossPrev && samplesPrinted < MAX_SAMPLES) {
+                                System.out.println("[DEBUG-DossPrev] Object " + objId + ": field '" + sourcePath + "' = '" + fieldValue + "'" + " (type=" + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")" + ", matches=" + conditions.get(i).matches(fieldValue));
+                                samplesPrinted++;
+                            }
+                            if (fieldValue == null)
+                                nullFieldCount++;
+                            if (!conditions.get(i).matches(fieldValue)) {
+                                allMatch = false;
+                                break;
+                            }
+                        }
+                    }
+                    // If no conditions, match all objects of this class
+                    if (allMatch) {
+                        matches.add(objId);
+                        matchCount++;
+                    }
+                } catch (Exception e) {
+                    // best-effort
+                }
+            }
+            if (isDossPrev) {
+                System.out.println("[DEBUG-DossPrev] executeSeedQueries: " + matchCount + " match(es) out of " + objectIds.length + " for " + className + " (nullFields=" + nullFieldCount + ", conditions=" + (conditions != null ? conditions.size() : 0) + ")");
+            }
         }
         return result;
+    }
+
+    // ── Bidirectional closure ────────────────────────────────────────────────
+
+    /**
+     * Builds a selection using bidirectional closure from seed objects.
+     * Unlike the cap-based buildRankedOrder, this starts with ONLY seed-matched
+     * objects and propagates both forward (S→T) and backward (T→S).
+     */
+    private SelectionResult buildSeedClosure(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData, Map<String, Set<Long>> seedObjects) {
+
+        // Build the initial selected set from seeds only
+        Map<String, Set<Long>> selected = new LinkedHashMap<>();
+        for (String cls : classObjectIds.keySet()) {
+            Set<Long> seeds = seedObjects.get(cls);
+            selected.put(cls, seeds != null ? new LinkedHashSet<>(seeds) : new LinkedHashSet<>());
+        }
+
+        // Collect seed class names so backward propagation skips them.
+        // This prevents the chain reaction where seed class A → shared entity →
+        // ALL objects referencing that entity get pulled back into class A.
+        Set<String> seedClassNames = new LinkedHashSet<>(seedObjects.keySet());
+
+        // Also build a reversed edge-data index for backward propagation:
+        // For edge S→T with { srcId → tgtId }, build reverse: { tgtId → [srcId,...] }
+        Map<ReferenceEdge, Map<Long, List<Long>>> reverseEdgeData = new LinkedHashMap<>();
+        for (ReferenceEdge edge : edges) {
+            Map<Long, List<Long>> reverse = new LinkedHashMap<>();
+            Map<Long, Long> forward = edgeData.get(edge);
+            if (forward != null) {
+                for (Map.Entry<Long, Long> entry : forward.entrySet()) {
+                    reverse.computeIfAbsent(entry.getValue(), k -> new ArrayList<>()).add(entry.getKey());
+                }
+            }
+            reverseEdgeData.put(edge, reverse);
+        }
+
+        // Iterative bidirectional closure
+        final int MAX_ITERATIONS = 20;
+        for (int iter = 0; iter < MAX_ITERATIONS; iter++) {
+            boolean changed = false;
+
+            for (ReferenceEdge edge : edges) {
+                Set<Long> srcSelected = selected.get(edge.sourceClass);
+                Set<Long> tgtSelected = selected.get(edge.targetClass);
+                if (srcSelected == null || tgtSelected == null)
+                    continue;
+
+                Map<Long, Long> forward = edgeData.get(edge);
+                Map<Long, List<Long>> reverse = reverseEdgeData.get(edge);
+
+                // Forward pass: selected source → add target
+                // Skip forward propagation into seed classes — seed classes
+                // are frozen at their initial seed-matched set.
+                if (forward != null && !seedClassNames.contains(edge.targetClass)) {
+                    List<Long> toAdd = new ArrayList<>();
+                    for (Long srcId : srcSelected) {
+                        Long tgtId = forward.get(srcId);
+                        if (tgtId != null && !tgtSelected.contains(tgtId)) {
+                            toAdd.add(tgtId);
+                        }
+                    }
+                    if (!toAdd.isEmpty()) {
+                        int before = tgtSelected.size();
+                        tgtSelected.addAll(toAdd);
+                        int added = tgtSelected.size() - before;
+                        if (added > 0) {
+
+                            changed = true;
+                        }
+                    }
+                }
+
+                // Backward pass: selected target → add source
+                // Skip backward propagation into seed classes to prevent
+                // chain-reaction blowup (seed → shared entity → all referrers).
+                if (reverse != null && !seedClassNames.contains(edge.sourceClass)) {
+                    List<Long> toAdd = new ArrayList<>();
+                    for (Long tgtId : tgtSelected) {
+                        List<Long> srcIds = reverse.get(tgtId);
+                        if (srcIds != null) {
+                            for (Long srcId : srcIds) {
+                                if (!srcSelected.contains(srcId)) {
+                                    toAdd.add(srcId);
+                                }
+                            }
+                        }
+                    }
+                    if (!toAdd.isEmpty()) {
+                        int before = srcSelected.size();
+                        srcSelected.addAll(toAdd);
+                        int added = srcSelected.size() - before;
+                        if (added > 0) {
+
+                            changed = true;
+                        }
+                    }
+                }
+            }
+
+            if (!changed) {
+                break;
+            }
+        }
+
+        // Build output: selected objects first (as "required"), then unselected
+        Map<String, long[]> rankedIds = new LinkedHashMap<>();
+        Map<String, Integer> requiredCounts = new LinkedHashMap<>();
+
+        for (Map.Entry<String, long[]> e : classObjectIds.entrySet()) {
+            String cls = e.getKey();
+            long[] allIds = e.getValue();
+            Set<Long> sel = selected.get(cls);
+            if (sel == null || sel.isEmpty())
+                continue;
+
+            boolean isSeedClass = seedObjects.containsKey(cls) && seedObjects.get(cls) != null && !seedObjects.get(cls).isEmpty();
+
+            if (isSeedClass) {
+                // Seed classes: export ONLY matched/closure objects — no fill
+                long[] ranked = new long[sel.size()];
+                int idx = 0;
+                for (long id : allIds) {
+                    if (sel.contains(id))
+                        ranked[idx++] = id;
+                }
+                rankedIds.put(cls, ranked);
+                requiredCounts.put(cls, idx);
+
+            } else {
+                // Related classes: closure objects first (prioritized), then fill.
+                // requiredCount is 0 so the normal cap still applies — closure
+                // objects are favoured by ordering, not by being cap-exempt.
+                long[] ranked = new long[allIds.length];
+                int idx = 0;
+                for (long id : allIds) {
+                    if (sel.contains(id))
+                        ranked[idx++] = id;
+                }
+                for (long id : allIds) {
+                    if (!sel.contains(id))
+                        ranked[idx++] = id;
+                }
+                rankedIds.put(cls, ranked);
+                requiredCounts.put(cls, 0);
+            }
+        }
+        return new SelectionResult(rankedIds, requiredCounts);
     }
 
     // ── Step 1: collect exported classes ────────────────────────────────────
@@ -170,9 +465,7 @@ public class ExportSelectionAdvisor {
                 DOSchemaClass dbClass = databaseSchema.findClassByName(name);
                 if (dbClass != null && dbClass.objectIds != null && dbClass.objectIds.length > 0) {
                     out.put(name, dbClass.objectIds);
-                    System.out.println("[Advisor] Collected class " + name + " with " + dbClass.objectIds.length + " objects");
-                } else {
-                    System.out.println("[Advisor] Skipping class " + name + " — no objectIds in databaseSchema (dbClass=" + dbClass + ")");
+
                 }
             }
         }
@@ -228,17 +521,9 @@ public class ExportSelectionAdvisor {
                     srcNames.add(declaringClass);
                 } else {
                     for (DOSchemaClass candidate : exportedClasses) {
-                        if (!candidate.source.equals(tgtName)
-                                && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                        if (!candidate.source.equals(tgtName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
                             srcNames.add(candidate.source);
                         }
-                    }
-                    if (!srcNames.isEmpty()) {
-                        System.out.println("[Advisor] Inherited field expanded: "
-                                + simpleClassName(declaringClass) + "." + ref.fieldName
-                                + " \u2192 " + simpleClassName(tgtName)
-                                + " \u2014 " + srcNames.size() + " exported subclass(es): "
-                                + srcNames.stream().map(ExportSelectionAdvisor::simpleClassName).collect(java.util.stream.Collectors.joining(", ")));
                     }
                 }
 
@@ -253,7 +538,8 @@ public class ExportSelectionAdvisor {
                     DOSchemaField effectiveField = schemaField;
                     if (schemaField != null && schemaField.isSharedField()) {
                         DOSchemaField def = referenceSchema.sharedFields.get(schemaField.definitionId);
-                        if (def != null) effectiveField = def;
+                        if (def != null)
+                            effectiveField = def;
                     }
                     // Skip if the effective field is explicitly marked not exported.
                     if (effectiveField != null && !effectiveField.isExported)
@@ -298,7 +584,6 @@ public class ExportSelectionAdvisor {
             Map<Long, Long> midMap = new HashMap<>();
             DOSchemaClass dbClass = databaseSchema.findClassByName(targetClass);
             if (dbClass == null || dbClass.objectIds == null) {
-                System.out.println("[Advisor] mID index: no databaseSchema entry for " + targetClass);
                 index.put(targetClass, midMap);
                 continue;
             }
@@ -309,7 +594,7 @@ public class ExportSelectionAdvisor {
                         continue;
                     // Read mID using the proven ancestor-walking pattern
                     // (mID is often declared on a parent class like Entite)
-                    Object midVal = readStoredField(activation.object, "mID");
+                    Object midVal = DatabaseUtil.getStoredFieldValue(container, activation.object, "mID");
                     if (midVal instanceof Number) {
                         long mid = ((Number) midVal).longValue();
                         if (mid > 0)
@@ -319,7 +604,6 @@ public class ExportSelectionAdvisor {
                     // best-effort
                 }
             }
-            System.out.println("[Advisor] mID index for " + simpleClassName(targetClass) + ": " + midMap.size() + " entries");
             index.put(targetClass, midMap);
         }
         return index;
@@ -357,7 +641,6 @@ public class ExportSelectionAdvisor {
 
             status(monitor, "Smart selection: scanning " + simpleClassName(srcClass) + " (" + objectIds.length + " objects)\u2026");
 
-            int resolvedCount = 0;
             for (long objectId : objectIds) {
                 try {
                     // Use ObjectActivator — the proven recipe for object retrieval
@@ -369,7 +652,7 @@ public class ExportSelectionAdvisor {
                     for (ReferenceEdge edge : classEdges) {
                         // Read the field using the proven FieldExporter pattern:
                         // DatabaseUtil.getAllFieldsIncludingAncestors + name match
-                        Object fv = readStoredField(obj, edge.fieldName);
+                        Object fv = DatabaseUtil.getStoredFieldValue(container, obj, edge.fieldName);
                         if (fv == null)
                             continue;
 
@@ -378,7 +661,7 @@ public class ExportSelectionAdvisor {
                             // Activate the IDEntite wrapper, then read its mID
                             // using the same ancestor-walking pattern
                             ObjectResolverUtil.activateObjectShallow(container, fv, null);
-                            Object midVal = readStoredField(fv, "mID");
+                            Object midVal = DatabaseUtil.getStoredFieldValue(container, fv, "mID");
                             if (!(midVal instanceof Number))
                                 continue;
                             long mid = ((Number) midVal).longValue();
@@ -394,14 +677,12 @@ public class ExportSelectionAdvisor {
 
                         if (targetId != null) {
                             result.get(edge).put(objectId, targetId);
-                            resolvedCount++;
                         }
                     }
                 } catch (Exception ignored) {
                     // best-effort
                 }
             }
-            System.out.println("[Advisor] " + simpleClassName(srcClass) + ": " + resolvedCount + " references resolved across " + classEdges.size() + " edge(s)");
         }
         return result;
     }
@@ -478,14 +759,11 @@ public class ExportSelectionAdvisor {
 
                 // For every currently-selected source object, mark its referenced
                 // target as required and add it to the target's selected set.
-                // newLinks records which srcId drove each newly-required tgtId (for logging).
                 List<Long> toAdd = new ArrayList<>();
-                Map<Long, Long> newLinks = new LinkedHashMap<>();
                 for (Long srcId : srcSelected) {
                     Long tgtId = links.get(srcId);
                     if (tgtId != null && !tgtSelected.contains(tgtId)) {
                         toAdd.add(tgtId);
-                        newLinks.put(tgtId, srcId); // tgtId → driving srcId
                     }
                 }
 
@@ -495,40 +773,12 @@ public class ExportSelectionAdvisor {
                     tgtRequired.addAll(toAdd); // track as closure-driven
                     int added = tgtSelected.size() - before;
                     if (added > 0) {
-                        System.out.println("[Advisor] pass " + (iter + 1) + " — " + simpleClassName(edge.targetClass)
-                                + ": +" + added + " required object(s) added via "
-                                + simpleClassName(edge.sourceClass) + "." + edge.fieldName
-                                + " (now " + tgtSelected.size()
-                                + (tgtSelected.size() > cap ? ", EXCEEDS cap " + cap + " by " + (tgtSelected.size() - cap) : ", within cap " + cap)
-                                + ")");
-                        // Per-object detail: one line per source object that drove a new requirement
-                        // Group by source ID so we see "SrcClass #X → TargetClass #Y, #Z via field"
-                        Map<Long, List<Long>> bySrc = new LinkedHashMap<>();
-                        for (Map.Entry<Long, Long> nl : newLinks.entrySet()) {
-                            long tgt = nl.getKey();
-                            long src = nl.getValue();
-                            bySrc.computeIfAbsent(src, k -> new ArrayList<>()).add(tgt);
-                        }
-                        for (Map.Entry<Long, List<Long>> entry : bySrc.entrySet()) {
-                            List<Long> tgts = entry.getValue();
-                            StringBuilder sb = new StringBuilder();
-                            sb.append("[Advisor]   ").append(simpleClassName(edge.sourceClass))
-                              .append(" #").append(entry.getKey())
-                              .append(" → ").append(simpleClassName(edge.targetClass)).append(" #");
-                            for (int i = 0; i < tgts.size(); i++) {
-                                if (i > 0) sb.append(", #");
-                                sb.append(tgts.get(i));
-                            }
-                            sb.append("  (via ").append(edge.fieldName).append(")");
-                            System.out.println(sb);
-                        }
                         changed = true;
                     }
                 }
             }
 
             if (!changed) {
-                System.out.println("[Advisor] Closure converged after " + (iter + 1) + " pass(es)");
                 break;
             }
         }
@@ -543,23 +793,13 @@ public class ExportSelectionAdvisor {
             long[] allIds = e.getValue();
             Set<Long> sel = selected.get(cls);
             Set<Long> req = required.get(cls);
-            Set<Long> seedSet = seed.get(cls);
 
             // Emit a reordered entry when the class has more total objects than
             // the seed, OR closure pushed required beyond the initial seed.
-            int seedSize = Math.min(cap, allIds.length);
             boolean hasRequired = req != null && !req.isEmpty();
             boolean needsReorder = allIds.length > cap || hasRequired;
             if (!needsReorder || sel == null || sel.isEmpty())
                 continue;
-
-            int reqCount = (req != null ? req.size() : 0);
-            int seedOnlyCount = (sel.size() - reqCount);
-            System.out.println("[Advisor] " + simpleClassName(cls) + ": "
-                    + reqCount + " required (cap-exempt) + "
-                    + seedOnlyCount + " seed-fill"
-                    + (sel.size() > cap ? " (EXCEEDS cap " + cap + " by " + (sel.size() - cap) + ")" : " (within cap " + cap + ")")
-                    + ", " + (allIds.length - sel.size()) + " appended as fallback");
 
             // Build output:
             //   1. Required objects first (in original DB order)
@@ -590,35 +830,52 @@ public class ExportSelectionAdvisor {
         return new SelectionResult(rankedIds, requiredCounts);
     }
 
-    // ── Field reading (proven FieldExporter pattern) ─────────────────────────
+    // ── Field path resolution ──────────────────────────────────────────────
 
     /**
-     * Reads a single field value by name from a DB4O object, searching the
-     * <em>full</em> stored-class hierarchy.  This is the same proven pattern
-     * used by {@link migration4o.migration.FieldExporter#exportAllFields}:
-     * {@link DatabaseUtil#getAllFieldsIncludingAncestors} + name match.
+     * Translates a destinationName-based field path (e.g. "adresse.rue") into
+     * the corresponding DB4O source field path (e.g. "mAdresse.mRue") by
+     * walking the reference schema class hierarchy.
      *
-     * <p>CRITICAL: many reference fields (e.g.&nbsp;{@code mIDDossPrev}) are
-     * declared on a parent class like {@code EntiteContientID}.  Calling
-     * {@code storedField(name, null)} on the child stored class alone would
-     * miss them.  This helper avoids that pitfall.</p>
+     * @param className  fully-qualified class name (e.g. "gest.dossPrev.DossPrev")
+     * @param destPath   dot-separated destinationName path from the UI
+     * @return dot-separated source field path, or null if resolution fails
      */
-    private Object readStoredField(Object obj, String fieldName) {
-        if (!(obj instanceof GenericObject))
+    private String resolveDestinationPathToSourcePath(String className, String destPath) {
+        if (destPath == null || destPath.isEmpty())
             return null;
-        StoredClass storedClass = container.ext().storedClass(obj);
-        if (storedClass == null)
-            return null;
-        for (StoredField sf : DatabaseUtil.getAllFieldsIncludingAncestors(storedClass)) {
-            if (fieldName.equals(sf.getName())) {
-                try {
-                    return sf.get(obj);
-                } catch (Exception e) {
-                    return null;
+
+        String[] segments = destPath.split("\\.");
+        StringBuilder sourcePath = new StringBuilder();
+        DOSchemaClass currentClass = referenceSchema.findClassByName(className);
+
+        for (int i = 0; i < segments.length; i++) {
+            if (currentClass == null)
+                return null;
+
+            // Search all fields including inherited ones
+            DOSchemaField field = null;
+            List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(currentClass, referenceSchema);
+            for (DOSchemaField f : allFields) {
+                if (segments[i].equals(f.destinationName)) {
+                    field = f;
+                    break;
                 }
             }
+            if (field == null)
+                return null;
+
+            if (sourcePath.length() > 0)
+                sourcePath.append(".");
+            sourcePath.append(field.source);
+
+            // If there are more segments, resolve the embedded type for the next level
+            if (i < segments.length - 1) {
+                String typeName = field.isCollection ? field.childrenType : field.type;
+                currentClass = (typeName != null) ? referenceSchema.findClassByName(typeName) : null;
+            }
         }
-        return null;
+        return sourcePath.toString();
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
