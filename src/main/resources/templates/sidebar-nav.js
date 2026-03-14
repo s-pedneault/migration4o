@@ -1482,6 +1482,13 @@
         return schemaTitleForPath(name) || humanizeFieldName(name);
     }
 
+    /** Returns a title="..." attribute for a section header when the raw field name differs from the display title. */
+    function sectionTitleAttr(name) {
+        var display = formatSectionTitle(name);
+        var raw = String(name || '').split('.').pop() || '';
+        return raw && raw !== display ? ' title="' + esc(raw) + '"' : '';
+    }
+
     function displayFieldLabel(path) {
         const normalized = normalizeFieldPath(path || '');
         if (!normalized) return '';
@@ -1551,7 +1558,10 @@
     }
 
     function renderFieldRow(entry) {
-        return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(entry.key)) + '</div><div class="field-value">' + fmtValue(entry.value, entry.key) + '</div></div>';
+        var label = displayFieldLabel(entry.key);
+        var destName = String(entry.key || '').split('.').pop() || '';
+        var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
+        return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + fmtValue(entry.value, entry.key) + '</div></div>';
     }
 
     function renderColumnGroup(entries, cols, subtitle) {
@@ -1836,7 +1846,7 @@
         };
 
         const openAttr = level <= 1 ? ' open' : '';
-        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${items.length} ${esc(t('elements'))}</span></summary><div class="section-body">`;
+        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title"${sectionTitleAttr(label)}>${esc(formatSectionTitle(label))}</span><span class="summary-meta">${items.length} ${esc(t('elements'))}</span></summary><div class="section-body">`;
 
         html += `<div class="collection-toolbar"><span>${items.length} ${esc(t('elements'))}</span><span class="collection-pager">`
             + `<button type="button" data-collection-action="prev" data-collection-id="${collectionId}" disabled>${esc(t('prev'))}</button>`
@@ -1850,7 +1860,10 @@
             html += `<th>${esc(t('collection'))}</th>`;
         } else {
             table.columns.forEach((col) => {
-                html += `<th data-collection-id="${collectionId}" data-sort-col="${esc(col)}">${esc(displayFieldLabel(col))}<span class="sort-indicator"></span></th>`;
+                var colLabel = displayFieldLabel(col);
+                var colDest = String(col || '').split('.').pop() || '';
+                var colTitle = colDest && colDest !== colLabel ? ` title="${esc(colDest)}"` : '';
+                html += `<th data-collection-id="${collectionId}" data-sort-col="${esc(col)}"${colTitle}>${esc(colLabel)}<span class="sort-indicator"></span></th>`;
             });
         }
         html += `</tr></thead><tbody id="collection-body-${collectionId}">${renderCollectionTableBody(collectionViewState[collectionId])}</tbody></table>`;
@@ -1881,7 +1894,7 @@
             }
         }
         let html = '<div class="field-group">';
-        html += '<div class="field-group-subtitle">' + esc(formatSectionTitle(key)) + '</div>';
+        html += '<div class="field-group-subtitle"' + sectionTitleAttr(key) + '>' + esc(formatSectionTitle(key)) + '</div>';
         if (primitiveEntries.length >= 2) {
             html += '<div class="field-columns-2">';
             primitiveEntries.forEach((e) => { html += renderFieldRow(e); });
@@ -1931,7 +1944,7 @@
         }
 
         const openAttr = level <= 1 ? ' open' : '';
-        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title">${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + idEntiteEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
+        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title"${sectionTitleAttr(label)}>${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + idEntiteEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
 
         html += renderPrimitiveGroup(primitiveEntries);
 
@@ -2251,8 +2264,10 @@
                 var scalarVal = (Array.isArray(val) && val.length === 1) ? val[0] : val;
                 if (scalarVal === null || scalarVal === undefined || String(scalarVal).trim() === '') return '';
                 var label = p.label || displayFieldLabel(p.ref);
+                var fieldDestName = String(p.ref || '').split('.').pop() || '';
+                var fieldTitleAttr = fieldDestName && fieldDestName !== label ? ' title="' + esc(fieldDestName) + '"' : '';
                 var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
-                return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label">' + esc(label)
+                return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                     + '</div><div class="field-value">' + formatted + '</div></div>';
             }
             case 'divider': {

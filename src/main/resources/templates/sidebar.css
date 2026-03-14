@@ -2204,6 +2204,43 @@ body {
     background: linear-gradient(135deg, #4565e6 0%, #3352d0 100%);
 }
 
+/* ── Nested section depth styling ───────────────────────────────── */
+/* Level 2: slightly lighter, reduced font, left accent */
+.detail-section .section-body>.detail-section>summary {
+    background: linear-gradient(135deg, #6b84f5 0%, #5a73e8 100%);
+    font-size: 12px;
+    padding: 8px 14px;
+    border-left: 3px solid rgba(255, 255, 255, .35);
+}
+
+.detail-section .section-body>.detail-section>summary:hover {
+    background: linear-gradient(135deg, #5f7af0 0%, #4e68e0 100%);
+}
+
+/* Level 3+: even lighter, more compact */
+.detail-section .section-body>.detail-section .section-body>.detail-section>summary {
+    background: linear-gradient(135deg, #8498f3 0%, #7489ec 100%);
+    font-size: 11px;
+    padding: 7px 14px;
+    border-left: 5px solid rgba(255, 255, 255, .3);
+}
+
+.detail-section .section-body>.detail-section .section-body>.detail-section>summary:hover {
+    background: linear-gradient(135deg, #7a8ff0 0%, #6a7fe8 100%);
+}
+
+/* Nested sections: reduce outer margin and shadow for compactness */
+.detail-section .section-body>.detail-section {
+    margin-bottom: 8px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.detail-section .section-body>.detail-section .section-body>.detail-section {
+    margin-bottom: 4px;
+    box-shadow: none;
+    border-color: var(--c-border-light);
+}
+
 .detail-section summary .summary-meta {
     font-size: 11px;
     color: rgba(255, 255, 255, .7);
@@ -2236,6 +2273,10 @@ body {
     font-weight: 600;
     color: var(--c-text-secondary);
     background: #eef1f6;
+}
+
+.field-label[title] {
+    cursor: help;
 }
 
 .field-value {
@@ -2356,6 +2397,11 @@ body {
     color: var(--c-text-muted);
     padding: 8px 14px 4px;
     border-bottom: 1px solid var(--c-border-light);
+}
+
+.summary-title[title],
+.field-group-subtitle[title] {
+    cursor: help;
 }
 
 .field-empty-group {

@@ -2,32 +2,35 @@ package migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dia
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.models.schema.DOSchemaField;
-import migration4o.util.DatabaseUtil;
-import migration4o.util.SchemaUtil;
-import migration4o.util.TypeUtil;
+import migration4o.ui.common.FieldSelectorPanel;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedHashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
  * Dialog for editing the summary string of a DOSchemaClass.
  *
- * <p>The summary is a free-form string containing literal text and field references
- * in the form {@code [fieldName]}. For example:
- * <pre>Dossier [adresse.numeroCivique] [adresse.rue], [adresse.ville]</pre>
+ * <p>
+ * The summary is a free-form string containing literal text and field
+ * references in the form {@code [fieldName]}. For example:
+ * 
+ * <pre>
+ * Dossier [adresse.numeroCivique] [adresse.rue], [adresse.ville]
+ * </pre>
  *
- * <p>The editor provides:
+ * <p>
+ * The editor provides:
  * <ul>
- *   <li>A main text area for direct editing of the summary string</li>
- *   <li>A field reference panel listing available fields for one-click insertion</li>
- *   <li>A live preview showing the result</li>
+ * <li>A main text area for direct editing of the summary string</li>
+ * <li>A field reference panel listing available fields for one-click
+ * insertion</li>
+ * <li>A live preview showing the result</li>
  * </ul>
  */
 public class SummaryEditorDialog extends JDialog {
@@ -36,8 +39,7 @@ public class SummaryEditorDialog extends JDialog {
 
     private final JTextArea summaryTextArea;
     private final JLabel previewLabel;
-    private final DefaultListModel<String> fieldListModel;
-    private final JList<String> fieldList;
+    private final FieldSelectorPanel fieldSelector;
 
     private boolean confirmed = false;
     private String result = null;
@@ -46,7 +48,7 @@ public class SummaryEditorDialog extends JDialog {
      * Creates and shows the dialog.
      *
      * @return the edited summary string if OK was clicked (may be {@code ""} if
-     *         the user cleared the summary), or {@code null} if the user cancelled.
+     * the user cleared the summary), or {@code null} if the user cancelled.
      */
     public static String showDialog(Frame owner, DOSchemaClass schemaClass, DOSchema schema) {
         SummaryEditorDialog dialog = new SummaryEditorDialog(owner, schemaClass, schema);
@@ -96,33 +98,25 @@ public class SummaryEditorDialog extends JDialog {
 
         split.setLeftComponent(textPanel);
 
-        // Right: field panel
+        // Right: field selector tree panel
+        // Collect currently-referenced field paths so the tree can highlight
+        // them
+        Set<String> referencedPaths = extractReferencedPaths(schemaClass.summary);
+
+        fieldSelector = new FieldSelectorPanel(schemaClass, referencedPaths, (fieldPath, fieldLabel) -> insertField(fieldPath));
+
         JPanel fieldPanel = new JPanel(new BorderLayout(0, 4));
         fieldPanel.setBorder(BorderFactory.createTitledBorder("Available Fields"));
-
-        fieldListModel = new DefaultListModel<>();
-        populateFieldList(schemaClass, schema);
-
-        fieldList = new JList<>(fieldListModel);
-        fieldList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        fieldList.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 12));
-
-        // Double-click inserts immediately
-        fieldList.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                if (e.getClickCount() == 2) {
-                    insertSelectedField();
-                }
-            }
-        });
-
-        JScrollPane fieldScroll = new JScrollPane(fieldList);
-        fieldPanel.add(fieldScroll, BorderLayout.CENTER);
+        fieldPanel.add(fieldSelector, BorderLayout.CENTER);
 
         JButton insertButton = new JButton("Insert →");
         insertButton.setToolTipText("Insert selected field reference at cursor position");
-        insertButton.addActionListener(e -> insertSelectedField());
+        insertButton.addActionListener(e -> {
+            String path = fieldSelector.getSelectedFieldPath();
+            if (path != null) {
+                insertField(path);
+            }
+        });
         JPanel insertButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         insertButtonPanel.add(insertButton);
         fieldPanel.add(insertButtonPanel, BorderLayout.SOUTH);
@@ -154,7 +148,8 @@ public class SummaryEditorDialog extends JDialog {
         okButton.addActionListener(e -> {
             confirmed = true;
             String text = summaryTextArea.getText().trim();
-            // Return "" for empty (to distinguish from cancel which returns null)
+            // Return "" for empty (to distinguish from cancel which returns
+            // null)
             result = text;
             dispose();
         });
@@ -166,21 +161,24 @@ public class SummaryEditorDialog extends JDialog {
         buttonPanel.add(okButton);
         add(buttonPanel, BorderLayout.SOUTH);
 
-        // Live preview update
+        // Live preview update + field-tree highlighting
         summaryTextArea.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
                 updatePreview();
+                refreshSelectedPaths();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
                 updatePreview();
+                refreshSelectedPaths();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
                 updatePreview();
+                refreshSelectedPaths();
             }
         });
         updatePreview();
@@ -191,72 +189,32 @@ public class SummaryEditorDialog extends JDialog {
     // ── Private helpers ───────────────────────────────────────────────────
 
     /**
-     * Populates the field list with:
-     * <ul>
-     *   <li>Direct and inherited fields of the class (non-collection)</li>
-     *   <li>Dotted fields from non-collection, non-IDEntite embedded object
-     *       fields (one level deep), e.g. {@code adresse.rue}</li>
-     * </ul>
-     * Inherited fields are included at every level via
-     * {@link DatabaseUtil#getAllSchemaFieldsIncludingAncestors}.
+     * Extracts field paths referenced as {@code [fieldName]} tokens from a
+     * summary string.
      */
-    private void populateFieldList(DOSchemaClass schemaClass, DOSchema schema) {
-        fieldListModel.clear();
-
-        for (DOSchemaField field : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, schema)) {
-            if (field.isCollection)
-                continue;
-            String destName = field.destinationName; // already guaranteed non-null/non-empty by helper
-
-            DOSchemaClass embeddedClass = resolveEmbeddedClass(field, schema);
-
-            if (embeddedClass == null) {
-                fieldListModel.addElement(destName);
-            } else {
-                boolean addedAny = false;
-                for (DOSchemaField subField : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, schema)) {
-                    if (subField.isCollection)
-                        continue;
-                    DOSchemaClass subEmbedded = resolveEmbeddedClass(subField, schema);
-                    if (subEmbedded == null) {
-                        fieldListModel.addElement(destName + "." + subField.destinationName);
-                        addedAny = true;
-                    }
-                }
-                if (!addedAny) {
-                    fieldListModel.addElement(destName);
-                }
-            }
+    private static Set<String> extractReferencedPaths(String summary) {
+        Set<String> paths = new LinkedHashSet<>();
+        if (summary == null || summary.isEmpty())
+            return paths;
+        Matcher m = FIELD_REF_PATTERN.matcher(summary);
+        while (m.find()) {
+            paths.add(m.group(1).trim());
         }
+        return paths;
     }
 
     /**
-     * Returns the schema class that {@code field} embeds, or {@code null} if
-     * the field itself carries a primitive/leaf value.
-     * IDEntite classes are treated as leaf values (they export as an ID).
+     * Updates the selected-path highlighting in the field tree based on the
+     * current summary text.
      */
-    private static DOSchemaClass resolveEmbeddedClass(DOSchemaField field, DOSchema schema) {
-        if (schema == null)
-            return null;
-        String type = field.type;
-        if (type == null || type.isEmpty())
-            return null;
-        if (TypeUtil.isPrimitiveType(type))
-            return null;
-        DOSchemaClass cls = SchemaUtil.findClassByName(type, schema);
-        if (cls == null)
-            return null;
-        // IDEntite classes export as a scalar ID — treat as leaf
-        if (cls.isIDEntite(schema))
-            return null;
-        return cls;
+    private void refreshSelectedPaths() {
+        fieldSelector.setSelectedPaths(extractReferencedPaths(summaryTextArea.getText()));
     }
 
-    private void insertSelectedField() {
-        String selected = fieldList.getSelectedValue();
-        if (selected == null || selected.isEmpty())
+    private void insertField(String fieldPath) {
+        if (fieldPath == null || fieldPath.isEmpty())
             return;
-        String ref = "[" + selected + "]";
+        String ref = "[" + fieldPath + "]";
         int pos = summaryTextArea.getCaretPosition();
         summaryTextArea.insert(ref, pos);
         summaryTextArea.requestFocusInWindow();
