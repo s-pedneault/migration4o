@@ -22,8 +22,8 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
  * validation.
  * <p>
  * Own state: {@code xsdBuilder}, {@code exportedXMLFiles}, {@code generateXsd}.
- * Overrides six hooks: {@code init}, {@code observeObject}, {@code observeField},
- * {@code open}, {@code close}, {@code done}.
+ * Overrides six hooks: {@code init}, {@code observeObject},
+ * {@code observeField}, {@code open}, {@code close}, {@code done}.
  */
 public class XmlFormatHandler extends FormatHandler {
 
@@ -90,6 +90,21 @@ public class XmlFormatHandler extends FormatHandler {
         writer.openRootStructure("export", schemaLocation);
         if (ctx.schemaClass != null) {
             writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
+            // Register the configured class as a top-level object before any
+            // objects
+            // are activated. DB4O polymorphism means activated objects always
+            // return
+            // their concrete runtime subclass name, so observeObject() would
+            // only
+            // register subclasses (e.g. SousRapport) and never the base class
+            // declared in the module config (e.g. Rapport). Registering here
+            // ensures
+            // the class that owns this file IS always in the XSD top-level
+            // list.
+            if (liveXsdBuilder != null) {
+                DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(ctx.schemaClass.source);
+                liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
+            }
         }
         writer.openStructure("objects");
     }
@@ -132,7 +147,8 @@ public class XmlFormatHandler extends FormatHandler {
         }
     }
 
-    // ── Private helpers ───────────────────────────────────────────────────────
+    // ── Private helpers
+    // ───────────────────────────────────────────────────────
 
     private String computeSchemaLocation(ExportContext ctx) {
         if (writer == null || writer.outputPath == null)

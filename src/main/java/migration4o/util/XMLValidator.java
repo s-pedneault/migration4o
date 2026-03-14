@@ -36,20 +36,18 @@ public class XMLValidator {
             validator.setErrorHandler(new org.xml.sax.ErrorHandler() {
                 @Override
                 public void warning(org.xml.sax.SAXParseException e) {
-                    errorDetails.append(String.format("  WARNING at line %d, column %d: %s\n",
-                            e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
+                    errorDetails.append(String.format("  WARNING at line %d, column %d: %s\n", e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
                 }
 
                 @Override
-                public void error(org.xml.sax.SAXParseException e) {
-                    errorDetails.append(String.format("  ERROR at line %d, column %d: %s\n",
-                            e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
+                public void error(org.xml.sax.SAXParseException e) throws org.xml.sax.SAXException {
+                    errorDetails.append(String.format("  ERROR at line %d, column %d: %s\n", e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
+                    throw e;
                 }
 
                 @Override
                 public void fatalError(org.xml.sax.SAXParseException e) throws org.xml.sax.SAXException {
-                    errorDetails.append(String.format("  FATAL ERROR at line %d, column %d: %s\n",
-                            e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
+                    errorDetails.append(String.format("  FATAL ERROR at line %d, column %d: %s\n", e.getLineNumber(), e.getColumnNumber(), e.getMessage()));
                     throw e;
                 }
             });
@@ -72,7 +70,7 @@ public class XMLValidator {
      * Validates multiple XML files against an XSD schema.
      * 
      * @param xmlPaths List of XML file paths to validate
-     * @param xsdPath  Path to the XSD schema file
+     * @param xsdPath Path to the XSD schema file
      * @return ValidationResult containing success count and error details
      */
     public static ValidationResult validateMultiple(List<String> xmlPaths, String xsdPath) {
