@@ -17,7 +17,8 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
 /**
- * Generates lightweight HTML viewers for JS exports produced by StructuredWriterJS.
+ * Generates lightweight HTML viewers for JS exports produced by
+ * StructuredWriterJS.
  */
 public final class JsViewerHtmlGenerator {
 
@@ -42,16 +43,19 @@ public final class JsViewerHtmlGenerator {
     }
 
     /**
-     * Writes a self-contained HTML viewer for in-memory JS data (no intermediate
-     * file). The caller provides the complete data script string; this method
-     * embeds it directly in the template and writes to {@code outputPath}.
+     * Writes a self-contained HTML viewer for in-memory JS data (no
+     * intermediate file). The caller provides the complete data script string;
+     * this method embeds it directly in the template and writes to
+     * {@code outputPath}.
      *
-     * @param outputPath  destination {@code .html} file
+     * @param outputPath destination {@code .html} file
      * @param schemaClass schema class for title / field metadata; may be null
      * @param navItemsJson serialised nav-tree JSON
-     * @param baseHref    relative path back to the export root (e.g. {@code "../../"})
-     * @param layoutJson  detail-layout JSON or {@code "null"}
-     * @param dataScript  pre-built JS data script (the full {@code window.__m4o={…};\n})
+     * @param baseHref relative path back to the export root (e.g.
+     * {@code "../../"})
+     * @param layoutJson detail-layout JSON or {@code "null"}
+     * @param dataScript pre-built JS data script (the full
+     * {@code window.__m4o={…};\n})
      */
     public static Path writeViewerForJs(Path outputPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson, String dataScript) throws IOException {
         if (outputPath == null) {
@@ -119,12 +123,13 @@ public final class JsViewerHtmlGenerator {
     /**
      * Writes an index.html welcome page at the given database output root.
      *
-     * @param dbRoot        The database root folder (e.g. output/54060/)
-     * @param dbName        Human-readable database name shown in the page header
-     * @param navItemsJson  Serialised NAV_ITEMS JSON array
-     * @param moduleCount   Total number of exported modules (including sub-modules)
-     * @param classCount    Number of exported class data files
-     * @param objectCount   Total number of exported objects; 0 hides the bubble
+     * @param dbRoot The database root folder (e.g. output/54060/)
+     * @param dbName Human-readable database name shown in the page header
+     * @param navItemsJson Serialised NAV_ITEMS JSON array
+     * @param moduleCount Total number of exported modules (including
+     * sub-modules)
+     * @param classCount Number of exported class data files
+     * @param objectCount Total number of exported objects; 0 hides the bubble
      */
     public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount) throws IOException {
         if (dbRoot == null) {
@@ -147,16 +152,18 @@ public final class JsViewerHtmlGenerator {
     /**
      * Streaming HTML assembler: never loads the full JS data into memory.
      * <p>
-     * Splits the processed template at the {@code __EMBEDDED_JS_DATA__} placeholder,
-     * writes the header half, then streams {@code jsDataFile} line-by-line (escaping
-     * {@code </script} as it goes), then writes the footer half.
+     * Splits the processed template at the {@code __EMBEDDED_JS_DATA__}
+     * placeholder, writes the header half, then streams {@code jsDataFile}
+     * line-by-line (escaping {@code </script} as it goes), then writes the
+     * footer half.
      *
-     * @param outputPath  destination {@code .html} file
+     * @param outputPath destination {@code .html} file
      * @param schemaClass schema class for title / field metadata; may be null
      * @param navItemsJson serialised nav-tree JSON
-     * @param baseHref    relative path back to the export root
-     * @param layoutJson  detail-layout JSON or {@code "null"}
-     * @param jsDataFile  temp file containing the pre-built JS data (will NOT be deleted here)
+     * @param baseHref relative path back to the export root
+     * @param layoutJson detail-layout JSON or {@code "null"}
+     * @param jsDataFile temp file containing the pre-built JS data (will NOT be
+     * deleted here)
      */
     public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
         return writeViewerFromTempFile(outputPath, schemaClass, null, navItemsJson, baseHref, layoutJson, jsDataFile);
@@ -165,7 +172,8 @@ public final class JsViewerHtmlGenerator {
     /**
      * Streaming HTML assembler with an optional config title override.
      *
-     * @param configTitle   display title from {@code classRef title="…"} (highest priority); may be null
+     * @param configTitle display title from {@code classRef title="…"} (highest
+     * priority); may be null
      */
     public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String configTitle, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
         return writeViewerFromTempFile(outputPath, schemaClass, configTitle, "null", navItemsJson, baseHref, layoutJson, jsDataFile);
@@ -174,8 +182,10 @@ public final class JsViewerHtmlGenerator {
     /**
      * Streaming HTML assembler with title override and default columns.
      *
-     * @param configTitle        display title from {@code classRef title="…"} (highest priority); may be null
-     * @param defaultColumnsJson JSON array of default column field paths, e.g. {@code ["name","adresse.rue"]}, or {@code "null"}
+     * @param configTitle display title from {@code classRef title="…"} (highest
+     * priority); may be null
+     * @param defaultColumnsJson JSON array of default column field paths, e.g.
+     * {@code ["name","adresse.rue"]}, or {@code "null"}
      */
     public static Path writeViewerFromTempFile(Path outputPath, DOSchemaClass schemaClass, String configTitle, String defaultColumnsJson, String navItemsJson, String baseHref, String layoutJson, Path jsDataFile) throws IOException {
         if (outputPath == null)
@@ -197,7 +207,8 @@ public final class JsViewerHtmlGenerator {
         String defaultCols = (defaultColumnsJson != null && !defaultColumnsJson.isBlank()) ? defaultColumnsJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
-        // Build the full template with all substitutions EXCEPT __EMBEDDED_JS_DATA__
+        // Build the full template with all substitutions EXCEPT
+        // __EMBEDDED_JS_DATA__
         String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
@@ -213,7 +224,8 @@ public final class JsViewerHtmlGenerator {
             out.write(header);
             String line;
             while ((line = jsIn.readLine()) != null) {
-                // Escape </script inside JS data to prevent the browser from ending the script block early
+                // Escape </script inside JS data to prevent the browser from
+                // ending the script block early
                 out.write(line.replaceAll("(?i)</script", "<\\/script"));
                 out.write('\n');
             }
@@ -222,7 +234,10 @@ public final class JsViewerHtmlGenerator {
         return outputPath;
     }
 
-    /** Clears the in-memory template caches (useful after resource reload in tests). */
+    /**
+     * Clears the in-memory template caches (useful after resource reload in
+     * tests).
+     */
     public static void clearCache() {
         cachedTemplate = null;
         cachedWelcomeTemplate = null;
@@ -344,12 +359,22 @@ public final class JsViewerHtmlGenerator {
             sb.append(",\"title\":\"").append(escapeJson(field.title)).append('"');
         }
 
-        // Mark IDEntite fields that do not embed their contents — the HTML viewer
+        // Mark IDEntite fields that do not embed their contents — the HTML
+        // viewer
         // will render these inline (multicolumn) inside the parent section.
         if (!field.isCollection && !field.embedContents && field.type != null && refSchema != null) {
             DOSchemaClass typeClass = refSchema.findClassByName(field.type);
             if (typeClass != null && typeClass.isIDEntite(refSchema)) {
                 sb.append(",\"idEntite\":true");
+                // Resolve the target entity destination name for cross-page
+                // deep-linking
+                String targetFqn = typeClass.pointsTo;
+                if (targetFqn != null && !targetFqn.isBlank()) {
+                    DOSchemaClass targetClass = refSchema.findClassByName(targetFqn);
+                    if (targetClass != null && targetClass.destinationName != null && !targetClass.destinationName.isBlank()) {
+                        sb.append(",\"pointsTo\":\"").append(escapeJson(targetClass.destinationName)).append('"');
+                    }
+                }
             }
         }
 

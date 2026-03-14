@@ -2404,6 +2404,46 @@ body {
     cursor: help;
 }
 
+.field-group-subtitle.ref-subtitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.ref-link {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--c-primary);
+    opacity: 0.6;
+    font-size: 11px;
+    font-weight: 400;
+    text-transform: none;
+    letter-spacing: 0;
+    line-height: 1;
+    padding: 1px 4px;
+    border-radius: 3px;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.ref-link:hover {
+    opacity: 1;
+    background: rgba(var(--c-primary-rgb, 79, 70, 229), 0.08);
+}
+
+.ref-id-link {
+    color: var(--c-primary);
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px dotted var(--c-primary);
+}
+
+.ref-id-link:hover {
+    text-decoration: underline;
+}
+
 .field-empty-group {
     background: var(--c-surface);
     border: 1px solid var(--c-border-light);

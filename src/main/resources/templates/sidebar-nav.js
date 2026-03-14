@@ -599,6 +599,35 @@
     }
     collectIdEntiteFields(schemaFields);
 
+    // Build a map from field path → target entity destination name, for cross-page deep-links
+    const pointsToByPath = {};
+    (function collectPointsToFields(fields) {
+        if (!Array.isArray(fields)) return;
+        fields.forEach(function (field) {
+            if (field && field.idEntite && field.pointsTo) {
+                var p = normalizeSchemaPath(field.path || field.name || '');
+                var n = normalizeSchemaPath(field.name || '');
+                if (p) pointsToByPath[p] = field.pointsTo;
+                if (n && !pointsToByPath[n]) pointsToByPath[n] = field.pointsTo;
+            }
+            if (field && Array.isArray(field.children)) collectPointsToFields(field.children);
+        });
+    })(schemaFields);
+
+    // Build a map from entity destination name → nav leaf href, derived from NAV_ITEMS
+    const navHrefByDestName = {};
+    (function buildNavHrefMap(items) {
+        if (!Array.isArray(items)) return;
+        items.forEach(function (item) {
+            if (item.href) {
+                var fname = item.href.replace(/\?.*$/, '').split('/').pop() || '';
+                var base = fname.replace(/\.html$/i, '');
+                if (base) navHrefByDestName[base] = item.href;
+            }
+            if (item.children) buildNavHrefMap(item.children);
+        });
+    })((typeof NAV_ITEMS !== 'undefined') ? NAV_ITEMS : []);
+
     function appendField(map, key, value) {
         if (!key) return;
         const normalizedKey = normalizeFieldPath(key);
@@ -1561,7 +1590,16 @@
         var label = displayFieldLabel(entry.key);
         var destName = String(entry.key || '').split('.').pop() || '';
         var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
-        return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + fmtValue(entry.value, entry.key) + '</div></div>';
+        // If this field is a direct IDEntite reference (embedContents=false), its value IS the ID —
+        // render it as a clickable link to the target entity page.
+        var _ptDestName = pointsToByPath[normalizeSchemaPath(entry.key || '')];
+        var _ptHref = _ptDestName ? navHrefByDestName[_ptDestName] : null;
+        var _idVal = _ptHref ? String(entry.value ?? '').trim() : null;
+        if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
+        var valueHtml = (_ptHref && _idVal)
+            ? '<a class="ref-id-link" href="' + esc(_ptHref + '?open=' + encodeURIComponent(_idVal)) + '">' + esc(_idVal) + '</a>'
+            : fmtValue(entry.value, entry.key);
+        return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
     }
 
     function renderColumnGroup(entries, cols, subtitle) {
@@ -1893,14 +1931,46 @@
                 if ((lo === 'mid' || lo === 'id') && (!valStr || valStr === '0' || valStr === '-1')) return '';
             }
         }
+
+        // Determine cross-page link: resolve pointsTo target + find matching nav href
+        var _ptDestName = pointsToByPath[normalizeSchemaPath(key)];
+        var _ptHref = _ptDestName ? navHrefByDestName[_ptDestName] : null;
+        var _idEntry = primitiveEntries.find(function (e) {
+            var lo = String(e.key || '').toLowerCase().split('.').pop() || '';
+            return lo === 'mid' || lo === 'id';
+        });
+        var _idVal = _idEntry ? String(_idEntry.value ?? '').trim() : null;
+        if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
+        var _targetLink = (_ptHref && _idVal) ? _ptHref + '?open=' + encodeURIComponent(_idVal) : null;
+
+        // Render a single field row, optionally wrapping the value in a navigation link
+        function renderFieldRowMaybeLinked(entry) {
+            var label = displayFieldLabel(entry.key);
+            var destName = String(entry.key || '').split('.').pop() || '';
+            var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
+            var lo = String(entry.key || '').toLowerCase().split('.').pop() || '';
+            var isIdField = (lo === 'mid' || lo === 'id') && _targetLink;
+            var valueHtml = isIdField
+                ? '<a class="ref-id-link" href="' + esc(_targetLink) + '">' + esc(String(entry.value ?? '')) + '</a>'
+                : fmtValue(entry.value, entry.key);
+            return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
+        }
+
         let html = '<div class="field-group">';
-        html += '<div class="field-group-subtitle"' + sectionTitleAttr(key) + '>' + esc(formatSectionTitle(key)) + '</div>';
+        // Subtitle — also shows a ↗ icon when a cross-page link is available
+        if (_targetLink) {
+            html += '<div class="field-group-subtitle ref-subtitle"' + sectionTitleAttr(key) + '>'
+                + '<span>' + esc(formatSectionTitle(key)) + '</span>'
+                + '<a class="ref-link" href="' + esc(_targetLink) + '" title="Ouvrir l\'enregistrement lié">&#8599;</a></div>';
+        } else {
+            html += '<div class="field-group-subtitle"' + sectionTitleAttr(key) + '>' + esc(formatSectionTitle(key)) + '</div>';
+        }
         if (primitiveEntries.length >= 2) {
             html += '<div class="field-columns-2">';
-            primitiveEntries.forEach((e) => { html += renderFieldRow(e); });
+            primitiveEntries.forEach((e) => { html += renderFieldRowMaybeLinked(e); });
             html += '</div>';
         } else {
-            primitiveEntries.forEach((e) => { html += renderFieldRow(e); });
+            primitiveEntries.forEach((e) => { html += renderFieldRowMaybeLinked(e); });
         }
         collectionEntries.forEach((e) => { html += renderCollectionSection(e.key, e.value, 2); });
         html += '</div>';
@@ -1953,13 +2023,34 @@
             html += renderInlineIdEntiteSection(entry.key, entry.value);
         });
 
-        objectEntries.forEach((entry) => {
-            html += renderNodeSection(entry.key, entry.value, level + 1);
-        });
+        // Build inner section list; use tabbed view when more than one sub-section
+        const innerSectionEntries =
+            objectEntries.map((entry) => ({
+                label: formatSectionTitle(entry.key),
+                content: renderNodeSection(entry.key, entry.value, level + 1)
+            })).concat(
+                collectionEntries.map((entry) => ({
+                    label: formatSectionTitle(entry.key),
+                    content: renderCollectionSection(entry.key, entry.value, level + 1)
+                }))
+            ).filter((sec) => sec.content.trim() !== '');
 
-        collectionEntries.forEach((entry) => {
-            html += renderCollectionSection(entry.key, entry.value, level + 1);
-        });
+        if (innerSectionEntries.length > 1) {
+            const autoTabId = 'at' + (collectionIdCounter++);
+            html += '<div class="layout-tabs"><div class="tab-bar" data-tabgroup="' + autoTabId + '">';
+            innerSectionEntries.forEach((sec, idx) => {
+                html += '<button type="button" data-tab-target="' + autoTabId + '-' + idx + '"'
+                    + (idx === 0 ? ' class="active"' : '') + '>' + esc(sec.label) + '</button>';
+            });
+            html += '</div>';
+            innerSectionEntries.forEach((sec, idx) => {
+                html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + autoTabId + '-' + idx + '">'
+                    + sec.content + '</div>';
+            });
+            html += '</div>';
+        } else {
+            innerSectionEntries.forEach((sec) => { html += sec.content; });
+        }
 
         html += '</div></details>';
         return html;
@@ -2116,12 +2207,33 @@
                     html += '</div></details>';
                 }
 
-                objectEntries.forEach((entry) => {
-                    html += renderNodeSection(entry.key, entry.value, 1);
-                });
-                collectionEntries.forEach((entry) => {
-                    html += renderCollectionSection(entry.key, entry.value, 1);
-                });
+                const topInnerSections =
+                    objectEntries.map((entry) => ({
+                        label: formatSectionTitle(entry.key),
+                        content: renderNodeSection(entry.key, entry.value, 1)
+                    })).concat(
+                        collectionEntries.map((entry) => ({
+                            label: formatSectionTitle(entry.key),
+                            content: renderCollectionSection(entry.key, entry.value, 1)
+                        }))
+                    ).filter((sec) => sec.content.trim() !== '');
+
+                if (topInnerSections.length > 1) {
+                    const autoTabId = 'at' + (collectionIdCounter++);
+                    html += '<div class="layout-tabs"><div class="tab-bar" data-tabgroup="' + autoTabId + '">';
+                    topInnerSections.forEach((sec, idx) => {
+                        html += '<button type="button" data-tab-target="' + autoTabId + '-' + idx + '"'
+                            + (idx === 0 ? ' class="active"' : '') + '>' + esc(sec.label) + '</button>';
+                    });
+                    html += '</div>';
+                    topInnerSections.forEach((sec, idx) => {
+                        html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + autoTabId + '-' + idx + '">'
+                            + sec.content + '</div>';
+                    });
+                    html += '</div>';
+                } else {
+                    topInnerSections.forEach((sec) => { html += sec.content; });
+                }
             } else {
                 html += renderNodeSection(rec.entity, rawData, 0);
             }
@@ -2426,6 +2538,12 @@
             applyLanguage();
             renderResults();
             resultsCount.textContent = allRecords.length + ' ' + t('resultsTotal');
+            // Auto-open a specific record if ?open=<id> is present in the URL
+            var _openId = new URLSearchParams(window.location.search).get('open');
+            if (_openId) {
+                var _targetRec = allRecords.find(function (r) { return String(r.id) === String(_openId); });
+                if (_targetRec) selectRecord(_targetRec);
+            }
         } catch (err) {
             resultsCount.textContent = `${t('err')}: ${err.message || 'Unknown'}`;
             resultsBody.innerHTML = `<tr><td colspan="3"><div class="results-empty"><p>${esc(err.message || t('noPayload'))}</p></div></td></tr>`;
