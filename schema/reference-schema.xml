@@ -25,6 +25,8 @@
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDTypeActivite" title="ID de Type d'activité" />
         <field source="mIDDossPrev" destinationName="idDossierAdresse" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" title="ID de dossier adresse" />
     </fields>
+    <class source="java.lang.Class" destinationName="Classe" isExported="false" title="Classe">
+    </class>
     <class source="com.db4o.StaticClass" destinationName="StaticClass" isExported="false" title="Static class" schemaNotes="Internal DB4O class, excluded specifically">
         <field source="fields" destinationName="fields" isExported="true" skipWhen="DEFAULT" type="com.db4o.StaticField" embedContents="true" title="Champs" />
         <field source="name" destinationName="name" isExported="true" skipWhen="DEFAULT" type="string" title="Name" />
