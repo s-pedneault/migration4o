@@ -128,7 +128,12 @@ public class XmlFormatHandler extends FormatHandler {
      */
     @Override
     public void done(ExportContext ctx) throws Exception {
-        exportUnreachedObjects(ctx);
+        // Extra.xml is only generated in unrestricted ("all") mode — i.e. when
+        // no per-class object limit is set.  In limited/preview exports the
+        // reachability data is incomplete so the Extra file would be misleading.
+        if (ctx.operation.maxObjectsPerClass == null) {
+            exportUnreachedObjects(ctx);
+        }
 
         if (generateXsd && liveXsdBuilder != null) {
             Path xsdPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");

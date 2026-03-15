@@ -257,6 +257,93 @@ public class SummaryGenerator {
         }
     }
 
+    /**
+     * Result container returned by {@link #resolveIDEntiteResult}.
+     */
+    public static final class IDEntiteResult {
+        /** Human-readable label for the referenced entity; may be null. */
+        public final String label;
+        /**
+         * DB4O native object ID of the resolved target entity; used to build
+         * cross-reference indices.
+         */
+        public final Long targetObjectId;
+
+        public IDEntiteResult(String label, Long targetObjectId) {
+            this.label = label;
+            this.targetObjectId = targetObjectId;
+        }
+    }
+
+    /**
+     * Resolves an IDEntite reference and returns both the human-readable label
+     * and the target entity's native DB4O object ID in a single pass (with
+     * caching).
+     *
+     * @return an {@link IDEntiteResult} with the resolved label (possibly null)
+     * and the target's DB4O object ID (possibly null if unresolvable)
+     */
+    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj,
+            DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema,
+            Map<String, Long> targetCache, Map<Long, String> summaryCache) {
+        if (container == null || idEntiteObj == null || idEntiteClass == null) {
+            return new IDEntiteResult(null, null);
+        }
+        try {
+            String expectedType = idEntiteClass.pointsTo;
+            if (expectedType == null || expectedType.isEmpty()) {
+                expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.source);
+            }
+
+            long idEntiteObjId = container.ext().getID(idEntiteObj);
+            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteObjId);
+            Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
+            if (mID == null) {
+                return new IDEntiteResult(null, null);
+            }
+            String cacheKey = mID + ":" + (expectedType != null ? expectedType : "");
+
+            Long targetObjectId;
+            if (targetCache != null && targetCache.containsKey(cacheKey)) {
+                targetObjectId = targetCache.get(cacheKey);
+            } else {
+                targetObjectId = ReferenceUtil.findObjectByMID(container, mID, expectedType, databaseSchema);
+                if (targetCache != null) {
+                    targetCache.put(cacheKey, targetObjectId);
+                }
+            }
+            if (targetObjectId == null) {
+                return new IDEntiteResult(null, null);
+            }
+
+            if (summaryCache != null && summaryCache.containsKey(targetObjectId)) {
+                return new IDEntiteResult(summaryCache.get(targetObjectId), targetObjectId);
+            }
+
+            Object targetObj = container.ext().getByID(targetObjectId);
+            if (targetObj == null) {
+                return new IDEntiteResult(null, targetObjectId);
+            }
+            ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
+
+            String targetClassName = ClassUtil.getClassName(targetObj);
+            DOSchemaClass targetSchemaClass = SchemaUtil.findClassByName(targetClassName, referenceSchema);
+            String label = null;
+            if (targetSchemaClass != null && targetSchemaClass.summary != null && !targetSchemaClass.summary.isEmpty()) {
+                label = generate(container, targetObj, targetSchemaClass, referenceSchema);
+            }
+            if ((label == null || label.isBlank()) && targetObj != null) {
+                label = generateFallbackLabel(container, targetObj);
+            }
+            if (summaryCache != null) {
+                summaryCache.put(targetObjectId, label);
+            }
+            return new IDEntiteResult(label, targetObjectId);
+        } catch (Exception e) {
+            return new IDEntiteResult(null, null);
+        }
+    }
+
     // ── Fallback label generation
     // ─────────────────────────────────────────────
 

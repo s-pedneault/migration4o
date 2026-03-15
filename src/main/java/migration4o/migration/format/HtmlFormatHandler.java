@@ -4,11 +4,15 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import migration4o.migration.ExportFormat;
 import migration4o.migration.SummaryGenerator;
+import migration4o.migration.SummaryGenerator.IDEntiteResult;
 import migration4o.migration.tasks.NavTreeBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ClassUtil;
@@ -52,6 +56,49 @@ public class HtmlFormatHandler extends FormatHandler {
      * {@link #close}.
      */
     private Path currentTempJsPath;
+
+    // ── Cross-reference collection
+    // ────────────────────────────────────────────────
+
+    /**
+     * One back-reference entry: a record in a source entity that references a
+     * record in a target entity.
+     */
+    static final class BackRefEntry {
+        String sourceEntityDestName;
+        String sourceEntityLabel; // human-readable display name (title or dest
+                                  // name)
+        String sourceId; // String.valueOf(objectId) of the source record
+        String sourceSummary; // _summary of the source record
+        String sourceHref; // relative href from html root to the source page
+        String fieldTitle; // human-readable field title (e.g. "Dossier
+                           // adresse")
+    }
+
+    /**
+     * Registry for all back-references collected during the full export.
+     * Structure: targetEntityDestName → targetId → list of sources.
+     */
+    private final Map<String, Map<String, List<BackRefEntry>>> crossRefMap = new LinkedHashMap<>();
+
+    /** DB4O native ID of the root object currently being exported. */
+    private long currentRootObjectId = -1;
+    /** Summary of the root object currently being exported. */
+    private String currentRootObjectSummary = null;
+    /**
+     * Entries added for the current entity class (href set later in
+     * {@link #close}).
+     */
+    private final List<BackRefEntry> pendingHrefEntries = new ArrayList<>();
+    /** HTML output root — set in {@link #init}. */
+    private Path htmlBasePath = null;
+    /**
+     * Maps each exported root record's DB4O native object ID to the HTML file
+     * it was written into. Used by {@link #patchCrossRefsIntoHtmlFiles()} to
+     * find the exact file that contains a given target record, regardless of
+     * how many HTML files the same class is split across.
+     */
+    private final Map<Long, Path> objectIdToHtmlPath = new LinkedHashMap<>();
 
     public HtmlFormatHandler() {
         super(ExportFormat.HTML);
@@ -99,6 +146,7 @@ public class HtmlFormatHandler extends FormatHandler {
             // Build nav tree rooted at the html/ sub-folder so that hrefs are
             // correct relative to the index.html and viewer files placed there.
             Path htmlBase = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
+            htmlBasePath = htmlBase;
             new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, htmlBase);
             cachedNavJson = ctx.operation.cachedNavJson;
         }
@@ -113,6 +161,7 @@ public class HtmlFormatHandler extends FormatHandler {
         this.currentSchemaClass = ctx.schemaClass;
         this.currentConfigTitle = (ctx.exportConfig != null) ? ctx.exportConfig.getTitle() : null;
         this.currentDefaultColumnsJson = (ctx.exportConfig != null && ctx.exportConfig.hasDefaultColumns()) ? ctx.exportConfig.getDefaultColumnsJson() : "null";
+        pendingHrefEntries.clear();
         super.open(ctx);
     }
 
@@ -129,30 +178,54 @@ public class HtmlFormatHandler extends FormatHandler {
         // IDEntite: attempt to resolve to a human-readable label
         if (ctx.schemaClass.isIDEntite(ctx.operation.databaseSchema)) {
             Object obj = ctx.currentObject().obj;
-            String refLabel = SummaryGenerator.resolveIDEntiteLabel(ctx.operation.container, obj, ctx.schemaClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
-            if (refLabel != null && !refLabel.isBlank()) {
-                writer.elementWithContent(stripIdPrefix(ctx.schemaClass.destinationName), null, refLabel, false);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.operation.container, obj, ctx.schemaClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            // Collect back-ref for embedded IDEntite objects
+            // (embedContents=true path)
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.operation.databaseSchema)) {
+                collectBackRef(ctx, ctx.schemaClass, result.targetObjectId);
+            }
+            if (result.label != null && !result.label.isBlank()) {
+                Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
+                writer.elementWithContent(stripIdPrefix(ctx.schemaClass.destinationName), idEntiteAttrs, result.label, false);
                 return true; // fully written — skip field loop
             }
             // No label resolved — fall through to default structure export
         }
 
-        // Default: open a structure with optional native id and summary
-        // attributes
+        // Default: open a structure with id and optional summary attributes.
+        // The HTML viewer always needs the native object id on root objects:
+        // it drives CROSS_REFS lookups and the ?open= URL parameter regardless
+        // of whether the user enabled exportNativeIds for XML output.
         Map<String, String> attrs = null;
-        if (ctx.operation.exportNativeIds || hasSummary(ctx.schemaClass)) {
+        if (ctx.isRootObject() || ctx.operation.exportNativeIds || hasSummary(ctx.schemaClass)) {
             attrs = new java.util.LinkedHashMap<>();
-            if (ctx.operation.exportNativeIds) {
+            // Always emit id on root objects for the viewer; also emit on all
+            // objects when exportNativeIds is explicitly requested.
+            if (ctx.isRootObject() || ctx.operation.exportNativeIds) {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
                 String summary = SummaryGenerator.generate(ctx.operation.container, ctx.currentObject().obj, ctx.schemaClass, ctx.operation.referenceSchema);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
+                    if (ctx.isRootObject()) {
+                        currentRootObjectId = ctx.currentObject().objectId;
+                        currentRootObjectSummary = summary;
+                    }
                 }
             }
             if (attrs.isEmpty())
                 attrs = null;
+        }
+        if (ctx.isRootObject()) {
+            currentRootObjectId = ctx.currentObject().objectId;
+            // Track this record's exact HTML file so
+            // patchCrossRefsIntoHtmlFiles
+            // can find it regardless of how many files the class is split
+            // across.
+            if (currentRootObjectId > 0 && writer != null && writer.outputPath != null) {
+                objectIdToHtmlPath.put(currentRootObjectId, writer.outputPath);
+            }
         }
         writer.openStructure(ctx.schemaClass.destinationName, attrs);
         return false;
@@ -173,15 +246,66 @@ public class HtmlFormatHandler extends FormatHandler {
             if (fieldClass == null || !fieldClass.isIDEntite(ctx.operation.databaseSchema))
                 return false;
 
-            String refLabel = SummaryGenerator.resolveIDEntiteLabel(ctx.operation.container, ctx.fieldValue, fieldClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
-            if (refLabel != null && !refLabel.isBlank()) {
-                writer.elementWithContent(stripIdPrefix(ctx.field.destinationName), null, refLabel, false);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.operation.container, ctx.fieldValue, fieldClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            // Collect back-reference whenever target is resolved (even if label
+            // is absent)
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.operation.databaseSchema)) {
+                collectBackRef(ctx, fieldClass, result.targetObjectId);
+            }
+            if (result.label != null && !result.label.isBlank()) {
+                Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
+                writer.elementWithContent(stripIdPrefix(ctx.field.destinationName), idEntiteAttrs, result.label, false);
                 return true;
             }
         } catch (Exception ignored) {
             // Non-persistent object or lookup failure — fall through to default
         }
         return false;
+    }
+
+    /** Maximum back-references stored per target record (display cap). */
+    private static final int BACK_REF_CAP_PER_RECORD = 25;
+
+    /**
+     * Records a back-reference from the root entity currently being exported to
+     * the target entity identified by {@code targetObjectId}.
+     */
+    private void collectBackRef(ExportContext ctx, DOSchemaClass idEntiteClass, long targetObjectId) {
+        try {
+            // Resolve target entity class via idEntiteClass.pointsTo
+            String expectedType = idEntiteClass.pointsTo;
+            if (expectedType == null || expectedType.isEmpty())
+                return;
+            DOSchemaClass targetClass = SchemaUtil.findClassByName(expectedType, ctx.operation.referenceSchema);
+            if (targetClass == null || targetClass.destinationName == null)
+                return;
+
+            String targetDestName = targetClass.destinationName;
+            String targetId = String.valueOf(targetObjectId);
+
+            // Cap refs per target record to avoid bloating the index
+            List<BackRefEntry> existing = crossRefMap.computeIfAbsent(targetDestName, k -> new LinkedHashMap<>()).computeIfAbsent(targetId, k -> new ArrayList<>());
+            if (existing.size() >= BACK_REF_CAP_PER_RECORD)
+                return;
+
+            // Source is always the root entity currently being exported
+            long sourceId = currentRootObjectId >= 0 ? currentRootObjectId : ctx.objectChain.get(0).objectId;
+            String sourceDestName = currentSchemaClass.destinationName;
+            String sourceEntityLabel = (currentSchemaClass.title != null && !currentSchemaClass.title.isBlank()) ? currentSchemaClass.title : sourceDestName;
+
+            BackRefEntry entry = new BackRefEntry();
+            entry.sourceEntityDestName = sourceDestName;
+            entry.sourceEntityLabel = sourceEntityLabel;
+            entry.sourceId = String.valueOf(sourceId);
+            entry.sourceSummary = currentRootObjectSummary;
+            entry.sourceHref = null; // backfilled in close()
+            entry.fieldTitle = (ctx.field != null && ctx.field.title != null) ? ctx.field.title : null;
+
+            existing.add(entry);
+            pendingHrefEntries.add(entry);
+        } catch (Exception ignored) {
+            // Cross-ref collection is best-effort
+        }
     }
 
     /**
@@ -217,6 +341,21 @@ public class HtmlFormatHandler extends FormatHandler {
                 }
                 currentTempJsPath = null;
             }
+            // Backfill href for all back-ref entries collected during this
+            // entity
+            if (!pendingHrefEntries.isEmpty() && htmlBasePath != null && outputPath != null) {
+                try {
+                    String entityHref = htmlBasePath.relativize(outputPath.toAbsolutePath().normalize()).toString().replace('\\', '/');
+                    for (BackRefEntry e : pendingHrefEntries) {
+                        e.sourceHref = entityHref;
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+            pendingHrefEntries.clear();
+            // objectIdToHtmlPath is built record-by-record in onObject().
+            currentRootObjectId = -1;
+            currentRootObjectSummary = null;
             this.currentSchemaClass = null;
             this.currentConfigTitle = null;
             this.currentDefaultColumnsJson = null;
@@ -239,6 +378,101 @@ public class HtmlFormatHandler extends FormatHandler {
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }
+        // Patch cross-reference data inline into each entity's HTML file
+        if (!crossRefMap.isEmpty()) {
+            try {
+                patchCrossRefsIntoHtmlFiles();
+            } catch (Exception e) {
+                System.err.println("Warning: failed to patch cross-refs into HTML files: " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * For each entity that has back-references pointing to it, reads its
+     * already-written HTML file and replaces the cross-ref placeholder
+     * ({@code null} followed by the XREF comment token) with the per-entity
+     * cross-ref JSON inline — keeping every HTML file completely self-contained
+     * (no external {@code crossrefs.js} dependency).
+     */
+    private void patchCrossRefsIntoHtmlFiles() {
+        final String PLACEHOLDER = "null/*XREF*/";
+        // Group the cross-ref data by the exact HTML file that contains each
+        // target record.
+        Map<Path, Map<String, List<BackRefEntry>>> byFile = new LinkedHashMap<>();
+        for (Map.Entry<String, Map<String, List<BackRefEntry>>> targetEntry : crossRefMap.entrySet()) {
+            for (Map.Entry<String, List<BackRefEntry>> idEntry : targetEntry.getValue().entrySet()) {
+                long targetId;
+                try {
+                    targetId = Long.parseLong(idEntry.getKey());
+                } catch (NumberFormatException e) {
+                    continue;
+                }
+                Path htmlPath = objectIdToHtmlPath.get(targetId);
+                if (htmlPath == null)
+                    continue;
+                byFile.computeIfAbsent(htmlPath, k -> new LinkedHashMap<>()).computeIfAbsent(idEntry.getKey(), k -> new ArrayList<>()).addAll(idEntry.getValue());
+            }
+        }
+        for (Map.Entry<Path, Map<String, List<BackRefEntry>>> fileEntry : byFile.entrySet()) {
+            Path htmlPath = fileEntry.getKey();
+            if (!Files.exists(htmlPath))
+                continue;
+            try {
+                String html = Files.readString(htmlPath, StandardCharsets.UTF_8);
+                if (!html.contains(PLACEHOLDER))
+                    continue;
+                StringBuilder sb = new StringBuilder();
+                appendEntityRecordsJson(sb, fileEntry.getValue());
+                String replaced = html.replace(PLACEHOLDER, sb.toString() + "/*XREF*/");
+                Files.writeString(htmlPath, replaced, StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                System.err.println("Warning: failed to patch cross-refs into " + htmlPath + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Serialises the id→refs map for a single target entity. Produces:
+     * {@code {"id1":[{...}],"id2":[{...}]}}.
+     */
+    private void appendEntityRecordsJson(StringBuilder sb, Map<String, List<BackRefEntry>> idMap) {
+        sb.append('{');
+        boolean firstId = true;
+        for (Map.Entry<String, List<BackRefEntry>> idEntry : idMap.entrySet()) {
+            if (!firstId)
+                sb.append(',');
+            firstId = false;
+            sb.append('"').append(escapeJsonStr(idEntry.getKey())).append('"').append(':').append('[');
+            boolean firstRef = true;
+            for (BackRefEntry e : idEntry.getValue()) {
+                if (!firstRef)
+                    sb.append(',');
+                firstRef = false;
+                sb.append('{');
+                sb.append('"').append("entity").append('"').append(':').append('"').append(escapeJsonStr(e.sourceEntityDestName)).append('"');
+                sb.append(',').append('"').append("label").append('"').append(':').append('"').append(escapeJsonStr(e.sourceEntityLabel)).append('"');
+                sb.append(',').append('"').append("id").append('"').append(':').append('"').append(escapeJsonStr(e.sourceId)).append('"');
+                if (e.sourceSummary != null && !e.sourceSummary.isBlank()) {
+                    sb.append(',').append('"').append("summary").append('"').append(':').append('"').append(escapeJsonStr(e.sourceSummary)).append('"');
+                }
+                if (e.sourceHref != null && !e.sourceHref.isBlank()) {
+                    sb.append(',').append('"').append("href").append('"').append(':').append('"').append(escapeJsonStr(e.sourceHref)).append('"');
+                }
+                if (e.fieldTitle != null && !e.fieldTitle.isBlank()) {
+                    sb.append(',').append('"').append("fieldTitle").append('"').append(':').append('"').append(escapeJsonStr(e.fieldTitle)).append('"');
+                }
+                sb.append('}');
+            }
+            sb.append(']');
+        }
+        sb.append('}');
+    }
+
+    private static String escapeJsonStr(String s) {
+        if (s == null)
+            return "";
+        return s.replace("\\", "\\\\").replace("\"", "\\\"").replace("\n", "\\n").replace("\r", "");
     }
 
     // ── Private helpers

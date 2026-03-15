@@ -3324,7 +3324,7 @@
         <field source="mPropNombre" destinationName="propaneNombre" isExported="true" skipWhen="NULL,MINUS_ONE" type="int" title="Nombre d'équipements à propane" />
         <field source="mPropQuant" destinationName="propaneQuantite" isExported="true" skipWhen="DEFAULT" type="gest.gen.Qte" embedContents="true" title="Quantité de propane" />
     </class>
-    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="HistoImportDossPrev" summary="[nomFichier] ([dateImport])" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="Historique d'import de dossiers adresse" summary="[nomFichier] ([dateImport])" parentClass="gest.gen.EntiteContientID">
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="ID" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mDateImport" destinationName="dateImport" isExported="true" skipWhen="DEFAULT" type="date" title="Date de l'import" />

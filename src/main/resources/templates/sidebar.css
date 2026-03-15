@@ -2534,3 +2534,87 @@ body {
 .tab-panel.active {
     display: block;
 }
+
+/* ── Back-reference section ──────────────────────────────────────────────── */
+
+.back-ref-section {
+    margin: 12px 0 4px;
+    border-top: 2px solid var(--c-border);
+    padding-top: 4px;
+}
+
+.back-ref-section>.layout-tabs {
+    border: none;
+}
+
+.back-ref-header {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--c-text-muted);
+    padding: 8px 14px 4px;
+}
+
+.back-ref-entity-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 7px;
+    border-radius: 10px;
+    background: var(--c-border-light);
+    color: var(--c-text-secondary);
+    font-size: 11px;
+    font-weight: 500;
+    vertical-align: middle;
+}
+
+.back-ref-list {
+    padding: 0 8px;
+}
+
+.back-ref-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 5px 6px;
+    border-bottom: 1px solid var(--c-border-light);
+    font-size: 13px;
+}
+
+.back-ref-row:last-child {
+    border-bottom: none;
+}
+
+.back-ref-id {
+    flex: 0 0 auto;
+    min-width: 60px;
+    font-weight: 600;
+    color: var(--c-text-muted);
+    font-size: 12px;
+}
+
+.back-ref-summary {
+    flex: 1;
+    color: var(--c-text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.back-ref-no-summary {
+    color: var(--c-text-muted);
+}
+
+.back-ref-capped {
+    padding: 6px 10px;
+    font-size: 11px;
+    color: var(--c-text-muted);
+    font-style: italic;
+    border-top: 1px solid var(--c-border);
+}
+
+.tab-count {
+    font-size: 11px;
+    font-weight: 400;
+    opacity: 0.75;
+}

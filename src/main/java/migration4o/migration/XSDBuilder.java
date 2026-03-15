@@ -290,16 +290,13 @@ public class XSDBuilder {
                 xsdWriter.write("    </xs:sequence>\n");
                 xsdWriter.write("    <!-- no exported fields -->\n");
             } else {
-                xsdWriter.write("    <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
+                xsdWriter.write("    <xs:all>\n");
                 List<DOSchemaField> sortedFields = new ArrayList<>(fields.values());
                 sortedFields.sort((a, b) -> a.destinationName.compareTo(b.destinationName));
                 for (DOSchemaField field : sortedFields) {
                     writeFieldElement(xsdWriter, field, "      ");
                 }
-                // Allow DB4O artifact elements not in reference schema (e.g.
-                // <unknown>, source-named fields)
-                xsdWriter.write("      <xs:element name=\"unknown\" type=\"xs:anyType\" minOccurs=\"0\"/>\n");
-                xsdWriter.write("    </xs:choice>\n");
+                xsdWriter.write("    </xs:all>\n");
             }
             xsdWriter.write("  </xs:complexType>\n");
         }
@@ -328,15 +325,13 @@ public class XSDBuilder {
                     xsdWriter.write("        <xs:any minOccurs=\"0\" maxOccurs=\"unbounded\" processContents=\"skip\"/>\n");
                     xsdWriter.write("      </xs:sequence>\n");
                 } else {
-                    xsdWriter.write("      <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
+                    xsdWriter.write("      <xs:all>\n");
                     List<DOSchemaField> sortedFields = new ArrayList<>(fields.values());
                     sortedFields.sort((a, b) -> a.destinationName.compareTo(b.destinationName));
                     for (DOSchemaField field : sortedFields) {
                         writeFieldElement(xsdWriter, field, "        ");
                     }
-                    // Allow DB4O artifact elements not in the reference schema
-                    xsdWriter.write("        <xs:element name=\"unknown\" type=\"xs:anyType\" minOccurs=\"0\"/>\n");
-                    xsdWriter.write("      </xs:choice>\n");
+                    xsdWriter.write("      </xs:all>\n");
                 }
                 xsdWriter.write("    </xs:complexType>\n");
                 xsdWriter.write("  </xs:element>\n");
@@ -444,95 +439,63 @@ public class XSDBuilder {
                     }
                 } else {
                     // Non-embedded IDEntite collection OR non-IDEntite complex:
-                    // DB4O may store a subclass with a different element name
-                    // than the declared type.
-                    // Use xs:any inside the wrapper so any subclass element is
-                    // accepted.
+                    // reference the declared type directly.
                     String refClassName = childClass.destinationName;
                     referencedTypes.add(refClassName);
-                    itemType = null; // null signals: use xs:any for inner
-                                     // content
+                    itemType = refClassName;
                     itemElemName = refClassName;
                 }
             }
             xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\">\n");
             xsdWriter.write(indent + "  <xs:complexType>\n");
-            if (itemType == null) {
-                // Polymorphic complex collection: accept any element name
-                // (subclass instances)
-                xsdWriter.write(indent + "    <xs:sequence>\n");
-                xsdWriter.write(indent + "      <xs:any minOccurs=\"0\" maxOccurs=\"unbounded\" processContents=\"skip\"/>\n");
-                xsdWriter.write(indent + "    </xs:sequence>\n");
-            } else {
-                xsdWriter.write(indent + "    <xs:sequence>\n");
-                xsdWriter.write(indent + "      <xs:element name=\"" + itemElemName + "\" type=\"" + itemType + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
-                xsdWriter.write(indent + "    </xs:sequence>\n");
-            }
+            xsdWriter.write(indent + "    <xs:sequence>\n");
+            xsdWriter.write(indent + "      <xs:element name=\"" + itemElemName + "\" type=\"" + itemType + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
+            xsdWriter.write(indent + "    </xs:sequence>\n");
             xsdWriter.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
             xsdWriter.write(indent + "  </xs:complexType>\n");
             xsdWriter.write(indent + "</xs:element>\n");
         } else if (isPrimitiveType(fieldType) && !field.embedContents) {
             // Primitive field (only when NOT embedded): if it has a valueMap,
             // the exported
-            // value is the mapped string label, so use xs:string regardless of
-            // the underlying
-            // type. Never use enum restrictions since data may contain unmapped
-            // raw values.
             // Note: embedContents=true on a "primitive" type (e.g.
             // java.util.UUID) means
             // the export serialises it as a nested complex object, not a simple
             // string value.
-            String xsdType = (field.valueMap != null && !field.valueMap.isEmpty()) ? "xs:string" : getXSDType(fieldType);
-            xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            if (field.valueMap != null && !field.valueMap.isEmpty()) {
+                // Restrict to the enumerated mapped output values.
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+                xsdWriter.write(indent + "  <xs:simpleType>\n");
+                xsdWriter.write(indent + "    <xs:restriction base=\"xs:string\">\n");
+                for (String mappedValue : field.valueMap.values()) {
+                    xsdWriter.write(indent + "      <xs:enumeration value=\"" + escapeXml(mappedValue) + "\"/>\n");
+                }
+                xsdWriter.write(indent + "    </xs:restriction>\n");
+                xsdWriter.write(indent + "  </xs:simpleType>\n");
+                xsdWriter.write(indent + "</xs:element>\n");
+            } else {
+                String xsdType = getXSDType(fieldType);
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            }
         } else {
             // Check if this is an IDEntite reference (detected by pointsTo
             // being set)
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && !field.embedContents && fieldClass.pointsTo != null) {
-                // Non-embedded IDEntite reference: exported as a xs:long
-                // numeric ID value.
-                // embedContents=false + pointsTo set means this is an ID-only
-                // foreign key.
+                // Non-embedded IDEntite reference: exported as a xs:long mID value.
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else if (fieldClass != null && field.embedContents && fieldClass.pointsTo != null) {
-                // Embedded IDEntite reference: at runtime DB4O may store either
-                // the IDEntite
-                // class itself OR the pointed-to entity (polymorphism). Use
-                // xs:any so both
-                // are accepted.
-                // e.g. idMaintenance (IDMaintenance→Maintenance,
-                // embedContents=true) may write
-                // <Maintenance>...entity fields...</Maintenance>
-                // but nouvelEtatParDefaut (IDEtatEquipement,
-                // embedContents=true) writes
-                // <IDEtatEquipement>...</IDEtatEquipement>
-                String innerClassName = fieldClass.destinationName;
-                referencedTypes.add(innerClassName); // keep type reachable in
-                                                     // XSD
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
-                xsdWriter.write(indent + "  <xs:complexType>\n");
-                xsdWriter.write(indent + "    <xs:sequence>\n");
-                xsdWriter.write(indent + "      <xs:any minOccurs=\"0\" processContents=\"skip\"/>\n");
-                xsdWriter.write(indent + "    </xs:sequence>\n");
-                xsdWriter.write(indent + "  </xs:complexType>\n");
-                xsdWriter.write(indent + "</xs:element>\n");
+                // Embedded IDEntite reference: typed by the pointed-to entity class,
+                // same principle as any other complex field reference.
+                DOSchemaClass pointsToClass = referenceSchema.findClassByName(fieldClass.pointsTo);
+                String targetClassName = pointsToClass != null ? pointsToClass.destinationName : fieldClass.destinationName;
+                referencedTypes.add(targetClassName);
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + targetClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else if (fieldClass != null) {
-                // Embedded complex object. DB4O may store a subclass instance
-                // with a different element name
-                // than the declared field type — use xs:any to accept any inner
-                // element.
-                // Keep the type referenced so it gets a proper definition in
-                // the XSD.
+                // Any other complex field: reference the declared type directly.
                 String refClassName = fieldClass.destinationName;
                 referencedTypes.add(refClassName);
-                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
-                xsdWriter.write(indent + "  <xs:complexType>\n");
-                xsdWriter.write(indent + "    <xs:sequence>\n");
-                xsdWriter.write(indent + "      <xs:any minOccurs=\"0\" processContents=\"skip\"/>\n");
-                xsdWriter.write(indent + "    </xs:sequence>\n");
-                xsdWriter.write(indent + "  </xs:complexType>\n");
-                xsdWriter.write(indent + "</xs:element>\n");
+                xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 // Field type is not in the schema - check if it's a known
                 // primitive/Java type
