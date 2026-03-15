@@ -493,15 +493,16 @@ public class XSDBuilder {
                 String targetClassName = pointsToClass != null ? pointsToClass.destinationName : fieldClass.destinationName;
                 referencedTypes.add(targetClassName);
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + targetClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
-            } else if (fieldClass != null) {
+            } else if (fieldClass != null && fieldClass.migrate) {
                 // Any other complex field: reference the declared type
                 // directly.
                 String refClassName = fieldClass.destinationName;
                 referencedTypes.add(refClassName);
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
-                // Field type is not in the schema - check if it's a known
-                // primitive/Java type
+                // Field type is not in the schema, or is in the schema but
+                // marked as non-exported (migrate=false, e.g. java.lang.Class)
+                // — check if it's a known primitive/Java type
                 if (isPrimitiveType(fieldType)) {
                     String xsdType = getXSDType(fieldType);
                     xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
