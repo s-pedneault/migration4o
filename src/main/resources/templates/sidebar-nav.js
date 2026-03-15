@@ -1922,6 +1922,31 @@
      */
     function renderInlineIdEntiteSection(key, value) {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+
+        // HTML-resolved IDEntite reference: HtmlFormatHandler writes these as
+        // {"@attributes":{"_id":"123"},"#text":"label"} so the viewer can both
+        // display a human-readable name AND build a deep-link to the target record.
+        // We detect this by the presence of @attributes._id + #text — not by key count,
+        // so additional future attributes don't silently break the link.
+        if (value['#text'] !== undefined && value['@attributes'] && value['@attributes']['_id'] !== undefined) {
+            var _refId = String(value['@attributes']['_id'] ?? '').trim();
+            var _refText = String(value['#text'] ?? '').trim();
+            if (!_refText || _refText === '0' || _refText === '-1') return '';
+            var _refPtDestName = pointsToByPath[normalizeSchemaPath(key)];
+            var _refPtHref = _refPtDestName ? navHrefByDestName[_refPtDestName] : null;
+            var _refLink = (_refPtHref && _refId && _refId !== '0' && _refId !== '-1')
+                ? _refPtHref + '?open=' + encodeURIComponent(_refId)
+                : null;
+            var _refLabel = displayFieldLabel(key);
+            var _refValueHtml = _refLink
+                ? '<a class="ref-id-link" href="' + esc(_refLink) + '">' + esc(_refText) + '</a>'
+                : esc(_refText);
+            return '<div class="field-group"><div class="field-row">'
+                + '<div class="field-label">' + esc(_refLabel) + '</div>'
+                + '<div class="field-value">' + _refValueHtml + '</div>'
+                + '</div></div>';
+        }
+
         const entries = getObjectEntries(value);
         const primitiveEntries = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive'));
         const collectionEntries = entries.filter((e) => e.type === 'collection');
@@ -1941,7 +1966,7 @@
         var _ptHref = _ptDestName ? navHrefByDestName[_ptDestName] : null;
         var _idEntry = primitiveEntries.find(function (e) {
             var lo = String(e.key || '').toLowerCase().split('.').pop() || '';
-            return lo === 'mid' || lo === 'id';
+            return lo === 'mid' || lo === 'id' || lo === '_id';
         });
         var _idVal = _idEntry ? String(_idEntry.value ?? '').trim() : null;
         if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
@@ -1953,7 +1978,7 @@
             var destName = String(entry.key || '').split('.').pop() || '';
             var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
             var lo = String(entry.key || '').toLowerCase().split('.').pop() || '';
-            var isIdField = (lo === 'mid' || lo === 'id') && _targetLink;
+            var isIdField = (lo === 'mid' || lo === 'id' || lo === '_id') && _targetLink;
             var valueHtml = isIdField
                 ? '<a class="ref-id-link" href="' + esc(_targetLink) + '">' + esc(String(entry.value ?? '')) + '</a>'
                 : fmtValue(entry.value, entry.key);

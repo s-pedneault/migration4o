@@ -265,13 +265,20 @@ public class SummaryGenerator {
         public final String label;
         /**
          * DB4O native object ID of the resolved target entity; used to build
-         * cross-reference indices.
+         * cross-reference indices and deep-links.
          */
         public final Long targetObjectId;
+        /**
+         * Application-level mID extracted from the IDEntite object. Used as
+         * fallback display text when no human-readable label is available, so
+         * the viewer never exports the raw mID as a plain unlinked primitive.
+         */
+        public final Long mId;
 
-        public IDEntiteResult(String label, Long targetObjectId) {
+        public IDEntiteResult(String label, Long targetObjectId, Long mId) {
             this.label = label;
             this.targetObjectId = targetObjectId;
+            this.mId = mId;
         }
     }
 
@@ -285,7 +292,7 @@ public class SummaryGenerator {
      */
     public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
         if (container == null || idEntiteObj == null || idEntiteClass == null) {
-            return new IDEntiteResult(null, null);
+            return new IDEntiteResult(null, null, null);
         }
         try {
             String expectedType = idEntiteClass.pointsTo;
@@ -297,7 +304,7 @@ public class SummaryGenerator {
             ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteObjId);
             Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
             if (mID == null) {
-                return new IDEntiteResult(null, null);
+                return new IDEntiteResult(null, null, null);
             }
             String cacheKey = mID + ":" + (expectedType != null ? expectedType : "");
 
@@ -311,16 +318,16 @@ public class SummaryGenerator {
                 }
             }
             if (targetObjectId == null) {
-                return new IDEntiteResult(null, null);
+                return new IDEntiteResult(null, null, mID);
             }
 
             if (summaryCache != null && summaryCache.containsKey(targetObjectId)) {
-                return new IDEntiteResult(summaryCache.get(targetObjectId), targetObjectId);
+                return new IDEntiteResult(summaryCache.get(targetObjectId), targetObjectId, mID);
             }
 
             Object targetObj = container.ext().getByID(targetObjectId);
             if (targetObj == null) {
-                return new IDEntiteResult(null, targetObjectId);
+                return new IDEntiteResult(null, targetObjectId, mID);
             }
             ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
 
@@ -336,9 +343,9 @@ public class SummaryGenerator {
             if (summaryCache != null) {
                 summaryCache.put(targetObjectId, label);
             }
-            return new IDEntiteResult(label, targetObjectId);
+            return new IDEntiteResult(label, targetObjectId, mID);
         } catch (Exception e) {
-            return new IDEntiteResult(null, null);
+            return new IDEntiteResult(null, null, null);
         }
     }
 

@@ -146,7 +146,7 @@ public class HtmlFormatHandler extends FormatHandler {
             // Build nav tree rooted at the html/ sub-folder so that hrefs are
             // correct relative to the index.html and viewer files placed there.
             Path htmlBase = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
-            htmlBasePath = htmlBase;
+            htmlBasePath = htmlBase.toAbsolutePath().normalize();
             new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, htmlBase);
             cachedNavJson = ctx.operation.cachedNavJson;
         }
@@ -252,10 +252,24 @@ public class HtmlFormatHandler extends FormatHandler {
             if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.operation.databaseSchema)) {
                 collectBackRef(ctx, fieldClass, result.targetObjectId);
             }
-            if (result.label != null && !result.label.isBlank()) {
-                Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
-                writer.elementWithContent(stripIdPrefix(ctx.field.destinationName), idEntiteAttrs, result.label, false);
-                return true;
+            if (result.targetObjectId != null) {
+                // Always intercept when we know the DB4O target ID, even if
+                // no human-readable label is available. Using the mId as
+                // fallback display text means the viewer writes
+                // {"@attributes":{"_id":"<db4oId>"},"#text":"<mId>"} and the
+                // cross-page link uses the correct DB4O native ID — never the
+                // raw application-level mId that would silently fail
+                // navigation.
+                String displayText = (result.label != null && !result.label.isBlank()) ? result.label : (result.mId != null ? String.valueOf(result.mId) : null);
+                if (displayText != null) {
+                    Map<String, String> idEntiteAttrs = java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId));
+                    // Use destinationName as-is (no prefix stripping) so the
+                    // data key matches
+                    // the SCHEMA_FIELDS path used by pointsToByPath in the JS
+                    // viewer.
+                    writer.elementWithContent(ctx.field.destinationName, idEntiteAttrs, displayText, false);
+                    return true;
+                }
             }
         } catch (Exception ignored) {
             // Non-persistent object or lookup failure — fall through to default
@@ -288,15 +302,24 @@ public class HtmlFormatHandler extends FormatHandler {
             if (existing.size() >= BACK_REF_CAP_PER_RECORD)
                 return;
 
-            // Source is always the root entity currently being exported
+            // Deduplicate: same source record can reference the same target
+            // through multiple fields — only keep the first occurrence per
+            // source id
             long sourceId = currentRootObjectId >= 0 ? currentRootObjectId : ctx.objectChain.get(0).objectId;
+            String sourceIdStr = String.valueOf(sourceId);
+            for (BackRefEntry prev : existing) {
+                if (sourceIdStr.equals(prev.sourceId))
+                    return;
+            }
+
+            // Source is always the root entity currently being exported
             String sourceDestName = currentSchemaClass.destinationName;
             String sourceEntityLabel = (currentSchemaClass.title != null && !currentSchemaClass.title.isBlank()) ? currentSchemaClass.title : sourceDestName;
 
             BackRefEntry entry = new BackRefEntry();
             entry.sourceEntityDestName = sourceDestName;
             entry.sourceEntityLabel = sourceEntityLabel;
-            entry.sourceId = String.valueOf(sourceId);
+            entry.sourceId = sourceIdStr;
             entry.sourceSummary = currentRootObjectSummary;
             entry.sourceHref = null; // backfilled in close()
             entry.fieldTitle = (ctx.field != null && ctx.field.title != null) ? ctx.field.title : null;
