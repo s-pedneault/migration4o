@@ -482,17 +482,20 @@ public class XSDBuilder {
             DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
             DOSchemaClass fieldClass = referenceSchema.findClassByName(fieldType);
             if (fieldClass != null && !field.embedContents && fieldClass.pointsTo != null) {
-                // Non-embedded IDEntite reference: exported as a xs:long mID value.
+                // Non-embedded IDEntite reference: exported as a xs:long mID
+                // value.
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else if (fieldClass != null && field.embedContents && fieldClass.pointsTo != null) {
-                // Embedded IDEntite reference: typed by the pointed-to entity class,
+                // Embedded IDEntite reference: typed by the pointed-to entity
+                // class,
                 // same principle as any other complex field reference.
                 DOSchemaClass pointsToClass = referenceSchema.findClassByName(fieldClass.pointsTo);
                 String targetClassName = pointsToClass != null ? pointsToClass.destinationName : fieldClass.destinationName;
                 referencedTypes.add(targetClassName);
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + targetClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else if (fieldClass != null) {
-                // Any other complex field: reference the declared type directly.
+                // Any other complex field: reference the declared type
+                // directly.
                 String refClassName = fieldClass.destinationName;
                 referencedTypes.add(refClassName);
                 xsdWriter.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + refClassName + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");

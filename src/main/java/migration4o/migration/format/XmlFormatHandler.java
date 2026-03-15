@@ -129,8 +129,9 @@ public class XmlFormatHandler extends FormatHandler {
     @Override
     public void done(ExportContext ctx) throws Exception {
         // Extra.xml is only generated in unrestricted ("all") mode — i.e. when
-        // no per-class object limit is set.  In limited/preview exports the
-        // reachability data is incomplete so the Extra file would be misleading.
+        // no per-class object limit is set. In limited/preview exports the
+        // reachability data is incomplete so the Extra file would be
+        // misleading.
         if (ctx.operation.maxObjectsPerClass == null) {
             exportUnreachedObjects(ctx);
         }

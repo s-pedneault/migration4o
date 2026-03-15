@@ -283,9 +283,7 @@ public class SummaryGenerator {
      * @return an {@link IDEntiteResult} with the resolved label (possibly null)
      * and the target's DB4O object ID (possibly null if unresolvable)
      */
-    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj,
-            DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema,
-            Map<String, Long> targetCache, Map<Long, String> summaryCache) {
+    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
         if (container == null || idEntiteObj == null || idEntiteClass == null) {
             return new IDEntiteResult(null, null);
         }
