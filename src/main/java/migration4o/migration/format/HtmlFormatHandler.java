@@ -27,8 +27,9 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
  * <p>
  * No intermediate {@code .js} file is written to disk. The JS serialisation
  * layer ({@link StructuredWriterJS}) writes into an in-memory
- * {@link StringWriter}; {@link #close(ExportContext)} wraps the accumulated
- * script in the full HTML template and writes the single {@code .html} file.
+ * {@link StringWriter}; {@link #close(ExportCurrentState)} wraps the
+ * accumulated script in the full HTML template and writes the single
+ * {@code .html} file.
  * <p>
  * Own state: {@code cachedNavJson}, {@code idEntiteTargetCache},
  * {@code idEntiteSummaryCache}. Overrides four hooks: {@code init},
@@ -117,8 +118,8 @@ public class HtmlFormatHandler extends FormatHandler {
     /**
      * Creates a disk-backed writer that streams JS data to a temp file
      * ({@code baseName.js.tmp}) so large exports never accumulate in memory.
-     * {@link #close(ExportContext)} assembles the final HTML by streaming the
-     * temp file into the template, then deletes it.
+     * {@link #close(ExportCurrentState)} assembles the final HTML by streaming
+     * the temp file into the template, then deletes it.
      */
     @Override
     protected StructuredWriter createWriter(Path filePath) throws IOException {
@@ -139,16 +140,16 @@ public class HtmlFormatHandler extends FormatHandler {
      * output root.
      */
     @Override
-    public void init(ExportContext ctx) throws Exception {
-        if (ctx.operation.exportModules != null && !ctx.operation.exportModules.isEmpty()) {
+    public void init(ExportCurrentState ctx) throws Exception {
+        if (ctx.exportModules != null && !ctx.exportModules.isEmpty()) {
             // Enable welcome-page generation in NavTreeBuilder
-            ctx.operation.generateHtmlViewer = true;
+            ctx.generateHtmlViewer = true;
             // Build nav tree rooted at the html/ sub-folder so that hrefs are
             // correct relative to the index.html and viewer files placed there.
-            Path htmlBase = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
+            Path htmlBase = ctx.request.getBaseOutputPath(ctx.request.baseOutputPath).resolve(folderName());
             htmlBasePath = htmlBase.toAbsolutePath().normalize();
-            new NavTreeBuilder(ctx.operation).build(ctx.operation.exportModules, ctx.operation.exportModulePaths, htmlBase);
-            cachedNavJson = ctx.operation.cachedNavJson;
+            new NavTreeBuilder(ctx).build(ctx.exportModules, htmlBase);
+            cachedNavJson = ctx.cachedNavJson;
         }
     }
 
@@ -157,7 +158,7 @@ public class HtmlFormatHandler extends FormatHandler {
      * exportObject nulls ctx.
      */
     @Override
-    public void open(ExportContext ctx) throws Exception {
+    public void open(ExportCurrentState ctx) throws Exception {
         this.currentSchemaClass = ctx.schemaClass;
         this.currentConfigTitle = (ctx.exportConfig != null) ? ctx.exportConfig.getTitle() : null;
         this.currentDefaultColumnsJson = (ctx.exportConfig != null && ctx.exportConfig.hasDefaultColumns()) ? ctx.exportConfig.getDefaultColumnsJson() : "null";
@@ -171,22 +172,22 @@ public class HtmlFormatHandler extends FormatHandler {
      * open-structure behaviour for all other classes.
      */
     @Override
-    public boolean onObject(ExportContext ctx) throws Exception {
+    public boolean onObject(ExportCurrentState ctx) throws Exception {
         if (ctx.schemaClass == null)
             return false;
 
         // IDEntite: attempt to resolve to a human-readable label
-        if (ctx.schemaClass.isIDEntite(ctx.operation.databaseSchema)) {
+        if (ctx.schemaClass.isIDEntite(ctx.request.databaseSchema)) {
             Object obj = ctx.currentObject().obj;
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.operation.container, obj, ctx.schemaClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-ref for embedded IDEntite objects
             // (embedContents=true path)
-            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.operation.databaseSchema)) {
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.request.databaseSchema)) {
                 collectBackRef(ctx, ctx.schemaClass, result.targetObjectId);
             }
             if (result.label != null && !result.label.isBlank()) {
                 Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
-                writer.elementWithContent(stripIdPrefix(ctx.schemaClass.destinationName), idEntiteAttrs, result.label, false);
+                writer.elementWithContent(SchemaUtil.stripIdPrefix(ctx.schemaClass.destinationName), idEntiteAttrs, result.label, false);
                 return true; // fully written — skip field loop
             }
             // No label resolved — fall through to default structure export
@@ -197,15 +198,15 @@ public class HtmlFormatHandler extends FormatHandler {
         // it drives CROSS_REFS lookups and the ?open= URL parameter regardless
         // of whether the user enabled exportNativeIds for XML output.
         Map<String, String> attrs = null;
-        if (ctx.isRootObject() || ctx.operation.exportNativeIds || hasSummary(ctx.schemaClass)) {
+        if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummary(ctx.schemaClass)) {
             attrs = new java.util.LinkedHashMap<>();
             // Always emit id on root objects for the viewer; also emit on all
             // objects when exportNativeIds is explicitly requested.
-            if (ctx.isRootObject() || ctx.operation.exportNativeIds) {
+            if (ctx.isRootObject() || ctx.request.exportNativeIds) {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
-                String summary = SummaryGenerator.generate(ctx.operation.container, ctx.currentObject().obj, ctx.schemaClass, ctx.operation.referenceSchema);
+                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
                     if (ctx.isRootObject()) {
@@ -236,20 +237,20 @@ public class HtmlFormatHandler extends FormatHandler {
      * label and writes it as flat content, skipping the default pipeline.
      */
     @Override
-    public boolean onField(ExportContext ctx) throws Exception {
+    public boolean onField(ExportCurrentState ctx) throws Exception {
         if (ctx.field == null || ctx.field.embedContents || ctx.fieldValue == null)
             return false;
 
         try {
             String className = ClassUtil.getClassName(ctx.fieldValue);
-            DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, ctx.operation.referenceSchema);
-            if (fieldClass == null || !fieldClass.isIDEntite(ctx.operation.databaseSchema))
+            DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, ctx.request.referenceSchema);
+            if (fieldClass == null || !fieldClass.isIDEntite(ctx.request.databaseSchema))
                 return false;
 
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.operation.container, ctx.fieldValue, fieldClass, ctx.operation.referenceSchema, ctx.operation.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-reference whenever target is resolved (even if label
             // is absent)
-            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.operation.databaseSchema)) {
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.request.databaseSchema)) {
                 collectBackRef(ctx, fieldClass, result.targetObjectId);
             }
             if (result.targetObjectId != null) {
@@ -284,13 +285,13 @@ public class HtmlFormatHandler extends FormatHandler {
      * Records a back-reference from the root entity currently being exported to
      * the target entity identified by {@code targetObjectId}.
      */
-    private void collectBackRef(ExportContext ctx, DOSchemaClass idEntiteClass, long targetObjectId) {
+    private void collectBackRef(ExportCurrentState ctx, DOSchemaClass idEntiteClass, long targetObjectId) {
         try {
             // Resolve target entity class via idEntiteClass.pointsTo
             String expectedType = idEntiteClass.pointsTo;
             if (expectedType == null || expectedType.isEmpty())
                 return;
-            DOSchemaClass targetClass = SchemaUtil.findClassByName(expectedType, ctx.operation.referenceSchema);
+            DOSchemaClass targetClass = SchemaUtil.findClassByName(expectedType, ctx.request.referenceSchema);
             if (targetClass == null || targetClass.destinationName == null)
                 return;
 
@@ -337,7 +338,7 @@ public class HtmlFormatHandler extends FormatHandler {
      * file when done.
      */
     @Override
-    public void close(ExportContext ctx) throws Exception {
+    public void close(ExportCurrentState ctx) throws Exception {
         // Close the JS structures so onDocumentComplete writes the final ";\n"
         writer.closeStructure("objects");
         writer.closeStructure("export");
@@ -390,14 +391,14 @@ public class HtmlFormatHandler extends FormatHandler {
      * the welcome page so it can report the definitive exported-object count.
      */
     @Override
-    public void done(ExportContext ctx) throws Exception {
-        if (!ctx.operation.generateHtmlViewer)
+    public void done(ExportCurrentState ctx) throws Exception {
+        if (!ctx.generateHtmlViewer)
             return;
         try {
-            java.nio.file.Path base = ctx.operation.getBaseOutputPath(ctx.operation.baseOutputPath).resolve(folderName());
-            String dbName = ctx.operation.getDatabaseFolderName();
+            java.nio.file.Path base = ctx.request.getBaseOutputPath(ctx.request.baseOutputPath).resolve(folderName());
+            String dbName = ctx.request.getDatabaseFolderName();
             int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
-            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.operation.htmlWelcomeModuleCount, ctx.operation.htmlWelcomeClassCount, objectCount);
+            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount);
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }
@@ -503,14 +504,5 @@ public class HtmlFormatHandler extends FormatHandler {
 
     private static boolean hasSummary(DOSchemaClass sc) {
         return sc != null && sc.summary != null && !sc.summary.isEmpty();
-    }
-
-    private static String stripIdPrefix(String name) {
-        if (name == null || name.isEmpty())
-            return name;
-        String stripped = name.replaceFirst("(?i)^id\\s*", "");
-        if (stripped.isEmpty() || stripped.equals(name))
-            return name;
-        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 }

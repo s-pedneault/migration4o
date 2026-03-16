@@ -21,54 +21,59 @@ import migration4o.util.tools.structuredwriter.StructuredWriter;
  * The engine calls all eight hooks unconditionally; handlers override only what
  * they need. Two hooks ({@code observeObject}, {@code observeField}) serve as
  * schema-observation callbacks (XSD registration) — all other handlers leave
- * them as no-ops. {@code onReferencedClasses} has a default implementation
- * that replaces the old {@code ReferencedClassesExporter}.
+ * them as no-ops. {@code onReferencedClasses} has a default implementation that
+ * replaces the old {@code ReferencedClassesExporter}.
  */
 public abstract class FormatHandler {
 
-    // ── Public fields ─────────────────────────────────────────────────────────
+    // ── Public fields
+    // ─────────────────────────────────────────────────────────
 
     /** The format this handler implements. */
     public final ExportFormat format;
 
-    /** Current output writer. Set by the engine before each {@code open} call. */
+    /**
+     * Current output writer. Set by the engine before each {@code open} call.
+     */
     public StructuredWriter writer;
 
     /**
      * Per-format set of exported object IDs — prevents writing the same object
      * twice within one format's output. Shared statistics and reference
-     * tracking live on {@link ExportContext} instead.
+     * tracking live on {@link ExportCurrentState} instead.
      */
     public final Set<Long> exportedIds = new HashSet<>();
 
-    // ── Constructor ───────────────────────────────────────────────────────────
+    // ── Constructor
+    // ───────────────────────────────────────────────────────────
 
     protected FormatHandler(ExportFormat format) {
         this.format = format;
     }
 
-    // ── Abstract methods ──────────────────────────────────────────────────────
+    // ── Abstract methods
+    // ──────────────────────────────────────────────────────
 
     /**
-     * Returns the output file extension including the leading dot,
-     * e.g. {@code ".xml"}, {@code ".html"}, {@code ".json"}, {@code ".xlsx"}.
+     * Returns the output file extension including the leading dot, e.g.
+     * {@code ".xml"}, {@code ".html"}, {@code ".json"}, {@code ".xlsx"}.
      */
     public abstract String extension();
 
     /**
-     * Returns the human-readable display name for UI labels,
-     * e.g. {@code "XML"}, {@code "HTML"}, {@code "JSON"}, {@code "Excel"}.
+     * Returns the human-readable display name for UI labels, e.g.
+     * {@code "XML"}, {@code "HTML"}, {@code "JSON"}, {@code "Excel"}.
      */
     public abstract String displayName();
 
     /**
-     * Creates a new {@link StructuredWriter} for the given output file.
-     * Each implementation instantiates its own {@code StructuredWriterAPI}
-     * directly (no {@code StructuredWriterProvider}).
+     * Creates a new {@link StructuredWriter} for the given output file. Each
+     * implementation instantiates its own {@code StructuredWriterAPI} directly
+     * (no {@code StructuredWriterProvider}).
      * <p>
-     * Implementations should pass {@code filePath} as the third argument to
-     * the {@code StructuredWriter} constructor so that {@code writer.outputPath}
-     * is always set — even when the underlying {@code Writer} is in-memory.
+     * Implementations should pass {@code filePath} as the third argument to the
+     * {@code StructuredWriter} constructor so that {@code writer.outputPath} is
+     * always set — even when the underlying {@code Writer} is in-memory.
      */
     protected abstract StructuredWriter createWriter(Path filePath) throws IOException;
 
@@ -85,7 +90,7 @@ public abstract class FormatHandler {
      * Returns the root output directory for this format:
      * {@code ctx.basePath / folderName()}.
      */
-    public Path formatBasePath(ExportContext ctx) {
+    public Path formatBasePath(ExportCurrentState ctx) {
         return ctx.basePath.resolve(folderName());
     }
 
@@ -97,24 +102,26 @@ public abstract class FormatHandler {
         this.writer = createWriter(filePath);
     }
 
-    // ── Eight hooks ───────────────────────────────────────────────────────────
+    // ── Eight hooks
+    // ───────────────────────────────────────────────────────────
 
     /**
      * Called once before any module is processed. Default: no-op.
      */
-    public void init(ExportContext ctx) throws Exception {
+    public void init(ExportCurrentState ctx) throws Exception {
     }
 
     /**
      * Called at the start of each class data file, after {@code writer} has
      * been set by the engine. Default opens the standard two-level structure:
+     * 
      * <pre>
      *   writer.openStructure("export")
      *   writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()))
      *   writer.openStructure("objects")
      * </pre>
      */
-    public void open(ExportContext ctx) throws Exception {
+    public void open(ExportCurrentState ctx) throws Exception {
         writer.openStructure("export");
         if (ctx.schemaClass != null) {
             writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
@@ -124,10 +131,10 @@ public abstract class FormatHandler {
 
     /**
      * Called once per object <em>before</em> {@code onObject}. Not for content
-     * writing — for schema observation only (e.g. XSD registration).
-     * Default: no-op.
+     * writing — for schema observation only (e.g. XSD registration). Default:
+     * no-op.
      */
-    public void observeObject(ExportContext ctx) throws Exception {
+    public void observeObject(ExportCurrentState ctx) throws Exception {
     }
 
     /**
@@ -136,20 +143,22 @@ public abstract class FormatHandler {
      * skipped); {@code false} to proceed with the default field pipeline.
      * <p>
      * Default opens the object element:
+     * 
      * <pre>
-     *   Map&lt;String,String&gt; attrs = exportNativeIds ? Map.of("id", objectId) : null;
-     *   writer.openStructure(ctx.schemaClass.destinationName, attrs);
-     *   return false;
+     * Map&lt;String, String&gt; attrs = exportNativeIds ? Map.of("id", objectId) : null;
+     * writer.openStructure(ctx.schemaClass.destinationName, attrs);
+     * return false;
      * </pre>
+     * 
      * When {@code false} is returned the engine calls
      * {@code writer.closeStructure(ctx.schemaClass.destinationName)} after the
      * field loop.
      */
-    public boolean onObject(ExportContext ctx) throws Exception {
+    public boolean onObject(ExportCurrentState ctx) throws Exception {
         if (ctx.schemaClass == null)
             return true; // no schema match — skip object safely
         Map<String, String> attrs = null;
-        if (ctx.operation.exportNativeIds) {
+        if (ctx.request.exportNativeIds) {
             attrs = Map.of("id", String.valueOf(ctx.currentObject().objectId));
         }
         writer.openStructure(ctx.schemaClass.destinationName, attrs);
@@ -161,7 +170,16 @@ public abstract class FormatHandler {
      * content writing — for schema observation only (e.g. XSD registration).
      * Default: no-op.
      */
-    public void observeField(ExportContext ctx) throws Exception {
+    public void observeField(ExportCurrentState ctx) throws Exception {
+    }
+
+    /**
+     * Registers a referenced class and all its fields for schema observation
+     * (e.g. XSD registration of ID-reference wrapper classes). Called when the
+     * export encounters a class that is not the current top-level export class
+     * but needs to appear in the output schema. Default: no-op.
+     */
+    public void observeReferencedClass(DOSchemaClass refClass) {
     }
 
     /**
@@ -170,20 +188,21 @@ public abstract class FormatHandler {
      * pipeline is skipped); {@code false} to let the pipeline handle it.
      * Default: {@code return false}.
      */
-    public boolean onField(ExportContext ctx) throws Exception {
+    public boolean onField(ExportCurrentState ctx) throws Exception {
         return false;
     }
 
     /**
      * Called after the data file is fully written. Default closes the two
      * structures opened by {@code open} and flushes the writer:
+     * 
      * <pre>
      *   writer.closeStructure("objects")
      *   writer.closeStructure("export")
      *   writer.writer.flush()
      * </pre>
      */
-    public void close(ExportContext ctx) throws Exception {
+    public void close(ExportCurrentState ctx) throws Exception {
         writer.closeStructure("objects");
         writer.closeStructure("export");
         writer.writer.flush();
@@ -195,11 +214,11 @@ public abstract class FormatHandler {
      * Default implementation replaces {@code ReferencedClassesExporter}: it
      * exports every class in {@code ctx.referencedClassTracker} that has not
      * already been exported, writing files under {@code Referenced/}. Reference
-     * tracking is disabled during this pass to prevent infinite recursion.
-     * The recursive use of {@code open}/{@code close} ensures format-specific
+     * tracking is disabled during this pass to prevent infinite recursion. The
+     * recursive use of {@code open}/{@code close} ensures format-specific
      * post-processing (HTML viewer, XSD registration) applies automatically.
      */
-    public void onReferencedClasses(ExportContext ctx) throws Exception {
+    public void onReferencedClasses(ExportCurrentState ctx) throws Exception {
         if (ctx.referencedClassTracker == null)
             return;
         Set<String> toExport = ctx.referencedClassTracker.getReferencedClasses();
@@ -216,8 +235,8 @@ public abstract class FormatHandler {
                 if (saved.isReferencedClassExported(className))
                     continue;
 
-                DOSchemaClass schemaClass = ctx.operation.referenceSchema.findClassByName(className);
-                DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(className);
+                DOSchemaClass schemaClass = ctx.request.referenceSchema.findClassByName(className);
+                DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(className);
                 if (schemaClass == null || dbSchemaClass == null)
                     continue;
 
@@ -239,16 +258,18 @@ public abstract class FormatHandler {
      * Called after {@code onReferencedClasses}, once per handler, for final
      * tasks. Default: no-op.
      */
-    public void done(ExportContext ctx) throws Exception {
+    public void done(ExportCurrentState ctx) throws Exception {
     }
 
-    // ── Static factory ────────────────────────────────────────────────────────
+    // ── Static factory
+    // ────────────────────────────────────────────────────────
 
     /**
      * Creates handler instances for the requested formats.
      *
-     * @param formats     list of formats to export
-     * @param generateXsd whether to generate XSD (passed to {@link XmlFormatHandler})
+     * @param formats list of formats to export
+     * @param generateXsd whether to generate XSD (passed to
+     * {@link XmlFormatHandler})
      * @return one handler per format, in request order
      */
     public static List<FormatHandler> create(List<ExportFormat> formats, boolean generateXsd) {

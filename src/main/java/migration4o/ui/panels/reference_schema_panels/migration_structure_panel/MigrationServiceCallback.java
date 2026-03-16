@@ -8,6 +8,7 @@ import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.migration.ExportRequest;
 import migration4o.migration.MigrationExportService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
@@ -62,12 +63,10 @@ public class MigrationServiceCallback {
 
         final boolean fullTracking = options.isFullTracking();
 
-        // Extract modules and paths
+        // Extract modules
         List<DOSchemaModule> modules = new ArrayList<>();
-        List<String> modulePaths = new ArrayList<>();
         for (ModuleExportInfo info : modulesToExport) {
             modules.add(info.module);
-            modulePaths.add(info.fullPath);
         }
 
         // Get migration report monitor from main window
@@ -84,13 +83,12 @@ public class MigrationServiceCallback {
         SwingWorker<ExportStatistics, Void> worker = new SwingWorker<>() {
             @Override
             protected ExportStatistics doInBackground() throws Exception {
-                // Use exportModules which handles single or multiple modules
-                // automatically
                 DODatabaseContext context = dbContext;
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
-                return exportService.exportModules(context, modules, modulePaths, options.getOutputPath(), monitor, options.getMaxObjectsPerClass(), options.isExportNativeIds(), options.getSelectedSkipOptions(), options.getOutputOptions(), options.isApplyUserSelectedFieldExclusions(), options.isApplySkipWhenConditions(), options.isApplyExportCriteriaFilters(), options.isSkipObjectsWithoutExportableFields(), fullTracking, options.getSeedQueries(), options.getOutputBranch());
+                ExportRequest request = options.toExportRequest(context, monitor);
+                return exportService.exportModules(request, modules);
             }
 
             @Override
@@ -127,7 +125,7 @@ public class MigrationServiceCallback {
      * Handles successful export completion.
      *
      * @param fullTracking whether full tracking was enabled for this export;
-     *        when {@code false} the coverage panel is disabled after completion
+     * when {@code false} the coverage panel is disabled after completion
      */
     private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext, boolean fullTracking) {
         // Show results in the Migration results tab instead of a dialog

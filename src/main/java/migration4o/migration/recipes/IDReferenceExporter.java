@@ -4,9 +4,7 @@ import java.io.IOException;
 
 import com.db4o.ext.ExtObjectContainer;
 
-import migration4o.migration.ExportOperation;
-import migration4o.migration.XMLWriter;
-import migration4o.migration.XSDBuilder;
+import migration4o.migration.format.ExportCurrentState;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ValueUtil;
@@ -26,12 +24,11 @@ public class IDReferenceExporter {
      * @param entity The entity object to reference
      * @param idClass The ID class schema (e.g., IDCompartiment)
      * @param xmlWriter XML writer for output
-     * @param xsdBuilder XSD builder for schema
      * @param indentLevel Current indentation level
-     * @param operation Export operation context (contains objectExporter)
+     * @param ctx Export state (contains objectExporter)
      * @throws IOException if write fails
      */
-    public static void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, XSDBuilder xsdBuilder, int indentLevel, ExportOperation operation) throws IOException {
+    public static void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, int indentLevel, ExportCurrentState ctx) throws IOException {
 
         // Get the DB object ID of the entity
         long entityObjectId = container.ext().getID(entity);
@@ -43,12 +40,6 @@ public class IDReferenceExporter {
         // Export the ID object wrapper
         String idClassName = idClass.source; // e.g., "IDCompartiment"
         String simpleClassName = idClassName.substring(idClassName.lastIndexOf('.') + 1);
-
-        // XSD: Register the ID class and its fields
-        xsdBuilder.addClass(idClass);
-        for (DOSchemaField field : idClass.fields) {
-            xsdBuilder.addField(idClass, field);
-        }
 
         xmlWriter.openStructure(simpleClassName);
 
@@ -71,6 +62,6 @@ public class IDReferenceExporter {
 
         // Ensure the actual entity object gets exported separately (not
         // embedded)
-        operation.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null, null, null, false, null);
+        ctx.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null, null, null, false, null);
     }
 }

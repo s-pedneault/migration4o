@@ -3,11 +3,15 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 import java.util.ArrayList;
 import java.util.List;
 
+import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportOutputOption;
+import migration4o.migration.ExportRequest;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ExportConfig;
 import migration4o.models.ui.SeedQuery;
 import migration4o.schema.DOSchemaService;
+import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.SchemaUtil;
 
 /**
@@ -24,9 +28,11 @@ public class ExportOptions {
     private final boolean applySkipWhenConditions;
     private final boolean applyExportCriteriaFilters;
     private final boolean skipObjectsWithoutExportableFields;
-    /** When {@code false}, expensive per-object diagnostic tracking and
+    /**
+     * When {@code false}, expensive per-object diagnostic tracking and
      * reachability ID collection are skipped, speeding up the export at the
-     * cost of disabling the coverage analysis panel. */
+     * cost of disabling the coverage analysis panel.
+     */
     private final boolean fullTracking;
     private final List<SeedQuery> seedQueries;
     private final String outputBranch;
@@ -142,5 +148,37 @@ public class ExportOptions {
         }
 
         return new ExportOptions(maxPerClass, config.isExportNativeIds(), selectedSkipFields, "output", config.getOutputOptions(), config.isApplyUserSelectedFieldExclusions(), config.isApplySkipWhenConditions(), config.isApplyExportCriteriaFilters(), config.isSkipObjectsWithoutExportableFields(), config.isFullTracking(), seeds, config.getOutputBranch());
+    }
+
+    /**
+     * Builds a fully-configured {@link ExportRequest} from these options, the
+     * given database context, and the export monitor.
+     */
+    public ExportRequest toExportRequest(DODatabaseContext dbContext, DOExportMonitor monitor) {
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+
+        ExportRequest request = new ExportRequest();
+        request.referenceSchema = referenceSchema;
+        request.databaseSchema = dbContext.databaseSchema;
+        request.databasePath = dbContext.databaseFilePath;
+        request.dbContext = dbContext;
+        request.container = dbContext.container;
+        request.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(referenceSchema);
+        request.maxObjectsPerClass = maxObjectsPerClass;
+        request.exportNativeIds = exportNativeIds;
+        request.selectedSkipUserOptions = selectedSkipOptions != null ? new ArrayList<>(selectedSkipOptions) : new ArrayList<>();
+        request.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
+        request.applySkipWhenConditions = applySkipWhenConditions;
+        request.applyExportCriteriaFilters = applyExportCriteriaFilters;
+        request.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
+        request.fullTracking = fullTracking;
+        request.baseOutputPath = outputPath;
+        request.outputBranch = outputBranch;
+        request.outputOptions = new ArrayList<>(outputOptions);
+        request.monitor = monitor;
+        if (seedQueries != null && !seedQueries.isEmpty()) {
+            request.seedQueries = new ArrayList<>(seedQueries);
+        }
+        return request;
     }
 }

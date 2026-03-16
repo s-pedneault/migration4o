@@ -42,7 +42,7 @@ public class ExcelFormatHandler extends FormatHandler {
 
     /** EXCEL always exports native IDs as its first column. */
     @Override
-    public void init(ExportContext ctx) throws Exception {
-        ctx.operation.exportNativeIds = true;
+    public void init(ExportCurrentState ctx) throws Exception {
+        ctx.request.exportNativeIds = true;
     }
 }

@@ -30,7 +30,7 @@ public class SchemaUtil {
     /**
      * Finds a class by name in a schema array.
      * 
-     * @param schema    The schema to search
+     * @param schema The schema to search
      * @param className The class name to find
      * @return The schema class, or null if not found
      */
@@ -49,9 +49,9 @@ public class SchemaUtil {
     /**
      * Checks if a schema class is a descendant of a given ancestor class.
      * 
-     * @param schemaClass       the class to check
+     * @param schemaClass the class to check
      * @param ancestorClassName the name of the ancestor class
-     * @param schema            the schema containing all classes
+     * @param schema the schema containing all classes
      * @return true if schemaClass is a descendant of ancestorClassName
      */
     public static boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName, DOSchema schema) {
@@ -89,17 +89,18 @@ public class SchemaUtil {
      * Converts a field to use a common field definition reference if a matching
      * common field exists in the schema.
      * 
-     * @param field  the field to potentially convert
+     * @param field the field to potentially convert
      * @param schema the schema containing common field definitions
      * @return a new field using the common definition if found, or the original
-     *         field
+     * field
      */
     public static DOSchemaField convertToCommonFieldIfExists(DOSchemaField field, DOSchema schema) {
         if (field == null || schema == null || schema.sharedFields == null || schema.sharedFields.isEmpty()) {
             return field;
         }
 
-        // Check if a common field definition exists for this field's source name
+        // Check if a common field definition exists for this field's source
+        // name
         DOSchemaField commonField = schema.sharedFields.get(field.source);
         if (commonField != null) {
             // Create a reference to the common field
@@ -126,7 +127,7 @@ public class SchemaUtil {
     /**
      * Adds a class to a schema, inserting it alphabetically by source name.
      * 
-     * @param schema   the schema to add the class to
+     * @param schema the schema to add the class to
      * @param newClass the class to add
      */
     public static void addClass(DOSchema schema, DOSchemaClass newClass) {
@@ -160,11 +161,11 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a class in the schemas by its absolute name.
-     * Searches the schemas in reverse order, and returns the first class found.
+     * Finds a class in the schemas by its absolute name. Searches the schemas
+     * in reverse order, and returns the first class found.
      * 
      * @param className the absolute class name to find
-     * @param schemas   the array of schemas to search
+     * @param schemas the array of schemas to search
      * @return the schema class, or null if not found
      */
     public static DOSchemaClass findClassByName(String className, DOSchema[] schemas) {
@@ -181,12 +182,12 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a class in the schema by its absolute name.
-     * If not found, falls back to searching by simple name (class name without
-     * package).
+     * Finds a class in the schema by its absolute name. If not found, falls
+     * back to searching by simple name (class name without package).
      * 
-     * @param className the absolute class name to find (or simple name as fallback)
-     * @param schema    the reference schema
+     * @param className the absolute class name to find (or simple name as
+     * fallback)
+     * @param schema the reference schema
      * @return the schema class, or null if not found
      */
     public static DOSchemaClass findClassByName(String className, DOSchema schema) {
@@ -246,13 +247,13 @@ public class SchemaUtil {
     }
 
     /**
-     * Checks if the given class is a superclass of other Entite-type classes in the
-     * schema.
+     * Checks if the given class is a superclass of other Entite-type classes in
+     * the schema.
      * 
-     * @param schema      the schema to search
+     * @param schema the schema to search
      * @param targetClass the class to check
-     * @return true if at least one other class in the schema has this class as a
-     *         parent
+     * @return true if at least one other class in the schema has this class as
+     * a parent
      */
     public static boolean hasSubclasses(DOSchema schema, DOSchemaClass targetClass) {
         if (schema == null || schema.getClasses() == null || targetClass == null) {
@@ -276,11 +277,12 @@ public class SchemaUtil {
 
     /**
      * Given a set of class names that represent the same object (due to
-     * inheritance),
-     * finds the leaf (most derived) class using the reference schema.
+     * inheritance), finds the leaf (most derived) class using the reference
+     * schema.
      * 
      * @param classNames set of class names for the same object
-     * @return the leaf class name, or the first class name if schema lookup fails
+     * @return the leaf class name, or the first class name if schema lookup
+     * fails
      */
     public static String findLeafClass(Set<String> classNames) {
         if (classNames == null || classNames.isEmpty()) {
@@ -318,5 +320,20 @@ public class SchemaUtil {
 
         // Fallback: return first class
         return classNames.iterator().next();
+    }
+
+    /**
+     * Strips a leading "id" or "ID" prefix (optionally followed by a space)
+     * from a field or element name, lowercasing the new first character if it
+     * was uppercase. Examples: "IDTypeChampPerso" → "typeChampPerso",
+     * "IDPersonne" → "personne", "id type" → "type".
+     */
+    public static String stripIdPrefix(String name) {
+        if (name == null || name.isEmpty())
+            return name;
+        String stripped = name.replaceFirst("(?i)^id\\s*", "");
+        if (stripped.isEmpty() || stripped.equals(name))
+            return name;
+        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 }

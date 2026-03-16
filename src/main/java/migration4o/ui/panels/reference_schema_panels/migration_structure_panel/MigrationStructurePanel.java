@@ -967,7 +967,8 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Redirects to the Export tab where the user can configure and launch exports.
+     * Redirects to the Export tab where the user can configure and launch
+     * exports.
      */
     private void exportSelectedModules(migration4o.database.DODatabaseContext dbContext) {
         // Validate prerequisites
@@ -1049,8 +1050,8 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Repeats the last export using the persisted {@link ExportConfig}.
-     * This follows the exact same code path as the UI Export button.
+     * Repeats the last export using the persisted {@link ExportConfig}. This
+     * follows the exact same code path as the UI Export button.
      */
     public void repeatLastExport() {
         // Validate export prerequisites
@@ -1065,7 +1066,8 @@ public class MigrationStructurePanel extends JPanel {
             return;
         }
 
-        // Load persisted config (same file the Export tab auto-saves before each export)
+        // Load persisted config (same file the Export tab auto-saves before
+        // each export)
         ExportConfig config = ExportConfigPersistence.load(activeContext.databaseFilePath);
         ExportOptions options = ExportOptions.fromConfig(config);
 
@@ -1078,7 +1080,7 @@ public class MigrationStructurePanel extends JPanel {
 
         List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
         for (DOSchemaModule module : modules) {
-            modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(module.name, module, module.name));
+            modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(module.name, module));
         }
 
         // Same call as the Export button

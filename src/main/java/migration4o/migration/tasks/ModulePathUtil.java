@@ -2,7 +2,7 @@ package migration4o.migration.tasks;
 
 import java.nio.file.Path;
 
-import migration4o.migration.ExportOperation;
+import migration4o.migration.ExportRequest;
 import migration4o.models.schema.DOSchemaModule;
 
 /**
@@ -66,7 +66,7 @@ public final class ModulePathUtil {
      * given output file path, using the operation's base output path as a
      * reference.
      */
-    public static String getModuleNameForXml(Path xmlPath, ExportOperation operation) {
+    public static String getModuleNameForXml(Path xmlPath, ExportRequest operation) {
         if (xmlPath == null) {
             return "";
         }
@@ -94,7 +94,7 @@ public final class ModulePathUtil {
      * Returns the path of the comprehensive XSD schema file for the current
      * export (relative to the db-specific output directory).
      */
-    public static Path getComprehensiveSchemaPath(String baseOutputPath, ExportOperation operation) {
+    public static Path getComprehensiveSchemaPath(String baseOutputPath, ExportRequest operation) {
         Path dbBasePath = operation.getBaseOutputPath(baseOutputPath);
         return dbBasePath.resolve("_Migration").resolve("Schema.xsd");
     }
@@ -104,10 +104,7 @@ public final class ModulePathUtil {
      * path from the file's directory to the comprehensive schema. Returns
      * {@code null} when the operation format is not XML.
      */
-    public static String getSchemaLocationForXml(Path xmlPath, String baseOutputPath, ExportOperation operation) {
-        if (!operation.isXMLFormat()) {
-            return null;
-        }
+    public static String getSchemaLocationForXml(Path xmlPath, String baseOutputPath, ExportRequest operation) {
         Path schemaPath = getComprehensiveSchemaPath(baseOutputPath, operation);
         Path xmlDir = xmlPath.getParent();
         if (xmlDir == null) {

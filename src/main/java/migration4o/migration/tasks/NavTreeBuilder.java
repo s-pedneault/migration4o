@@ -4,11 +4,12 @@ import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.List;
 
-import migration4o.migration.ExportOperation;
+import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.NavNode;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
+import migration4o.util.JsonUtil;
 import migration4o.util.LucideIcons;
 
 /**
@@ -23,9 +24,9 @@ import migration4o.util.LucideIcons;
  */
 public class NavTreeBuilder {
 
-    private final ExportOperation operation;
+    private final ExportCurrentState operation;
 
-    public NavTreeBuilder(ExportOperation operation) {
+    public NavTreeBuilder(ExportCurrentState operation) {
         this.operation = operation;
     }
 
@@ -35,19 +36,19 @@ public class NavTreeBuilder {
      * {@code operation.generateHtmlViewer} is {@code true}.
      * <p>
      * Delegates to {@link #build(List, List, Path)} using
-     * {@code operation.getBaseOutputPath(baseOutputDir)} as the base.
+     * {@code operation.request.getBaseOutputPath(baseOutputDir)} as the base.
      */
-    public void build(List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputDir) {
-        build(modules, modulePaths, operation.getBaseOutputPath(baseOutputDir));
+    public void build(List<DOSchemaModule> modules, String baseOutputDir) {
+        build(modules, operation.request.getBaseOutputPath(baseOutputDir));
     }
 
     /**
      * Pre-builds the hierarchical nav tree and serializes it to JSON using an
      * explicit {@code base} path. Use this overload when the nav root does not
-     * match {@code operation.getBaseOutputPath()} (e.g. a format-specific
-     * sub-folder such as {@code html/}).
+     * match {@code operation.request.getBaseOutputPath()} (e.g. a
+     * format-specific sub-folder such as {@code html/}).
      */
-    public void build(List<DOSchemaModule> modules, List<String> modulePaths, Path base) {
+    public void build(List<DOSchemaModule> modules, Path base) {
         operation.navTree.clear();
         operation.cachedNavJson = "[]";
         if (modules == null || modules.isEmpty()) {
@@ -57,7 +58,7 @@ public class NavTreeBuilder {
 
         for (int i = 0; i < modules.size(); i++) {
             DOSchemaModule m = modules.get(i);
-            String mp = (modulePaths != null && i < modulePaths.size()) ? modulePaths.get(i) : m.name;
+            String mp = m.name;
             String[] parts = mp.split("/");
 
             // Compute the module's actual output folder (mirrors
@@ -99,7 +100,7 @@ public class NavTreeBuilder {
     private void buildModuleNavChildren(NavNode node, DOSchemaModule module, Path folderPath, Path base, int depth) {
         for (ClassExportConfig config : module.classConfigs) {
             String destName = config.getDestinationFileName();
-            DOSchemaClass sc = (operation.referenceSchema != null) ? operation.referenceSchema.findClassByName(config.getClassName()) : null;
+            DOSchemaClass sc = (operation.request.referenceSchema != null) ? operation.request.referenceSchema.findClassByName(config.getClassName()) : null;
             String label = config.hasTitle() ? config.getTitle() : (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
             String href = base.relativize(folderPath.resolve(destName + ".html")).toString().replace('\\', '/');
             node.children.add(new NavNode(label, href, null, depth + 1, null, null, null, null));
@@ -150,25 +151,25 @@ public class NavTreeBuilder {
     }
 
     private void appendNavNode(StringBuilder sb, NavNode node) {
-        sb.append("{\"label\":\"").append(escNavJson(node.label)).append('"');
+        sb.append("{\"label\":\"").append(JsonUtil.escape(node.label)).append('"');
         sb.append(",\"depth\":").append(node.depth);
         if (node.iconSvg != null && !node.iconSvg.isEmpty()) {
-            sb.append(",\"icon\":\"").append(escNavJson(node.iconSvg)).append('"');
+            sb.append(",\"icon\":\"").append(JsonUtil.escape(node.iconSvg)).append('"');
         }
         if (node.tileBg != null) {
-            sb.append(",\"tileBg\":\"").append(escNavJson(node.tileBg)).append('"');
+            sb.append(",\"tileBg\":\"").append(JsonUtil.escape(node.tileBg)).append('"');
         }
         if (node.tileTextColor != null) {
-            sb.append(",\"tileText\":\"").append(escNavJson(node.tileTextColor)).append('"');
+            sb.append(",\"tileText\":\"").append(JsonUtil.escape(node.tileTextColor)).append('"');
         }
         if (node.tileIconColor != null) {
-            sb.append(",\"tileIcon\":\"").append(escNavJson(node.tileIconColor)).append('"');
+            sb.append(",\"tileIcon\":\"").append(JsonUtil.escape(node.tileIconColor)).append('"');
         }
         if (node.tileFontSize != null) {
-            sb.append(",\"tileFontSize\":\"").append(escNavJson(node.tileFontSize)).append('"');
+            sb.append(",\"tileFontSize\":\"").append(JsonUtil.escape(node.tileFontSize)).append('"');
         }
         if (node.isLeaf()) {
-            sb.append(",\"href\":\"").append(escNavJson(node.rootRelativeHref)).append('"');
+            sb.append(",\"href\":\"").append(JsonUtil.escape(node.rootRelativeHref)).append('"');
         } else {
             sb.append(",\"children\":");
             appendNavNodes(sb, node.children);
@@ -176,9 +177,4 @@ public class NavTreeBuilder {
         sb.append('}');
     }
 
-    private static String escNavJson(String v) {
-        if (v == null)
-            return "";
-        return v.replace("\\", "\\\\").replace("\"", "\\\"");
-    }
 }

@@ -585,10 +585,11 @@ public class DatabaseExportPanel extends JPanel {
         // Build ModuleExportInfo list
         List<MigrationStructurePanelUtil.ModuleExportInfo> modulesToExport = new ArrayList<>();
         for (DOSchemaModule module : modules) {
-            modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(module.name, module, module.name));
+            modulesToExport.add(new MigrationStructurePanelUtil.ModuleExportInfo(module.name, module));
         }
 
-        // Build ExportOptions from the persisted config — single source of truth
+        // Build ExportOptions from the persisted config — single source of
+        // truth
         ExportOptions exportOptions = ExportOptions.fromConfig(config);
 
         exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);

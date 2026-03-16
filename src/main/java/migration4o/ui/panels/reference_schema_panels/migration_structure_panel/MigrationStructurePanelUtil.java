@@ -494,17 +494,10 @@ public class MigrationStructurePanelUtil {
     public static class ModuleExportInfo {
         public final String name;
         public final DOSchemaModule module;
-        public final String fullPath; // Full hierarchical path (e.g.,
-                                      // "Activités/Intervention")
 
         public ModuleExportInfo(String name, DOSchemaModule module) {
-            this(name, module, name); // Default: fullPath = name
-        }
-
-        public ModuleExportInfo(String name, DOSchemaModule module, String fullPath) {
             this.name = name;
             this.module = module;
-            this.fullPath = fullPath;
         }
     }
 

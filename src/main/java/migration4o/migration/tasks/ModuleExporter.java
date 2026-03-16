@@ -3,7 +3,7 @@ package migration4o.migration.tasks;
 import java.util.HashSet;
 import java.util.Set;
 
-import migration4o.migration.ExportOperation;
+import migration4o.migration.ExportRequest;
 import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
@@ -12,17 +12,18 @@ import migration4o.models.ui.ClassExportConfig;
  * Utility class for module-level operations shared by the export engine.
  * <p>
  * Delegates per-class file writing to the format handlers via
- * {@link migration4o.migration.ExportEngine#exportModules}.
+ * {@link migration4o.migration.MigrationExportService#exportModules}.
  */
 public class ModuleExporter {
 
-    private final ExportOperation operation;
+    private final ExportRequest operation;
 
-    public ModuleExporter(ExportOperation operation) {
+    public ModuleExporter(ExportRequest operation) {
         this.operation = operation;
     }
 
-    // ── Counting ──────────────────────────────────────────────────────────────
+    // ── Counting
+    // ──────────────────────────────────────────────────────────────
 
     /** Returns the total number of class configs across the module tree. */
     public int countTotalClasses(DOSchemaModule module) {

@@ -54,8 +54,8 @@ public class XmlFormatHandler extends FormatHandler {
 
     /** Initialises the shared XSD builder. */
     @Override
-    public void init(ExportContext ctx) throws Exception {
-        liveXsdBuilder = new XSDBuilder(ctx.operation.dbContext);
+    public void init(ExportCurrentState ctx) throws Exception {
+        liveXsdBuilder = new XSDBuilder(ctx.request.dbContext);
         liveXsdBuilder.startExportRoot();
     }
 
@@ -64,20 +64,37 @@ public class XmlFormatHandler extends FormatHandler {
      * Called once per object; XSDBuilder operations are idempotent.
      */
     @Override
-    public void observeObject(ExportContext ctx) throws Exception {
+    public void observeObject(ExportCurrentState ctx) throws Exception {
         if (ctx.schemaClass == null || liveXsdBuilder == null)
             return;
         liveXsdBuilder.addClass(ctx.schemaClass);
-        DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(ctx.schemaClass.source);
+        DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(ctx.schemaClass.source);
         liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
     }
 
     /** Registers the current field in the XSD builder. */
     @Override
-    public void observeField(ExportContext ctx) throws Exception {
+    public void observeField(ExportCurrentState ctx) throws Exception {
         if (ctx.field == null || ctx.schemaClass == null || liveXsdBuilder == null)
             return;
         liveXsdBuilder.addField(ctx.schemaClass, ctx.field);
+    }
+
+    /**
+     * Registers a referenced class (e.g. an ID-reference wrapper) and all its
+     * fields in the XSD builder. Called from the field export pipeline when an
+     * ID-reference collection is detected.
+     */
+    @Override
+    public void observeReferencedClass(DOSchemaClass refClass) {
+        if (refClass == null || liveXsdBuilder == null)
+            return;
+        liveXsdBuilder.addClass(refClass);
+        if (refClass.fields != null) {
+            for (var field : refClass.fields) {
+                liveXsdBuilder.addField(refClass, field);
+            }
+        }
     }
 
     /**
@@ -85,7 +102,7 @@ public class XmlFormatHandler extends FormatHandler {
      * attribute, then writes class metadata and opens {@code <objects>}.
      */
     @Override
-    public void open(ExportContext ctx) throws Exception {
+    public void open(ExportCurrentState ctx) throws Exception {
         String schemaLocation = computeSchemaLocation(ctx);
         writer.openRootStructure("export", schemaLocation);
         if (ctx.schemaClass != null) {
@@ -102,7 +119,7 @@ public class XmlFormatHandler extends FormatHandler {
             // the class that owns this file IS always in the XSD top-level
             // list.
             if (liveXsdBuilder != null) {
-                DOSchemaClass dbSchemaClass = ctx.operation.databaseSchema.findClassByName(ctx.schemaClass.source);
+                DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(ctx.schemaClass.source);
                 liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
             }
         }
@@ -114,7 +131,7 @@ public class XmlFormatHandler extends FormatHandler {
      * records the file path for post-export validation.
      */
     @Override
-    public void close(ExportContext ctx) throws Exception {
+    public void close(ExportCurrentState ctx) throws Exception {
         writer.closeStructure("objects");
         writer.closeStructure("export");
         writer.writer.flush();
@@ -127,24 +144,24 @@ public class XmlFormatHandler extends FormatHandler {
      * Final pass: unreached objects → comprehensive XSD → XML validation.
      */
     @Override
-    public void done(ExportContext ctx) throws Exception {
+    public void done(ExportCurrentState ctx) throws Exception {
         // Extra.xml is only generated in unrestricted ("all") mode — i.e. when
         // no per-class object limit is set. In limited/preview exports the
         // reachability data is incomplete so the Extra file would be
         // misleading.
-        if (ctx.operation.maxObjectsPerClass == null) {
+        if (ctx.request.maxObjectsPerClass == null) {
             exportUnreachedObjects(ctx);
         }
 
         if (generateXsd && liveXsdBuilder != null) {
             Path xsdPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
             Files.createDirectories(xsdPath.getParent());
-            if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage("Generating comprehensive XSD schema...");
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("Generating comprehensive XSD schema...");
             }
             liveXsdBuilder.writeXSD(xsdPath.toString());
-            if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage("Comprehensive XSD schema generated: _Migration/Schema.xsd");
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("Comprehensive XSD schema generated: _Migration/Schema.xsd");
             }
         }
 
@@ -156,7 +173,7 @@ public class XmlFormatHandler extends FormatHandler {
     // ── Private helpers
     // ───────────────────────────────────────────────────────
 
-    private String computeSchemaLocation(ExportContext ctx) {
+    private String computeSchemaLocation(ExportCurrentState ctx) {
         if (writer == null || writer.outputPath == null)
             return null;
         Path schemaPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
@@ -170,27 +187,27 @@ public class XmlFormatHandler extends FormatHandler {
         }
     }
 
-    private void exportUnreachedObjects(ExportContext ctx) throws Exception {
+    private void exportUnreachedObjects(ExportCurrentState ctx) throws Exception {
         Set<Long> reachedIds = collectReachedIds(ctx);
         Set<Long> unreachedIds = collectUnreachedIds(ctx, reachedIds);
         if (unreachedIds.isEmpty()) {
-            if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage("No unreached objects detected.");
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("No unreached objects detected.");
             }
             return;
         }
 
-        if (ctx.operation.monitor != null) {
-            String limitNote = (ctx.operation.maxObjectsPerClass != null) ? " (limited to " + ctx.operation.maxObjectsPerClass + " per class)" : "";
-            ctx.operation.monitor.onStatusMessage("Exporting " + unreachedIds.size() + " unreached objects to _Migration/Extra.xml..." + limitNote);
+        if (ctx.request.monitor != null) {
+            String limitNote = (ctx.request.maxObjectsPerClass != null) ? " (limited to " + ctx.request.maxObjectsPerClass + " per class)" : "";
+            ctx.request.monitor.onStatusMessage("Exporting " + unreachedIds.size() + " unreached objects to _Migration/Extra.xml..." + limitNote);
         }
 
         Path extraPath = formatBasePath(ctx).resolve("_Migration").resolve("Extra.xml");
         Files.createDirectories(extraPath.getParent());
         exportedXMLFiles.add(extraPath.toString());
 
-        if (ctx.operation.monitor != null) {
-            ctx.operation.monitor.onModuleStart("_Migration", unreachedIds.size(), 0);
+        if (ctx.request.monitor != null) {
+            ctx.request.monitor.onModuleStart("_Migration", unreachedIds.size(), 0);
         }
 
         this.writer = createWriter(extraPath);
@@ -203,8 +220,8 @@ public class XmlFormatHandler extends FormatHandler {
             ctx.statistics.setCurrentClass("Extra", extraCount);
             ctx.statistics.setCurrentFormatName(displayName());
         }
-        if (ctx.operation.monitor != null) {
-            ctx.operation.monitor.onClassStart("Extra", "Extra", extraCount, displayName());
+        if (ctx.request.monitor != null) {
+            ctx.request.monitor.onClassStart("Extra", "Extra", extraCount, displayName());
         }
 
         try {
@@ -220,12 +237,12 @@ public class XmlFormatHandler extends FormatHandler {
             for (Long objectId : sortedIds) {
                 if (objectId == null || objectId <= 0)
                     continue;
-                if (ctx.operation.monitor != null && ctx.operation.monitor.isCancelled())
+                if (ctx.request.monitor != null && ctx.request.monitor.isCancelled())
                     break;
                 objectExporter.exportObject(objectId, false);
                 extraExported++;
-                if (ctx.operation.monitor != null && extraExported % 100 == 0 && extraCount > 0) {
-                    ctx.operation.monitor.onObjectProgress("Extra", "Extra", extraExported, extraCount, displayName());
+                if (ctx.request.monitor != null && extraExported % 100 == 0 && extraCount > 0) {
+                    ctx.request.monitor.onObjectProgress("Extra", "Extra", extraExported, extraCount, displayName());
                 }
             }
 
@@ -236,14 +253,14 @@ public class XmlFormatHandler extends FormatHandler {
             ctx.allowedObjectIds = null;
         }
 
-        if (ctx.operation.monitor != null) {
+        if (ctx.request.monitor != null) {
             int exported = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : 0;
-            ctx.operation.monitor.onClassComplete("Extra", exported, displayName());
-            ctx.operation.monitor.onModuleComplete("_Migration");
+            ctx.request.monitor.onClassComplete("Extra", exported, displayName());
+            ctx.request.monitor.onModuleComplete("_Migration");
         }
     }
 
-    private Set<Long> collectReachedIds(ExportContext ctx) {
+    private Set<Long> collectReachedIds(ExportCurrentState ctx) {
         Set<Long> reached = new HashSet<>();
         if (ctx.statistics == null)
             return reached;
@@ -258,12 +275,12 @@ public class XmlFormatHandler extends FormatHandler {
         return reached;
     }
 
-    private Set<Long> collectUnreachedIds(ExportContext ctx, Set<Long> reachedIds) {
+    private Set<Long> collectUnreachedIds(ExportCurrentState ctx, Set<Long> reachedIds) {
         Set<Long> all = new HashSet<>();
-        if (ctx.operation.databaseSchema == null)
+        if (ctx.request.databaseSchema == null)
             return all;
-        Integer limit = ctx.operation.maxObjectsPerClass;
-        for (DOSchemaClass sc : ctx.operation.databaseSchema.getClasses()) {
+        Integer limit = ctx.request.maxObjectsPerClass;
+        for (DOSchemaClass sc : ctx.request.databaseSchema.getClasses()) {
             long[] ids = (sc.uniqueObjectIds != null && sc.uniqueObjectIds.length > 0) ? sc.uniqueObjectIds : sc.objectIds;
             if (ids == null)
                 continue;
@@ -280,10 +297,10 @@ public class XmlFormatHandler extends FormatHandler {
         return all;
     }
 
-    private void validateXmlFiles(ExportContext ctx) {
+    private void validateXmlFiles(ExportCurrentState ctx) {
         try {
-            if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage("Validating " + exportedXMLFiles.size() + " XML files against schema...");
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("Validating " + exportedXMLFiles.size() + " XML files against schema...");
             }
             Path xsdPath = formatBasePath(ctx).resolve("_Migration").resolve("Schema.xsd");
             migration4o.util.XMLValidator.ValidationResult result = migration4o.util.XMLValidator.validateMultiple(new ArrayList<>(exportedXMLFiles), xsdPath.toString());
@@ -296,19 +313,19 @@ public class XmlFormatHandler extends FormatHandler {
             }
             System.out.println();
 
-            if (ctx.operation.monitor != null) {
+            if (ctx.request.monitor != null) {
                 if (result.allValid()) {
-                    ctx.operation.monitor.onStatusMessage("✓ All " + result.getTotalCount() + " XML files validated successfully");
+                    ctx.request.monitor.onStatusMessage("✓ All " + result.getTotalCount() + " XML files validated successfully");
                 } else {
-                    ctx.operation.monitor.onStatusMessage("⚠ Validation: " + result.successCount + " passed, " + result.failedFiles.size() + " failed");
+                    ctx.request.monitor.onStatusMessage("⚠ Validation: " + result.successCount + " passed, " + result.failedFiles.size() + " failed");
                     for (String failed : result.failedFiles) {
-                        ctx.operation.monitor.onStatusMessage("  ✗ " + new java.io.File(failed).getName());
+                        ctx.request.monitor.onStatusMessage("  ✗ " + new java.io.File(failed).getName());
                     }
                 }
             }
         } catch (Exception e) {
-            if (ctx.operation.monitor != null) {
-                ctx.operation.monitor.onStatusMessage("Warning: XML validation failed: " + e.getMessage());
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("Warning: XML validation failed: " + e.getMessage());
             }
         }
     }

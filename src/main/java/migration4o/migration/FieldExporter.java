@@ -10,13 +10,14 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
-import migration4o.migration.format.ExportContext;
+import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
 import migration4o.migration.recipes.ArrayTraverser;
 import migration4o.migration.recipes.FieldValueMapper;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.migration.recipes.IDReferenceDetector;
 import migration4o.migration.recipes.IDReferenceExporter;
+import migration4o.migration.recipes.VirtualFieldQueryEngine;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -33,47 +34,31 @@ import migration4o.util.tools.structuredwriter.StructuredWriter;
  * of an object, handling arrays, collections, and references.
  */
 public class FieldExporter {
-    private final ExportOperation operation;
+    private final ExportRequest operation;
     private final StructuredWriter xmlWriter;
-    private final XSDBuilder xsdBuilder;
     private final ReferenceObjectExporter idEntiteResolver;
-    // New-path fields (null when using old constructor)
     private final FormatHandler handlerRef;
-    private final ExportContext ctxRef;
+    private final ExportCurrentState ctxRef;
+    private final VirtualFieldQueryEngine virtualFieldQuery = new VirtualFieldQueryEngine();
 
-    // Cache for preloaded objects by class name - load once per target class,
-    // reuse
-    // across all exports
-    private final java.util.Map<String, java.util.List<GenericObject>> preloadedObjectsByClass = new java.util.HashMap<>();
-
-    public FieldExporter(ExportOperation operation, StructuredWriter xmlWriter, XSDBuilder xsdBuilder) {
-        this.operation = operation;
-        this.xmlWriter = xmlWriter;
-        this.xsdBuilder = xsdBuilder;
-        this.handlerRef = null;
-        this.ctxRef = null;
-        this.idEntiteResolver = new ReferenceObjectExporter(operation.databaseSchema);
-    }
-
-    /** New-path constructor: routes XSD observation and field hooks through the FormatHandler. */
-    public FieldExporter(ExportContext ctx, FormatHandler handler, ObjectExporter objectExporter) {
-        this.operation = ctx.operation;
+    /** Creates a FieldExporter driven by FormatHandler hooks. */
+    public FieldExporter(ExportCurrentState ctx, FormatHandler handler, ObjectExporter objectExporter) {
+        this.operation = ctx.request;
         this.xmlWriter = handler.writer;
-        this.xsdBuilder = null;
         this.handlerRef = handler;
         this.ctxRef = ctx;
-        this.idEntiteResolver = new ReferenceObjectExporter(ctx.operation.databaseSchema);
+        this.idEntiteResolver = new ReferenceObjectExporter(ctx.request.databaseSchema);
     }
 
     /**
-     * Counts how many fields would be exported from this GenericObject (dry run).
-     * Goes through all the same skip logic as exportAllFields but doesn't write
-     * anything.
+     * Counts how many fields would be exported from this GenericObject (dry
+     * run). Goes through all the same skip logic as exportAllFields but doesn't
+     * write anything.
      * 
-     * @param container   DB4O container
-     * @param obj         The GenericObject to analyze
+     * @param container DB4O container
+     * @param obj The GenericObject to analyze
      * @param parentClass Schema class definition
-     * @param schema      Reference schema for skip condition checking
+     * @param schema Reference schema for skip condition checking
      * @return number of fields that will be exported
      */
     public int countFieldsToExport(ExtObjectContainer container, GenericObject obj, DOSchemaClass parentClass, DOSchema schema) {
@@ -161,19 +146,17 @@ public class FieldExporter {
     /**
      * Exports all fields of a GenericObject.
      * 
-     * @param container            DB4O container for object activation and ID
-     *                             lookups
-     * @param obj                  The GenericObject whose fields are being exported
-     * @param parentClass          Schema class definition for the object being
-     *                             exported (not the parent in object graph)
-     * @param indentLevel          Current XML indentation level
+     * @param container DB4O container for object activation and ID lookups
+     * @param obj The GenericObject whose fields are being exported
+     * @param parentClass Schema class definition for the object being exported
+     * (not the parent in object graph)
+     * @param indentLevel Current XML indentation level
      * @param destinationClassName Destination class name from schema (e.g.,
-     *                             "Vehicule") - used for tracking field context
-     * @param sourceClassName      Source class name from schema (e.g.,
-     *                             "gest.vehicule.Vehicule") - used for tracking
-     *                             field context
-     * @param parentObjectId       DB4O object ID of the object being exported -
-     *                             used for duplicate detection and tracking
+     * "Vehicule") - used for tracking field context
+     * @param sourceClassName Source class name from schema (e.g.,
+     * "gest.vehicule.Vehicule") - used for tracking field context
+     * @param parentObjectId DB4O object ID of the object being exported - used
+     * for duplicate detection and tracking
      * @return the number of fields actually written to XML
      * @throws IOException if XML writing fails
      */
@@ -203,7 +186,8 @@ public class FieldExporter {
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
                         recordRelationshipSkippedIfPersistent(parentObjectId, sourceClassName, sourceFieldName, fieldValue, "field disabled in reference schema (isExported=false)");
-                        // For disabled collection fields, still mark individual items as reached
+                        // For disabled collection fields, still mark individual
+                        // items as reached
                         if (fieldValue != null) {
                             markDisabledFieldDescendantsReached(container, fieldValue, schemaField);
                         }
@@ -211,14 +195,13 @@ public class FieldExporter {
                     }
 
                     // XSD / schema observation
-                    if (handlerRef != null) {
-                        if (schemaField != null) {
-                            ctxRef.setField(schemaField, fieldValue);
-                            try { handlerRef.observeField(ctxRef); } catch (Exception ignored) {}
-                            ctxRef.clearField();
+                    if (handlerRef != null && schemaField != null) {
+                        ctxRef.setField(schemaField, fieldValue);
+                        try {
+                            handlerRef.observeField(ctxRef);
+                        } catch (Exception ignored) {
                         }
-                    } else if (xsdBuilder != null && schemaField != null) {
-                        xsdBuilder.addField(parentClass, schemaField);
+                        ctxRef.clearField();
                     }
 
                     if (fieldValue == null) {
@@ -231,12 +214,19 @@ public class FieldExporter {
                         continue;
                     }
 
-                    // Check schema flag first - DB4O collections may not be Java Collection instances
-                    // CRITICAL: Always use schema-driven extraction for DB4O objects, even if they implement Collection interface, because calling .size() on GenericObject proxies may return incorrect values before proper activation and extraction
+                    // Check schema flag first - DB4O collections may not be
+                    // Java Collection instances
+                    // CRITICAL: Always use schema-driven extraction for DB4O
+                    // objects, even if they implement Collection interface,
+                    // because calling .size() on GenericObject proxies may
+                    // return incorrect values before proper activation and
+                    // extraction
                     if (schemaField != null && schemaField.isCollection) {
                         markCollectionWrapperReached(fieldValue, parentObjectId, sourceClassName, sourceFieldName);
-                        // CRITICAL FIX: Activate collection fields directly to populate their contents
-                        // This matches the working pattern from ClassObjectsDialog.getFieldValue
+                        // CRITICAL FIX: Activate collection fields directly to
+                        // populate their contents
+                        // This matches the working pattern from
+                        // ClassObjectsDialog.getFieldValue
                         if (fieldValue instanceof Collection) {
                             try {
                                 container.activate(fieldValue, 1);
@@ -262,8 +252,11 @@ public class FieldExporter {
                             fieldsWritten++;
                         }
                     } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isCollectionByAncestry(schemaField.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
-                        // Safety net: field type extends a collection base class (e.g. VectChampPerso extends VectRechID extends HVector extends Vector)
-                        // but is not flagged collection=true in schema and arrived as GenericObject
+                        // Safety net: field type extends a collection base
+                        // class (e.g. VectChampPerso extends VectRechID extends
+                        // HVector extends Vector)
+                        // but is not flagged collection=true in schema and
+                        // arrived as GenericObject
                         markCollectionWrapperReached(fieldValue, parentObjectId, sourceClassName, sourceFieldName);
                         if (exportSchemaCollectionField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
@@ -273,12 +266,13 @@ public class FieldExporter {
                         fieldsWritten++;
                     }
                 } catch (Exception e) {
-                    // Field export failed — still mark the field value as reached if it's a persistent object
-                    if (fieldValue != null && operation.statistics != null) {
+                    // Field export failed — still mark the field value as
+                    // reached if it's a persistent object
+                    if (fieldValue != null && ctxRef.statistics != null) {
                         try {
                             long childId = operation.container.ext().getID(fieldValue);
                             if (childId > 0) {
-                                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childId, operation.referenceSchema);
+                                ctxRef.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childId, operation.referenceSchema);
                             }
                         } catch (Exception ignored) {
                             // Best-effort reach recording
@@ -306,17 +300,17 @@ public class FieldExporter {
      * schema collection). Handles all the common logic: skip conditions, size
      * attributes, ID reference detection, and item export.
      * 
-     * @param container             DB4O container
-     * @param items                 Iterable of items to export (extracted from
-     *                              collection/array)
-     * @param size                  Number of items
-     * @param itemsValue            Original collection/array value for skip
-     *                              condition checking
-     * @param schemaField           Schema field definition
-     * @param indentLevel           Current indentation level
-     * @param parentClassName       Parent class name for tracking
+     * @param container DB4O container
+     * @param items Iterable of items to export (extracted from
+     * collection/array)
+     * @param size Number of items
+     * @param itemsValue Original collection/array value for skip condition
+     * checking
+     * @param schemaField Schema field definition
+     * @param indentLevel Current indentation level
+     * @param parentClassName Parent class name for tracking
      * @param parentSourceClassName Parent source class name for tracking
-     * @param parentObjectId        Parent object ID for tracking
+     * @param parentObjectId Parent object ID for tracking
      * @return true if field was written, false if skipped
      * @throws IOException if XML writing fails
      */
@@ -345,23 +339,29 @@ public class FieldExporter {
             // Check if we should export ID references instead of entities
             IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField, operation.referenceSchema);
 
+            // Register ID-reference wrapper class in XSD via handler hook
+            if (detection.shouldExportAsIDReferences && handlerRef != null) {
+                handlerRef.observeReferencedClass(detection.idClass);
+            }
+
             for (Object item : items) {
                 if (item != null) {
                     try {
                         if (detection.shouldExportAsIDReferences) {
                             // Export as ID reference
-                            IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter, xsdBuilder, indentLevel + 1, operation);
+                            IDReferenceExporter.exportAsIDReference(container, item, detection.idClass, xmlWriter, indentLevel + 1, ctxRef);
                         } else {
                             // Export normally
                             exportFieldValue(container, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
                         }
                     } catch (Exception e) {
-                        // Item export failed — still mark as reached if persistent
-                        if (operation.statistics != null) {
+                        // Item export failed — still mark as reached if
+                        // persistent
+                        if (ctxRef.statistics != null) {
                             try {
                                 long itemId = container.ext().getID(item);
                                 if (itemId > 0) {
-                                    operation.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId, operation.referenceSchema);
+                                    ctxRef.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId, operation.referenceSchema);
                                 }
                             } catch (Exception ignored) {
                                 // Best-effort reach recording
@@ -376,9 +376,9 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a collection field that is marked as collection in the schema but may
-     * be stored as a DB4O persistent object (like VectRechID). This method extracts
-     * the collection items from the DB4O object structure.
+     * Exports a collection field that is marked as collection in the schema but
+     * may be stored as a DB4O persistent object (like VectRechID). This method
+     * extracts the collection items from the DB4O object structure.
      * 
      * @return true if field was written, false if skipped
      */
@@ -491,9 +491,9 @@ public class FieldExporter {
             // Check if field should be skipped (includes IDEntite with mID ==
             // -1)
             if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
-                if (operation.statistics != null) {
-                    operation.statistics.recordReachedOnly(className, refId, operation.referenceSchema);
-                    operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, buildSkipReason(schemaField));
+                if (ctxRef.statistics != null) {
+                    ctxRef.statistics.recordReachedOnly(className, refId, operation.referenceSchema);
+                    ctxRef.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, buildSkipReason(schemaField));
                 }
                 return;
             }
@@ -506,13 +506,13 @@ public class FieldExporter {
                 // Check if this IDEntite will be skipped due to mID == -1
                 if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
                     if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
-                        if (operation.statistics != null && refId > 0) {
-                            operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
+                        if (ctxRef.statistics != null && refId > 0) {
+                            ctxRef.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         }
                         // This field will produce empty content, skip it
                         // entirely
-                        if (operation.statistics != null) {
-                            operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "reference skipped because mID=-1 and skipWhen includes MINUS_ONE");
+                        if (ctxRef.statistics != null) {
+                            ctxRef.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "reference skipped because mID=-1 and skipWhen includes MINUS_ONE");
                         }
                         return;
                     }
@@ -522,11 +522,11 @@ public class FieldExporter {
                 // value
                 // instead of nested structure
                 if (schemaField != null && !schemaField.embedContents) {
-                    if (operation.statistics != null) {
+                    if (ctxRef.statistics != null) {
                         long idEntiteObjectId = container.ext().getID(fieldValue);
                         if (idEntiteObjectId > 0) {
-                            operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
-                            operation.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
+                            ctxRef.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
+                            ctxRef.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
                         }
                     }
 
@@ -537,15 +537,14 @@ public class FieldExporter {
                         if (handlerRef != null) {
                             ctxRef.setField(schemaField, fieldValue);
                             boolean handled;
-                            try { handled = handlerRef.onField(ctxRef); } catch (Exception e) { handled = false; }
-                            ctxRef.clearField();
-                            if (handled) return;
-                        } else if ("JS".equalsIgnoreCase(operation.outputFormat) && fieldClass != null) {
-                            String refLabel = SummaryGenerator.resolveIDEntiteLabel(container, fieldValue, fieldClass, operation.referenceSchema, operation.databaseSchema, operation.idEntiteTargetCache, operation.idEntiteSummaryCache);
-                            if (refLabel != null && !refLabel.isBlank()) {
-                                xmlWriter.elementWithContent(stripIdPrefix(fieldName), attrs, refLabel, false);
-                                return;
+                            try {
+                                handled = handlerRef.onField(ctxRef);
+                            } catch (Exception e) {
+                                handled = false;
                             }
+                            ctxRef.clearField();
+                            if (handled)
+                                return;
                         }
                         String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
                         xmlWriter.elementWithContent(fieldName, attrs, formattedId, false);
@@ -570,9 +569,9 @@ public class FieldExporter {
                 // If no fields will be exported, optionally skip this field
                 // wrapper entirely
                 if (operation.skipObjectsWithoutExportableFields && referencedFieldsToExport == 0) {
-                    if (operation.statistics != null) {
-                        operation.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
-                        operation.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "target object has no exportable fields after skip/criteria rules");
+                    if (ctxRef.statistics != null) {
+                        ctxRef.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
+                        ctxRef.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "target object has no exportable fields after skip/criteria rules");
                     }
                     return;
                 }
@@ -609,9 +608,9 @@ public class FieldExporter {
     }
 
     /**
-     * Exports virtual fields defined in schema but not present in database. Virtual
-     * fields use @ prefix in source and criteria-based queries. Example:
-     * source="@mVectRapportOfficier" with criteria match="this.mID"
+     * Exports virtual fields defined in schema but not present in database.
+     * Virtual fields use @ prefix in source and criteria-based queries.
+     * Example: source="@mVectRapportOfficier" with criteria match="this.mID"
      * with="mIDIntervention" Queries database for objects where mIDIntervention
      * equals this object's mID.
      * 
@@ -642,7 +641,7 @@ public class FieldExporter {
 
             try {
                 // Execute query based on criteria
-                Collection<?> queryResults = executeVirtualFieldQuery(container, obj, schemaField);
+                Collection<?> queryResults = virtualFieldQuery.execute(container, obj, schemaField);
                 int size = (queryResults != null) ? queryResults.size() : 0;
 
                 // Export results using unified collection export
@@ -650,8 +649,15 @@ public class FieldExporter {
 
                 if (written) {
                     fieldsWritten++;
-                    // XSD: record field type
-                    xsdBuilder.addField(parentClass, schemaField);
+                    // XSD: record virtual field type via handler hook
+                    if (handlerRef != null) {
+                        ctxRef.setField(schemaField, null);
+                        try {
+                            handlerRef.observeField(ctxRef);
+                        } catch (Exception ignored) {
+                        }
+                        ctxRef.clearField();
+                    }
                 }
 
             } catch (Exception e) {
@@ -661,247 +667,6 @@ public class FieldExporter {
         }
 
         return fieldsWritten;
-    }
-
-    /**
-     * Executes a database query for a virtual field based on its criteria. Uses a
-     * preloaded cache of all objects of the target class type, loading them once
-     * per class and reusing across all exports for efficiency. Finds objects where
-     * criterion.with field matches value from criterion.match field of current
-     * object. Supports multiple criteria combined with AND/OR operators and
-     * comparison operators.
-     * 
-     * @param container   DB4O container
-     * @param obj         Current object being exported
-     * @param schemaField Virtual field definition with criterias
-     * @return Collection of matching objects
-     */
-    private Collection<?> executeVirtualFieldQuery(ExtObjectContainer container, GenericObject obj, DOSchemaField schemaField) {
-        java.util.List<Object> results = new java.util.ArrayList<>();
-
-        // Get the target class name from the virtual field
-        // The field type should contain the class name of objects to query
-        String targetClassName = schemaField.type;
-        if (targetClassName == null || targetClassName.isEmpty()) {
-            return results;
-        }
-
-        // Preload all objects of this class if not already cached
-        if (!preloadedObjectsByClass.containsKey(targetClassName)) {
-            java.util.List<GenericObject> allObjects = new java.util.ArrayList<>();
-
-            // Use the proper DB4O API to get objects by class name
-            StoredClass storedClass = container.ext().storedClass(targetClassName);
-            if (storedClass != null) {
-                long[] objectIds = storedClass.getIDs();
-
-                // Load each object by ID and activate it to depth 2 for nested
-                // field access
-                for (long objectId : objectIds) {
-                    try {
-                        Object loadedObj = container.ext().getByID(objectId);
-                        if (loadedObj instanceof GenericObject) {
-                            // CRITICAL: Activate to depth 2 so nested fields
-                            // like mIDIntervention.mID are
-                            // accessible
-                            container.activate(loadedObj, 2);
-                            allObjects.add((GenericObject) loadedObj);
-                        }
-                    } catch (Exception e) {
-                        // Skip objects that fail to load
-                    }
-                }
-            }
-
-            preloadedObjectsByClass.put(targetClassName, allObjects);
-        }
-
-        // Get the preloaded objects
-        java.util.List<GenericObject> targetObjects = preloadedObjectsByClass.get(targetClassName);
-
-        // Determine the logical operator for combining criteria (default: AND)
-        String criteriasOperator = schemaField.criteriasOperator != null ? schemaField.criteriasOperator : "AND";
-        boolean useAndLogic = criteriasOperator.equalsIgnoreCase("AND");
-
-        // Extract match values from current object for all criteria
-        java.util.List<CriterionMatchData> criteriaData = new java.util.ArrayList<>();
-        for (migration4o.models.schema.DOFieldCriteria criterion : schemaField.criterias) {
-            try {
-                // Extract the match value from current object
-                String matchFieldName = criterion.match;
-                if (matchFieldName.startsWith("this.")) {
-                    matchFieldName = matchFieldName.substring(5); // Remove
-                                                                  // "this."
-                                                                  // prefix
-                }
-
-                // Get the value from current object's field
-                StoredClass storedClass = container.ext().storedClass(obj);
-                if (storedClass == null) {
-                    continue;
-                }
-
-                StoredField matchField = storedClass.storedField(matchFieldName, null);
-                if (matchField == null) {
-                    continue;
-                }
-
-                Object matchValue = matchField.get(obj);
-                // For OR logic, skip null values; for AND logic, null means no
-                // matches
-                if (matchValue == null && useAndLogic) {
-                    return results; // AND logic with null value = no results
-                }
-                if (matchValue == null) {
-                    continue; // OR logic - skip this criterion
-                }
-
-                criteriaData.add(new CriterionMatchData(criterion, matchValue));
-            } catch (Exception e) {
-            }
-        }
-
-        if (criteriaData.isEmpty()) {
-            return results;
-        }
-
-        // Search through preloaded objects in memory
-        int objectIndex = 0;
-        for (GenericObject targetObj : targetObjects) {
-            objectIndex++;
-            try {
-                boolean matchesAllCriteria = true;
-                boolean matchesAnyCriterion = false;
-
-                // Check each criterion
-                for (CriterionMatchData data : criteriaData) {
-                    // Navigate through field path (supports dotted paths like
-                    // "mIDIntervention.mID")
-                    Object withValue = getFieldValueByPath(container, targetObj, data.criterion.with, false);
-
-                    if (withValue == null) {
-                        matchesAllCriteria = false;
-                        if (useAndLogic) {
-                            break; // AND logic - one failure means no match
-                        }
-                        continue;
-                    }
-
-                    // Compare values using the operator
-                    boolean matches = compareCriterionValues(data.matchValue, withValue, data.criterion.operator);
-
-                    if (matches) {
-                        matchesAnyCriterion = true;
-                    } else {
-                        matchesAllCriteria = false;
-                        if (useAndLogic) {
-                            break; // AND logic - one failure means no match
-                        }
-                    }
-                }
-
-                // Add to results based on AND/OR logic
-                if ((useAndLogic && matchesAllCriteria) || (!useAndLogic && matchesAnyCriterion)) {
-                    results.add(targetObj);
-                }
-            } catch (Exception e) {
-                // Skip objects that cause errors
-            }
-        }
-
-        return results;
-    }
-
-    /**
-     * Helper class to store criterion and its extracted match value.
-     */
-    private static class CriterionMatchData {
-        final migration4o.models.schema.DOFieldCriteria criterion;
-        final Object matchValue;
-
-        CriterionMatchData(migration4o.models.schema.DOFieldCriteria criterion, Object matchValue) {
-            this.criterion = criterion;
-            this.matchValue = matchValue;
-        }
-    }
-
-    /**
-     * Compares two values based on the specified operator.
-     * 
-     * 
-     * /** Gets a field value by navigating through a dotted path (e.g.,
-     * "mIDIntervention.mID"). Supports nested object navigation for virtual field
-     * queries.
-     * 
-     * @param container DB4O container
-     * @param obj       Starting object
-     * @param fieldPath Dotted field path (e.g., "mIDIntervention.mID")
-     * @param debug     Whether to print debug information
-     * @return The value at the end of the path, or null if any step fails
-     */
-    private Object getFieldValueByPath(ExtObjectContainer container, Object obj, String fieldPath, boolean debug) {
-        return DatabaseUtil.getFieldValueByPath(container, obj, fieldPath);
-    }
-
-    /**
-     * Compares two values based on the specified operator. Supports: equals,
-     * notEquals, greaterThan, lessThan, greaterOrEqual, lessOrEqual
-     */
-    private boolean compareCriterionValues(Object matchValue, Object withValue, String operator) {
-        if (matchValue == null || withValue == null) {
-            return operator.equals("equals") ? (matchValue == withValue) : (matchValue != withValue);
-        }
-
-        switch (operator.toLowerCase()) {
-        case "equals":
-            return matchValue.equals(withValue);
-
-        case "notequals":
-            return !matchValue.equals(withValue);
-
-        case "greaterthan":
-            return compareNumeric(matchValue, withValue) > 0;
-
-        case "lessthan":
-            return compareNumeric(matchValue, withValue) < 0;
-
-        case "greaterorequal":
-            return compareNumeric(matchValue, withValue) >= 0;
-
-        case "lessorequal":
-            return compareNumeric(matchValue, withValue) <= 0;
-
-        default:
-            // Unknown operator - default to equals
-            return matchValue.equals(withValue);
-        }
-    }
-
-    /**
-     * Compares two values numerically. Handles Number types and attempts string
-     * parsing.
-     */
-    @SuppressWarnings("unchecked")
-    private int compareNumeric(Object val1, Object val2) {
-        try {
-            if (val1 instanceof Number && val2 instanceof Number) {
-                double d1 = ((Number) val1).doubleValue();
-                double d2 = ((Number) val2).doubleValue();
-                return Double.compare(d1, d2);
-            }
-
-            if (val1 instanceof Comparable && val2 instanceof Comparable && val1.getClass().equals(val2.getClass())) {
-                return ((Comparable<Object>) val1).compareTo(val2);
-            }
-
-            // Try parsing as numbers
-            double d1 = Double.parseDouble(val1.toString());
-            double d2 = Double.parseDouble(val2.toString());
-            return Double.compare(d1, d2);
-        } catch (Exception e) {
-            // Fall back to string comparison
-            return val1.toString().compareTo(val2.toString());
-        }
     }
 
     /**
@@ -951,29 +716,29 @@ public class FieldExporter {
         }
 
         if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
-            if (operation.statistics != null) {
+            if (ctxRef.statistics != null) {
                 long idEntiteObjectId = container.ext().getID(fieldValue);
                 if (idEntiteObjectId > 0) {
-                    operation.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
+                    ctxRef.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
                 }
             }
 
             // Track the referenced entity class if this is a non-embedded
             // reference
-            if (operation.referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {
+            if (ctxRef.referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {
                 // Use the pointsTo field to find what entity class this
                 // IDEntite references
                 if (fieldClass.pointsTo != null && !fieldClass.pointsTo.isEmpty()) {
-                    operation.referencedClassTracker.registerReferencedClass(fieldClass.pointsTo);
+                    ctxRef.referencedClassTracker.registerReferencedClass(fieldClass.pointsTo);
                 }
             }
 
             // Pass through the embedded flag and field name for tracking
             idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField, (objectId, indent) -> {
-                if (operation.statistics != null) {
-                    operation.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
+                if (ctxRef.statistics != null) {
+                    ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
                 }
-                operation.objectExporter.exportObjectRecursively(container, objectId, indent, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
+                ctxRef.objectExporter.exportObjectRecursively(container, objectId, indent, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
             }, indentLevel);
             return;
         }
@@ -1003,10 +768,10 @@ public class FieldExporter {
         }
 
         if (objectId > 0) {
-            if (operation.statistics != null) {
-                operation.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "traversed as embedded relationship" : "traversed as object reference");
+            if (ctxRef.statistics != null) {
+                ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "traversed as embedded relationship" : "traversed as object reference");
             }
-            operation.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
+            ctxRef.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
         } else {
             // Primitive value - write inline
             String stringValue;
@@ -1094,15 +859,15 @@ public class FieldExporter {
     }
 
     private void recordRelationshipSkippedIfPersistent(long parentObjectId, String parentSourceClassName, String sourceFieldName, Object fieldValue, String reason) {
-        if (operation.statistics == null || parentObjectId <= 0 || fieldValue == null) {
+        if (ctxRef.statistics == null || parentObjectId <= 0 || fieldValue == null) {
             return;
         }
 
         try {
             long childObjectId = operation.container.ext().getID(fieldValue);
             if (childObjectId > 0) {
-                operation.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childObjectId, operation.referenceSchema);
-                operation.statistics.recordRelationshipSkipped(parentObjectId, childObjectId, parentSourceClassName, sourceFieldName, reason);
+                ctxRef.statistics.recordReachedOnly(ClassUtil.getClassName(fieldValue), childObjectId, operation.referenceSchema);
+                ctxRef.statistics.recordRelationshipSkipped(parentObjectId, childObjectId, parentSourceClassName, sourceFieldName, reason);
             }
         } catch (Exception ignored) {
             // Best-effort diagnostics only
@@ -1110,7 +875,7 @@ public class FieldExporter {
     }
 
     private void markCollectionWrapperReached(Object fieldValue, long parentObjectId, String parentSourceClassName, String sourceFieldName) {
-        if (operation.statistics == null || fieldValue == null) {
+        if (ctxRef.statistics == null || fieldValue == null) {
             return;
         }
 
@@ -1121,8 +886,8 @@ public class FieldExporter {
             }
 
             String wrapperClassName = ClassUtil.getClassName(fieldValue);
-            operation.statistics.recordReachedOnly(wrapperClassName, wrapperObjectId, operation.referenceSchema);
-            operation.statistics.recordRelationshipExported(parentObjectId, wrapperObjectId, parentSourceClassName, sourceFieldName, "collection wrapper encountered; contents exported from this object");
+            ctxRef.statistics.recordReachedOnly(wrapperClassName, wrapperObjectId, operation.referenceSchema);
+            ctxRef.statistics.recordRelationshipExported(parentObjectId, wrapperObjectId, parentSourceClassName, sourceFieldName, "collection wrapper encountered; contents exported from this object");
         } catch (Exception ignored) {
             // Best-effort diagnostics only
         }
@@ -1132,15 +897,15 @@ public class FieldExporter {
      * When a field has isExported=false, we skip its export but must still mark
      * all descendant objects as reached. This handles two cases:
      * 
-     * 1. Collection fields: extract items and mark each as reached
-     * 2. Persistent GenericObject fields: traverse one level and mark child
-     *    persistent objects as reached
+     * 1. Collection fields: extract items and mark each as reached 2.
+     * Persistent GenericObject fields: traverse one level and mark child
+     * persistent objects as reached
      * 
      * Without this, objects only reachable through disabled fields would appear
      * as "unreached" even though the engine encountered them.
      */
     private void markDisabledFieldDescendantsReached(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField) {
-        if (operation.statistics == null) {
+        if (ctxRef.statistics == null) {
             return;
         }
 
@@ -1156,7 +921,8 @@ public class FieldExporter {
                 } else if (fieldValue.getClass().isArray() && !(fieldValue instanceof byte[])) {
                     items = ValueUtil.arrayToList(fieldValue);
                 } else {
-                    // GenericObject collection wrapper — use standard extraction
+                    // GenericObject collection wrapper — use standard
+                    // extraction
                     items = RecipeCollectionItems.getItems(container, fieldValue);
                 }
 
@@ -1180,15 +946,16 @@ public class FieldExporter {
     }
 
     /**
-     * Recursively marks a persistent object and its immediate children as reached,
-     * without generating any XML output. Traverses up to maxDepth levels.
+     * Recursively marks a persistent object and its immediate children as
+     * reached, without generating any XML output. Traverses up to maxDepth
+     * levels.
      * 
      * @param container DB4O container
-     * @param obj       The object to mark
-     * @param maxDepth  Maximum depth to traverse (0 = mark this object only)
+     * @param obj The object to mark
+     * @param maxDepth Maximum depth to traverse (0 = mark this object only)
      */
     private void markObjectReachedRecursiveShallow(ExtObjectContainer container, Object obj, int maxDepth) {
-        if (obj == null || operation.statistics == null) {
+        if (obj == null || ctxRef.statistics == null) {
             return;
         }
 
@@ -1199,7 +966,7 @@ public class FieldExporter {
             }
 
             String className = ClassUtil.getClassName(obj);
-            operation.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
+            ctxRef.statistics.recordReachedOnly(className, objectId, operation.referenceSchema);
 
             if (maxDepth <= 0) {
                 return;
@@ -1245,19 +1012,5 @@ public class FieldExporter {
         } catch (Exception ignored) {
             // Best-effort reach recording
         }
-    }
-
-    /**
-     * Strips a leading "id" or "ID" prefix (optionally followed by a space) from a
-     * field or element name, lowercasing the new first character if it became
-     * uppercase. E.g. "IDTypeChampPerso" → "typeChampPerso", "id type" → "type".
-     */
-    private static String stripIdPrefix(String name) {
-        if (name == null || name.isEmpty())
-            return name;
-        String stripped = name.replaceFirst("(?i)^id\\s*", "");
-        if (stripped.isEmpty() || stripped.equals(name))
-            return name;
-        return Character.isUpperCase(stripped.charAt(0)) ? Character.toLowerCase(stripped.charAt(0)) + stripped.substring(1) : stripped;
     }
 }

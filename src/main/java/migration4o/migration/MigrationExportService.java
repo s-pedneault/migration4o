@@ -1,21 +1,28 @@
 package migration4o.migration;
 
-import java.util.ArrayList;
+import java.nio.file.Files;
 import java.util.List;
 
+import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
 import migration4o.migration.monitoring.ExportStatistics;
+import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.monitoring.ValidationResult;
-import migration4o.models.schema.DOSchema;
+import migration4o.migration.tasks.ExportModuleLoop;
+import migration4o.migration.tasks.ExportPreSelection;
+import migration4o.migration.tasks.ModuleExporter;
 import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.ui.SeedQuery;
 import migration4o.schema.DOSchemaService;
-import migration4o.ui.common.DOExportMonitor;
 
 /**
- * Service for coordinating XML export operations. Handles validation and export
- * execution. All exports — whether triggered from the UI Export button or
- * {@code --repeat-export} — use the single {@link #exportModules} method.
+ * Service for coordinating export operations. Handles validation and
+ * multi-format export execution via {@link FormatHandler} hooks.
+ * <p>
+ * All exports — whether triggered from the UI Export button or
+ * {@code --repeat-export} — use the single {@link #exportModules} method. The
+ * main loop runs class-by-class so all format handlers write one class's file
+ * before moving to the next, keeping statistics and reference tracking shared
+ * across formats.
  */
 public class MigrationExportService {
 
@@ -33,29 +40,92 @@ public class MigrationExportService {
         return ValidationResult.success();
     }
 
-    public ExportStatistics exportModules(migration4o.database.DODatabaseContext dbContext, List<DOSchemaModule> modules, List<String> modulePaths, String baseOutputPath, DOExportMonitor monitor, Integer maxObjectsPerClass, boolean exportNativeIds, List<migration4o.models.schema.DOSchemaField> selectedSkipOptions, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking, List<SeedQuery> seedQueries, String outputBranch) throws Exception {
-
-        DOSchema referenceSchema = schemaService.getReferenceSchema();
-        DOSchema databaseSchema = dbContext.databaseSchema;
-
-        ExportEngine exporter = new ExportEngine(referenceSchema, databaseSchema, dbContext.databaseFilePath, dbContext);
-        exporter.operation.maxObjectsPerClass = maxObjectsPerClass;
-        exporter.operation.exportNativeIds = exportNativeIds;
-        exporter.operation.selectedSkipUserOptions = selectedSkipOptions != null ? new ArrayList<>(selectedSkipOptions) : new ArrayList<>();
-        exporter.operation.applyUserSelectedFieldExclusions = applyUserSelectedFieldExclusions;
-        exporter.operation.applySkipWhenConditions = applySkipWhenConditions;
-        exporter.operation.applyExportCriteriaFilters = applyExportCriteriaFilters;
-        exporter.operation.skipObjectsWithoutExportableFields = skipObjectsWithoutExportableFields;
-        exporter.operation.fullTracking = fullTracking;
-        exporter.operation.baseOutputPath = baseOutputPath;
-        exporter.operation.outputBranch = outputBranch;
-        exporter.operation.monitor = monitor;
-        if (seedQueries != null) {
-            exporter.operation.seedQueries = new ArrayList<>(seedQueries);
+    /**
+     * Exports all modules to all requested formats via handler hooks.
+     * <p>
+     * Runs a class-to-class loop: all handlers write one class's file before
+     * moving to the next class, so statistics and reference tracking are shared
+     * across formats.
+     *
+     * @param request Fully-configured export request (must have container set)
+     * @param modules Modules to export (in order)
+     * @return shared export statistics
+     */
+    public ExportStatistics exportModules(ExportRequest request, List<DOSchemaModule> modules) throws Exception {
+        if (request.container == null) {
+            throw new IllegalStateException("No database is open.");
         }
 
-        List<FormatHandler> handlers = ExportOutputOption.toHandlers(outputOptions);
-        return exporter.exportModules(modules, modulePaths, handlers);
+        List<FormatHandler> handlers = ExportOutputOption.toHandlers(request.outputOptions);
+
+        ExportCurrentState ctx = new ExportCurrentState(request);
+        ctx.basePath = request.getBaseOutputPath(request.baseOutputPath);
+        ctx.statistics = new ExportStatistics(request.monitor);
+        ctx.statistics.fullTracking = request.fullTracking;
+        ctx.referencedClassTracker = new ReferencedClassTracker();
+
+        // Let HtmlFormatHandler.init() find module list for nav tree building
+        ctx.exportModules = modules;
+
+        Files.createDirectories(ctx.basePath);
+
+        new ExportPreSelection(request).run(modules);
+
+        ModuleExporter me = new ModuleExporter(request);
+        int totalClasses = 0;
+        for (DOSchemaModule m : modules) {
+            totalClasses += me.countTotalClasses(m);
+            me.registerModuleClasses(m, ctx.referencedClassTracker);
+        }
+        if (request.monitor != null) {
+            request.monitor.onExportStart("All modules", totalClasses);
+        }
+
+        // Init — one call per handler before any file is opened
+        for (FormatHandler handler : handlers) {
+            handler.init(ctx);
+        }
+
+        // Class-to-class export loop
+        Throwable exportError = null;
+        try {
+            new ExportModuleLoop(ctx, handlers).runAll(modules);
+
+            // Referenced-class pass and final done hook
+            for (int i = 0; i < handlers.size(); i++) {
+                if (i > 0) {
+                    ctx.statistics.skipDiagnostics = true;
+                }
+                try {
+                    handlers.get(i).onReferencedClasses(ctx);
+                } finally {
+                    ctx.statistics.skipDiagnostics = false;
+                }
+            }
+            for (FormatHandler handler : handlers) {
+                handler.done(ctx);
+            }
+        } catch (Throwable t) {
+            exportError = t;
+        }
+
+        ctx.statistics.schemaWarnings.clear();
+        ctx.statistics.schemaWarnings.addAll(ctx.statistics.duplicationDetector.generateDuplicateWarnings());
+
+        if (request.monitor != null) {
+            if (exportError != null) {
+                String msg = exportError.getMessage() != null ? exportError.getMessage() : exportError.getClass().getSimpleName();
+                request.monitor.onExportError("All modules", msg);
+            } else {
+                request.monitor.onExportComplete("All modules", ctx.statistics.getUniqueExportedCount(), ctx.statistics.schemaWarnings.size());
+            }
+        }
+
+        if (exportError instanceof Error)
+            throw (Error) exportError;
+        if (exportError != null)
+            throw (Exception) exportError;
+        return ctx.statistics;
     }
 
 }

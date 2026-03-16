@@ -40,14 +40,6 @@ public final class ExportOutputOption {
         return option;
     }
 
-    public static boolean generatesHtmlViewer(String option) {
-        return HTML_JS.equalsIgnoreCase(option);
-    }
-
-    public static boolean generatesXsd(String option) {
-        return XML_XSD.equalsIgnoreCase(option);
-    }
-
     public static List<String> normalize(List<String> requestedOptions) {
         Set<String> normalized = new LinkedHashSet<>();
 
@@ -77,27 +69,6 @@ public final class ExportOutputOption {
         }
 
         return new ArrayList<>(normalized);
-    }
-
-    public static List<String> parsePersistedOptions(String persisted) {
-        if (persisted == null || persisted.isBlank()) {
-            return List.of(XML_XSD);
-        }
-
-        String[] parts = persisted.split(",");
-        List<String> parsed = new ArrayList<>();
-        for (String part : parts) {
-            if (part == null || part.isBlank()) {
-                continue;
-            }
-            parsed.add(part.trim());
-        }
-        return normalize(parsed);
-    }
-
-    public static String toPersistedOptions(List<String> options) {
-        List<String> normalized = normalize(options);
-        return String.join(",", normalized);
     }
 
     /**
