@@ -13,7 +13,6 @@ import migration4o.migration.ExportRequest;
 import migration4o.migration.NavNode;
 import migration4o.migration.ObjectExporter;
 import migration4o.migration.monitoring.ExportStatistics;
-import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.tasks.ModulePathUtil;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -80,12 +79,6 @@ public class ExportCurrentState {
 
     /** Shared statistics across all format handlers. */
     public ExportStatistics statistics;
-
-    /**
-     * Shared reference tracker. Temporarily set to {@code null} during the
-     * referenced-class export pass to prevent infinite recursion.
-     */
-    public ReferencedClassTracker referencedClassTracker;
 
     // ── HTML viewer / nav tree
     // ────────────────────────────────────────────────

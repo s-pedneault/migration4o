@@ -6,7 +6,6 @@ import java.util.List;
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
 import migration4o.migration.monitoring.ExportStatistics;
-import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.migration.tasks.ExportModuleLoop;
 import migration4o.migration.tasks.ExportPreSelection;
@@ -62,8 +61,6 @@ public class MigrationExportService {
         ctx.basePath = request.getBaseOutputPath(request.baseOutputPath);
         ctx.statistics = new ExportStatistics(request.monitor);
         ctx.statistics.fullTracking = request.fullTracking;
-        ctx.referencedClassTracker = new ReferencedClassTracker();
-
         // Let HtmlFormatHandler.init() find module list for nav tree building
         ctx.exportModules = modules;
 
@@ -75,7 +72,6 @@ public class MigrationExportService {
         int totalClasses = 0;
         for (DOSchemaModule m : modules) {
             totalClasses += me.countTotalClasses(m);
-            me.registerModuleClasses(m, ctx.referencedClassTracker);
         }
         if (request.monitor != null) {
             request.monitor.onExportStart("All modules", totalClasses);
@@ -91,17 +87,6 @@ public class MigrationExportService {
         try {
             new ExportModuleLoop(ctx, handlers).runAll(modules);
 
-            // Referenced-class pass and final done hook
-            for (int i = 0; i < handlers.size(); i++) {
-                if (i > 0) {
-                    ctx.statistics.skipDiagnostics = true;
-                }
-                try {
-                    handlers.get(i).onReferencedClasses(ctx);
-                } finally {
-                    ctx.statistics.skipDiagnostics = false;
-                }
-            }
             for (FormatHandler handler : handlers) {
                 handler.done(ctx);
             }

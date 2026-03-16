@@ -722,16 +722,6 @@ public class FieldExporter {
                 }
             }
 
-            // Track the referenced entity class if this is a non-embedded
-            // reference
-            if (ctxRef.referencedClassTracker != null && schemaField != null && !schemaField.embedContents) {
-                // Use the pointsTo field to find what entity class this
-                // IDEntite references
-                if (fieldClass.pointsTo != null && !fieldClass.pointsTo.isEmpty()) {
-                    ctxRef.referencedClassTracker.registerReferencedClass(fieldClass.pointsTo);
-                }
-            }
-
             // Resolve and export the IDEntite reference
             // Skip empty references (mID == -1) when MINUS_ONE is in skipWhen
             if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {

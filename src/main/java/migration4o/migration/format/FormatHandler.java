@@ -10,19 +10,16 @@ import java.util.Map;
 import java.util.Set;
 
 import migration4o.migration.ExportFormat;
-import migration4o.migration.monitoring.ReferencedClassTracker;
-import migration4o.migration.tasks.ObjectExportLoop;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
  * Abstract base class for format-specific export implementations.
  * <p>
- * The engine calls all eight hooks unconditionally; handlers override only what
- * they need. Two hooks ({@code observeObject}, {@code observeField}) serve as
+ * The engine calls all hooks unconditionally; handlers override only what they
+ * need. Two hooks ({@code observeObject}, {@code observeField}) serve as
  * schema-observation callbacks (XSD registration) — all other handlers leave
- * them as no-ops. {@code onReferencedClasses} has a default implementation that
- * replaces the old {@code ReferencedClassesExporter}.
+ * them as no-ops.
  */
 public abstract class FormatHandler {
 
@@ -209,54 +206,8 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called once per handler after all modules finish, before {@code done}.
-     * <p>
-     * Default implementation replaces {@code ReferencedClassesExporter}: it
-     * exports every class in {@code ctx.referencedClassTracker} that has not
-     * already been exported, writing files under {@code Referenced/}. Reference
-     * tracking is disabled during this pass to prevent infinite recursion. The
-     * recursive use of {@code open}/{@code close} ensures format-specific
-     * post-processing (HTML viewer, XSD registration) applies automatically.
-     */
-    public void onReferencedClasses(ExportCurrentState ctx) throws Exception {
-        if (ctx.referencedClassTracker == null)
-            return;
-        Set<String> toExport = ctx.referencedClassTracker.getReferencedClasses();
-        if (toExport.isEmpty())
-            return;
-
-        Path referencedPath = formatBasePath(ctx).resolve("Referenced");
-        Files.createDirectories(referencedPath);
-
-        ReferencedClassTracker saved = ctx.referencedClassTracker;
-        ctx.referencedClassTracker = null;
-        try {
-            for (String className : toExport) {
-                if (saved.isReferencedClassExported(className))
-                    continue;
-
-                DOSchemaClass schemaClass = ctx.request.referenceSchema.findClassByName(className);
-                DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(className);
-                if (schemaClass == null || dbSchemaClass == null)
-                    continue;
-
-                ctx.setClass(schemaClass, null);
-                Path filePath = referencedPath.resolve(schemaClass.destinationName + extension());
-                this.writer = createWriter(filePath);
-                this.open(ctx);
-                new ObjectExportLoop(ctx, this).run(dbSchemaClass);
-                this.close(ctx);
-                ctx.clearClass();
-                saved.markReferencedClassAsExported(className);
-            }
-        } finally {
-            ctx.referencedClassTracker = saved;
-        }
-    }
-
-    /**
-     * Called after {@code onReferencedClasses}, once per handler, for final
-     * tasks. Default: no-op.
+     * Called once per handler after all modules finish, for final tasks.
+     * Default: no-op.
      */
     public void done(ExportCurrentState ctx) throws Exception {
     }

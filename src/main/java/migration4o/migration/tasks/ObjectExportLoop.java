@@ -16,8 +16,6 @@ import migration4o.models.schema.DOSchemaClass;
  * <li>Iterates over the class's object IDs, respecting
  * {@link ExportOperation#maxObjectsPerClass} and cancellation.
  * <li>Calls {@link ObjectExporter#exportObject} for each ID.
- * <li>Propagates newly discovered reference classes back to the shared
- * {@link migration4o.migration.monitoring.ReferencedClassTracker}.
  * </ul>
  */
 public class ObjectExportLoop {
@@ -141,12 +139,6 @@ public class ObjectExportLoop {
                 }
             }
 
-            // Propagate newly discovered references to the shared tracker
-            if (ctx.referencedClassTracker != null && ctx.referencedClassTracker != null) {
-                for (String className : ctx.referencedClassTracker.getReferencedClasses()) {
-                    ctx.referencedClassTracker.registerReferencedClass(className);
-                }
-            }
         }
 
         if (request.monitor != null && loopClass != null) {

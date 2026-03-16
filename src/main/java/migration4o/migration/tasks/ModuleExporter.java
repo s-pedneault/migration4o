@@ -1,12 +1,7 @@
 package migration4o.migration.tasks;
 
-import java.util.HashSet;
-import java.util.Set;
-
 import migration4o.migration.ExportRequest;
-import migration4o.migration.monitoring.ReferencedClassTracker;
 import migration4o.models.schema.DOSchemaModule;
-import migration4o.models.ui.ClassExportConfig;
 
 /**
  * Utility class for module-level operations shared by the export engine.
@@ -34,21 +29,4 @@ public class ModuleExporter {
         return count;
     }
 
-    // ── Reference-tracker registration ───────────────────────────────────────
-
-    /**
-     * Recursively registers all class names in the module tree with the given
-     * {@link ReferencedClassTracker} so the tracker can distinguish between
-     * "known module classes" and truly foreign references.
-     */
-    public void registerModuleClasses(DOSchemaModule module, ReferencedClassTracker tracker) {
-        Set<String> classNames = new HashSet<>();
-        for (ClassExportConfig c : module.classConfigs) {
-            classNames.add(c.getClassName());
-        }
-        tracker.registerModule(module.name, classNames);
-        for (DOSchemaModule child : module.children) {
-            registerModuleClasses(child, tracker);
-        }
-    }
 }
