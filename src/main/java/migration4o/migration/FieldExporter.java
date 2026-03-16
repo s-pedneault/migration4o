@@ -25,6 +25,7 @@ import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.ClassUtil;
 import migration4o.util.CollectionTypeUtil;
 import migration4o.util.DatabaseUtil;
+import migration4o.util.ReferenceUtil;
 import migration4o.util.SchemaUtil;
 import migration4o.util.ValueUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -36,7 +37,6 @@ import migration4o.util.tools.structuredwriter.StructuredWriter;
 public class FieldExporter {
     private final ExportRequest operation;
     private final StructuredWriter xmlWriter;
-    private final ReferenceObjectExporter idEntiteResolver;
     private final FormatHandler handlerRef;
     private final ExportCurrentState ctxRef;
     private final VirtualFieldQueryEngine virtualFieldQuery = new VirtualFieldQueryEngine();
@@ -47,7 +47,6 @@ public class FieldExporter {
         this.xmlWriter = handler.writer;
         this.handlerRef = handler;
         this.ctxRef = ctx;
-        this.idEntiteResolver = new ReferenceObjectExporter(ctx.request.databaseSchema);
     }
 
     /**
@@ -733,13 +732,20 @@ public class FieldExporter {
                 }
             }
 
-            // Pass through the embedded flag and field name for tracking
-            idEntiteResolver.resolveAndExport(container, fieldValue, className, schemaField, (objectId, indent) -> {
-                if (ctxRef.statistics != null) {
-                    ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
+            // Resolve and export the IDEntite reference
+            // Skip empty references (mID == -1) when MINUS_ONE is in skipWhen
+            if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
+                Long mID = ReferenceUtil.extractMIDField(container, fieldValue);
+                if (mID != null && mID == -1 && schemaField.skipWhen.contains("MINUS_ONE")) {
+                    return;
                 }
-                ctxRef.objectExporter.exportObjectRecursively(container, objectId, indent, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
-            }, indentLevel);
+            }
+
+            long resolvedObjectId = ReferenceUtil.resolveIDEntiteForExport(container, fieldValue, className, schemaField, operation.databaseSchema);
+            if (ctxRef.statistics != null) {
+                ctxRef.statistics.recordRelationshipExported(parentObjectId, resolvedObjectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
+            }
+            ctxRef.objectExporter.exportObject(resolvedObjectId, isEmbedded);
             return;
         }
 
@@ -771,7 +777,7 @@ public class FieldExporter {
             if (ctxRef.statistics != null) {
                 ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "traversed as embedded relationship" : "traversed as object reference");
             }
-            ctxRef.objectExporter.exportObjectRecursively(container, objectId, indentLevel, isEmbedded, fieldName, parentClassName, sourceFieldName, parentSourceClassName, false, parentObjectId);
+            ctxRef.objectExporter.exportObject(objectId, isEmbedded);
         } else {
             // Primitive value - write inline
             String stringValue;

@@ -62,6 +62,6 @@ public class IDReferenceExporter {
 
         // Ensure the actual entity object gets exported separately (not
         // embedded)
-        ctx.objectExporter.exportObjectRecursively(container, entityObjectId, indentLevel, false, null, null, null, null, false, null);
+        ctx.objectExporter.exportObject(entityObjectId, false);
     }
 }

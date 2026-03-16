@@ -15,7 +15,7 @@ import migration4o.models.schema.DOSchemaClass;
  * <li>Fires {@code onClassStart} / {@code onClassComplete} progress callbacks.
  * <li>Iterates over the class's object IDs, respecting
  * {@link ExportOperation#maxObjectsPerClass} and cancellation.
- * <li>Calls {@link ObjectExporter#exportObjectRecursively} for each ID.
+ * <li>Calls {@link ObjectExporter#exportObject} for each ID.
  * <li>Propagates newly discovered reference classes back to the shared
  * {@link migration4o.migration.monitoring.ReferencedClassTracker}.
  * </ul>

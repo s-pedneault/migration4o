@@ -12,7 +12,7 @@ import java.util.Set;
 
 import migration4o.migration.ExportFormat;
 import migration4o.migration.ObjectExporter;
-import migration4o.migration.XSDBuilder;
+import migration4o.migration.xsd.XSDBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
@@ -55,8 +55,7 @@ public class XmlFormatHandler extends FormatHandler {
     /** Initialises the shared XSD builder. */
     @Override
     public void init(ExportCurrentState ctx) throws Exception {
-        liveXsdBuilder = new XSDBuilder(ctx.request.dbContext);
-        liveXsdBuilder.startExportRoot();
+        liveXsdBuilder = new XSDBuilder();
     }
 
     /**

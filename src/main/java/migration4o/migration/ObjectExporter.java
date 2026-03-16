@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.migration.format.ExportCurrentState;
@@ -45,7 +44,7 @@ public class ObjectExporter {
      * and content writing. Called from ObjectExportLoop (new path) and from
      * XmlFormatHandler.done() for the unreached-objects pass.
      */
-    public void exportObject(long objectId, boolean isEmbedded) throws Exception {
+    public void exportObject(long objectId, boolean isEmbedded) throws IOException {
         // For root objects: check without marking yet, so criteria-filtered
         // objects
         // are not consumed from exportedIds (they must remain available for
@@ -133,28 +132,6 @@ public class ObjectExporter {
         } finally {
             if (isEmbedded)
                 inProgressIds.remove(objectId);
-        }
-    }
-
-    /**
-     * Delegates to {@link #exportObject(long, boolean)} — kept for call sites
-     * in FieldExporter and IDReferenceExporter that use the full recursive
-     * signature.
-     */
-    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel) throws IOException {
-        exportObjectRecursively(container, objectId, indentLevel, false, null, null, null, null, true, null);
-    }
-
-    /**
-     * Delegates to {@link #exportObject(long, boolean)}.
-     */
-    public void exportObjectRecursively(ExtObjectContainer container, long objectId, int indentLevel, boolean isEmbedded, String fieldName, String containingClassName, String sourceFieldName, String sourceContainingClassName, boolean isRootObject, Long parentObjectId) throws IOException {
-        try {
-            exportObject(objectId, isEmbedded);
-        } catch (IOException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IOException(e);
         }
     }
 }
