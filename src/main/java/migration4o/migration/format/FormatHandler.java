@@ -10,16 +10,14 @@ import java.util.Map;
 import java.util.Set;
 
 import migration4o.migration.ExportFormat;
-import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
  * Abstract base class for format-specific export implementations.
  * <p>
  * The engine calls all hooks unconditionally; handlers override only what they
- * need. Two hooks ({@code observeObject}, {@code observeField}) serve as
- * schema-observation callbacks (XSD registration) — all other handlers leave
- * them as no-ops.
+ * need. Subclasses must call {@code super} or replicate its schema-observation
+ * callbacks (XSD registration) — all other handlers leave them as no-ops.
  */
 public abstract class FormatHandler {
 
@@ -127,17 +125,9 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called once per object <em>before</em> {@code onObject}. Not for content
-     * writing — for schema observation only (e.g. XSD registration). Default:
-     * no-op.
-     */
-    public void observeObject(ExportCurrentState ctx) throws Exception {
-    }
-
-    /**
-     * Called after {@code observeObject}, before field export. Returns
-     * {@code true} if the handler has fully written this object (field loop is
-     * skipped); {@code false} to proceed with the default field pipeline.
+     * Called after {@code open}, before field export. Returns {@code true} if
+     * the handler has fully written this object (field loop is skipped);
+     * {@code false} to proceed with the default field pipeline.
      * <p>
      * Default opens the object element:
      * 
@@ -163,27 +153,10 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called once per schema field <em>before</em> {@code onField}. Not for
-     * content writing — for schema observation only (e.g. XSD registration).
-     * Default: no-op.
-     */
-    public void observeField(ExportCurrentState ctx) throws Exception {
-    }
-
-    /**
-     * Registers a referenced class and all its fields for schema observation
-     * (e.g. XSD registration of ID-reference wrapper classes). Called when the
-     * export encounters a class that is not the current top-level export class
-     * but needs to appear in the output schema. Default: no-op.
-     */
-    public void observeReferencedClass(DOSchemaClass refClass) {
-    }
-
-    /**
-     * Called after {@code observeField}, before the default field pipeline.
-     * Returns {@code true} if the handler has fully written this field (default
-     * pipeline is skipped); {@code false} to let the pipeline handle it.
-     * Default: {@code return false}.
+     * Called before the default field pipeline. Returns {@code true} if the
+     * handler has fully written this field (default pipeline is skipped);
+     * {@code false} to let the pipeline handle it. Default:
+     * {@code return false}.
      */
     public boolean onField(ExportCurrentState ctx) throws Exception {
         return false;

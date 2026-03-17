@@ -1,8 +1,8 @@
 package migration4o.migration.xsd;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -13,84 +13,19 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.schema.DOSchemaService;
 
 /**
- * Mutable shared state accumulated during export and consumed by XSD writers.
+ * Shared context for XSD generation, providing schema navigation utilities.
  * <p>
- * During the export phase, {@link XSDBuilder} populates this context via the
- * {@code register*()} methods. During the write phase, {@link XSDSchemaWriter}
- * and {@link XSDFieldWriter} read and extend the maps as they discover
- * additional referenced types.
+ * The XSD is generated from the full reference schema — no observation-based
+ * registration is needed. This class provides helper methods used by
+ * {@link XSDSchemaWriter}, {@link XSDClassWriter}, and {@link XSDFieldWriter}.
  */
 class XSDContext {
-
-    /** Classes registered for XSD generation, keyed by source name. */
-    final Map<String, DOSchemaClass> classMap = new LinkedHashMap<>();
-
-    /** Exported fields per class (source name → destination name → field). */
-    final Map<String, Map<String, DOSchemaField>> fieldsByClass = new LinkedHashMap<>();
-
-    /** Destination names of classes that appear as top-level XML elements. */
-    final Set<String> topLevelObjects = new LinkedHashSet<>();
-
-    /**
-     * Destination names of types referenced as field types (discovered during
-     * writing).
-     */
-    final Set<String> referencedTypes = new LinkedHashSet<>();
 
     // ── Reference schema accessor ──────────────────────────────────────────
 
     /** Returns the reference schema (cached singleton). */
     DOSchema getReferenceSchema() {
         return DOSchemaService.getInstance().getReferenceSchema();
-    }
-
-    // ── Registration methods (called during export phase) ──────────────────
-
-    void registerClass(DOSchemaClass schemaClass) {
-        if (schemaClass == null)
-            return;
-        String absName = schemaClass.source;
-        if (!classMap.containsKey(absName)) {
-            DOSchemaClass refClass = getReferenceSchema().findClassByName(absName);
-            if (refClass != null) {
-                classMap.put(absName, refClass);
-            }
-        }
-    }
-
-    void registerTopLevelObject(String destName, DOSchemaClass schemaClass) {
-        if (schemaClass != null) {
-            DOSchemaClass refClass = getReferenceSchema().findClassByName(schemaClass.source);
-            if (refClass != null) {
-                topLevelObjects.add(refClass.destinationName);
-                classMap.put(refClass.source, refClass);
-            }
-        }
-    }
-
-    void registerField(DOSchemaClass parentClass, DOSchemaField field) {
-        if (field == null || parentClass == null)
-            return;
-
-        DOSchemaClass refClass = getReferenceSchema().findClassByName(parentClass.source);
-        if (refClass == null)
-            return;
-
-        // Look up the field in reference schema to get correct export
-        // properties
-        DOSchemaField refField = null;
-        if (refClass.fields != null) {
-            for (DOSchemaField f : refClass.fields) {
-                if (f.source.equals(field.source)) {
-                    refField = f;
-                    break;
-                }
-            }
-        }
-
-        if (refField != null && refField.isExported) {
-            fieldsByClass.computeIfAbsent(refClass.source, k -> new LinkedHashMap<>()).put(refField.destinationName, refField);
-        }
     }
 
     // ── Schema navigation utilities (used by writers) ──────────────────────
@@ -131,6 +66,42 @@ class XSDContext {
     }
 
     /**
+     * Returns only the fields declared directly on this class that are not
+     * already defined in any ancestor class. Used for xs:extension where
+     * inherited fields come from the parent type — re-emitting them would
+     * violate the XSD Unique Particle Attribution (UPA) constraint.
+     */
+    Map<String, DOSchemaField> getOwnExportedFields(DOSchemaClass schemaClass) {
+        // Collect all ancestor field destinationNames so we can exclude them
+        Set<String> ancestorFieldNames = new HashSet<>();
+        DOSchema schema = getReferenceSchema();
+        String parentName = schemaClass.parentClassName;
+        while (parentName != null && !parentName.isEmpty()) {
+            DOSchemaClass parent = schema.findClassByName(parentName);
+            if (parent == null)
+                break;
+            if (parent.fields != null) {
+                for (DOSchemaField f : parent.fields) {
+                    if (f.isExported) {
+                        ancestorFieldNames.add(f.destinationName);
+                    }
+                }
+            }
+            parentName = parent.parentClassName;
+        }
+
+        Map<String, DOSchemaField> result = new LinkedHashMap<>();
+        if (schemaClass.fields != null) {
+            for (DOSchemaField f : schemaClass.fields) {
+                if (f.isExported && !ancestorFieldNames.contains(f.destinationName)) {
+                    result.put(f.destinationName, f);
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * Checks whether a schema class has any subclass in the reference schema.
      */
     boolean hasAnySubclass(DOSchemaClass schemaClass) {
@@ -144,5 +115,46 @@ class XSDContext {
             }
         }
         return false;
+    }
+
+    /**
+     * Returns all exported descendant classes (direct and transitive) of the
+     * given class. Uses BFS over parentClassName to find all descendants.
+     */
+    List<DOSchemaClass> getAllExportedDescendants(DOSchemaClass schemaClass) {
+        DOSchema schema = getReferenceSchema();
+        List<DOSchemaClass> descendants = new ArrayList<>();
+        List<String> queue = new ArrayList<>();
+        queue.add(schemaClass.source);
+
+        int idx = 0;
+        while (idx < queue.size()) {
+            String parentName = queue.get(idx++);
+            for (DOSchemaClass c : schema.getClasses()) {
+                if (parentName.equals(c.parentClassName)) {
+                    if (c.migrate) {
+                        descendants.add(c);
+                    }
+                    queue.add(c.source);
+                }
+            }
+        }
+        return descendants;
+    }
+
+    /**
+     * Checks whether a schema class has an exported parent class that uses
+     * xs:extension. Returns the parent class if it's exported, null otherwise.
+     */
+    DOSchemaClass getExportedParent(DOSchemaClass schemaClass) {
+        if (schemaClass.parentClassName == null || schemaClass.parentClassName.isEmpty()) {
+            return null;
+        }
+        DOSchema schema = getReferenceSchema();
+        DOSchemaClass parent = schema.findClassByName(schemaClass.parentClassName);
+        if (parent != null && parent.migrate) {
+            return parent;
+        }
+        return null;
     }
 }

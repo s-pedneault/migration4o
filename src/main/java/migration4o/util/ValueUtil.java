@@ -49,6 +49,11 @@ public class ValueUtil {
             return ((Collection<?>) value).isEmpty();
         }
 
+        // Check for empty maps
+        if (value instanceof java.util.Map) {
+            return ((java.util.Map<?, ?>) value).isEmpty();
+        }
+
         // Check for empty arrays
         if (value.getClass().isArray()) {
             return java.lang.reflect.Array.getLength(value) == 0;
@@ -137,6 +142,9 @@ public class ValueUtil {
                     return true;
                 }
                 if (value instanceof Collection && ((Collection<?>) value).isEmpty()) {
+                    return true;
+                }
+                if (value instanceof java.util.Map && ((java.util.Map<?, ?>) value).isEmpty()) {
                     return true;
                 }
                 if (value.getClass().isArray() && java.lang.reflect.Array.getLength(value) == 0) {

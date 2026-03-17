@@ -17,20 +17,19 @@ public class ReferenceUtil {
 
     /**
      * Determines which object ID should be exported for an IDEntite reference.
-     * If embedContents is false, returns the IDEntite object ID itself.
-     * If embedContents is true, attempts to resolve to the target object and
-     * returns
-     * that ID, falling back to the IDEntite object ID if resolution fails.
+     * If embedContents is false, returns the IDEntite object ID itself. If
+     * embedContents is true, attempts to resolve to the target object. Returns
+     * null if resolution fails (caller must skip the export).
      * 
-     * @param container      Database container
-     * @param idEntiteObj    The IDEntite object
-     * @param idClassName    Class name of the IDEntite object
-     * @param schemaField    Schema field definition (may be null)
+     * @param container Database container
+     * @param idEntiteObj The IDEntite object
+     * @param idClassName Class name of the IDEntite object
+     * @param schemaField Schema field definition (may be null)
      * @param databaseSchema The database schema containing all classes
-     * @return The object ID to export
+     * @return The object ID to export, or null if embedContents resolution
+     * failed
      */
-    public static long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj,
-            String idClassName, DOSchemaField schemaField, DOSchema databaseSchema) {
+    public static Long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DOSchema databaseSchema) {
         long idEntiteId = container.ext().getID(idEntiteObj);
 
         // Check if we should embed the target object's contents
@@ -48,23 +47,25 @@ public class ReferenceUtil {
         // Resolve the reference to find the target object
         Long targetObjectId = resolveIDEntiteReference(container, idEntiteObj, expectedType, databaseSchema);
 
-        // Return the target object ID if found, otherwise fall back to the IDEntite
-        // object
-        return targetObjectId != null ? targetObjectId : idEntiteId;
+        if (targetObjectId == null) {
+            System.err.println("[WARN] IDEntite resolution failed for field '" + fieldName + "' (" + idClassName + ", objectId=" + idEntiteId + ") - skipping unresolvable reference");
+            return null;
+        }
+
+        return targetObjectId;
     }
 
     /**
      * Resolves an IDEntite reference to find the target object ID.
      * 
-     * @param container      Database container
-     * @param idEntiteObj    The IDEntite object to resolve
-     * @param expectedType   Expected type name (simple or absolute class name) -
-     *                       can be null
+     * @param container Database container
+     * @param idEntiteObj The IDEntite object to resolve
+     * @param expectedType Expected type name (simple or absolute class name) -
+     * can be null
      * @param databaseSchema The database schema containing all classes
      * @return The object ID of the target object, or null if not found
      */
-    public static Long resolveIDEntiteReference(ExtObjectContainer container, Object idEntiteObj,
-            String expectedType, DOSchema databaseSchema) {
+    public static Long resolveIDEntiteReference(ExtObjectContainer container, Object idEntiteObj, String expectedType, DOSchema databaseSchema) {
         try {
             long idEntiteId = container.ext().getID(idEntiteObj);
 
@@ -86,15 +87,14 @@ public class ReferenceUtil {
     /**
      * Finds an object by its mID field value.
      * 
-     * @param container      Database container
-     * @param mID            The mID value to search for
-     * @param expectedType   Expected type name (simple or absolute class name) -
-     *                       can be null
+     * @param container Database container
+     * @param mID The mID value to search for
+     * @param expectedType Expected type name (simple or absolute class name) -
+     * can be null
      * @param databaseSchema The database schema containing all classes
      * @return The object ID of the matching object, or null if not found
      */
-    public static Long findObjectByMID(ExtObjectContainer container, Long mID, String expectedType,
-            DOSchema databaseSchema) {
+    public static Long findObjectByMID(ExtObjectContainer container, Long mID, String expectedType, DOSchema databaseSchema) {
         if (mID == null || databaseSchema == null) {
             return null;
         }
@@ -106,7 +106,8 @@ public class ReferenceUtil {
 
             String fullClassName = schemaClass.source;
 
-            // Only search in classes that match the expected type (if specified)
+            // Only search in classes that match the expected type (if
+            // specified)
             if (expectedType != null && !fullClassName.equals(expectedType)) {
                 // Also try matching by simple name
                 String simpleClassName = ClassUtil.getSimpleName(fullClassName);
@@ -142,7 +143,7 @@ public class ReferenceUtil {
      * Extracts the mID field value from a GenericObject.
      * 
      * @param container Database container
-     * @param obj       The object (must be a GenericObject)
+     * @param obj The object (must be a GenericObject)
      * @return The mID value as Long, or null if not found
      */
     public static Long extractMIDField(ExtObjectContainer container, Object obj) {
@@ -175,12 +176,11 @@ public class ReferenceUtil {
     }
 
     /**
-     * Extracts expected type name from a field name or ID class name.
-     * Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
-     * Example: "gest.gen.IDTypeAssistanceParticuliere" ->
-     * "TypeAssistanceParticuliere"
+     * Extracts expected type name from a field name or ID class name. Example:
+     * "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere" Example:
+     * "gest.gen.IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
      * 
-     * @param fieldName   The field name
+     * @param fieldName The field name
      * @param idClassName The ID class name (fully qualified)
      * @return The expected type name, or null if cannot be extracted
      */

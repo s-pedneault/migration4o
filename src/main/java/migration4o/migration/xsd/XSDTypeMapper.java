@@ -30,7 +30,7 @@ final class XSDTypeMapper {
      */
     static String getXSDType(String javaType) {
         if (javaType == null || javaType.isEmpty()) {
-            return "xs:string";
+            throw new IllegalArgumentException("XSD type mapping error: null or empty Java type");
         }
 
         String normalizedType = javaType;
@@ -49,7 +49,7 @@ final class XSDTypeMapper {
         if (normalizedType.equals("java.lang.Long") || normalizedType.equals("long"))
             return "xs:long";
         if (normalizedType.equals("java.lang.Boolean") || normalizedType.equals("boolean"))
-            return "xs:string";
+            return "xs:boolean";
         if (normalizedType.equals("java.lang.Double") || normalizedType.equals("double"))
             return "xs:double";
         if (normalizedType.equals("java.lang.Float") || normalizedType.equals("float"))
@@ -59,7 +59,7 @@ final class XSDTypeMapper {
         if (normalizedType.equals("java.lang.Short") || normalizedType.equals("short"))
             return "xs:short";
         if (normalizedType.equals("java.util.Date") || normalizedType.equals("date"))
-            return "xs:string";
+            return "xs:dateTime";
         if (normalizedType.equals("java.lang.Object") || normalizedType.equals("Object") || normalizedType.equals("object"))
             return "xs:anyType";
         if (normalizedType.equals("java.lang.Class") || normalizedType.equals("Class"))

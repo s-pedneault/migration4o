@@ -95,7 +95,6 @@ public class ObjectExporter {
             ctx.schemaClass = schemaClass;
             ctx.pushObject(obj, objectId);
             try {
-                handler.observeObject(ctx);
                 boolean handled = handler.onObject(ctx);
                 if (!handled) {
                     try {

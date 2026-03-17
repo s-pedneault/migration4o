@@ -2,17 +2,22 @@ package migration4o.migration.xsd;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.TreeSet;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.CollectionTypeUtil;
 
 /**
  * Writes individual field XSD element definitions inside a class complexType.
  * <p>
  * Handles the complex branching logic for collections, arrays, primitive types,
- * IDEntite references, and embedded complex fields. Discovers new referenced
- * types and registers them in the shared {@link XSDContext}.
+ * IDEntite references, and embedded complex fields. Uses {@code xs:choice} with
+ * explicit descendant listing instead of {@code xs:any} for polymorphic fields.
  */
 class XSDFieldWriter {
 
@@ -31,14 +36,29 @@ class XSDFieldWriter {
         boolean isCollection = field.isCollection;
 
         if (fieldType == null || fieldType.isEmpty()) {
-            // No type info: write a permissive anyType element
-            writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:anyType\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            // Field has no type information in the schema — skip it from XSD.
+            // This can happen for inherited DB4O internal fields (e.g.
+            // com.db4o.config.TCollection) where the type was never recorded.
+            System.err.println("WARNING: XSD skipping field '" + fieldName + "' (source='" + field.source + "') — null or empty type. Check if a class is missing from the reference schema.");
             return;
         }
 
-        // byte[] is exported as a single base64/string value, not as an array
+        // If the field type maps to a non-exported class (migrate=false), skip.
+        // Per spec 3.8: all fields whose type resolves to a class with
+        // migrate=false are skipped — no exception for primitive-like types.
+        {
+            DOSchemaClass typeClass = context.getReferenceSchema().findClassByName(fieldType);
+            if (typeClass != null && !typeClass.migrate) {
+                System.err.println("WARNING: XSD skipping field '" + fieldName + "' — type '" + fieldType + "' is not exported (migrate=false).");
+                return;
+            }
+        }
+
+        // byte[] is exported as a base64-encoded value — let XSDTypeMapper
+        // handle it
         if ("byte[]".equals(fieldType)) {
-            writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            String xsdType = XSDTypeMapper.getXSDType(fieldType);
+            writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             return;
         }
 
@@ -46,6 +66,8 @@ class XSDFieldWriter {
         boolean isArrayType = !isCollection && fieldType.endsWith("[]");
         if (isCollection || isArrayType) {
             writeCollectionField(writer, field, fieldName, fieldType, isCollection, isArrayType, indent);
+        } else if (CollectionTypeUtil.isMapType(fieldType)) {
+            writeMapField(writer, field, fieldName, indent);
         } else if (XSDTypeMapper.isPrimitiveType(fieldType)) {
             writePrimitiveField(writer, field, fieldName, fieldType, indent);
         } else {
@@ -71,26 +93,30 @@ class XSDFieldWriter {
             DOSchema referenceSchema = context.getReferenceSchema();
             DOSchemaClass childClass = referenceSchema.findClassByName(childrenType);
             if (childClass == null) {
-                System.err.println("WARNING: Collection field '" + fieldName + "' references childrenType='" + childrenType + "' which is not found in schema");
-                itemType = "xs:anyType";
-                itemElemName = fieldName;
-            } else if (field.embedContents && childClass.pointsTo != null) {
+                throw new IllegalStateException("XSD generation error: collection field '" + fieldName + "' references childrenType='" + childrenType + "' which is not found in schema");
+            }
+            if (!childClass.migrate) {
+                System.err.println("WARNING: XSD skipping collection field '" + fieldName + "' — child type '" + childrenType + "' is not exported (migrate=false).");
+                return;
+            }
+            if (field.embedContents && childClass.pointsTo != null) {
                 // IDEntite with embedContents=true: XML writes the pointed-to
                 // entity class
                 DOSchemaClass pointsToClass = referenceSchema.findClassByName(childClass.pointsTo);
+                if (pointsToClass != null && !pointsToClass.migrate) {
+                    System.err.println("WARNING: XSD skipping collection field '" + fieldName + "' — target type '" + childClass.pointsTo + "' is not exported (migrate=false).");
+                    return;
+                }
                 if (pointsToClass != null) {
                     itemElemName = pointsToClass.destinationName;
                     itemType = pointsToClass.destinationName;
-                    context.referencedTypes.add(itemType);
                 } else {
                     itemElemName = childClass.destinationName;
                     itemType = childClass.destinationName;
-                    context.referencedTypes.add(itemType);
                 }
             } else {
                 // Non-embedded IDEntite collection OR non-IDEntite complex
                 String refClassName = childClass.destinationName;
-                context.referencedTypes.add(refClassName);
                 itemType = refClassName;
                 itemElemName = refClassName;
             }
@@ -108,10 +134,9 @@ class XSDFieldWriter {
             DOSchema refSchema = context.getReferenceSchema();
             DOSchemaClass itemClass = refSchema.findClassByName(childrenType);
             if (itemClass != null && context.hasAnySubclass(itemClass)) {
-                // Polymorphic: runtime item elements may use subclass names
-                writer.write(indent + "    <xs:sequence>\n");
-                writer.write(indent + "      <xs:any minOccurs=\"0\" maxOccurs=\"unbounded\" processContents=\"lax\"/>\n");
-                writer.write(indent + "    </xs:sequence>\n");
+                // Polymorphic: use xs:choice listing base + all exported
+                // descendants
+                writePolymorphicChoice(writer, itemClass, indent + "    ", true);
             } else {
                 writer.write(indent + "    <xs:sequence>\n");
                 writer.write(indent + "      <xs:element name=\"" + itemElemName + "\" type=\"" + itemType + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
@@ -119,6 +144,32 @@ class XSDFieldWriter {
             }
         }
 
+        writer.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
+        writer.write(indent + "  </xs:complexType>\n");
+        writer.write(indent + "</xs:element>\n");
+    }
+
+    // ── Map fields ─────────────────────────────────────────────────────────
+
+    /**
+     * Writes a map field (Hashtable, HashMap, etc.) as a wrapper element with
+     * entry children. Each entry has a key and a value, both as xs:anyType
+     * since the concrete types are not known at schema time. Matches export
+     * structure: {@code <field size=
+     * "N"><entry><key>...</key><value>...</value></entry>...</field>}
+     */
+    private void writeMapField(FileWriter writer, DOSchemaField field, String fieldName, String indent) throws IOException {
+        writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+        writer.write(indent + "  <xs:complexType>\n");
+        writer.write(indent + "    <xs:sequence>\n");
+        writer.write(indent + "      <xs:element name=\"entry\" minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
+        writer.write(indent + "        <xs:complexType>\n");
+        writer.write(indent + "          <xs:sequence>\n");
+        writer.write(indent + "            <xs:any minOccurs=\"0\" maxOccurs=\"2\" processContents=\"lax\"/>\n");
+        writer.write(indent + "          </xs:sequence>\n");
+        writer.write(indent + "        </xs:complexType>\n");
+        writer.write(indent + "      </xs:element>\n");
+        writer.write(indent + "    </xs:sequence>\n");
         writer.write(indent + "    <xs:attribute name=\"size\" type=\"xs:int\"/>\n");
         writer.write(indent + "  </xs:complexType>\n");
         writer.write(indent + "</xs:element>\n");
@@ -137,10 +188,28 @@ class XSDFieldWriter {
         } else if (field.embedContents && fieldClass != null) {
             // Other primitive-like type in schema with embedContents
             // (e.g. UUID) — exporter writes it as a wrapped complex element
-            writeWrappedAnyElement(writer, fieldName, indent);
+            writeWrappedChoiceElement(writer, fieldName, fieldClass, indent);
         } else if (field.valueMap != null && !field.valueMap.isEmpty()) {
-            // ValueMap maps raw values to display strings — use xs:string
-            writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            // ValueMap: generate inline simpleType with xs:enumeration facets.
+            // However, if the field type is "object", the value can be anything
+            // (dates, numbers, strings) — the valueMap is a best-effort
+            // transformation, not an exhaustive constraint. Use xs:string.
+            if ("object".equalsIgnoreCase(fieldType)) {
+                writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:anyType\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            } else {
+                Collection<String> mappedValues = field.valueMap.values();
+                // Deduplicate and sort for deterministic output
+                TreeSet<String> sortedValues = new TreeSet<>(mappedValues);
+                writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+                writer.write(indent + "  <xs:simpleType>\n");
+                writer.write(indent + "    <xs:restriction base=\"xs:string\">\n");
+                for (String value : sortedValues) {
+                    writer.write(indent + "      <xs:enumeration value=\"" + XSDTypeMapper.escapeXml(value) + "\"/>\n");
+                }
+                writer.write(indent + "    </xs:restriction>\n");
+                writer.write(indent + "  </xs:simpleType>\n");
+                writer.write(indent + "</xs:element>\n");
+            }
         } else {
             String xsdType = XSDTypeMapper.getXSDType(fieldType);
             writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
@@ -157,34 +226,38 @@ class XSDFieldWriter {
             // Non-embedded IDEntite reference: exported as a xs:long mID value
             writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:long\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
         } else if (fieldClass != null && field.embedContents && fieldClass.pointsTo != null) {
-            // Embedded IDEntite reference: XML may write either the pointed-to
-            // entity OR the IDEntite class itself (when resolution fails)
-            context.referencedTypes.add(fieldClass.destinationName);
+            // Embedded IDEntite reference: the export resolves the IDEntite to
+            // the target entity, but resolution can fail and fall back to
+            // exporting the IDEntite object itself. Use an xs:choice that
+            // accepts both the IDEntite class and the pointsTo target class
+            // (plus their descendants).
             DOSchemaClass pointsToClass = referenceSchema.findClassByName(fieldClass.pointsTo);
-            if (pointsToClass != null) {
-                context.referencedTypes.add(pointsToClass.destinationName);
-            }
-            writeWrappedAnyElement(writer, fieldName, indent);
+            writeWrappedIDEntiteChoice(writer, fieldName, fieldClass, pointsToClass, indent);
         } else if (fieldClass != null && fieldClass.migrate) {
             // Non-IDEntite complex field
-            String refClassName = fieldClass.destinationName;
-            context.referencedTypes.add(refClassName);
             if (context.hasAnySubclass(fieldClass)) {
-                writeWrappedAnyElement(writer, fieldName, indent);
+                writeWrappedChoiceElement(writer, fieldName, fieldClass, indent);
             } else {
-                writeWrappedTypedElement(writer, fieldName, refClassName, indent);
+                writeWrappedTypedElement(writer, fieldName, fieldClass.destinationName, indent);
             }
         } else if (field.embedContents) {
-            // Embedded type that is not exported (e.g. java.util.UUID)
-            writeWrappedAnyElement(writer, fieldName, indent);
+            // Embedded type not in schema — write typed element if we know the
+            // type
+            if (fieldClass != null) {
+                writeWrappedChoiceElement(writer, fieldName, fieldClass, indent);
+            } else {
+                System.err.println("WARNING: XSD skipping embedded field '" + fieldName + "' — references unknown type '" + fieldType + "'. Check if a class is missing from the reference schema.");
+                return;
+            }
         } else {
             // Field type not in schema or non-exported
             if (XSDTypeMapper.isPrimitiveType(fieldType)) {
                 String xsdType = XSDTypeMapper.getXSDType(fieldType);
                 writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"" + xsdType + "\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
-                // Unknown complex type: use xs:anyType
-                writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:anyType\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+                // Unknown complex type — skip with warning
+                System.err.println("WARNING: XSD skipping field '" + fieldName + "' — references unknown type '" + fieldType + "'. Check if a class is missing from the reference schema.");
+                return;
             }
         }
     }
@@ -206,15 +279,101 @@ class XSDFieldWriter {
     }
 
     /**
-     * Writes a wrapper element that accepts any single child element. Used when
-     * the field type has subclasses (polymorphism).
+     * Writes a wrapper element with an xs:choice listing the base class and all
+     * its exported descendants. If no descendants, uses a single element ref.
      */
-    private void writeWrappedAnyElement(FileWriter writer, String fieldName, String indent) throws IOException {
+    private void writeWrappedChoiceElement(FileWriter writer, String fieldName, DOSchemaClass baseClass, String indent) throws IOException {
         writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
         writer.write(indent + "  <xs:complexType>\n");
-        writer.write(indent + "    <xs:sequence>\n");
-        writer.write(indent + "      <xs:any minOccurs=\"0\" processContents=\"lax\"/>\n");
-        writer.write(indent + "    </xs:sequence>\n");
+        writePolymorphicChoice(writer, baseClass, indent + "    ", false);
+        writer.write(indent + "  </xs:complexType>\n");
+        writer.write(indent + "</xs:element>\n");
+    }
+
+    /**
+     * Writes an xs:choice (or xs:sequence for single element) listing the base
+     * class and all its exported descendants.
+     *
+     * @param unbounded true for collection contexts (maxOccurs="unbounded"),
+     * false for single fields
+     */
+    private void writePolymorphicChoice(FileWriter writer, DOSchemaClass baseClass, String indent, boolean unbounded) throws IOException {
+        List<DOSchemaClass> descendants = context.getAllExportedDescendants(baseClass);
+
+        if (descendants.isEmpty()) {
+            // No descendants: single element
+            String maxOcc = unbounded ? " maxOccurs=\"unbounded\"" : "";
+            writer.write(indent + "<xs:sequence>\n");
+            writer.write(indent + "  <xs:element name=\"" + baseClass.destinationName + "\" type=\"" + baseClass.destinationName + "\" minOccurs=\"0\"" + maxOcc + "/>\n");
+            writer.write(indent + "</xs:sequence>\n");
+        } else {
+            // xs:choice with base + all descendants
+            String maxOcc = unbounded ? " maxOccurs=\"unbounded\"" : "";
+            writer.write(indent + "<xs:choice minOccurs=\"0\"" + maxOcc + ">\n");
+
+            // Collect all names (base + descendants), sort alphabetically
+            List<String> allNames = new ArrayList<>();
+            if (baseClass.migrate) {
+                allNames.add(baseClass.destinationName);
+            }
+            for (DOSchemaClass desc : descendants) {
+                allNames.add(desc.destinationName);
+            }
+            allNames.sort(String::compareTo);
+
+            for (String name : allNames) {
+                writer.write(indent + "  <xs:element ref=\"" + name + "\"/>\n");
+            }
+            writer.write(indent + "</xs:choice>\n");
+        }
+    }
+
+    /**
+     * Writes a wrapper element for an embedded IDEntite field. The runtime can
+     * produce either the IDEntite class itself (when resolution fails) or the
+     * pointsTo target class (when resolution succeeds). Generates an xs:choice
+     * that accepts both, plus all their exported descendants.
+     */
+    private void writeWrappedIDEntiteChoice(FileWriter writer, String fieldName, DOSchemaClass idEntiteClass, DOSchemaClass pointsToClass, String indent) throws IOException {
+        // Collect all valid element names
+        TreeSet<String> allNames = new TreeSet<>();
+
+        // Always include the IDEntite class itself (fallback when resolution
+        // fails)
+        if (idEntiteClass.migrate) {
+            allNames.add(idEntiteClass.destinationName);
+            for (DOSchemaClass desc : context.getAllExportedDescendants(idEntiteClass)) {
+                allNames.add(desc.destinationName);
+            }
+        }
+
+        // Include the pointsTo target class and its descendants
+        if (pointsToClass != null && pointsToClass.migrate) {
+            allNames.add(pointsToClass.destinationName);
+            for (DOSchemaClass desc : context.getAllExportedDescendants(pointsToClass)) {
+                allNames.add(desc.destinationName);
+            }
+        }
+
+        if (allNames.isEmpty()) {
+            System.err.println("WARNING: XSD skipping embedded IDEntite field '" + fieldName + "' — neither IDEntite class '" + idEntiteClass.source + "' nor pointsTo target are exported.");
+            return;
+        }
+
+        writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
+        writer.write(indent + "  <xs:complexType>\n");
+        if (allNames.size() == 1) {
+            String name = allNames.first();
+            writer.write(indent + "    <xs:sequence>\n");
+            writer.write(indent + "      <xs:element name=\"" + name + "\" type=\"" + name + "\" minOccurs=\"0\"/>\n");
+            writer.write(indent + "    </xs:sequence>\n");
+        } else {
+            writer.write(indent + "    <xs:choice minOccurs=\"0\">\n");
+            for (String name : allNames) {
+                writer.write(indent + "      <xs:element ref=\"" + name + "\"/>\n");
+            }
+            writer.write(indent + "    </xs:choice>\n");
+        }
         writer.write(indent + "  </xs:complexType>\n");
         writer.write(indent + "</xs:element>\n");
     }

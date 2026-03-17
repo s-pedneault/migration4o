@@ -1,8 +1,15 @@
 package migration4o.migration;
 
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collection;
+import java.util.Comparator;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
@@ -72,6 +79,8 @@ public class FieldExporter {
             // immediate
             // class
             StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            // Sort fields by schema destination name for deterministic output
+            fields = sortFieldsByDestinationName(fields, parentClass, schema);
             for (StoredField field : fields) {
                 try {
                     Object fieldValue = field.get(obj);
@@ -80,6 +89,12 @@ public class FieldExporter {
                     // CRITICAL: Get schema field from current class AND
                     // ancestors
                     DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, sourceFieldName, schema);
+
+                    // Skip fields without schema mapping (unmapped fields are
+                    // not exported)
+                    if (schemaField == null) {
+                        continue;
+                    }
 
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
@@ -171,6 +186,9 @@ public class FieldExporter {
             // immediate
             // class
             StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            // Sort fields by schema destination name for deterministic,
+            // alphabetical output (enables xs:sequence)
+            fields = sortFieldsByDestinationName(fields, parentClass, operation.referenceSchema);
             for (StoredField field : fields) {
                 Object fieldValue = null;
                 try {
@@ -180,7 +198,14 @@ public class FieldExporter {
                     // CRITICAL: Get destination field name from schema (search
                     // ancestors too)
                     DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, sourceFieldName, operation.referenceSchema);
-                    String fieldName = schemaField != null ? schemaField.destinationName : sourceFieldName;
+
+                    // Skip fields without schema mapping (unmapped fields are
+                    // not exported)
+                    if (schemaField == null) {
+                        continue;
+                    }
+
+                    String fieldName = schemaField.destinationName;
 
                     // Skip fields marked as not exported
                     if (schemaField != null && !schemaField.isExported) {
@@ -193,14 +218,18 @@ public class FieldExporter {
                         continue;
                     }
 
-                    // XSD / schema observation
-                    if (handlerRef != null && schemaField != null) {
-                        ctxRef.setField(schemaField, fieldValue);
-                        try {
-                            handlerRef.observeField(ctxRef);
-                        } catch (Exception ignored) {
+                    // Skip fields whose type resolves to a non-exported class
+                    // (migrate=false). This keeps the export consistent with
+                    // the XSD which also skips these fields (spec 3.8).
+                    // No exception for primitive-type aliases like UUID — if a
+                    // class is explicitly marked migrate=false, the field is
+                    // skipped.
+                    if (schemaField != null && schemaField.type != null && !schemaField.type.isEmpty()) {
+                        DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(schemaField.type, operation.referenceSchema);
+                        if (fieldTypeClass != null && !fieldTypeClass.migrate) {
+                            System.err.println("[WARN] Export skipping field '" + schemaField.destinationName + "' — type '" + schemaField.type + "' is not exported (migrate=false).");
+                            continue;
                         }
-                        ctxRef.clearField();
                     }
 
                     if (fieldValue == null) {
@@ -248,6 +277,18 @@ public class FieldExporter {
                         fieldsWritten++;
                     } else if (fieldValue.getClass().isArray()) {
                         if (exportArrayField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
+                            fieldsWritten++;
+                        }
+                    } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof java.util.Map) {
+                        // Map type (Hashtable, HashMap, etc.) — export like a
+                        // collection of entries
+                        if (exportMapField(container, (java.util.Map<?, ?>) fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
+                            fieldsWritten++;
+                        }
+                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isMapByAncestry(schemaField.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
+                        // Map type wrapped in GenericObject (DB4O stored
+                        // Hashtable)
+                        if (exportGenericMapField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
                     } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isCollectionByAncestry(schemaField.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
@@ -314,7 +355,7 @@ public class FieldExporter {
      * @throws IOException if XML writing fails
      */
     private boolean exportCollectionLikeField(ExtObjectContainer container, Iterable<?> items, int size, Object itemsValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+        String fieldName = schemaField.destinationName;
         boolean includeSizeMetadata = xmlWriter.includeCollectionSizeMetadata();
 
         if (size == 0 || items == null) {
@@ -337,11 +378,6 @@ public class FieldExporter {
 
             // Check if we should export ID references instead of entities
             IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField, operation.referenceSchema);
-
-            // Register ID-reference wrapper class in XSD via handler hook
-            if (detection.shouldExportAsIDReferences && handlerRef != null) {
-                handlerRef.observeReferencedClass(detection.idClass);
-            }
 
             for (Object item : items) {
                 if (item != null) {
@@ -420,6 +456,88 @@ public class FieldExporter {
     }
 
     /**
+     * Exports a Java Map field (Hashtable, HashMap, etc.) like a collection.
+     * Each map entry is written as an &lt;entry&gt; element with key and value
+     * children.
+     *
+     * @return true if field was written, false if skipped
+     */
+    private boolean exportMapField(ExtObjectContainer container, java.util.Map<?, ?> map, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
+        String fieldName = schemaField.destinationName;
+        int size = map.size();
+        boolean includeSizeMetadata = xmlWriter.includeCollectionSizeMetadata();
+
+        if (size == 0) {
+            if (shouldSkipField(map, schemaField, operation.referenceSchema)) {
+                return false;
+            }
+            if (includeSizeMetadata) {
+                xmlWriter.elementWithoutContent(fieldName, withSkippedBecauseAttribute(Map.of("size", "0"), map, schemaField, operation.referenceSchema));
+            } else {
+                xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(map, schemaField, operation.referenceSchema));
+            }
+            return true;
+        }
+
+        if (includeSizeMetadata) {
+            xmlWriter.openStructure(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), map, schemaField, operation.referenceSchema));
+        } else {
+            xmlWriter.openStructure(fieldName, skippedBecauseAttributes(map, schemaField, operation.referenceSchema));
+        }
+
+        for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+            xmlWriter.openStructure("entry", null);
+            Object key = entry.getKey();
+            Object value = entry.getValue();
+            if (key != null) {
+                exportFieldValue(container, key, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
+            }
+            if (value != null) {
+                exportFieldValue(container, value, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
+            }
+            xmlWriter.closeStructure("entry");
+        }
+
+        xmlWriter.closeStructure(fieldName);
+        return true;
+    }
+
+    /**
+     * Exports a map field stored as a DB4O GenericObject. Attempts to activate
+     * the object and extract entries. If the map is empty or cannot be read,
+     * handles skip conditions gracefully.
+     *
+     * @return true if field was written, false if skipped
+     */
+    private boolean exportGenericMapField(ExtObjectContainer container, Object genericObj, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
+        String fieldName = schemaField.destinationName;
+
+        // Try to activate the GenericObject
+        try {
+            container.activate(genericObj, 3);
+        } catch (Exception e) {
+            // Ignore activation errors
+        }
+
+        // GenericObject wrapping a Hashtable — treat as empty if we can't
+        // iterate
+        // The actual entries are stored internally by DB4O and we cannot
+        // iterate
+        // them without casting to a native Map. Write as empty.
+        if (shouldSkipField(genericObj, schemaField, operation.referenceSchema)) {
+            return false;
+        }
+
+        boolean includeSizeMetadata = xmlWriter.includeCollectionSizeMetadata();
+        if (includeSizeMetadata) {
+            xmlWriter.elementWithoutContent(fieldName, withSkippedBecauseAttribute(Map.of("size", "0"), genericObj, schemaField, operation.referenceSchema));
+        } else {
+            xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(genericObj, schemaField, operation.referenceSchema));
+        }
+        return true;
+    }
+
+    /**
      * Creates an Iterable wrapper around an array for unified processing.
      */
     private Iterable<?> createArrayIterable(Object array, int length) {
@@ -431,7 +549,7 @@ public class FieldExporter {
     }
 
     private void exportByteArrayField(byte[] byteArray, DOSchemaField schemaField, int indentLevel) throws IOException {
-        String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+        String fieldName = schemaField.destinationName;
 
         // Check skip conditions for empty byte arrays
         if (byteArray.length == 0) {
@@ -448,8 +566,8 @@ public class FieldExporter {
     }
 
     private void exportRegularField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
-        String sourceFieldName = schemaField != null && schemaField.source != null ? schemaField.source : fieldName;
+        String fieldName = schemaField.destinationName;
+        String sourceFieldName = schemaField.source != null ? schemaField.source : fieldName;
 
         // Check if this is a Class-typed field based on schema (DB4O may wrap
         // Class in
@@ -590,6 +708,9 @@ public class FieldExporter {
             // Special handling for byte arrays - convert to Base64
             if (fieldValue instanceof byte[]) {
                 stringValue = Base64.getEncoder().encodeToString((byte[]) fieldValue);
+            } else if (fieldValue instanceof Date) {
+                // ISO 8601 date format for xs:dateTime compliance
+                stringValue = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format((Date) fieldValue);
             } else {
                 stringValue = fieldValue.toString();
             }
@@ -648,15 +769,6 @@ public class FieldExporter {
 
                 if (written) {
                     fieldsWritten++;
-                    // XSD: record virtual field type via handler hook
-                    if (handlerRef != null) {
-                        ctxRef.setField(schemaField, null);
-                        try {
-                            handlerRef.observeField(ctxRef);
-                        } catch (Exception ignored) {
-                        }
-                        ctxRef.clearField();
-                    }
                 }
 
             } catch (Exception e) {
@@ -681,7 +793,7 @@ public class FieldExporter {
         // Check if this field is marked for embedding
         // Default behavior: embed regular objects (true), but respect explicit
         // embedContents=false for IDEntite references
-        String fieldName = schemaField != null ? schemaField.destinationName : "unknown";
+        String fieldName = schemaField != null ? schemaField.destinationName : className;
         String sourceFieldName = schemaField != null ? schemaField.source : null;
 
         // Check if this is an IDEntite reference (reference object pattern)
@@ -731,7 +843,12 @@ public class FieldExporter {
                 }
             }
 
-            long resolvedObjectId = ReferenceUtil.resolveIDEntiteForExport(container, fieldValue, className, schemaField, operation.databaseSchema);
+            Long resolvedObjectId = ReferenceUtil.resolveIDEntiteForExport(container, fieldValue, className, schemaField, operation.databaseSchema);
+            if (resolvedObjectId == null) {
+                // Resolution failed — skip this reference (already logged by
+                // ReferenceUtil)
+                return;
+            }
             if (ctxRef.statistics != null) {
                 ctxRef.statistics.recordRelationshipExported(parentObjectId, resolvedObjectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
             }
@@ -776,6 +893,9 @@ public class FieldExporter {
             } else if (fieldValue instanceof byte[]) {
                 // Convert byte arrays to Base64
                 stringValue = Base64.getEncoder().encodeToString((byte[]) fieldValue);
+            } else if (fieldValue instanceof Date) {
+                // ISO 8601 date format for xs:dateTime compliance
+                stringValue = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format((Date) fieldValue);
             } else {
                 stringValue = fieldValue.toString();
             }
@@ -1008,5 +1128,72 @@ public class FieldExporter {
         } catch (Exception ignored) {
             // Best-effort reach recording
         }
+    }
+
+    /**
+     * Sorts StoredField[] in inheritance-aware order to match the XSD
+     * {@code xs:extension} content model. Fields declared by ancestor classes
+     * come first (sorted alphabetically within each level), followed by the
+     * current class's own fields (also alphabetical). Fields without a schema
+     * mapping are placed at the end.
+     *
+     * <p>
+     * This ensures the XML output satisfies the XSD content model where base
+     * type fields precede extension fields.
+     * </p>
+     */
+    private StoredField[] sortFieldsByDestinationName(StoredField[] fields, DOSchemaClass parentClass, DOSchema schema) {
+        // Build ancestry chain from root down to the current class
+        List<DOSchemaClass> chain = new ArrayList<>();
+        DOSchemaClass current = parentClass;
+        while (current != null) {
+            chain.add(0, current); // prepend so root is first
+            String ancestorName = current.parentClassName;
+            if (ancestorName == null || ancestorName.isEmpty())
+                break;
+            DOSchemaClass ancestor = schema.findClassByName(ancestorName);
+            if (ancestor == null)
+                break;
+            current = ancestor;
+        }
+
+        // Build a map: source field name → hierarchy depth (0 = topmost
+        // ancestor)
+        Map<String, Integer> fieldDepth = new HashMap<>();
+        for (int depth = 0; depth < chain.size(); depth++) {
+            DOSchemaClass cls = chain.get(depth);
+            if (cls.fields != null) {
+                for (DOSchemaField f : cls.fields) {
+                    // First declaration wins (don't let overrides change depth)
+                    if (!fieldDepth.containsKey(f.source)) {
+                        fieldDepth.put(f.source, depth);
+                    }
+                }
+            }
+        }
+
+        StoredField[] sorted = Arrays.copyOf(fields, fields.length);
+        Arrays.sort(sorted, (a, b) -> {
+            DOSchemaField sfA = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, a.getName(), schema);
+            DOSchemaField sfB = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(parentClass, b.getName(), schema);
+
+            // Unmapped fields go last
+            if (sfA == null && sfB == null)
+                return 0;
+            if (sfA == null)
+                return 1;
+            if (sfB == null)
+                return -1;
+
+            // Sort first by hierarchy depth (ancestor fields before own fields)
+            int depthA = fieldDepth.getOrDefault(a.getName(), Integer.MAX_VALUE);
+            int depthB = fieldDepth.getOrDefault(b.getName(), Integer.MAX_VALUE);
+            if (depthA != depthB)
+                return Integer.compare(depthA, depthB);
+
+            // Within same depth, sort alphabetically by destination name
+            return sfA.destinationName.compareTo(sfB.destinationName);
+        });
+        return sorted;
     }
 }

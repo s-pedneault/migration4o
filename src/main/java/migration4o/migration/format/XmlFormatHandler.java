@@ -15,6 +15,7 @@ import migration4o.migration.ObjectExporter;
 import migration4o.migration.xsd.XSDBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
+import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
 
 /**
@@ -22,8 +23,8 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
  * validation.
  * <p>
  * Own state: {@code xsdBuilder}, {@code exportedXMLFiles}, {@code generateXsd}.
- * Overrides six hooks: {@code init}, {@code observeObject},
- * {@code observeField}, {@code open}, {@code close}, {@code done}.
+ * Overrides four hooks: {@code init}, {@code open}, {@code close},
+ * {@code done}.
  */
 public class XmlFormatHandler extends FormatHandler {
 
@@ -59,44 +60,6 @@ public class XmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Registers the current class and top-level object in the XSD builder.
-     * Called once per object; XSDBuilder operations are idempotent.
-     */
-    @Override
-    public void observeObject(ExportCurrentState ctx) throws Exception {
-        if (ctx.schemaClass == null || liveXsdBuilder == null)
-            return;
-        liveXsdBuilder.addClass(ctx.schemaClass);
-        DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(ctx.schemaClass.source);
-        liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
-    }
-
-    /** Registers the current field in the XSD builder. */
-    @Override
-    public void observeField(ExportCurrentState ctx) throws Exception {
-        if (ctx.field == null || ctx.schemaClass == null || liveXsdBuilder == null)
-            return;
-        liveXsdBuilder.addField(ctx.schemaClass, ctx.field);
-    }
-
-    /**
-     * Registers a referenced class (e.g. an ID-reference wrapper) and all its
-     * fields in the XSD builder. Called from the field export pipeline when an
-     * ID-reference collection is detected.
-     */
-    @Override
-    public void observeReferencedClass(DOSchemaClass refClass) {
-        if (refClass == null || liveXsdBuilder == null)
-            return;
-        liveXsdBuilder.addClass(refClass);
-        if (refClass.fields != null) {
-            for (var field : refClass.fields) {
-                liveXsdBuilder.addField(refClass, field);
-            }
-        }
-    }
-
-    /**
      * Opens the root {@code <export>} element with an XSD schema location
      * attribute, then writes class metadata and opens {@code <objects>}.
      */
@@ -106,21 +69,6 @@ public class XmlFormatHandler extends FormatHandler {
         writer.openRootStructure("export", schemaLocation);
         if (ctx.schemaClass != null) {
             writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
-            // Register the configured class as a top-level object before any
-            // objects
-            // are activated. DB4O polymorphism means activated objects always
-            // return
-            // their concrete runtime subclass name, so observeObject() would
-            // only
-            // register subclasses (e.g. SousRapport) and never the base class
-            // declared in the module config (e.g. Rapport). Registering here
-            // ensures
-            // the class that owns this file IS always in the XSD top-level
-            // list.
-            if (liveXsdBuilder != null) {
-                DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(ctx.schemaClass.source);
-                liveXsdBuilder.addTopLevelObject(ctx.schemaClass.destinationName, dbSchemaClass);
-            }
         }
         writer.openStructure("objects");
     }
@@ -224,8 +172,15 @@ public class XmlFormatHandler extends FormatHandler {
         }
 
         try {
-            // Open with null schemaClass (mixed types, no metadata)
+            // Open with metadata for Extra.xml
             writer.openRootStructure("export", computeSchemaLocation(ctx));
+            StructuredWriterMetadata extraMetadata = new StructuredWriterMetadata();
+            extraMetadata.generator = "Migration4o";
+            extraMetadata.provider = "Gestion Technologies";
+            extraMetadata.module = "_Migration";
+            extraMetadata.type = "Extra";
+            extraMetadata.objects = String.valueOf(unreachedIds.size());
+            writer.metadata(extraMetadata);
             writer.openStructure("objects");
 
             List<Long> sortedIds = new ArrayList<>(unreachedIds);

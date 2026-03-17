@@ -3,10 +3,7 @@ package migration4o.migration.xsd;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -14,9 +11,9 @@ import migration4o.models.schema.DOSchemaClass;
 /**
  * Orchestrates the generation of the complete XSD document.
  * <p>
- * Writes the XML header, root export element, metadata type, all registered
- * class definitions, and iteratively discovers and writes referenced types
- * until the type graph is fully resolved.
+ * Iterates ALL {@code isExported=true} classes from the reference schema to
+ * produce a comprehensive XSD. No observation-based discovery — the full
+ * reference schema is the single source of truth.
  */
 class XSDSchemaWriter {
 
@@ -36,8 +33,7 @@ class XSDSchemaWriter {
             writeHeader(writer);
             writeRootElement(writer);
             writeMetadataType(writer);
-            writeRegisteredClasses(writer);
-            writeDiscoveredReferencedTypes(writer);
+            writeAllExportedClasses(writer);
             writeFooter(writer);
         }
     }
@@ -55,6 +51,16 @@ class XSDSchemaWriter {
     }
 
     private void writeRootElement(FileWriter writer) throws IOException {
+        DOSchema referenceSchema = context.getReferenceSchema();
+        // Collect all exported class destination names for root xs:choice
+        List<String> topLevelNames = new ArrayList<>();
+        for (DOSchemaClass sc : referenceSchema.getClasses()) {
+            if (sc.migrate) {
+                topLevelNames.add(sc.destinationName);
+            }
+        }
+        topLevelNames.sort(String::compareTo);
+
         writer.write("  <xs:element name=\"export\">\n");
         writer.write("    <xs:complexType>\n");
         writer.write("      <xs:sequence>\n");
@@ -63,10 +69,8 @@ class XSDSchemaWriter {
         writer.write("          <xs:complexType>\n");
         writer.write("            <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
 
-        List<String> sortedTopLevelObjects = new ArrayList<>(context.topLevelObjects);
-        Collections.sort(sortedTopLevelObjects);
-        for (String obj : sortedTopLevelObjects) {
-            writer.write("              <xs:element ref=\"" + obj + "\"/>\n");
+        for (String name : topLevelNames) {
+            writer.write("              <xs:element ref=\"" + name + "\"/>\n");
         }
 
         writer.write("            </xs:choice>\n");
@@ -99,87 +103,22 @@ class XSDSchemaWriter {
     // ── Class definitions ──────────────────────────────────────────────────
 
     /**
-     * Writes type/element declarations for all classes registered during
-     * export.
+     * Writes type/element declarations for ALL exported classes from the
+     * reference schema. Every class with {@code migrate=true} gets a
+     * complexType definition and a global element declaration.
      */
-    private void writeRegisteredClasses(FileWriter writer) throws IOException {
-        List<DOSchemaClass> classesToWrite = new ArrayList<>(context.classMap.values());
-        classesToWrite.sort((c1, c2) -> c1.destinationName.compareTo(c2.destinationName));
-
-        for (DOSchemaClass schemaClass : classesToWrite) {
-            String destName = schemaClass.destinationName;
-            boolean isTopLevel = context.topLevelObjects.contains(destName);
-            boolean isReferenced = context.referencedTypes.contains(destName);
-            boolean shouldWrite = isTopLevel || isReferenced;
-            classWriter.writeClassTypeDefinition(writer, schemaClass, isTopLevel, shouldWrite);
-            if (shouldWrite) {
-                writtenTypes.add(destName);
-            }
-        }
-    }
-
-    /** Tracks which type definitions have been written, to avoid duplicates. */
-    private final Set<String> writtenTypes = new LinkedHashSet<>();
-
-    /**
-     * Iteratively discovers and writes type definitions for classes that were
-     * referenced by fields but not originally registered. Keeps processing
-     * until no new types are found.
-     */
-    private void writeDiscoveredReferencedTypes(FileWriter writer) throws IOException {
+    private void writeAllExportedClasses(FileWriter writer) throws IOException {
         DOSchema referenceSchema = context.getReferenceSchema();
-        boolean foundNewTypes = true;
-
-        while (foundNewTypes) {
-            foundNewTypes = false;
-            // Snapshot to avoid ConcurrentModificationException
-            Set<String> currentReferencedTypes = new LinkedHashSet<>(context.referencedTypes);
-
-            for (String referencedTypeName : currentReferencedTypes) {
-                if (writtenTypes.contains(referencedTypeName)) {
-                    continue;
-                }
-
-                boolean found = false;
-                for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
-                    if (schemaClass.destinationName.equals(referencedTypeName)) {
-                        if (!schemaClass.migrate) {
-                            System.err.println("WARNING: Referenced type '" + referencedTypeName + "' (source: " + schemaClass.source + ") has isExported=false");
-                            writtenTypes.add(referencedTypeName);
-                            found = true;
-                            break;
-                        }
-
-                        // Add the class and populate its fields
-                        context.classMap.put(schemaClass.source, schemaClass);
-                        context.fieldsByClass.put(schemaClass.source, context.getAllExportedFieldsIncludingAncestors(schemaClass));
-
-                        // Write the type definition (may discover more
-                        // referenced types)
-                        classWriter.writeClassTypeDefinition(writer, schemaClass, false, true);
-                        writtenTypes.add(referencedTypeName);
-                        foundNewTypes = true;
-                        found = true;
-                        break;
-                    }
-                }
-
-                if (!found) {
-                    System.err.println("ERROR: Referenced type '" + referencedTypeName + "' not found in reference schema. XSD validation will fail.");
-                }
+        List<DOSchemaClass> exportedClasses = new ArrayList<>();
+        for (DOSchemaClass sc : referenceSchema.getClasses()) {
+            if (sc.migrate) {
+                exportedClasses.add(sc);
             }
         }
+        exportedClasses.sort((c1, c2) -> c1.destinationName.compareTo(c2.destinationName));
 
-        // Report any referenced types that were never resolved
-        Set<String> missingTypes = new LinkedHashSet<>(context.referencedTypes);
-        missingTypes.removeAll(writtenTypes);
-        if (!missingTypes.isEmpty()) {
-            System.err.println("\nWARNING: The following types are referenced but not defined in XSD:");
-            for (String missingType : missingTypes) {
-                System.err.println("  - " + missingType);
-            }
-            System.err.println("These types should be added to reference-schema.xml with isExported=\"true\"");
-            System.err.println("or the fields referencing them should have embedContents=\"false\" if they are ID references.\n");
+        for (DOSchemaClass schemaClass : exportedClasses) {
+            classWriter.writeClassTypeDefinition(writer, schemaClass);
         }
     }
 }
