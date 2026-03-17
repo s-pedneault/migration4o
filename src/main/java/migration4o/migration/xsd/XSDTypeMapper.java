@@ -24,9 +24,9 @@ final class XSDTypeMapper {
      * Maps a Java type name to the corresponding XSD type string.
      * <p>
      * Array types (except {@code byte[]}) are mapped by their component type.
-     * Boolean is mapped to {@code xs:string} because DB4O data may contain
-     * non-standard representations (e.g. 'INT'). Date is mapped to
-     * {@code xs:string} because {@code Date.toString()} is not ISO format.
+     * Boolean is mapped to {@code xs:boolean} (Java {@code Boolean.toString()}
+     * outputs valid {@code xs:boolean} values). Date is mapped to
+     * {@code xs:dateTime} (the export formats dates as ISO 8601).
      */
     static String getXSDType(String javaType) {
         if (javaType == null || javaType.isEmpty()) {

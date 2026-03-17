@@ -74,9 +74,10 @@ This document describes every design decision and mapping rule in the XSD schema
 | 5.10 | **Object** | `java.lang.Object` / `Object` / `object` | `xs:anyType` | The runtime type is unknown at schema time. `xs:anyType` is the XSD universal base type, accepting any content. |
 | 5.11 | **Class** | `java.lang.Class` / `Class` | `xs:string` | `java.lang.Class` fields are exported as the fully-qualified class name string. |
 | 5.12 | **byte[]** | `byte[]` | `xs:base64Binary` | The export encodes byte arrays as Base64 strings via `Base64.getEncoder().encodeToString()`. `xs:base64Binary` matches the encoding semantics. `XSDTypeMapper` handles the mapping consistently. |
-| 5.13 | **Unknown/null type** | Field with null or empty `type` | **Error** | Throws `IllegalStateException` — all fields must have a declared type. No silent fallback to `xs:anyType`. |
+| 5.13 | **Unknown/null type** | Field with null or empty `type` | **Skipped with warning** | `XSDFieldWriter` skips fields with null or empty types with a warning log. This can happen for inherited DB4O internal fields (e.g. `com.db4o.config.TCollection`). `XSDTypeMapper` still throws `IllegalArgumentException` for null/empty types as a safety net for unexpected callers. |
 | 5.14 | **Array component types** | `int[]`, `String[]`, etc. (except `byte[]`) | Mapped by stripping `[]` from type name and applying regular mapping | Arrays are structurally exported as collections. The component type determines the XSD type of each item element. `byte[]` is excluded because it's treated as a single Base64 value, not an array of items. |
 | 5.15 | **Fields with `valueMap`** | Schema field has `<valueMap>` with `<mapping from="…" to="…"/>` | Inline `xs:simpleType` with `xs:enumeration` facets | ValueMap transforms raw database values to display strings. The XSD lists all possible output values as `xs:enumeration` facets for strict validation. Values are sorted and deduplicated for deterministic output. |
+| 5.16 | **Object-typed fields with `valueMap`** | Field type is `object` and has a `<valueMap>` | `xs:anyType` (no enumeration) | Object-typed fields can hold any value at runtime (dates, numbers, strings). The valueMap is a best-effort transformation, not an exhaustive constraint — unmapped values pass through unchanged. Using `xs:enumeration` would reject valid values not covered by the map. |
 
 ---
 
@@ -95,6 +96,21 @@ This document describes every design decision and mapping rule in the XSD schema
 | 6.9 | **Unknown child type** | **Error** | Throws `IllegalStateException` — collection fields must reference a type that exists in the reference schema. |
 | 6.10 | **Array fields** | Treated identically to collections (same wrapper + sequence/choice structure) | The export converts arrays to `List` and processes them through the same `exportCollectionLikeField()` path. The XSD structure must match. |
 | 6.11 | **Non-exported collection child type** | Collection field skipped with warning when child type has `migrate=false` | A non-exported child class has no complexType in the XSD. The entire collection field is omitted. Also applies when a collection's embedded IDEntite `pointsTo` target is non-exported. |
+
+---
+
+## 6b. Map Fields (Hashtable, HashMap, etc.)
+
+Map fields are detected by `CollectionTypeUtil.isMapType()` which recognises HashMap, TreeMap, Hashtable, LinkedHashMap, ConcurrentHashMap, and Map. Ancestry-based detection (`isMapByAncestry()`) additionally walks the class hierarchy for DB4O `GenericObject`-wrapped maps. Map detection takes priority over collection detection in both the XSD generator and the export engine.
+
+| # | Criterion | Current Implementation | Justification |
+|---|-----------|----------------------|---------------|
+| 6b.1 | **Wrapper element** | `<xs:element name="fieldName" minOccurs="0" maxOccurs="1">` containing an anonymous `<xs:complexType>` | Maps are written as `<fieldName size="N"><entry>…</entry>…</fieldName>`. The outer wrapper matches the field's destination name. |
+| 6b.2 | **Entry elements** | `<xs:element name="entry" minOccurs="0" maxOccurs="unbounded">` inside an `<xs:sequence>` | Each map entry is written as an `<entry>` element containing key and value children. |
+| 6b.3 | **Entry content model** | `<xs:any minOccurs="0" maxOccurs="2" processContents="lax"/>` inside each entry | Map key and value types are unknown at schema generation time (the reference schema does not record generic type parameters). `xs:any` with `processContents="lax"` accepts any two child elements. This is the only place in the XSD where `xs:any` is used — see exception in 11.1. |
+| 6b.4 | **`size` attribute** | `<xs:attribute name="size" type="xs:int"/>` on the wrapper's complexType | Same as collections (6.3) — the export writes a `size="N"` attribute on map wrappers. |
+| 6b.5 | **DB4O GenericObject maps** | `exportGenericMapField()` handles `GenericObject`-wrapped Hashtables via `isMapByAncestry()` | DB4O may store Hashtable instances as `GenericObject` wrappers. The export detects this via schema ancestry and writes an empty map element (internal DB4O entries cannot be iterated). |
+| 6b.6 | **Empty maps** | Written with `size="0"` or skipped via `skipWhen` conditions | Same skip logic as collections — `EMPTY_COLLECTION` and `NULL` conditions apply to maps. |
 
 ---
 
@@ -152,7 +168,7 @@ The XSD uses three distinct wrapper patterns for complex/embedded fields:
 
 | # | Criterion | Current Implementation | Justification |
 |---|-----------|----------------------|---------------|
-| 11.1 | **No `xs:any` wildcards** | All polymorphic fields use `xs:choice` with explicit element refs | Strict validation — every possible element is declared. No `processContents="lax"` or `"skip"` wildcards remain in the generated XSD. |
+| 11.1 | **No `xs:any` wildcards (except maps)** | All polymorphic fields use `xs:choice` with explicit element refs. Map entry contents (6b.3) are the sole exception, using `xs:any` because key/value types are unknown at schema time. | Strict validation — every possible element is declared. The only `xs:any` usage is inside map `<entry>` elements where generic type parameters are unavailable from the reference schema. |
 | 11.2 | **Post-export validation** | `XMLValidator.validateMultiple()` validates all exported XML files against the generated XSD | Catches XSD/XML mismatches before the user consumes the data. Uses `javax.xml.validation.Validator` with a custom error handler for detailed line/column error reporting. |
 | 11.3 | **XML escaping in XSD** | `XSDTypeMapper.escapeXml()` escapes `&`, `<`, `>`, `"`, `'` in documentation text and enumeration values | Prevents broken XSD syntax from special characters in schema descriptions and value map entries. |
 
