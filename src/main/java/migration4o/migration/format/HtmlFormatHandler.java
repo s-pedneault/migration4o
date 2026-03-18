@@ -141,6 +141,10 @@ public class HtmlFormatHandler extends FormatHandler {
      */
     @Override
     public void init(ExportCurrentState ctx) throws Exception {
+        // Configure locale-aware formatting for summaries and viewer language
+        SummaryGenerator.setExportLanguage(ctx.request.exportLanguage);
+        JsViewerHtmlGenerator.setExportLanguage(ctx.request.exportLanguage);
+
         if (ctx.exportModules != null && !ctx.exportModules.isEmpty()) {
             // Enable welcome-page generation in NavTreeBuilder
             ctx.generateHtmlViewer = true;
@@ -206,7 +210,7 @@ public class HtmlFormatHandler extends FormatHandler {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
-                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema);
+                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.databaseSchema);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
                     if (ctx.isRootObject()) {
@@ -315,6 +319,11 @@ public class HtmlFormatHandler extends FormatHandler {
 
             // Source is always the root entity currently being exported
             String sourceDestName = currentSchemaClass.destinationName;
+
+            // Skip self-references: a record referencing itself is meaningless
+            if (sourceDestName != null && sourceDestName.equals(targetDestName) && sourceIdStr.equals(targetId))
+                return;
+
             String sourceEntityLabel = (currentSchemaClass.title != null && !currentSchemaClass.title.isBlank()) ? currentSchemaClass.title : sourceDestName;
 
             BackRefEntry entry = new BackRefEntry();

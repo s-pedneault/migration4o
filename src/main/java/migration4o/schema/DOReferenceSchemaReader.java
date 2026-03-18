@@ -273,6 +273,7 @@ public class DOReferenceSchemaReader {
         NodeList valueMapNodes = fieldElement.getElementsByTagName("valueMap");
         if (valueMapNodes.getLength() > 0) {
             Element valueMapElement = (Element) valueMapNodes.item(0);
+            String bitmaskAttr = valueMapElement.getAttribute("bitmask");
             NodeList mappingNodes = valueMapElement.getElementsByTagName("mapping");
             for (int i = 0; i < mappingNodes.getLength(); i++) {
                 Element mappingElement = (Element) mappingNodes.item(i);
@@ -284,6 +285,9 @@ public class DOReferenceSchemaReader {
                     }
                     field.valueMap.add(fromValue, toValue);
                 }
+            }
+            if (field.valueMap != null && "true".equalsIgnoreCase(bitmaskAttr)) {
+                field.valueMap.bitmask = true;
             }
         }
 

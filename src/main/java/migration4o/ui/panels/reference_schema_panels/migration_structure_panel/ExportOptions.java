@@ -36,20 +36,25 @@ public class ExportOptions {
     private final boolean fullTracking;
     private final List<SeedQuery> seedQueries;
     private final String outputBranch;
+    private final String exportLanguage;
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
-        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true, null, null);
+        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true, null, null, "fr");
     }
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking) {
-        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking, null, null);
+        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking, null, null, "fr");
     }
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking, List<SeedQuery> seedQueries) {
-        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking, seedQueries, null);
+        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking, seedQueries, null, "fr");
     }
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking, List<SeedQuery> seedQueries, String outputBranch) {
+        this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, fullTracking, seedQueries, outputBranch, "fr");
+    }
+
+    public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields, boolean fullTracking, List<SeedQuery> seedQueries, String outputBranch, String exportLanguage) {
         this.maxObjectsPerClass = maxObjectsPerClass;
         this.exportNativeIds = exportNativeIds;
         this.selectedSkipOptions = selectedSkipOptions;
@@ -62,6 +67,7 @@ public class ExportOptions {
         this.fullTracking = fullTracking;
         this.seedQueries = seedQueries != null ? seedQueries : new ArrayList<>();
         this.outputBranch = outputBranch;
+        this.exportLanguage = (exportLanguage != null && !exportLanguage.isBlank()) ? exportLanguage : "fr";
     }
 
     public Integer getMaxObjectsPerClass() {
@@ -120,6 +126,10 @@ public class ExportOptions {
         return outputBranch;
     }
 
+    public String getExportLanguage() {
+        return exportLanguage;
+    }
+
     /**
      * Builds an {@code ExportOptions} from a persisted {@link ExportConfig}.
      * This is the single place that translates stored configuration into
@@ -147,7 +157,7 @@ public class ExportOptions {
             seeds = config.getSeeds();
         }
 
-        return new ExportOptions(maxPerClass, config.isExportNativeIds(), selectedSkipFields, "output", config.getOutputOptions(), config.isApplyUserSelectedFieldExclusions(), config.isApplySkipWhenConditions(), config.isApplyExportCriteriaFilters(), config.isSkipObjectsWithoutExportableFields(), config.isFullTracking(), seeds, config.getOutputBranch());
+        return new ExportOptions(maxPerClass, config.isExportNativeIds(), selectedSkipFields, "output", config.getOutputOptions(), config.isApplyUserSelectedFieldExclusions(), config.isApplySkipWhenConditions(), config.isApplyExportCriteriaFilters(), config.isSkipObjectsWithoutExportableFields(), config.isFullTracking(), seeds, config.getOutputBranch(), config.getExportLanguage());
     }
 
     /**
@@ -179,6 +189,7 @@ public class ExportOptions {
         if (seedQueries != null && !seedQueries.isEmpty()) {
             request.seedQueries = new ArrayList<>(seedQueries);
         }
+        request.exportLanguage = exportLanguage;
         return request;
     }
 }

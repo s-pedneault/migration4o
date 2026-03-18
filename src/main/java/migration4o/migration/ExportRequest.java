@@ -103,6 +103,16 @@ public class ExportRequest {
      */
     public List<SeedQuery> seedQueries = new ArrayList<>();
 
+    // ── Export language
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Language code for the export (e.g. {@code "fr"} or {@code "en"}).
+     * Controls locale-aware date formatting in summaries and sets the default
+     * viewer language.
+     */
+    public String exportLanguage = "fr";
+
     // ── Path helpers
     // ────────────────────────────────────────────────────────
 

@@ -304,7 +304,11 @@ public class DOReferenceSchemaWriter {
 
     private void writeValueMap(FileWriter writer, DOSchemaValueMap valueMap, int indentLevel) throws IOException {
         String indent = getIndent(indentLevel);
-        writer.write(indent + "<valueMap>\n");
+        if (valueMap.bitmask) {
+            writer.write(indent + "<valueMap bitmask=\"true\">\n");
+        } else {
+            writer.write(indent + "<valueMap>\n");
+        }
 
         for (java.util.Map.Entry<String, String> entry : valueMap.entrySet()) {
             writer.write(indent + "    <mapping");

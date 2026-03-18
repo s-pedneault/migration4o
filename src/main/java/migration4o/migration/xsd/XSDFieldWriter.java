@@ -194,8 +194,10 @@ class XSDFieldWriter {
             // However, if the field type is "object", the value can be anything
             // (dates, numbers, strings) — the valueMap is a best-effort
             // transformation, not an exhaustive constraint. Use xs:string.
-            if ("object".equalsIgnoreCase(fieldType)) {
-                writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:anyType\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            // Bitmask value maps produce comma-separated combinations, so they
+            // cannot be constrained to a single enumeration value.
+            if ("object".equalsIgnoreCase(fieldType) || field.valueMap.bitmask) {
+                writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 Collection<String> mappedValues = field.valueMap.values();
                 // Deduplicate and sort for deterministic output

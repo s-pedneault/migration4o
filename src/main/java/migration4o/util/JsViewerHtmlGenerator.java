@@ -31,6 +31,20 @@ public final class JsViewerHtmlGenerator {
     private static volatile String cachedSidebarCss;
     private static volatile String cachedSidebarNavJs;
 
+    /**
+     * Export language code ({@code "fr"} or {@code "en"}). Set before HTML
+     * generation; replaces the {@code __EXPORT_LANGUAGE__} placeholder in the
+     * sidebar JS.
+     */
+    private static volatile String exportLanguage = "fr";
+
+    /**
+     * Sets the export language used as the default viewer language.
+     */
+    public static void setExportLanguage(String language) {
+        exportLanguage = (language != null && !language.isBlank()) ? language : "fr";
+    }
+
     private JsViewerHtmlGenerator() {
     }
 
@@ -78,7 +92,7 @@ public final class JsViewerHtmlGenerator {
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (outputPath.getParent() != null) {
             Files.createDirectories(outputPath.getParent());
@@ -110,7 +124,7 @@ public final class JsViewerHtmlGenerator {
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -141,7 +155,7 @@ public final class JsViewerHtmlGenerator {
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
         String objects = objectCount > 0 ? String.format("%,d", objectCount).replace(',', '\u00a0') : "—";
 
-        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects);
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects);
 
         Files.createDirectories(dbRoot);
         Path welcomePath = dbRoot.resolve("index.html");
@@ -209,7 +223,7 @@ public final class JsViewerHtmlGenerator {
 
         // Build the full template with all substitutions EXCEPT
         // __EMBEDDED_JS_DATA__
-        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
+        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
         final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";

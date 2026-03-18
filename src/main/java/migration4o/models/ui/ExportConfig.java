@@ -28,6 +28,7 @@ public class ExportConfig {
     private List<SeedQuery> seeds = new ArrayList<>();
     private int seedMaxPerClass = 50;
     private String outputBranch;
+    private String exportLanguage = "fr";
 
     public ExportConfig() {
     }
@@ -136,6 +137,14 @@ public class ExportConfig {
 
     public void setOutputBranch(String outputBranch) {
         this.outputBranch = outputBranch;
+    }
+
+    public String getExportLanguage() {
+        return exportLanguage;
+    }
+
+    public void setExportLanguage(String exportLanguage) {
+        this.exportLanguage = (exportLanguage != null && !exportLanguage.isBlank()) ? exportLanguage : "fr";
     }
 
     /**

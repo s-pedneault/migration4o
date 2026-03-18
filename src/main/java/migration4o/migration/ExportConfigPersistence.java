@@ -84,7 +84,8 @@ public class ExportConfigPersistence {
         sb.append("  \"selectedSkipOptionNames\": ").append(JsonUtil.jsonStringArray(c.getSelectedSkipOptionNames())).append(",\n");
         sb.append("  \"seeds\": ").append(seedsToJson(c.getSeeds())).append(",\n");
         sb.append("  \"seedMaxPerClass\": ").append(c.getSeedMaxPerClass()).append(",\n");
-        sb.append("  \"outputBranch\": ").append(JsonUtil.jsonString(c.getOutputBranch())).append("\n");
+        sb.append("  \"outputBranch\": ").append(JsonUtil.jsonString(c.getOutputBranch())).append(",\n");
+        sb.append("  \"exportLanguage\": ").append(JsonUtil.jsonString(c.getExportLanguage())).append("\n");
         sb.append("}");
         return sb.toString();
     }
@@ -140,6 +141,10 @@ public class ExportConfigPersistence {
         c.setSeeds(parseSeeds(json));
         c.setSeedMaxPerClass(JsonUtil.readInt(json, "seedMaxPerClass", 50));
         c.setOutputBranch(JsonUtil.readString(json, "outputBranch"));
+        String lang = JsonUtil.readString(json, "exportLanguage");
+        if (lang != null && !lang.isBlank()) {
+            c.setExportLanguage(lang);
+        }
         return c;
     }
 

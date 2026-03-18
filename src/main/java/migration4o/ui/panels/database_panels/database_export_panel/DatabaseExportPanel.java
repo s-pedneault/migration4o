@@ -20,6 +20,7 @@ import javax.swing.ButtonGroup;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
+import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
@@ -78,6 +79,7 @@ public class DatabaseExportPanel extends JPanel {
     // Section D: Additional Options
     private JCheckBox exportNativeIdsCheckbox;
     private JCheckBox fullTrackingCheckbox;
+    private JComboBox<String> languageCombo;
     private JCheckBox applyUserSelectedFieldExclusionsCheckbox;
     private JCheckBox applySkipWhenConditionsCheckbox;
     private JCheckBox applyExportCriteriaFiltersCheckbox;
@@ -312,6 +314,18 @@ public class DatabaseExportPanel extends JPanel {
         panel.setBorder(BorderFactory.createTitledBorder("Additional Options"));
         panel.setAlignmentX(Component.LEFT_ALIGNMENT);
 
+        // Export language
+        JPanel langPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        langPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        langPanel.add(new JLabel("Export language: "));
+        languageCombo = new JComboBox<>(new String[] { "Fran\u00e7ais", "English" });
+        languageCombo.setSelectedIndex(0);
+        languageCombo.setPreferredSize(new Dimension(120, 25));
+        langPanel.add(languageCombo);
+        panel.add(langPanel);
+
+        panel.add(Box.createVerticalStrut(8));
+
         exportNativeIdsCheckbox = new JCheckBox("Export native object IDs (adds DB4O id attribute to XML)");
         exportNativeIdsCheckbox.setSelected(false);
         exportNativeIdsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -492,6 +506,9 @@ public class DatabaseExportPanel extends JPanel {
         // Output branch
         config.setOutputBranch(outputBranchField.getText().trim());
 
+        // Export language
+        config.setExportLanguage(languageCombo.getSelectedIndex() == 1 ? "en" : "fr");
+
         // Seeds
         List<SeedQuery> seeds = new ArrayList<>();
         for (int i = 0; i < seedListModel.size(); i++) {
@@ -530,6 +547,9 @@ public class DatabaseExportPanel extends JPanel {
         applySkipWhenConditionsCheckbox.setSelected(config.isApplySkipWhenConditions());
         applyExportCriteriaFiltersCheckbox.setSelected(config.isApplyExportCriteriaFilters());
         skipObjectsWithoutExportableFieldsCheckbox.setSelected(config.isSkipObjectsWithoutExportableFields());
+
+        // Export language
+        languageCombo.setSelectedIndex("en".equals(config.getExportLanguage()) ? 1 : 0);
 
         // Output options
         for (Map.Entry<String, JCheckBox> entry : outputOptionCheckboxes.entrySet()) {

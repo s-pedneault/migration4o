@@ -1,5 +1,8 @@
 package migration4o.migration;
 
+import java.text.DateFormat;
+import java.util.Date;
+import java.util.Locale;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -51,6 +54,24 @@ public class SummaryGenerator {
 
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("\\[([^\\]]+)\\]");
 
+    /**
+     * Export language code ({@code "fr"} or {@code "en"}). Set once before the
+     * export starts by the format handler; read by {@link #formatValue} for
+     * locale-aware date rendering. Defaults to French.
+     */
+    private static volatile String exportLanguage = "fr";
+
+    /**
+     * Sets the export language used for locale-aware date formatting in
+     * summaries.
+     *
+     * @param language ISO language code: {@code "fr"} for French (default),
+     * {@code "en"} for English
+     */
+    public static void setExportLanguage(String language) {
+        exportLanguage = (language != null && !language.isBlank()) ? language : "fr";
+    }
+
     /** Prevents instantiation — all methods are static. */
     private SummaryGenerator() {
     }
@@ -58,6 +79,12 @@ public class SummaryGenerator {
     /**
      * Generates a summary string for {@code obj} using the summary template on
      * its schema class.
+     *
+     * <p>
+     * This overload does not support traversing IDEntite references in field
+     * paths. Use
+     * {@link #generate(ExtObjectContainer, Object, DOSchemaClass, DOSchema, DOSchema)}
+     * when IDEntite traversal is needed.
      *
      * @param container open DB4O container
      * @param obj the root object to read field values from
@@ -69,6 +96,30 @@ public class SummaryGenerator {
      * resolved to empty
      */
     public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema) {
+        return generate(container, obj, schemaClass, referenceSchema, null);
+    }
+
+    /**
+     * Generates a summary string for {@code obj} using the summary template on
+     * its schema class, with support for traversing IDEntite references.
+     *
+     * <p>
+     * When {@code databaseSchema} is provided, field paths that pass through an
+     * IDEntite reference (e.g. {@code idDossierAdresse.adresse.rue}) are
+     * resolved by following the IDEntite to its target entity in the database.
+     *
+     * @param container open DB4O container
+     * @param obj the root object to read field values from
+     * @param schemaClass the schema class whose {@code summary} template is
+     * used
+     * @param referenceSchema full reference schema for embedded-class lookups
+     * @param databaseSchema database schema for IDEntite resolution (may be
+     * {@code null} to disable IDEntite traversal)
+     * @return the generated summary, or {@code null} if the class has no
+     * summary template, or {@code ""} if the template is defined but all tokens
+     * resolved to empty
+     */
+    public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DOSchema databaseSchema) {
         if (schemaClass == null || schemaClass.summary == null || schemaClass.summary.isEmpty()) {
             return null;
         }
@@ -85,7 +136,7 @@ public class SummaryGenerator {
             result.append(schemaClass.summary, last, matcher.start());
             // Resolve and append the field reference
             String token = matcher.group(1); // e.g. "adresse.rue"
-            result.append(resolveToken(container, obj, token, schemaClass, referenceSchema));
+            result.append(resolveToken(container, obj, token, schemaClass, referenceSchema, databaseSchema));
             last = matcher.end();
         }
 
@@ -107,8 +158,20 @@ public class SummaryGenerator {
      * {@link DOSchemaClass#findField(String)}, and the actual field value is
      * then read from the live object using
      * {@link DatabaseUtil#getStoredFieldValue}.
+     *
+     * <p>
+     * When {@code databaseSchema} is non-null, IDEntite segments are traversed
+     * by resolving the reference to the target entity before continuing with
+     * the remaining path segments.
      */
-    private static String resolveToken(ExtObjectContainer container, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema) {
+    /**
+     * Well-known virtual field name that triggers recursive summary generation
+     * for the current entity. Must match
+     * {@code FieldSelectorPanel.SUMMARY_FIELD_NAME}.
+     */
+    private static final String SUMMARY_TOKEN = "sommaire";
+
+    private static String resolveToken(ExtObjectContainer container, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema, DOSchema databaseSchema) {
         String[] parts = token.split("\\.", -1);
         Object currentObj = rootObj;
         DOSchemaClass currentClass = rootClass;
@@ -116,6 +179,13 @@ public class SummaryGenerator {
         for (int i = 0; i < parts.length; i++) {
             if (currentObj == null || currentClass == null) {
                 return "";
+            }
+
+            // Virtual "sommaire" token: recursively generate this entity's
+            // summary
+            if (SUMMARY_TOKEN.equals(parts[i])) {
+                String sub = generate(container, currentObj, currentClass, schema, databaseSchema);
+                return sub != null ? sub : "";
             }
 
             // Find field by destinationName, walking the full inheritance chain
@@ -134,11 +204,55 @@ public class SummaryGenerator {
                 if (type == null || type.isEmpty() || TypeUtil.isPrimitiveType(type)) {
                     return ""; // Can't go deeper into a primitive
                 }
-                currentClass = SchemaUtil.findClassByName(type, schema);
+                DOSchemaClass nextClass = SchemaUtil.findClassByName(type, schema);
+
+                // IDEntite traversal: follow the reference to the target entity
+                if (nextClass != null && nextClass.isIDEntite(schema) && databaseSchema != null && currentObj != null) {
+                    String expectedType = nextClass.pointsTo;
+                    if (expectedType == null || expectedType.isEmpty()) {
+                        expectedType = (field.pointsTo != null && !field.pointsTo.isEmpty()) ? field.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.source);
+                    }
+                    Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, currentObj, expectedType, databaseSchema);
+                    if (targetObjectId == null) {
+                        return "";
+                    }
+                    Object targetObj = container.ext().getByID(targetObjectId);
+                    if (targetObj == null) {
+                        return "";
+                    }
+                    ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
+                    String targetClassName = ClassUtil.getClassName(targetObj);
+                    nextClass = SchemaUtil.findClassByName(targetClassName, schema);
+                    currentObj = targetObj;
+                }
+
+                currentClass = nextClass;
             }
         }
 
-        return currentObj != null ? currentObj.toString() : "";
+        return formatValue(currentObj);
+    }
+
+    /**
+     * Maps language codes to {@link Locale} instances for date formatting.
+     */
+    private static Locale resolveLocale() {
+        return "en".equals(exportLanguage) ? Locale.ENGLISH : Locale.FRENCH;
+    }
+
+    /**
+     * Formats the final resolved value as a string. Dates are rendered in a
+     * human-friendly locale format (e.g. "18 juil. 2019, 17:13" for French,
+     * "Jul 18, 2019, 5:13 PM" for English).
+     */
+    private static String formatValue(Object value) {
+        if (value == null)
+            return "";
+        if (value instanceof Date) {
+            DateFormat df = DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT, resolveLocale());
+            return df.format((Date) value);
+        }
+        return value.toString();
     }
 
     /**
@@ -219,7 +333,7 @@ public class SummaryGenerator {
             DOSchemaClass targetSchemaClass = SchemaUtil.findClassByName(targetClassName, referenceSchema);
             String label = null;
             if (targetSchemaClass != null && targetSchemaClass.summary != null && !targetSchemaClass.summary.isEmpty()) {
-                label = generate(container, targetObj, targetSchemaClass, referenceSchema);
+                label = generate(container, targetObj, targetSchemaClass, referenceSchema, databaseSchema);
             }
             if ((label == null || label.isBlank()) && targetObj != null) {
                 label = generateFallbackLabel(container, targetObj);

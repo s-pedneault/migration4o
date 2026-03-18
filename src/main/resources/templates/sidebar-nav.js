@@ -455,7 +455,7 @@
     let selectedRecordKey = null;
     let searchApplied = false;
     let globalLogicOperator = 'AND';
-    let currentLanguage = 'fr';
+    let currentLanguage = '__EXPORT_LANGUAGE__';
     let selectedColumns = (typeof DEFAULT_COLUMNS !== 'undefined' && Array.isArray(DEFAULT_COLUMNS) && DEFAULT_COLUMNS.length > 0)
         ? DEFAULT_COLUMNS.slice()
         : ['__id', '__summary'];
@@ -504,7 +504,8 @@
             boolTrue: 'Oui', boolFalse: 'Non',
             logicAnd: 'ET', logicOr: 'OU',
             backRefs: 'Références',
-            backRefsCapped: 'Affichage limité aux 25 premières références'
+            backRefsCapped: 'Affichage limité aux 25 premières références',
+            openLinkedRecord: 'Ouvrir l\'enregistrement lié'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -522,7 +523,8 @@
             boolTrue: 'Yes', boolFalse: 'No',
             logicAnd: 'AND', logicOr: 'OR',
             backRefs: 'References',
-            backRefsCapped: 'Showing first 25 references only'
+            backRefsCapped: 'Showing first 25 references only',
+            openLinkedRecord: 'Open linked record'
         }
     };
 
@@ -1327,7 +1329,7 @@
                 const tr = document.createElement('tr');
                 if (rec.key === selectedRecordKey) tr.classList.add('active');
                 let row = `<td>${rec.pos}</td>`;
-                cols.forEach((c) => row += `<td>${esc(getColumnValue(rec, c))}</td>`);
+                cols.forEach((c) => row += `<td>${fmtValue(getColumnValue(rec, c), c)}</td>`);
                 tr.innerHTML = row;
                 tr.addEventListener('click', () => selectRecord(rec));
                 resultsBody.appendChild(tr);
@@ -1340,6 +1342,9 @@
         nextBtn.disabled = currentPage >= totalPages;
     }
 
+    /** Maps our language codes to BCP-47 locales for date formatting. */
+    var DATE_LOCALES = { fr: 'fr-CA', en: 'en-CA' };
+
     function fmtDate(val) {
         const m = String(val).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2}))?)?/);
         if (!m) return null;
@@ -1349,7 +1354,8 @@
             if (isNaN(d.getTime())) return null;
             const opts = { year: 'numeric', month: 'long', day: 'numeric' };
             if (m[4]) { opts.hour = '2-digit'; opts.minute = '2-digit'; }
-            return d.toLocaleDateString('fr-CA', opts);
+            var locale = DATE_LOCALES[currentLanguage] || 'fr-CA';
+            return d.toLocaleDateString(locale, opts);
         } catch (_) { return null; }
     }
 
@@ -1590,6 +1596,14 @@
         });
     }
 
+    /** Inline SVG arrow icon used in reference link buttons. */
+    var REF_ARROW_SVG = '<svg class="ref-btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12L12 4M12 4H5M12 4v7"/></svg>';
+
+    /** Builds an internal reference link button with arrow icon. */
+    function refLinkBtn(href, text) {
+        return '<a class="ref-id-link" href="' + esc(href) + '">' + esc(text) + REF_ARROW_SVG + '</a>';
+    }
+
     function renderFieldRow(entry) {
         var label = displayFieldLabel(entry.key);
         var destName = String(entry.key || '').split('.').pop() || '';
@@ -1601,7 +1615,7 @@
         var _idVal = _ptHref ? String(entry.value ?? '').trim() : null;
         if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
         var valueHtml = (_ptHref && _idVal)
-            ? '<a class="ref-id-link" href="' + esc(_ptHref + '?open=' + encodeURIComponent(_idVal)) + '">' + esc(_idVal) + '</a>'
+            ? refLinkBtn(_ptHref + '?open=' + encodeURIComponent(_idVal), _idVal)
             : fmtValue(entry.value, entry.key);
         return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
     }
@@ -1939,7 +1953,7 @@
                 : null;
             var _refLabel = displayFieldLabel(key);
             var _refValueHtml = _refLink
-                ? '<a class="ref-id-link" href="' + esc(_refLink) + '">' + esc(_refText) + '</a>'
+                ? refLinkBtn(_refLink, _refText)
                 : esc(_refText);
             return '<div class="field-group"><div class="field-row">'
                 + '<div class="field-label">' + esc(_refLabel) + '</div>'
@@ -1980,7 +1994,7 @@
             var lo = String(entry.key || '').toLowerCase().split('.').pop() || '';
             var isIdField = (lo === 'mid' || lo === 'id' || lo === '_id') && _targetLink;
             var valueHtml = isIdField
-                ? '<a class="ref-id-link" href="' + esc(_targetLink) + '">' + esc(String(entry.value ?? '')) + '</a>'
+                ? refLinkBtn(_targetLink, String(entry.value ?? ''))
                 : fmtValue(entry.value, entry.key);
             return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
         }
@@ -1990,7 +2004,7 @@
         if (_targetLink) {
             html += '<div class="field-group-subtitle ref-subtitle"' + sectionTitleAttr(key) + '>'
                 + '<span>' + esc(formatSectionTitle(key)) + '</span>'
-                + '<a class="ref-link" href="' + esc(_targetLink) + '" title="Ouvrir l\'enregistrement lié">&#8599;</a></div>';
+                + '<a class="ref-link" href="' + esc(_targetLink) + '" title="' + esc(t('openLinkedRecord')) + '">' + REF_ARROW_SVG + '</a></div>';
         } else {
             html += '<div class="field-group-subtitle"' + sectionTitleAttr(key) + '>' + esc(formatSectionTitle(key)) + '</div>';
         }
@@ -2354,7 +2368,7 @@
         var href = entry.href || groupHref;
         var linkUrl = href ? href + '?open=' + encodeURIComponent(entry.id) : null;
         var idHtml = linkUrl
-            ? '<a class="ref-id-link" href="' + esc(linkUrl) + '">' + esc(entry.id) + '</a>'
+            ? refLinkBtn(linkUrl, entry.id)
             : '<span>' + esc(entry.id) + '</span>';
         var summaryHtml = (entry.summary && entry.summary.trim())
             ? esc(entry.summary)
@@ -2655,6 +2669,8 @@
             buildDiscoveredFields();
             renderColumnsMenu();
             addCondition();
+            // Sync language dropdown with export-configured default language
+            if (languageSelect) languageSelect.value = currentLanguage;
             applyLanguage();
             renderResults();
             resultsCount.textContent = allRecords.length + ' ' + t('resultsTotal');

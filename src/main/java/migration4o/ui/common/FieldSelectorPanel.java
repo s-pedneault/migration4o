@@ -28,6 +28,9 @@ import java.util.List;
  * the leaf fields of the embedded class.</li>
  * <li>Collection (listed) fields that embed contents are shown as expandable
  * groups similarly.</li>
+ * <li>IDEntite reference fields are shown as expandable groups whose children
+ * are the fields of the <em>target</em> entity (resolved via the IDEntite
+ * class's {@code pointsTo}).</li>
  * </ul>
  *
  * <p>
@@ -38,6 +41,58 @@ import java.util.List;
  * <li>A callback invoked on double-click of any leaf field node.</li>
  * </ul>
  *
+ * <h3>Path format</h3>
+ * <p>
+ * Selected fields are returned as dot-separated <em>destination name</em> paths
+ * (e.g. {@code "adresse.rue"}, {@code "idDossierAdresse.adresse.rue"}). Each
+ * segment corresponds to a field's {@code destinationName} in the reference
+ * schema. For IDEntite references the first segment is the IDEntite field
+ * itself and subsequent segments belong to the resolved target entity.
+ *
+ * <h3>Consumers &amp; runtime resolution</h3>
+ * <p>
+ * Three dialog consumers use this panel. Each has its own runtime algorithm for
+ * traversing the composite paths this panel produces:
+ *
+ * <table border="1" cellpadding="4">
+ * <tr>
+ * <th>Consumer</th>
+ * <th>Runtime resolver</th>
+ * <th>Notes</th>
+ * </tr>
+ * <tr>
+ * <td>{@code SummaryEditorDialog}</td>
+ * <td>{@link migration4o.migration.SummaryGenerator#generate
+ * SummaryGenerator.generate()}<br>
+ * (private helper {@code resolveToken()})</td>
+ * <td>Walks the DB4O object graph segment by segment: looks up the field by
+ * {@code destinationName} (including ancestors), reads the value via
+ * {@code field.source}, then advances the schema class using
+ * {@code field.type}. For IDEntite segments the IDEntite reference is resolved
+ * to its target entity before continuing.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code SeedQueryDialog}</td>
+ * <td>{@link migration4o.migration.tasks.ExportSelectionAdvisor
+ * ExportSelectionAdvisor}<br>
+ * (private helper {@code resolveDestinationPathToSourcePath()})<br>
+ * + {@link migration4o.util.DatabaseUtil#getFieldValueByPath
+ * DatabaseUtil.getFieldValueByPath()}</td>
+ * <td>Two-phase: first translates the destination-name path to a source-name
+ * path (segment by segment, advancing via {@code field.type} or
+ * {@code field.childrenType}), then reads the live object value using the
+ * source path via {@code DatabaseUtil.getFieldValueByPath()}.</td>
+ * </tr>
+ * <tr>
+ * <td>{@code ClassExportConfigDialog}</td>
+ * <td>JavaScript viewer (client-side)</td>
+ * <td>Paths are stored as default-column configuration in
+ * {@code ClassExportConfig.defaultColumns} and written into the HTML viewer
+ * output. The JS viewer resolves them against the flattened XML record
+ * structure at display time.</td>
+ * </tr>
+ * </table>
+ *
  * <h3>Usage</h3>
  * 
  * <pre>{@code
@@ -46,6 +101,20 @@ import java.util.List;
  * }</pre>
  */
 public class FieldSelectorPanel extends JPanel {
+
+    /**
+     * Maximum nesting depth for the field tree to prevent cycles and runaway
+     * expansion.
+     */
+    private static final int MAX_DEPTH = 5;
+
+    /**
+     * Virtual field name injected into groups whose resolved class has a
+     * {@code summary} template. Selecting this produces a path like
+     * {@code idDossierAdresse.sommaire} which the {@link SummaryGenerator}
+     * resolves by recursively generating the target entity's summary.
+     */
+    public static final String SUMMARY_FIELD_NAME = "sommaire";
 
     /** Callback interface for field selection events (double-click). */
     @FunctionalInterface
@@ -205,7 +274,9 @@ public class FieldSelectorPanel extends JPanel {
     /**
      * Populates the tree with fields from the schema class. Structure mirrors
      * the HTML viewer: primitive fields at root level, embedded/collection
-     * fields as expandable groups with their leaf children.
+     * fields as expandable groups with their leaf children. IDEntite reference
+     * fields are expanded to show the target entity's fields regardless of
+     * {@code embedContents}.
      */
     private void populateTree(DefaultMutableTreeNode root) {
         if (schemaClass == null)
@@ -227,30 +298,53 @@ public class FieldSelectorPanel extends JPanel {
                 DOSchemaClass childClass = resolveClass(field.childrenType);
                 if (childClass != null) {
                     DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
-                    addSubFields(groupNode, childClass, dest, fieldLabel);
+                    addSummaryNodeIfAvailable(groupNode, childClass, dest, fieldLabel);
+                    Set<String> visited = new HashSet<>();
+                    if (schemaClass.source != null)
+                        visited.add(schemaClass.source);
+                    addSubFields(groupNode, childClass, dest, fieldLabel, 1, visited);
                     if (groupNode.getChildCount() > 0) {
                         root.add(groupNode);
                     }
                 }
-            } else if (field.embedContents && !TypeUtil.isPrimitiveType(field.type)) {
-                // Embedded entity: group node with leaf children
+            } else if (!field.isCollection && !TypeUtil.isPrimitiveType(field.type)) {
                 DOSchemaClass embClass = resolveClass(field.type);
-                if (embClass != null) {
-                    // Check if it's an IDEntite (reference) — treat as leaf
-                    if (embClass.isIDEntite(refSchema)) {
-                        root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
-                    } else {
+                if (embClass != null && embClass.isIDEntite(refSchema)) {
+                    // IDEntite reference — resolve target entity and show its
+                    // fields as children (regardless of embedContents) so users
+                    // can build composite paths like
+                    // idDossierAdresse.adresse.rue
+                    DOSchemaClass targetClass = resolveIDEntiteTargetClass(embClass, field);
+                    if (targetClass != null) {
                         DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
-                        addSubFields(groupNode, embClass, dest, fieldLabel);
+                        addSummaryNodeIfAvailable(groupNode, targetClass, dest, fieldLabel);
+                        Set<String> visited = new HashSet<>();
+                        if (schemaClass.source != null)
+                            visited.add(schemaClass.source);
+                        addSubFields(groupNode, targetClass, dest, fieldLabel, 1, visited);
                         if (groupNode.getChildCount() > 0) {
                             root.add(groupNode);
                         } else {
-                            // No exported children — show as leaf
                             root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
                         }
+                    } else {
+                        root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
+                    }
+                } else if (embClass != null && field.embedContents) {
+                    // Regular embedded entity: group node with leaf children
+                    DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
+                    addSummaryNodeIfAvailable(groupNode, embClass, dest, fieldLabel);
+                    Set<String> visited = new HashSet<>();
+                    if (schemaClass.source != null)
+                        visited.add(schemaClass.source);
+                    addSubFields(groupNode, embClass, dest, fieldLabel, 1, visited);
+                    if (groupNode.getChildCount() > 0) {
+                        root.add(groupNode);
+                    } else {
+                        root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
                     }
                 } else {
-                    // Can't resolve the type — show as leaf
+                    // Non-embedded complex type — leaf
                     root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
                 }
             } else if (!field.isCollection) {
@@ -262,8 +356,25 @@ public class FieldSelectorPanel extends JPanel {
 
     /**
      * Recursively adds sub-fields from an embedded or collection class.
+     *
+     * @param depth current nesting depth (1 = direct child of root); recursion
+     * stops when {@code depth >= MAX_DEPTH}
+     * @param visited set of class source names already on the current tree
+     * path; used to break cycles (e.g. Prevention → IDPrevention → Prevention)
      */
-    private void addSubFields(DefaultMutableTreeNode parentNode, DOSchemaClass cls, String parentPath, String parentLabel) {
+    private void addSubFields(DefaultMutableTreeNode parentNode, DOSchemaClass cls, String parentPath, String parentLabel, int depth, Set<String> visited) {
+        if (depth >= MAX_DEPTH)
+            return;
+        // Cycle detection: if this class is already an ancestor on this path,
+        // stop
+        if (cls.source != null && visited.contains(cls.source))
+            return;
+
+        // Mark this class as visited for descendants on this branch
+        Set<String> branchVisited = new HashSet<>(visited);
+        if (cls.source != null)
+            branchVisited.add(cls.source);
+
         List<DOSchemaField> subFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(cls, refSchema) : (cls.fields != null ? Arrays.asList(cls.fields) : new ArrayList<>());
 
         for (DOSchemaField sf : subFields) {
@@ -279,11 +390,28 @@ public class FieldSelectorPanel extends JPanel {
                 continue;
             }
 
-            if (sf.embedContents && !TypeUtil.isPrimitiveType(sf.type)) {
+            if (!TypeUtil.isPrimitiveType(sf.type)) {
                 DOSchemaClass embClass = resolveClass(sf.type);
-                if (embClass != null && !embClass.isIDEntite(refSchema)) {
+                if (embClass != null && embClass.isIDEntite(refSchema)) {
+                    // IDEntite reference — resolve target entity
+                    DOSchemaClass targetClass = resolveIDEntiteTargetClass(embClass, sf);
+                    if (targetClass != null) {
+                        DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(childLabel, dotPath));
+                        addSummaryNodeIfAvailable(groupNode, targetClass, dotPath, fullLabel);
+                        addSubFields(groupNode, targetClass, dotPath, fullLabel, depth + 1, branchVisited);
+                        if (groupNode.getChildCount() > 0) {
+                            parentNode.add(groupNode);
+                        } else {
+                            parentNode.add(new DefaultMutableTreeNode(new FieldItem(childLabel, dotPath, fullLabel)));
+                        }
+                    } else {
+                        parentNode.add(new DefaultMutableTreeNode(new FieldItem(childLabel, dotPath, fullLabel)));
+                    }
+                } else if (embClass != null && sf.embedContents) {
+                    // Regular embedded entity
                     DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(childLabel, dotPath));
-                    addSubFields(groupNode, embClass, dotPath, fullLabel);
+                    addSummaryNodeIfAvailable(groupNode, embClass, dotPath, fullLabel);
+                    addSubFields(groupNode, embClass, dotPath, fullLabel, depth + 1, branchVisited);
                     if (groupNode.getChildCount() > 0) {
                         parentNode.add(groupNode);
                     } else {
@@ -415,6 +543,44 @@ public class FieldSelectorPanel extends JPanel {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────
+
+    /**
+     * If {@code cls} has a {@code summary} template configured, adds a virtual
+     * "Sommaire" leaf node as the first child of the group. The path is
+     * {@code parentPath + ".sommaire"} so the SummaryGenerator can detect it
+     * and recursively generate the target entity's summary.
+     */
+    private void addSummaryNodeIfAvailable(DefaultMutableTreeNode groupNode, DOSchemaClass cls, String parentPath, String parentLabel) {
+        if (cls != null && cls.summary != null && !cls.summary.isEmpty()) {
+            String dotPath = parentPath + "." + SUMMARY_FIELD_NAME;
+            String label = "Sommaire";
+            String fullLabel = parentLabel + " \u203a Sommaire";
+            groupNode.add(new DefaultMutableTreeNode(new FieldItem(label, dotPath, fullLabel)));
+        }
+    }
+
+    /**
+     * Resolves the target entity class that an IDEntite reference points to.
+     * Uses the IDEntite class's {@code pointsTo} first, then falls back to the
+     * field-level {@code pointsTo}.
+     *
+     * @param idEntiteClass the IDEntite schema class
+     * @param field the field that holds the IDEntite (may carry its own
+     * {@code pointsTo})
+     * @return the resolved target entity class, or {@code null}
+     */
+    private DOSchemaClass resolveIDEntiteTargetClass(DOSchemaClass idEntiteClass, DOSchemaField field) {
+        // 1. Try IDEntite class-level pointsTo
+        String target = idEntiteClass.pointsTo;
+        // 2. Fall back to field-level pointsTo
+        if ((target == null || target.isEmpty()) && field != null) {
+            target = field.pointsTo;
+        }
+        if (target == null || target.isEmpty()) {
+            return null;
+        }
+        return resolveClass(target);
+    }
 
     private DOSchemaClass resolveClass(String typeName) {
         if (typeName == null || refSchema == null)
