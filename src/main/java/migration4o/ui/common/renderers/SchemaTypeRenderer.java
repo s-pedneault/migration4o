@@ -46,16 +46,16 @@ public class SchemaTypeRenderer extends DefaultTableCellRenderer {
             String debugInfo = "";
             if (schema != null && schema.getClasses() != null) {
                 for (DOSchemaClass cls : schema.getClasses()) {
-                    String shortName = cls.source.contains(".")
-                            ? cls.source.substring(cls.source.lastIndexOf('.') + 1)
-                            : cls.source;
+                    String shortName = cls.attributes.source.contains(".")
+                            ? cls.attributes.source.substring(cls.attributes.source.lastIndexOf('.') + 1)
+                            : cls.attributes.source;
 
                     // Check full name, short name, and destination name
-                    if (cls.source.equals(typeName) ||
+                    if (cls.attributes.source.equals(typeName) ||
                             shortName.equals(typeName) ||
-                            (cls.destinationName != null && cls.destinationName.equals(typeName))) {
+                            (cls.attributes.destinationName != null && cls.attributes.destinationName.equals(typeName))) {
                         isSchemaClass = true;
-                        debugInfo = " (matched: " + cls.source + ")";
+                        debugInfo = " (matched: " + cls.attributes.source + ")";
                         break;
                     }
                 }

@@ -36,7 +36,7 @@ class XSDClassWriter {
      * complexType and a global element referencing it.
      */
     void writeClassTypeDefinition(FileWriter writer, DOSchemaClass schemaClass) throws IOException {
-        String destClassName = schemaClass.destinationName;
+        String destClassName = schemaClass.attributes.destinationName;
         DOSchemaClass exportedParent = context.getExportedParent(schemaClass);
 
         // Determine which fields to include in this complexType
@@ -50,8 +50,8 @@ class XSDClassWriter {
             fields = context.getAllExportedFieldsIncludingAncestors(schemaClass);
         }
 
-        String classTitle = schemaClass.title != null ? schemaClass.title.trim() : "";
-        String classDescription = schemaClass.description != null ? schemaClass.description.trim() : "";
+        String classTitle = schemaClass.attributes.title != null ? schemaClass.attributes.title.trim() : "";
+        String classDescription = schemaClass.attributes.description != null ? schemaClass.attributes.description.trim() : "";
 
         // Write the complexType definition
         writer.write("  <xs:complexType name=\"" + destClassName + "\">\n");
@@ -69,7 +69,7 @@ class XSDClassWriter {
         if (exportedParent != null) {
             // xs:extension from parent type
             writer.write("    <xs:complexContent>\n");
-            writer.write("      <xs:extension base=\"" + exportedParent.destinationName + "\">\n");
+            writer.write("      <xs:extension base=\"" + exportedParent.attributes.destinationName + "\">\n");
             writeFieldsSequence(writer, fields, "        ");
             writer.write("      </xs:extension>\n");
             writer.write("    </xs:complexContent>\n");
@@ -92,7 +92,7 @@ class XSDClassWriter {
         writer.write(indent + "<xs:sequence>\n");
         if (!fields.isEmpty()) {
             List<DOSchemaField> sortedFields = new ArrayList<>(fields.values());
-            sortedFields.sort((a, b) -> a.destinationName.compareTo(b.destinationName));
+            sortedFields.sort((a, b) -> a.attributes.destinationName.compareTo(b.attributes.destinationName));
             for (DOSchemaField field : sortedFields) {
                 fieldWriter.writeFieldElement(writer, field, indent + "  ");
             }

@@ -44,8 +44,8 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     private ClassExportConfig initialConfig;
 
     public ClassExportConfigDialog(Frame owner, DOSchemaClass schemaClass, ClassExportConfig existingConfig) {
-        super(owner, "Configure Export: " + schemaClass.source);
-        this.className = schemaClass.source;
+        super(owner, "Configure Export: " + schemaClass.attributes.source);
+        this.className = schemaClass.attributes.source;
         this.schemaClass = schemaClass;
         this.initialConfig = existingConfig;
 
@@ -520,7 +520,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     }
 
     private String getDefaultFileName() {
-        return schemaClass.destinationName;
+        return schemaClass.attributes.destinationName;
     }
 
     private void loadConfiguration(ClassExportConfig config) {
@@ -566,7 +566,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     private void addCriteria() {
         System.out.println("DEBUG ClassExportConfigDialog.addCriteria: schemaClass=" + schemaClass);
         if (schemaClass != null) {
-            System.out.println("  schemaClass.source=" + schemaClass.source);
+            System.out.println("  schemaClass.attributes.source=" + schemaClass.attributes.source);
             System.out.println("  schemaClass.fields=" + (schemaClass.fields != null ? schemaClass.fields.length : "null"));
         }
         ExportCriteriaDialog dialog = new ExportCriteriaDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass, null);

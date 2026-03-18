@@ -101,7 +101,7 @@ public class NavTreeBuilder {
         for (ClassExportConfig config : module.classConfigs) {
             String destName = config.getDestinationFileName();
             DOSchemaClass sc = (operation.request.referenceSchema != null) ? operation.request.referenceSchema.findClassByName(config.getClassName()) : null;
-            String label = config.hasTitle() ? config.getTitle() : (sc != null && sc.title != null && !sc.title.isBlank()) ? sc.title : destName;
+            String label = config.hasTitle() ? config.getTitle() : (sc != null && sc.attributes.title != null && !sc.attributes.title.isBlank()) ? sc.attributes.title : destName;
             String href = base.relativize(folderPath.resolve(destName + ".html")).toString().replace('\\', '/');
             node.children.add(new NavNode(label, href, null, depth + 1, null, null, null, null));
         }

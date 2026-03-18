@@ -255,7 +255,7 @@ public class UnreachedObjectsDialog extends JDialog {
             if (schemaClass == null) {
                 break;
             }
-            current = schemaClass.parentClassName;
+            current = schemaClass.attributes.parentClassName;
         }
 
         return chain;
@@ -266,7 +266,7 @@ public class UnreachedObjectsDialog extends JDialog {
             return null;
         }
         for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-            if (className.equals(schemaClass.source)) {
+            if (className.equals(schemaClass.attributes.source)) {
                 return schemaClass;
             }
         }

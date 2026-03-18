@@ -15,11 +15,11 @@ public class TypeUtil {
      * @return true if the field's type is an IDEntite class
      */
     public static boolean isIDEntiteField(DOSchemaField field, DOSchema schema) {
-        if (field.type == null || field.type.isEmpty()) {
+        if (field.attributes.type == null || field.attributes.type.isEmpty()) {
             return false;
         }
 
-        DOSchemaClass fieldClass = SchemaUtil.findClassByName(field.type, schema);
+        DOSchemaClass fieldClass = SchemaUtil.findClassByName(field.attributes.type, schema);
         return fieldClass != null && fieldClass.isIDEntite(schema);
     }
 

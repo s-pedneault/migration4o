@@ -72,7 +72,7 @@ public class ReferenceFinderUtil {
             return results;
         }
 
-        String targetClassName = targetSchemaClass.source;
+        String targetClassName = targetSchemaClass.attributes.source;
         String targetShortName = getShortClassName(targetClassName);
 
         if (progressCallback != null) {
@@ -86,7 +86,7 @@ public class ReferenceFinderUtil {
         // Find all classes that have fields referencing the target class
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             currentClass++;
-            String searchClassName = getShortClassName(schemaClass.source);
+            String searchClassName = getShortClassName(schemaClass.attributes.source);
 
             if (progressCallback != null) {
                 progressCallback.onProgress(String.format("[%d/%d] Searching in %s...\n",
@@ -107,7 +107,7 @@ public class ReferenceFinderUtil {
 
                     if (foundInClass > 0 && progressCallback != null) {
                         progressCallback.onProgress(String.format("  → Found %d reference(s) in field '%s'\n",
-                                foundInClass, field.source));
+                                foundInClass, field.attributes.source));
                     }
                 }
             }
@@ -136,18 +136,18 @@ public class ReferenceFinderUtil {
      * Checks if a field references the specified class.
      */
     private static boolean isReferenceToClass(DOSchemaField field, String targetClassName, DOSchema schema) {
-        if (field.type == null) {
+        if (field.attributes.type == null) {
             return false;
         }
 
         // Direct reference: field type matches target class
-        if (field.type.equals(targetClassName)) {
+        if (field.attributes.type.equals(targetClassName)) {
             return true;
         }
 
         // Check if field type is the target class by short name
         String targetShortName = getShortClassName(targetClassName);
-        String fieldShortType = getShortClassName(field.type);
+        String fieldShortType = getShortClassName(field.attributes.type);
         if (fieldShortType.equals(targetShortName)) {
             return true;
         }
@@ -155,7 +155,7 @@ public class ReferenceFinderUtil {
         // For collections, check if the schema class has the target as a field type
         // This is a simplification - in real use we'd need to know collection element
         // types
-        if (field.isCollection) {
+        if (field.attributes.isCollection) {
             // We can't know the element type from schema alone, so we'll check at runtime
             return true; // Will check during search
         }
@@ -179,7 +179,7 @@ public class ReferenceFinderUtil {
             return 0;
         }
 
-        String sourceFieldName = field.source;
+        String sourceFieldName = field.attributes.source;
         int foundCount = 0;
         int objectCount = schemaClass.objectIds.length;
 
@@ -189,7 +189,7 @@ public class ReferenceFinderUtil {
             // Report progress every 100 objects for large classes
             if (progressCallback != null && objectCount > 100 && i % 100 == 0) {
                 progressCallback.onProgress(String.format("  Checking %d/%d objects in %s...\n",
-                        i, objectCount, getShortClassName(schemaClass.source)));
+                        i, objectCount, getShortClassName(schemaClass.attributes.source)));
             }
 
             try {
@@ -207,7 +207,7 @@ public class ReferenceFinderUtil {
 
                 // Check if this field references our target
                 if (checkReference(container, fieldValue, targetObjectId)) {
-                    results.add(new ReferenceResult(objectId, schemaClass.source, sourceFieldName));
+                    results.add(new ReferenceResult(objectId, schemaClass.attributes.source, sourceFieldName));
                     foundCount++;
                 }
 

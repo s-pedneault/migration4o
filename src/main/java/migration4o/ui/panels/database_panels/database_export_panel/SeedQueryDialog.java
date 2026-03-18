@@ -32,9 +32,7 @@ import migration4o.schema.DOSchemaService;
 import migration4o.ui.common.FieldSelectorPanel;
 
 /**
- * Modal dialog for adding or editing a single seed query.
- * Users select a class (shown by title) and define conditions using an
- * interactive field selector tree and a conditions table.
+ * Modal dialog for adding or editing a single seed query. Users select a class (shown by title) and define conditions using an interactive field selector tree and a conditions table.
  */
 public class SeedQueryDialog extends JDialog {
 
@@ -150,7 +148,7 @@ public class SeedQueryDialog extends JDialog {
         // Populate from existing
         if (existing != null) {
             for (int i = 0; i < exportedClasses.size(); i++) {
-                if (exportedClasses.get(i).source.equals(existing.getClassName())) {
+                if (exportedClasses.get(i).attributes.source.equals(existing.getClassName())) {
                     classCombo.setSelectedIndex(i);
                     break;
                 }
@@ -171,7 +169,7 @@ public class SeedQueryDialog extends JDialog {
 
         List<DOSchemaClass> migratable = new ArrayList<>();
         for (DOSchemaClass cls : schema.classes) {
-            if (cls.migrate)
+            if (cls.attributes.migrate)
                 migratable.add(cls);
         }
 
@@ -185,13 +183,13 @@ public class SeedQueryDialog extends JDialog {
     }
 
     private String getClassDisplayTitle(DOSchemaClass cls) {
-        String simpleName = cls.source;
+        String simpleName = cls.attributes.source;
         int dot = simpleName.lastIndexOf('.');
         if (dot >= 0)
             simpleName = simpleName.substring(dot + 1);
 
-        if (cls.title != null && !cls.title.isBlank()) {
-            return cls.title + "  (" + simpleName + ")";
+        if (cls.attributes.title != null && !cls.attributes.title.isBlank()) {
+            return cls.attributes.title + "  (" + simpleName + ")";
         }
         return simpleName;
     }
@@ -247,7 +245,7 @@ public class SeedQueryDialog extends JDialog {
         int idx = classCombo.getSelectedIndex();
         if (idx < 0 || idx >= exportedClasses.size())
             return null;
-        String className = exportedClasses.get(idx).source;
+        String className = exportedClasses.get(idx).attributes.source;
         SeedQuery query = new SeedQuery(className);
 
         for (int r = 0; r < conditionsModel.getRowCount(); r++) {

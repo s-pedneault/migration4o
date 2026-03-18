@@ -44,7 +44,7 @@ public class VirtualFieldQueryEngine {
     public Collection<?> execute(ExtObjectContainer container, GenericObject obj, DOSchemaField schemaField) {
         List<Object> results = new ArrayList<>();
 
-        String targetClassName = schemaField.type;
+        String targetClassName = schemaField.attributes.type;
         if (targetClassName == null || targetClassName.isEmpty()) {
             return results;
         }
@@ -57,7 +57,7 @@ public class VirtualFieldQueryEngine {
         List<GenericObject> targetObjects = preloadedObjectsByClass.get(targetClassName);
 
         // Determine the logical operator for combining criteria (default: AND)
-        boolean useAndLogic = !"OR".equalsIgnoreCase(schemaField.criteriasOperator);
+        boolean useAndLogic = !"OR".equalsIgnoreCase(schemaField.attributes.criteriasOperator);
 
         // Extract match values from current object for all criteria
         List<CriterionMatch> criteriaData = extractCriteriaValues(container, obj, schemaField, useAndLogic);
@@ -121,7 +121,7 @@ public class VirtualFieldQueryEngine {
             return data;
         }
 
-        for (DOFieldCriteria criterion : schemaField.criterias) {
+        for (DOFieldCriteria criterion : schemaField.attributes.criterias) {
             try {
                 String matchFieldName = criterion.match;
                 if (matchFieldName.startsWith("this.")) {

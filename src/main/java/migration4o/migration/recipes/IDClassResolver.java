@@ -22,7 +22,7 @@ public class IDClassResolver {
      */
     public static DOSchemaClass findIDClass(String entityClassName, DOSchema schema) {
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.pointsTo != null && schemaClass.pointsTo.equals(entityClassName)) {
+            if (schemaClass.attributes.pointsTo != null && schemaClass.attributes.pointsTo.equals(entityClassName)) {
                 return schemaClass;
             }
         }
@@ -37,6 +37,6 @@ public class IDClassResolver {
      * @return The entity class name from the pointsTo field, or null
      */
     public static String getEntityClassName(DOSchemaClass idClass) {
-        return idClass != null ? idClass.pointsTo : null;
+        return idClass != null ? idClass.attributes.pointsTo : null;
     }
 }

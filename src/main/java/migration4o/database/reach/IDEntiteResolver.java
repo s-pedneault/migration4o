@@ -70,7 +70,7 @@ public class IDEntiteResolver {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
                 if (schemaClass.isEntite(referenceSchema)) {
                     // Check if this class matches the expected type (if specified)
-                    String simpleClassName = schemaClass.source;
+                    String simpleClassName = schemaClass.attributes.source;
                     if (simpleClassName.contains(".")) {
                         simpleClassName = simpleClassName.substring(simpleClassName.lastIndexOf('.') + 1);
                     }

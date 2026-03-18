@@ -45,13 +45,13 @@ public class DOEmbeddingCoordinator {
         }
 
         String getPackageName() {
-            String className = containingClass.source;
+            String className = containingClass.attributes.source;
             int lastDot = className.lastIndexOf('.');
             return lastDot > 0 ? className.substring(0, lastDot) : "";
         }
 
         String getClassName() {
-            return containingClass.source;
+            return containingClass.attributes.source;
         }
     }
 
@@ -117,7 +117,7 @@ public class DOEmbeddingCoordinator {
                 // ALL references are within ONE package - safe to embed
                 // Set embedContents=true on ALL fields
                 for (FieldReference ref : allReferences) {
-                    ref.field.embedContents = true;
+                    ref.field.attributes.embedContents = true;
                 }
                 embeddedEntities++;
                 totalFieldsEmbedded += allReferences.size();
@@ -126,14 +126,14 @@ public class DOEmbeddingCoordinator {
                 System.out.println("✓ EMBED: " + entityClass + " → " + allReferences.size() + " field(s) in " + groupingReason + " (" + classNames.size() + " class(es))");
                 if (allReferences.size() > 1) {
                     for (FieldReference ref : allReferences) {
-                        System.out.println("    - " + ref.getClassName() + "." + ref.field.source);
+                        System.out.println("    - " + ref.getClassName() + "." + ref.field.attributes.source);
                     }
                 }
             } else {
                 // Referenced by MULTIPLE packages/modules - must NOT embed
                 // Set embedContents=false on ALL fields
                 for (FieldReference ref : allReferences) {
-                    ref.field.embedContents = false;
+                    ref.field.attributes.embedContents = false;
                 }
                 notEmbeddedEntities++;
                 totalFieldsNotEmbedded += allReferences.size();
@@ -157,8 +157,8 @@ public class DOEmbeddingCoordinator {
     private void buildReferenceMap() {
         for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
             for (DOSchemaField field : schemaClass.fields) {
-                String fieldType = field.type;
-                String childrenType = field.childrenType;
+                String fieldType = field.attributes.type;
+                String childrenType = field.attributes.childrenType;
 
                 // Check if field references an entity (non-primitive type in
                 // schema)

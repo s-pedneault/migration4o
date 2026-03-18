@@ -55,8 +55,8 @@ class XSDSchemaWriter {
         // Collect all exported class destination names for root xs:choice
         List<String> topLevelNames = new ArrayList<>();
         for (DOSchemaClass sc : referenceSchema.getClasses()) {
-            if (sc.migrate) {
-                topLevelNames.add(sc.destinationName);
+            if (sc.attributes.migrate) {
+                topLevelNames.add(sc.attributes.destinationName);
             }
         }
         topLevelNames.sort(String::compareTo);
@@ -111,11 +111,11 @@ class XSDSchemaWriter {
         DOSchema referenceSchema = context.getReferenceSchema();
         List<DOSchemaClass> exportedClasses = new ArrayList<>();
         for (DOSchemaClass sc : referenceSchema.getClasses()) {
-            if (sc.migrate) {
+            if (sc.attributes.migrate) {
                 exportedClasses.add(sc);
             }
         }
-        exportedClasses.sort((c1, c2) -> c1.destinationName.compareTo(c2.destinationName));
+        exportedClasses.sort((c1, c2) -> c1.attributes.destinationName.compareTo(c2.attributes.destinationName));
 
         for (DOSchemaClass schemaClass : exportedClasses) {
             classWriter.writeClassTypeDefinition(writer, schemaClass);

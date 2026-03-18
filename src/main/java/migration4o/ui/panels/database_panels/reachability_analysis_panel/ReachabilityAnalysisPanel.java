@@ -191,14 +191,14 @@ public class ReachabilityAnalysisPanel extends JPanel {
 
         // Sort classes alphabetically by source name
         DOSchemaClass[] sortedClasses = classes.clone();
-        Arrays.sort(sortedClasses, Comparator.comparing(c -> c.source));
+        Arrays.sort(sortedClasses, Comparator.comparing(c -> c.attributes.source));
 
         // Create top-level nodes for each class
         for (DOSchemaClass dbClass : sortedClasses) {
-            DefaultMutableTreeNode topLevelNode = new DefaultMutableTreeNode(new ClassNodeData(dbClass.source, true));
+            DefaultMutableTreeNode topLevelNode = new DefaultMutableTreeNode(new ClassNodeData(dbClass.attributes.source, true));
 
             // Check if the top-level class itself is in a module
-            DOSchemaClass refClass = referenceSchema.findClassByName(dbClass.source);
+            DOSchemaClass refClass = referenceSchema.findClassByName(dbClass.attributes.source);
             boolean topLevelInModule = false;
             String topLevelModuleName = null;
 
@@ -220,8 +220,8 @@ public class ReachabilityAnalysisPanel extends JPanel {
             } else {
                 // Build reference chain for this class
                 Set<String> visited = new HashSet<>();
-                visited.add(dbClass.source); // Prevent cycles
-                buildReferenceChain(topLevelNode, dbClass.source, visited);
+                visited.add(dbClass.attributes.source); // Prevent cycles
+                buildReferenceChain(topLevelNode, dbClass.attributes.source, visited);
 
                 // Check if any node in the branch is in modules (makes top-level GREEN)
                 boolean hasModuleClass = checkForModuleClasses(topLevelNode);
@@ -307,7 +307,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
     // for (var reference : cls.schemaReferences) {
     // if (targetClassName.equals(reference.className)) {
     // // This class references our target class
-    // referencingClasses.add(cls.source);
+    // referencingClasses.add(cls.attributes.source);
     // break; // Only add each class once
     // }
     // }
@@ -362,7 +362,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
                     shouldShow = true;
                 } else if (currentFilterMode == FilterMode.SHOW_UNREACHED_UNJUSTIFIED && !data.isReached()) {
                     DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
-                    String schemaNotes = liveClass != null ? liveClass.schemaNotes : null;
+                    String schemaNotes = liveClass != null ? liveClass.attributes.schemaNotes : null;
                     shouldShow = schemaNotes == null || schemaNotes.trim().isEmpty();
                 }
 
@@ -518,7 +518,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
                 if (userObject instanceof ClassNodeData) {
                     ClassNodeData data = (ClassNodeData) userObject;
                     DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
-                    boolean exported = liveClass == null || liveClass.migrate;
+                    boolean exported = liveClass == null || liveClass.attributes.migrate;
                     setText(data.getClassName());
 
                     if (!selected) {
@@ -604,7 +604,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
             if (userObject instanceof ClassNodeData) {
                 ClassNodeData data = (ClassNodeData) userObject;
                 DOSchemaClass liveClass = referenceSchema.findClassByName(data.getClassName());
-                boolean exported = liveClass == null || liveClass.migrate;
+                boolean exported = liveClass == null || liveClass.attributes.migrate;
 
                 if (data.isInModule()) {
                     setBackground(new Color(0, 100, 200));
@@ -673,7 +673,7 @@ public class ReachabilityAnalysisPanel extends JPanel {
                     return classNodeData.getClassName();
                 }
                 DOSchemaClass liveClass = referenceSchema.findClassByName(classNodeData.getClassName());
-                return liveClass != null && liveClass.schemaNotes != null ? liveClass.schemaNotes : "";
+                return liveClass != null && liveClass.attributes.schemaNotes != null ? liveClass.attributes.schemaNotes : "";
             }
 
             if (userObject instanceof ModuleNodeData) {

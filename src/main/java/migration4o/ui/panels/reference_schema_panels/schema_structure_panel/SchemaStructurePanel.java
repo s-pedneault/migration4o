@@ -48,7 +48,7 @@ public class SchemaStructurePanel extends JPanel {
         }
 
         ClassTreeNode(String displayText, DOSchemaClass schemaClass, boolean isNonEmbeddedReference) {
-            this(displayText, schemaClass != null ? schemaClass.source : null, schemaClass, isNonEmbeddedReference);
+            this(displayText, schemaClass != null ? schemaClass.attributes.source : null, schemaClass, isNonEmbeddedReference);
         }
 
         ClassTreeNode(String displayText, DOSchemaClass schemaClass) {
@@ -174,18 +174,18 @@ public class SchemaStructurePanel extends JPanel {
                         }
                     }
 
-                    System.out.println("Expanding node: " + classNode.displayText + ", schemaClass=" + (classNode.schemaClass != null ? classNode.schemaClass.source : "null") + ", hasRealChildren=" + hasRealChildren);
+                    System.out.println("Expanding node: " + classNode.displayText + ", schemaClass=" + (classNode.schemaClass != null ? classNode.schemaClass.attributes.source : "null") + ", hasRealChildren=" + hasRealChildren);
 
                     // Only load children if not already loaded
                     if (!hasRealChildren && classNode.schemaClass != null) {
                         // Check for loop: if this class already appeared in
                         // ancestors, veto the
                         // expansion
-                        System.out.println("  [CHECKING] Should we allow expansion of " + classNode.schemaClass.source + "?");
+                        System.out.println("  [CHECKING] Should we allow expansion of " + classNode.schemaClass.attributes.source + "?");
                         boolean allowExpansion = shouldAllowExpansion(classNode.schemaClass, node);
                         System.out.println("  [RESULT] shouldAllowExpansion = " + allowExpansion);
                         if (!allowExpansion) {
-                            System.out.println("  [EXPANSION VETOED] Class " + classNode.schemaClass.source + " already in ancestor chain - preventing loop");
+                            System.out.println("  [EXPANSION VETOED] Class " + classNode.schemaClass.attributes.source + " already in ancestor chain - preventing loop");
                             throw new ExpandVetoException(event);
                         }
 
@@ -324,7 +324,7 @@ public class SchemaStructurePanel extends JPanel {
         // Initialize unreached classes with all schema classes
         unreachedClasses.clear();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            unreachedClasses.add(schemaClass.source);
+            unreachedClasses.add(schemaClass.attributes.source);
         }
 
         // Count classes in each category
@@ -370,7 +370,7 @@ public class SchemaStructurePanel extends JPanel {
         // Group by package
         Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteContientIDClasses) {
-            String packageName = ClassUtil.getPackageName(schemaClass.source);
+            String packageName = ClassUtil.getPackageName(schemaClass.attributes.source);
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -384,16 +384,16 @@ public class SchemaStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
+            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.attributes.source)));
 
             // Add each class to the package node (Entities branch)
             for (DOSchemaClass schemaClass : packageClasses) {
-                String simpleName = ClassUtil.getSimpleName(schemaClass.source);
+                String simpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
                 DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(new ClassTreeNode(simpleName, schemaClass));
                 packageNode.add(classNode);
 
                 // Mark this class as reached
-                unreachedClasses.remove(schemaClass.source);
+                unreachedClasses.remove(schemaClass.attributes.source);
 
                 // Add a placeholder child to make the node expandable
                 // Actual children will be loaded on expansion
@@ -421,7 +421,7 @@ public class SchemaStructurePanel extends JPanel {
         // Group by package
         Map<String, List<DOSchemaClass>> packageMap = new TreeMap<>();
         for (DOSchemaClass schemaClass : entiteParamClasses) {
-            String packageName = ClassUtil.getPackageName(schemaClass.source);
+            String packageName = ClassUtil.getPackageName(schemaClass.attributes.source);
             packageMap.computeIfAbsent(packageName, k -> new ArrayList<>()).add(schemaClass);
         }
 
@@ -435,16 +435,16 @@ public class SchemaStructurePanel extends JPanel {
             parentNode.add(packageNode);
 
             // Sort classes within package by simple name
-            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
+            packageClasses.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.attributes.source)));
 
             // Add each class to the package node (Params branch)
             for (DOSchemaClass schemaClass : packageClasses) {
-                String simpleName = ClassUtil.getSimpleName(schemaClass.source);
+                String simpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
                 DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(new ClassTreeNode(simpleName, schemaClass));
                 packageNode.add(classNode);
 
                 // Mark this class as reached
-                unreachedClasses.remove(schemaClass.source);
+                unreachedClasses.remove(schemaClass.attributes.source);
 
                 // Add a placeholder child to make the node expandable
                 // Actual children will be loaded on expansion
@@ -466,14 +466,14 @@ public class SchemaStructurePanel extends JPanel {
         }
 
         for (DOSchemaField field : fields) {
-            String fieldType = field.type;
+            String fieldType = field.attributes.type;
             if (fieldType == null) {
                 continue;
             }
 
             // Check if this is a collection - look at childrenType
-            if (field.isCollection) {
-                String childrenType = field.childrenType;
+            if (field.attributes.isCollection) {
+                String childrenType = field.attributes.childrenType;
                 if (childrenType != null) {
                     DOSchemaClass childClass = SchemaUtil.findClassByName(childrenType, schema);
                     if (childClass != null) {
@@ -510,14 +510,14 @@ public class SchemaStructurePanel extends JPanel {
      */
     private void handleIDEntiteField(DefaultMutableTreeNode classNode, DOSchemaField field, DOSchemaClass idEntiteClass) {
         // Mark the IDEntite class as reached
-        unreachedClasses.remove(idEntiteClass.source);
+        unreachedClasses.remove(idEntiteClass.attributes.source);
 
         // Get the target class from the pointsTo attribute (preferred)
         // or fall back to name extraction for backwards compatibility
-        String targetClassName = idEntiteClass.pointsTo;
+        String targetClassName = idEntiteClass.attributes.pointsTo;
         if (targetClassName == null) {
             // Fallback: extract from field name or class name
-            targetClassName = extractExpectedTypeFromFieldName(field.source, idEntiteClass.source);
+            targetClassName = extractExpectedTypeFromFieldName(field.attributes.source, idEntiteClass.attributes.source);
         }
 
         if (targetClassName != null) {
@@ -528,13 +528,13 @@ public class SchemaStructurePanel extends JPanel {
 
             if (targetClass != null && (targetClass.isEntite(schema) || targetClass.isParam(schema))) {
                 // Mark the target class as reached
-                unreachedClasses.remove(targetClass.source);
+                unreachedClasses.remove(targetClass.attributes.source);
 
-                String fieldLabel = "Field: " + field.source + " → " + ClassUtil.getSimpleName(targetClass.source);
+                String fieldLabel = "Field: " + field.attributes.source + " → " + ClassUtil.getSimpleName(targetClass.attributes.source);
 
                 // Check if this field has embedContents = false (reference
                 // only, not embedded)
-                boolean isNonEmbedded = !field.embedContents;
+                boolean isNonEmbedded = !field.attributes.embedContents;
 
                 DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(new ClassTreeNode(fieldLabel, targetClass, isNonEmbedded));
                 classNode.add(fieldNode);
@@ -553,10 +553,10 @@ public class SchemaStructurePanel extends JPanel {
      */
     private void handleRegularField(DefaultMutableTreeNode classNode, DOSchemaField field, DOSchemaClass referencedClass) {
         // Mark the referenced class as reached
-        unreachedClasses.remove(referencedClass.source);
+        unreachedClasses.remove(referencedClass.attributes.source);
 
-        String referencedSimpleName = ClassUtil.getSimpleName(referencedClass.source);
-        String fieldLabel = "Field: " + field.source + " → " + referencedSimpleName;
+        String referencedSimpleName = ClassUtil.getSimpleName(referencedClass.attributes.source);
+        String fieldLabel = "Field: " + field.attributes.source + " → " + referencedSimpleName;
         DefaultMutableTreeNode fieldNode = new DefaultMutableTreeNode(new ClassTreeNode(fieldLabel, referencedClass));
         classNode.add(fieldNode);
 
@@ -576,7 +576,7 @@ public class SchemaStructurePanel extends JPanel {
             return true;
         }
 
-        String className = schemaClass.source;
+        String className = schemaClass.attributes.source;
         System.out.println("    [shouldAllowExpansion] Checking for " + className + " in ancestors");
         DefaultMutableTreeNode ancestor = (DefaultMutableTreeNode) node.getParent();
 
@@ -625,7 +625,7 @@ public class SchemaStructurePanel extends JPanel {
         // the node
         // we're adding)
         int occurrenceCount = 0;
-        String className = schemaClass.source;
+        String className = schemaClass.attributes.source;
 
         DefaultMutableTreeNode ancestor = (DefaultMutableTreeNode) fieldNode.getParent();
         while (ancestor != null) {
@@ -668,18 +668,18 @@ public class SchemaStructurePanel extends JPanel {
         parentNode.setUserObject("Unreached (" + unreachedClassList.size() + ")");
 
         // Sort by simple name for easier navigation
-        unreachedClassList.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.source)));
+        unreachedClassList.sort(Comparator.comparing(c -> ClassUtil.getSimpleName(c.attributes.source)));
 
         // Add each unreached class to the tree
         for (DOSchemaClass schemaClass : unreachedClassList) {
-            String simpleName = ClassUtil.getSimpleName(schemaClass.source);
-            String fullName = schemaClass.source;
+            String simpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
+            String fullName = schemaClass.attributes.source;
             DefaultMutableTreeNode classNode = new DefaultMutableTreeNode(simpleName + " (" + fullName + ")");
             parentNode.add(classNode);
 
             // Drill backwards to find what references this class
             Set<String> visitedBackward = new HashSet<>();
-            visitedBackward.add(schemaClass.source);
+            visitedBackward.add(schemaClass.attributes.source);
             drillBackwards(classNode, schemaClass, visitedBackward);
         }
     }
@@ -690,7 +690,7 @@ public class SchemaStructurePanel extends JPanel {
      * unreachability.
      */
     private void drillBackwards(DefaultMutableTreeNode classNode, DOSchemaClass targetClass, Set<String> visitedBackward) {
-        String targetClassName = targetClass.source;
+        String targetClassName = targetClass.attributes.source;
 
         // Find all classes and fields that reference this target class
         List<DOSchemaFieldReference> references = new ArrayList<>();
@@ -702,7 +702,7 @@ public class SchemaStructurePanel extends JPanel {
             }
 
             for (DOSchemaField field : fields) {
-                String fieldType = field.type;
+                String fieldType = field.attributes.type;
                 if (fieldType == null) {
                     continue;
                 }
@@ -715,8 +715,8 @@ public class SchemaStructurePanel extends JPanel {
                 }
                 // Check if it's a collection with childrenType matching our
                 // target
-                else if (field.isCollection) {
-                    String childrenType = field.childrenType;
+                else if (field.attributes.isCollection) {
+                    String childrenType = field.attributes.childrenType;
                     if (childrenType != null && childrenType.equals(targetClassName)) {
                         isMatch = true;
                     }
@@ -727,12 +727,12 @@ public class SchemaStructurePanel extends JPanel {
                         if (childTypeClass != null && childTypeClass.isIDEntite(schema)) {
                             // Use pointsTo if available, otherwise fall back to
                             // name extraction
-                            String pointsTo = childTypeClass.pointsTo;
+                            String pointsTo = childTypeClass.attributes.pointsTo;
                             if (pointsTo != null && pointsTo.equals(targetClassName)) {
                                 isMatch = true;
                             } else if (pointsTo == null) {
                                 // Fallback to name extraction
-                                String expectedType = extractExpectedTypeFromFieldName(field.source, childrenType);
+                                String expectedType = extractExpectedTypeFromFieldName(field.attributes.source, childrenType);
                                 if (expectedType != null) {
                                     String targetSimpleName = ClassUtil.getSimpleName(targetClassName);
                                     if (targetSimpleName.equals(expectedType)) {
@@ -749,12 +749,12 @@ public class SchemaStructurePanel extends JPanel {
                     if (fieldTypeClass != null && fieldTypeClass.isIDEntite(schema)) {
                         // Use pointsTo if available, otherwise fall back to
                         // name extraction
-                        String pointsTo = fieldTypeClass.pointsTo;
+                        String pointsTo = fieldTypeClass.attributes.pointsTo;
                         if (pointsTo != null && pointsTo.equals(targetClassName)) {
                             isMatch = true;
                         } else if (pointsTo == null) {
                             // Fallback to name extraction
-                            String expectedType = extractExpectedTypeFromFieldName(field.source, fieldType);
+                            String expectedType = extractExpectedTypeFromFieldName(field.attributes.source, fieldType);
                             if (expectedType != null) {
                                 String targetSimpleName = ClassUtil.getSimpleName(targetClassName);
                                 if (targetSimpleName.equals(expectedType)) {
@@ -773,9 +773,9 @@ public class SchemaStructurePanel extends JPanel {
 
         // Add found references to the tree
         for (DOSchemaFieldReference ref : references) {
-            String refClassName = ref.schemaClass.source;
+            String refClassName = ref.schemaClass.attributes.source;
             String refSimpleName = ClassUtil.getSimpleName(refClassName);
-            String fieldLabel = "← " + refSimpleName + "." + ref.field.source;
+            String fieldLabel = "← " + refSimpleName + "." + ref.field.attributes.source;
             DefaultMutableTreeNode refNode = new DefaultMutableTreeNode(fieldLabel);
             classNode.add(refNode);
 

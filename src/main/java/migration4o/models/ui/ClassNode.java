@@ -75,7 +75,7 @@ public class ClassNode {
         if (exportConfig != null && exportConfig.hasCustomDestination()) {
             display.append(exportConfig.getDestinationFileName());
         } else {
-            display.append(schemaClass.destinationName);
+            display.append(schemaClass.attributes.destinationName);
         }
 
         // Show object count

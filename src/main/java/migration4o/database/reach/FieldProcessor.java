@@ -196,7 +196,7 @@ public class FieldProcessor {
         if (itemClass != null && itemClass.isIDEntite(referenceSchema)) {
             // This is an IDEntite - get target type from pointsTo or extract from field
             // name
-            String expectedType = itemClass.pointsTo;
+            String expectedType = itemClass.attributes.pointsTo;
             if (expectedType == null) {
                 // Fallback to name extraction
                 expectedType = extractExpectedTypeFromFieldName(fieldName, className);

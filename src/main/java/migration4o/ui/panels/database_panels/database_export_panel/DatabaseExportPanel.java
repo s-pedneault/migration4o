@@ -50,9 +50,7 @@ import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.M
 import migration4o.util.SchemaUtil;
 
 /**
- * Export configuration panel that replaces the old DatabaseOverviewPanel.
- * Embeds all export options (previously in ExportConfirmationDialog) plus
- * seed-based selection configuration. Persists config to export-config.json.
+ * Export configuration panel that replaces the old DatabaseOverviewPanel. Embeds all export options (previously in ExportConfirmationDialog) plus seed-based selection configuration. Persists config to export-config.json.
  */
 public class DatabaseExportPanel extends JPanel {
 
@@ -357,7 +355,7 @@ public class DatabaseExportPanel extends JPanel {
         availableSkipOptions = SchemaUtil.collectSkipUserOptions(DOSchemaService.getInstance().getReferenceSchema());
         if (availableSkipOptions != null && !availableSkipOptions.isEmpty()) {
             for (DOSchemaField field : availableSkipOptions) {
-                String label = field.skipUserOption;
+                String label = field.attributes.skipUserOption;
                 JCheckBox skipCheckbox = new JCheckBox(label);
                 skipCheckbox.setSelected(false);
                 skipCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -498,7 +496,7 @@ public class DatabaseExportPanel extends JPanel {
         List<String> skipNames = new ArrayList<>();
         for (Map.Entry<DOSchemaField, JCheckBox> entry : skipOptionCheckboxes.entrySet()) {
             if (entry.getValue().isSelected()) {
-                skipNames.add(entry.getKey().skipUserOption);
+                skipNames.add(entry.getKey().attributes.skipUserOption);
             }
         }
         config.setSelectedSkipOptionNames(skipNames);
@@ -559,7 +557,7 @@ public class DatabaseExportPanel extends JPanel {
         // Skip options — match by name
         List<String> savedNames = config.getSelectedSkipOptionNames();
         for (Map.Entry<DOSchemaField, JCheckBox> entry : skipOptionCheckboxes.entrySet()) {
-            entry.getValue().setSelected(savedNames.contains(entry.getKey().skipUserOption));
+            entry.getValue().setSelected(savedNames.contains(entry.getKey().attributes.skipUserOption));
         }
 
         // Seeds

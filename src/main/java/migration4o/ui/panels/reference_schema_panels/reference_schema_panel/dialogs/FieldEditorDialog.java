@@ -19,6 +19,7 @@ import java.util.Map;
 public class FieldEditorDialog extends JDialog {
 
     private final DOSchema schema;
+    private final DOSchemaClass fieldParentClass;
     private final JTextField sourceField;
     private final JTextField destField;
     private final JPanel typePanel;
@@ -65,19 +66,20 @@ public class FieldEditorDialog extends JDialog {
         super(owner, isNewField ? "Add Field" : "Edit Field", true);
         this.schema = schema;
         this.isNewField = isNewField;
-        this.originalFieldDefinitionId = field.definitionId; // Store original
-                                                             // shared field ID
-                                                             // if any
+        this.fieldParentClass = field.parentClass;
+        this.originalFieldDefinitionId = field.attributes.definitionId; // Store original
+        // shared field ID
+        // if any
 
         setLayout(new BorderLayout(10, 10));
 
         // Initialize all fields first
-        sourceField = new JTextField(field.source != null ? field.source : "", 30);
-        destField = new JTextField(field.destinationName != null ? field.destinationName : "", 30);
+        sourceField = new JTextField(field.attributes.source != null ? field.attributes.source : "", 30);
+        destField = new JTextField(field.attributes.destinationName != null ? field.attributes.destinationName : "", 30);
 
         // Type - show as text with Edit button
         typePanel = new JPanel(new BorderLayout(5, 0));
-        typeLabel = new JLabel(field.type != null ? field.type : "");
+        typeLabel = new JLabel(field.attributes.type != null ? field.attributes.type : "");
         typeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         typePanel.add(typeLabel, BorderLayout.CENTER);
 
@@ -94,7 +96,7 @@ public class FieldEditorDialog extends JDialog {
 
         // Points To - show as text with Edit button
         pointsToPanel = new JPanel(new BorderLayout(5, 0));
-        pointsToLabel = new JLabel(field.pointsTo != null ? field.pointsTo : "");
+        pointsToLabel = new JLabel(field.attributes.pointsTo != null ? field.attributes.pointsTo : "");
         pointsToLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         pointsToPanel.add(pointsToLabel, BorderLayout.CENTER);
 
@@ -113,8 +115,8 @@ public class FieldEditorDialog extends JDialog {
         formatUppercase = new JCheckBox("UPPERCASE");
 
         // Parse existing format value and check appropriate boxes
-        if (field.format != null && !field.format.trim().isEmpty()) {
-            String[] keywords = field.format.split(",");
+        if (field.attributes.format != null && !field.attributes.format.trim().isEmpty()) {
+            String[] keywords = field.attributes.format.split(",");
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
@@ -139,10 +141,10 @@ public class FieldEditorDialog extends JDialog {
         formatPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
         embedContentsCheckBox = new JCheckBox();
-        embedContentsCheckBox.setSelected(field.embedContents);
+        embedContentsCheckBox.setSelected(field.attributes.embedContents);
 
         collectionCheckBox = new JCheckBox();
-        collectionCheckBox.setSelected(field.isCollection);
+        collectionCheckBox.setSelected(field.attributes.isCollection);
 
         // Add listener to collection checkbox to update embed contents state
         // and
@@ -152,11 +154,11 @@ public class FieldEditorDialog extends JDialog {
             rebuildForm();
         });
 
-        titleField = new JTextField(field.title != null ? field.title : "", 30);
-        descField = new JTextField(field.description != null ? field.description : "", 30);
+        titleField = new JTextField(field.attributes.title != null ? field.attributes.title : "", 30);
+        descField = new JTextField(field.attributes.description != null ? field.attributes.description : "", 30);
 
         exportedCheckBox = new JCheckBox();
-        exportedCheckBox.setSelected(field.isExported);
+        exportedCheckBox.setSelected(field.attributes.isExported);
 
         // Create skip when checkboxes
         skipWhenNull = new JCheckBox("NULL");
@@ -168,8 +170,8 @@ public class FieldEditorDialog extends JDialog {
         skipWhenDefault = new JCheckBox("DEFAULT");
 
         // Parse existing skipWhen value and check appropriate boxes
-        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
-            String[] keywords = field.skipWhen.split(",");
+        if (field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty()) {
+            String[] keywords = field.attributes.skipWhen.split(",");
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
@@ -209,13 +211,13 @@ public class FieldEditorDialog extends JDialog {
         skipWhenPanel.add(skipWhenDefault);
         skipWhenPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
-        skipUserOptionField = new JTextField(field.skipUserOption != null ? field.skipUserOption : "", 30);
+        skipUserOptionField = new JTextField(field.attributes.skipUserOption != null ? field.attributes.skipUserOption : "", 30);
 
         // Children Type - show as text with Edit button and status
         childrenTypePanel = new JPanel(new BorderLayout(5, 0));
         JPanel childrenTypeContentPanel = new JPanel(new BorderLayout(5, 0));
 
-        childrenTypeLabel = new JLabel(field.childrenType != null ? field.childrenType : "");
+        childrenTypeLabel = new JLabel(field.attributes.childrenType != null ? field.attributes.childrenType : "");
         childrenTypeLabel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(3, 5, 3, 5)));
         childrenTypeContentPanel.add(childrenTypeLabel, BorderLayout.CENTER);
 
@@ -252,8 +254,8 @@ public class FieldEditorDialog extends JDialog {
         };
 
         // Load existing value mappings
-        if (field.valueMap != null && !field.valueMap.isEmpty()) {
-            for (Map.Entry<String, String> entry : field.valueMap.entrySet()) {
+        if (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+            for (Map.Entry<String, String> entry : field.attributes.valueMap.entrySet()) {
                 valueMappingTableModel.addRow(new Object[] { entry.getKey(), entry.getValue() });
             }
         }
@@ -302,7 +304,7 @@ public class FieldEditorDialog extends JDialog {
             iconLabel.setForeground(new Color(50, 100, 200));
             warningPanel.add(iconLabel, BorderLayout.WEST);
 
-            JLabel messageLabel = new JLabel("<html><b>Shared Field Definition:</b> " + currentField.definitionId + "<br>Changes made here will affect all classes using this shared field.</html>");
+            JLabel messageLabel = new JLabel("<html><b>Shared Field Definition:</b> " + currentField.attributes.definitionId + "<br>Changes made here will affect all classes using this shared field.</html>");
             messageLabel.setFont(new Font("Dialog", Font.PLAIN, 12));
             warningPanel.add(messageLabel, BorderLayout.CENTER);
 
@@ -457,8 +459,8 @@ public class FieldEditorDialog extends JDialog {
         }
 
         for (DOSchemaClass cls : schema.getClasses()) {
-            String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
-            if (cls.source.equals(className) || shortName.equals(className)) {
+            String shortName = cls.attributes.source.contains(".") ? cls.attributes.source.substring(cls.attributes.source.lastIndexOf('.') + 1) : cls.attributes.source;
+            if (cls.attributes.source.equals(className) || shortName.equals(className)) {
                 return cls;
             }
         }
@@ -487,8 +489,8 @@ public class FieldEditorDialog extends JDialog {
         boolean isResolved = false;
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                String shortName = cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
-                if (cls.source.equals(childrenType) || shortName.equals(childrenType)) {
+                String shortName = cls.attributes.source.contains(".") ? cls.attributes.source.substring(cls.attributes.source.lastIndexOf('.') + 1) : cls.attributes.source;
+                if (cls.attributes.source.equals(childrenType) || shortName.equals(childrenType)) {
                     isResolved = true;
                     break;
                 }
@@ -595,22 +597,22 @@ public class FieldEditorDialog extends JDialog {
         }
 
         // Copy all properties from common field
-        destField.setText(commonField.destinationName != null ? commonField.destinationName : "");
-        typeLabel.setText(commonField.type != null ? commonField.type : "");
-        pointsToLabel.setText(commonField.pointsTo != null ? commonField.pointsTo : "");
-        exportedCheckBox.setSelected(commonField.isExported);
-        embedContentsCheckBox.setSelected(commonField.embedContents);
-        collectionCheckBox.setSelected(commonField.isCollection);
-        childrenTypeLabel.setText(commonField.childrenType != null ? commonField.childrenType : "");
-        titleField.setText(commonField.title != null ? commonField.title : "");
-        descField.setText(commonField.description != null ? commonField.description : "");
-        skipUserOptionField.setText(commonField.skipUserOption != null ? commonField.skipUserOption : "");
+        destField.setText(commonField.attributes.destinationName != null ? commonField.attributes.destinationName : "");
+        typeLabel.setText(commonField.attributes.type != null ? commonField.attributes.type : "");
+        pointsToLabel.setText(commonField.attributes.pointsTo != null ? commonField.attributes.pointsTo : "");
+        exportedCheckBox.setSelected(commonField.attributes.isExported);
+        embedContentsCheckBox.setSelected(commonField.attributes.embedContents);
+        collectionCheckBox.setSelected(commonField.attributes.isCollection);
+        childrenTypeLabel.setText(commonField.attributes.childrenType != null ? commonField.attributes.childrenType : "");
+        titleField.setText(commonField.attributes.title != null ? commonField.attributes.title : "");
+        descField.setText(commonField.attributes.description != null ? commonField.attributes.description : "");
+        skipUserOptionField.setText(commonField.attributes.skipUserOption != null ? commonField.attributes.skipUserOption : "");
         formatTrim.setSelected(false);
         formatLowercase.setSelected(false);
         formatUppercase.setSelected(false);
 
-        if (commonField.format != null && !commonField.format.trim().isEmpty()) {
-            String[] keywords = commonField.format.split(",");
+        if (commonField.attributes.format != null && !commonField.attributes.format.trim().isEmpty()) {
+            String[] keywords = commonField.attributes.format.split(",");
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
@@ -636,8 +638,8 @@ public class FieldEditorDialog extends JDialog {
         skipWhenFalse.setSelected(false);
         skipWhenDefault.setSelected(false);
 
-        if (commonField.skipWhen != null && !commonField.skipWhen.trim().isEmpty()) {
-            String[] keywords = commonField.skipWhen.split(",");
+        if (commonField.attributes.skipWhen != null && !commonField.attributes.skipWhen.trim().isEmpty()) {
+            String[] keywords = commonField.attributes.skipWhen.split(",");
             for (String keyword : keywords) {
                 String trimmed = keyword.trim();
                 switch (trimmed) {
@@ -795,33 +797,31 @@ public class FieldEditorDialog extends JDialog {
     }
 
     /**
-     * Helper method to get current field state from form (used for checking if
-     * shared field).
+     * Helper method to get current field state from form (used for checking if shared field).
      */
     private DOSchemaField getCurrentFieldFromForm() {
-        DOSchemaField field = new DOSchemaField();
-        field.source = getFieldSource();
-        field.destinationName = getFieldDestination();
-        field.type = getFieldType();
-        field.format = getFieldFormat();
-        field.isExported = isFieldExported();
-        field.skipWhen = getFieldSkipWhen();
-        field.skipUserOption = getFieldSkipUserOption();
-        field.isCollection = isFieldCollection();
-        field.embedContents = isFieldEmbedContents();
-        field.childrenType = getFieldChildrenType();
-        field.title = getFieldTitle();
-        field.description = getFieldDescription();
-        field.pointsTo = getFieldPointsTo();
-        field.valueMap = DOSchemaValueMap.copyOf(getValueMappings());
-        field.definitionId = originalFieldDefinitionId; // Preserve the shared
-                                                        // field ID
+        DOSchemaField field = new DOSchemaField(schema, fieldParentClass);
+        field.attributes.source = getFieldSource();
+        field.attributes.destinationName = getFieldDestination();
+        field.attributes.type = getFieldType();
+        field.attributes.format = getFieldFormat();
+        field.attributes.isExported = isFieldExported();
+        field.attributes.skipWhen = getFieldSkipWhen();
+        field.attributes.skipUserOption = getFieldSkipUserOption();
+        field.attributes.isCollection = isFieldCollection();
+        field.attributes.embedContents = isFieldEmbedContents();
+        field.attributes.childrenType = getFieldChildrenType();
+        field.attributes.title = getFieldTitle();
+        field.attributes.description = getFieldDescription();
+        field.attributes.pointsTo = getFieldPointsTo();
+        field.attributes.valueMap = DOSchemaValueMap.copyOf(getValueMappings());
+        field.attributes.definitionId = originalFieldDefinitionId; // Preserve the shared
+        // field ID
         return field;
     }
 
     /**
-     * Get the name of the class that should be created (if Create Class button
-     * was clicked).
+     * Get the name of the class that should be created (if Create Class button was clicked).
      * 
      * @return class name to create, or null if no class should be created
      */
@@ -832,8 +832,7 @@ public class FieldEditorDialog extends JDialog {
     /**
      * Get the field definition ID (for shared field references).
      * 
-     * @return the definition ID if this field is linked to a common field, null
-     * otherwise
+     * @return the definition ID if this field is linked to a common field, null otherwise
      */
     public String getFieldDefinitionId() {
         return originalFieldDefinitionId;

@@ -36,7 +36,7 @@ public class ClassFinderDialog extends FilteredListDialog<String> {
         // Add all schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                allItems.add(cls.source);
+                allItems.add(cls.attributes.source);
             }
         }
 
@@ -58,7 +58,7 @@ public class ClassFinderDialog extends FilteredListDialog<String> {
         // Add matching schema classes
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass cls : schema.getClasses()) {
-                String className = cls.source;
+                String className = cls.attributes.source;
                 if (className.toLowerCase().contains(lowerPattern)) {
                     matches.add(className);
                 }

@@ -25,7 +25,7 @@ public class ModuleUtil {
             return false;
         }
 
-        String className = schemaClass.source;
+        String className = schemaClass.attributes.source;
         List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
 
         for (DOSchemaModule module : modules) {
@@ -48,7 +48,7 @@ public class ModuleUtil {
             return null;
         }
 
-        String className = schemaClass.source;
+        String className = schemaClass.attributes.source;
         List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
 
         for (DOSchemaModule module : modules) {

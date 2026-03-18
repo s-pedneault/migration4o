@@ -60,26 +60,26 @@ public class ObjectExportTrackingIndex {
         }
 
         for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-            classByName.put(schemaClass.source, schemaClass);
+            classByName.put(schemaClass.attributes.source, schemaClass);
 
             Set<Long> allIds = new LinkedHashSet<>();
             if (schemaClass.objectIds != null) {
                 for (long id : schemaClass.objectIds) {
                     allIds.add(id);
-                    idToClasses.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(schemaClass.source);
+                    idToClasses.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(schemaClass.attributes.source);
                 }
             }
-            classToAllIds.put(schemaClass.source, allIds);
+            classToAllIds.put(schemaClass.attributes.source, allIds);
 
             Set<Long> uniqueIds = new LinkedHashSet<>();
             if (schemaClass.uniqueObjectIds != null) {
                 for (long id : schemaClass.uniqueObjectIds) {
                     uniqueIds.add(id);
-                    idToLeafClass.put(id, schemaClass.source);
-                    idToClasses.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(schemaClass.source);
+                    idToLeafClass.put(id, schemaClass.attributes.source);
+                    idToClasses.computeIfAbsent(id, ignored -> new LinkedHashSet<>()).add(schemaClass.attributes.source);
                 }
             }
-            classToUniqueIds.put(schemaClass.source, uniqueIds);
+            classToUniqueIds.put(schemaClass.attributes.source, uniqueIds);
         }
     }
 
@@ -204,7 +204,7 @@ public class ObjectExportTrackingIndex {
             if (schemaClass == null) {
                 break;
             }
-            current = schemaClass.parentClassName;
+            current = schemaClass.attributes.parentClassName;
         }
     }
 
@@ -214,7 +214,7 @@ public class ObjectExportTrackingIndex {
         }
 
         for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-            Set<Long> reachedForClass = reachedIdsByClass.get(schemaClass.source);
+            Set<Long> reachedForClass = reachedIdsByClass.get(schemaClass.attributes.source);
             if (reachedForClass == null || reachedForClass.isEmpty()) {
                 schemaClass.reachedObjectIds = null;
                 continue;

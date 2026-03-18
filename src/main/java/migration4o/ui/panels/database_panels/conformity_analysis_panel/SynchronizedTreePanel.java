@@ -15,9 +15,7 @@ import java.util.*;
 import java.util.List;
 
 /**
- * A panel containing two synchronized JTrees that scroll and expand/collapse
- * together.
- * Handles ghost nodes for classes that exist in one tree but not the other.
+ * A panel containing two synchronized JTrees that scroll and expand/collapse together. Handles ghost nodes for classes that exist in one tree but not the other.
  */
 public class SynchronizedTreePanel extends JPanel {
 
@@ -245,8 +243,7 @@ public class SynchronizedTreePanel extends JPanel {
     }
 
     /**
-     * Build synchronized trees from class differences.
-     * Creates aligned trees with ghost nodes for missing classes.
+     * Build synchronized trees from class differences. Creates aligned trees with ghost nodes for missing classes.
      */
     public void buildTrees(List<ClassDifference> differences, String refLabel, String cmpLabel, boolean groupByPackage) {
         DefaultMutableTreeNode leftRoot = (DefaultMutableTreeNode) leftModel.getRoot();
@@ -310,7 +307,7 @@ public class SynchronizedTreePanel extends JPanel {
 
             for (ClassDifference diff : classes) {
                 // Check if this class is not exported (grey) - based on reference schema
-                boolean isNotExported = (diff.getReferenceClass() != null && !diff.getReferenceClass().migrate);
+                boolean isNotExported = (diff.getReferenceClass() != null && !diff.getReferenceClass().attributes.migrate);
 
                 if (!isNotExported) {
                     // At least one exported class exists, so package is not "only grey"
@@ -427,8 +424,8 @@ public class SynchronizedTreePanel extends JPanel {
         Map<String, DOSchemaField> refFieldMap = new HashMap<>();
         if (diff.getReferenceClass() != null && diff.getReferenceClass().fields != null) {
             for (DOSchemaField field : diff.getReferenceClass().fields) {
-                refFieldMap.put(field.source, field);
-                allFieldNames.add(field.source);
+                refFieldMap.put(field.attributes.source, field);
+                allFieldNames.add(field.attributes.source);
             }
         }
 
@@ -436,17 +433,17 @@ public class SynchronizedTreePanel extends JPanel {
         Map<String, DOSchemaField> cmpFieldMap = new HashMap<>();
         if (diff.getComparedClass() != null && diff.getComparedClass().fields != null) {
             for (DOSchemaField field : diff.getComparedClass().fields) {
-                cmpFieldMap.put(field.source, field);
-                allFieldNames.add(field.source);
+                cmpFieldMap.put(field.attributes.source, field);
+                allFieldNames.add(field.attributes.source);
             }
         }
 
         // Add fields from difference lists
         for (DOSchemaField field : diff.getFieldsOnlyInReference()) {
-            allFieldNames.add(field.source);
+            allFieldNames.add(field.attributes.source);
         }
         for (DOSchemaField field : diff.getFieldsOnlyInCompared()) {
-            allFieldNames.add(field.source);
+            allFieldNames.add(field.attributes.source);
         }
 
         // Sort field names for consistent display
@@ -466,14 +463,14 @@ public class SynchronizedTreePanel extends JPanel {
                 // Check if this field has differences
                 leftHasDiff = diff.getFieldsWithDifferences().containsKey(fieldName);
             }
-            String leftDisplay = fieldName + " : " + (refField != null ? refField.type : "?");
+            String leftDisplay = fieldName + " : " + (refField != null ? refField.attributes.type : "?");
             SyncTreeNode leftFieldNode = new SyncTreeNode(fieldName, leftDisplay, leftIsGhost, leftHasDiff, refField);
             leftParent.add(new DefaultMutableTreeNode(leftFieldNode));
 
             // Right tree (compared/database)
             boolean rightIsGhost = (cmpField == null && diff.getComparedClass() != null && !isVirtualQueryField);
             boolean rightHasDiff = leftHasDiff; // Same difference status
-            String rightType = cmpField != null ? cmpField.type : (isVirtualQueryField && refField != null ? refField.type : "?");
+            String rightType = cmpField != null ? cmpField.attributes.type : (isVirtualQueryField && refField != null ? refField.attributes.type : "?");
             String rightDisplay = fieldName + " : " + rightType;
             SyncTreeNode rightFieldNode = new SyncTreeNode(fieldName, rightDisplay, rightIsGhost, rightHasDiff, cmpField);
             rightParent.add(new DefaultMutableTreeNode(rightFieldNode));
@@ -490,7 +487,7 @@ public class SynchronizedTreePanel extends JPanel {
 
         // Check if class is not exported (isMigrate=false in reference schema)
         boolean isNotExported = false;
-        if (diff.getReferenceClass() != null && !diff.getReferenceClass().migrate) {
+        if (diff.getReferenceClass() != null && !diff.getReferenceClass().attributes.migrate) {
             isNotExported = true;
             className += " (not exported)";
         }
@@ -507,8 +504,8 @@ public class SynchronizedTreePanel extends JPanel {
 
     private String getParentClassName(ClassDifference diff) {
         DOSchemaClass cls = diff.getReferenceClass() != null ? diff.getReferenceClass() : diff.getComparedClass();
-        if (cls != null && cls.parentClassName != null && !cls.parentClassName.isEmpty() && !cls.parentClassName.equals("Undetermined")) {
-            return cls.parentClassName;
+        if (cls != null && cls.attributes.parentClassName != null && !cls.attributes.parentClassName.isEmpty() && !cls.attributes.parentClassName.equals("Undetermined")) {
+            return cls.attributes.parentClassName;
         }
         return null;
     }

@@ -234,7 +234,7 @@ public class CostPanel extends JPanel {
             return null;
         }
         DOSchemaClass cls = refSchema.findClassByName(className);
-        return (cls != null && cls.title != null && !cls.title.isEmpty()) ? cls.title : null;
+        return (cls != null && cls.attributes.title != null && !cls.attributes.title.isEmpty()) ? cls.attributes.title : null;
     }
 
     /**

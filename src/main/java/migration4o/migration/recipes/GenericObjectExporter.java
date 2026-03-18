@@ -82,8 +82,8 @@ public class GenericObjectExporter {
         StoredClass storedClass = container.ext().storedClass(genericObj);
 
         if (storedClass != null) {
-            String currentClassName = schemaClass.destinationName;
-            String currentSourceClassName = schemaClass.source; // Full source class name
+            String currentClassName = schemaClass.attributes.destinationName;
+            String currentSourceClassName = schemaClass.attributes.source; // Full source class name
             return fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
                     currentClassName, currentSourceClassName, objectId);
         }

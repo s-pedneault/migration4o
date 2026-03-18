@@ -35,11 +35,11 @@ public class ExportCriteriaDialog extends BaseFormDialog {
         // Populate field combo box after dialog is fully constructed
         SwingUtilities.invokeLater(() -> {
             if (fieldNameComboBox != null && schemaClass != null && schemaClass.fields != null) {
-                System.out.println("DEBUG ExportCriteriaDialog: Loading fields for " + schemaClass.source);
+                System.out.println("DEBUG ExportCriteriaDialog: Loading fields for " + schemaClass.attributes.source);
                 System.out.println("  Field count: " + schemaClass.fields.length);
                 for (DOSchemaField field : schemaClass.fields) {
-                    System.out.println("  Adding field: " + field.source);
-                    fieldNameComboBox.addItem(field.source);
+                    System.out.println("  Adding field: " + field.attributes.source);
+                    fieldNameComboBox.addItem(field.attributes.source);
                 }
             }
 

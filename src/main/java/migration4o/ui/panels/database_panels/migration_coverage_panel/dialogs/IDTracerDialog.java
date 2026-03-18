@@ -471,7 +471,7 @@ public class IDTracerDialog extends JFrame {
     private Map<String, List<SchemaReferenceEdge>> buildReferencedByIndex(DOSchema schema) {
         Map<String, List<SchemaReferenceEdge>> index = new HashMap<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass == null || schemaClass.source == null || schemaClass.schemaReferences == null) {
+            if (schemaClass == null || schemaClass.attributes.source == null || schemaClass.schemaReferences == null) {
                 continue;
             }
 
@@ -479,7 +479,7 @@ public class IDTracerDialog extends JFrame {
                 if (reference == null || reference.className == null || reference.className.isBlank()) {
                     continue;
                 }
-                index.computeIfAbsent(schemaClass.source, key -> new ArrayList<>()).add(new SchemaReferenceEdge(reference.className, reference.fieldName));
+                index.computeIfAbsent(schemaClass.attributes.source, key -> new ArrayList<>()).add(new SchemaReferenceEdge(reference.className, reference.fieldName));
             }
         }
 

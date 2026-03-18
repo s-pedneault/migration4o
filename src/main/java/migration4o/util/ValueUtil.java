@@ -207,8 +207,8 @@ public class ValueUtil {
         }
 
         // Check skipWhen conditions
-        if (applySkipWhenConditions && field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
-            return matchesSkipCondition(value, field.skipWhen, field, schema);
+        if (applySkipWhenConditions && field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty()) {
+            return matchesSkipCondition(value, field.attributes.skipWhen, field, schema);
         }
 
         return false;
@@ -230,12 +230,12 @@ public class ValueUtil {
             return null;
         }
 
-        if (field == null || field.format == null || field.format.trim().isEmpty()) {
+        if (field == null || field.attributes.format == null || field.attributes.format.trim().isEmpty()) {
             return value;
         }
 
         String formattedValue = value;
-        String[] formatKeywords = field.format.split(",");
+        String[] formatKeywords = field.attributes.format.split(",");
         for (String keyword : formatKeywords) {
             String normalizedKeyword = keyword.trim().toUpperCase();
 

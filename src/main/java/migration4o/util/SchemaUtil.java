@@ -19,7 +19,7 @@ public class SchemaUtil {
         ArrayList<DOSchemaField> list = new ArrayList<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             for (DOSchemaField field : schemaClass.fields) {
-                if (field.skipUserOption != null && !field.skipUserOption.trim().isEmpty()) {
+                if (field.attributes.skipUserOption != null && !field.attributes.skipUserOption.trim().isEmpty()) {
                     list.add(field);
                 }
             }
@@ -39,7 +39,7 @@ public class SchemaUtil {
             return null;
         }
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
+            if (schemaClass.attributes.source.equals(className)) {
                 return schemaClass;
             }
         }
@@ -59,12 +59,12 @@ public class SchemaUtil {
             return false;
         }
 
-        String currentClassName = schemaClass.source;
+        String currentClassName = schemaClass.attributes.source;
         if (currentClassName.equals(ancestorClassName)) {
             return true;
         }
 
-        String parentClassName = schemaClass.parentClassName;
+        String parentClassName = schemaClass.attributes.parentClassName;
         if (parentClassName == null || parentClassName.isEmpty()) {
             return false;
         }
@@ -76,7 +76,7 @@ public class SchemaUtil {
         // Look up parent class and recurse
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass candidate : schema.getClasses()) {
-                if (candidate.source.equals(parentClassName)) {
+                if (candidate.attributes.source.equals(parentClassName)) {
                     return isDescendantOf(candidate, ancestorClassName, schema);
                 }
             }
@@ -86,13 +86,11 @@ public class SchemaUtil {
     }
 
     /**
-     * Converts a field to use a common field definition reference if a matching
-     * common field exists in the schema.
+     * Converts a field to use a common field definition reference if a matching common field exists in the schema.
      * 
      * @param field the field to potentially convert
      * @param schema the schema containing common field definitions
-     * @return a new field using the common definition if found, or the original
-     * field
+     * @return a new field using the common definition if found, or the original field
      */
     public static DOSchemaField convertToCommonFieldIfExists(DOSchemaField field, DOSchema schema) {
         if (field == null || schema == null || schema.sharedFields == null || schema.sharedFields.isEmpty()) {
@@ -101,23 +99,23 @@ public class SchemaUtil {
 
         // Check if a common field definition exists for this field's source
         // name
-        DOSchemaField commonField = schema.sharedFields.get(field.source);
+        DOSchemaField commonField = schema.sharedFields.get(field.attributes.source);
         if (commonField != null) {
             // Create a reference to the common field
-            DOSchemaField refField = new DOSchemaField();
-            refField.source = field.source;
-            refField.definitionId = field.source; // Mark as reference
+            DOSchemaField refField = new DOSchemaField(schema, field.parentClass);
+            refField.attributes.source = field.attributes.source;
+            refField.attributes.definitionId = field.attributes.source; // Mark as reference
             // Copy properties from common field
-            refField.destinationName = commonField.destinationName;
-            refField.type = commonField.type;
-            refField.isExported = commonField.isExported;
-            refField.skipWhen = commonField.skipWhen;
-            refField.isCollection = commonField.isCollection;
-            refField.embedContents = commonField.embedContents;
-            refField.childrenType = commonField.childrenType;
-            refField.title = commonField.title;
-            refField.description = commonField.description;
-            refField.pointsTo = commonField.pointsTo;
+            refField.attributes.destinationName = commonField.attributes.destinationName;
+            refField.attributes.type = commonField.attributes.type;
+            refField.attributes.isExported = commonField.attributes.isExported;
+            refField.attributes.skipWhen = commonField.attributes.skipWhen;
+            refField.attributes.isCollection = commonField.attributes.isCollection;
+            refField.attributes.embedContents = commonField.attributes.embedContents;
+            refField.attributes.childrenType = commonField.attributes.childrenType;
+            refField.attributes.title = commonField.attributes.title;
+            refField.attributes.description = commonField.attributes.description;
+            refField.attributes.pointsTo = commonField.attributes.pointsTo;
             return refField;
         }
 
@@ -141,7 +139,7 @@ public class SchemaUtil {
         // Find insertion point (alphabetically by source)
         int insertIndex = 0;
         for (int i = 0; i < existing.length; i++) {
-            if (existing[i].source.compareTo(newClass.source) < 0) {
+            if (existing[i].attributes.source.compareTo(newClass.attributes.source) < 0) {
                 insertIndex = i + 1;
             }
         }
@@ -161,8 +159,7 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a class in the schemas by its absolute name. Searches the schemas
-     * in reverse order, and returns the first class found.
+     * Finds a class in the schemas by its absolute name. Searches the schemas in reverse order, and returns the first class found.
      * 
      * @param className the absolute class name to find
      * @param schemas the array of schemas to search
@@ -182,11 +179,9 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a class in the schema by its absolute name. If not found, falls
-     * back to searching by simple name (class name without package).
+     * Finds a class in the schema by its absolute name. If not found, falls back to searching by simple name (class name without package).
      * 
-     * @param className the absolute class name to find (or simple name as
-     * fallback)
+     * @param className the absolute class name to find (or simple name as fallback)
      * @param schema the reference schema
      * @return the schema class, or null if not found
      */
@@ -197,7 +192,7 @@ public class SchemaUtil {
 
         // First, try exact match by absolute name
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
+            if (schemaClass.attributes.source.equals(className)) {
                 return schemaClass;
             }
         }
@@ -205,7 +200,7 @@ public class SchemaUtil {
         // Fallback: try matching by simple name (class name without package)
         String searchSimpleName = ClassUtil.getSimpleName(className);
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.source);
+            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
             if (schemaSimpleName.equals(searchSimpleName)) {
                 return schemaClass;
             }
@@ -223,7 +218,7 @@ public class SchemaUtil {
         }
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (className.equals(schemaClass.source)) {
+            if (className.equals(schemaClass.attributes.source)) {
                 return schemaClass;
             }
         }
@@ -239,7 +234,7 @@ public class SchemaUtil {
         }
 
         for (DOSchemaField field : schemaClass.fields) {
-            if (fieldName.equals(field.source)) {
+            if (fieldName.equals(field.attributes.source)) {
                 return field;
             }
         }
@@ -247,24 +242,22 @@ public class SchemaUtil {
     }
 
     /**
-     * Checks if the given class is a superclass of other Entite-type classes in
-     * the schema.
+     * Checks if the given class is a superclass of other Entite-type classes in the schema.
      * 
      * @param schema the schema to search
      * @param targetClass the class to check
-     * @return true if at least one other class in the schema has this class as
-     * a parent
+     * @return true if at least one other class in the schema has this class as a parent
      */
     public static boolean hasSubclasses(DOSchema schema, DOSchemaClass targetClass) {
         if (schema == null || schema.getClasses() == null || targetClass == null) {
             return false;
         }
 
-        String targetClassName = targetClass.source;
+        String targetClassName = targetClass.attributes.source;
 
         // Check if any class has this class as its parent
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.parentClassName != null && schemaClass.parentClassName.equals(targetClassName)) {
+            if (schemaClass.attributes.parentClassName != null && schemaClass.attributes.parentClassName.equals(targetClassName)) {
                 // Found a direct subclass - now verify it's an Entite type
                 if (isDescendantOf(schemaClass, "gest.gen.Entite", schema)) {
                     return true;
@@ -276,13 +269,10 @@ public class SchemaUtil {
     }
 
     /**
-     * Given a set of class names that represent the same object (due to
-     * inheritance), finds the leaf (most derived) class using the reference
-     * schema.
+     * Given a set of class names that represent the same object (due to inheritance), finds the leaf (most derived) class using the reference schema.
      * 
      * @param classNames set of class names for the same object
-     * @return the leaf class name, or the first class name if schema lookup
-     * fails
+     * @return the leaf class name, or the first class name if schema lookup fails
      */
     public static String findLeafClass(Set<String> classNames) {
         if (classNames == null || classNames.isEmpty()) {
@@ -302,8 +292,8 @@ public class SchemaUtil {
         Map<String, String> parentMap = new HashMap<>();
         for (String className : classNames) {
             DOSchemaClass schemaClass = findClassByName(className, schema);
-            if (schemaClass != null && schemaClass.parentClassName != null) {
-                parentMap.put(className, schemaClass.parentClassName);
+            if (schemaClass != null && schemaClass.attributes.parentClassName != null) {
+                parentMap.put(className, schemaClass.attributes.parentClassName);
             }
         }
 
@@ -323,10 +313,7 @@ public class SchemaUtil {
     }
 
     /**
-     * Strips a leading "id" or "ID" prefix (optionally followed by a space)
-     * from a field or element name, lowercasing the new first character if it
-     * was uppercase. Examples: "IDTypeChampPerso" → "typeChampPerso",
-     * "IDPersonne" → "personne", "id type" → "type".
+     * Strips a leading "id" or "ID" prefix (optionally followed by a space) from a field or element name, lowercasing the new first character if it was uppercase. Examples: "IDTypeChampPerso" → "typeChampPerso", "IDPersonne" → "personne", "id type" → "type".
      */
     public static String stripIdPrefix(String name) {
         if (name == null || name.isEmpty())

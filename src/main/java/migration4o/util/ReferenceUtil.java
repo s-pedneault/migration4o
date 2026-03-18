@@ -33,7 +33,7 @@ public class ReferenceUtil {
         long idEntiteId = container.ext().getID(idEntiteObj);
 
         // Check if we should embed the target object's contents
-        boolean embedContents = schemaField != null && schemaField.embedContents;
+        boolean embedContents = schemaField != null && schemaField.attributes.embedContents;
 
         if (!embedContents) {
             // Export the IDEntite object itself
@@ -41,7 +41,7 @@ public class ReferenceUtil {
         }
 
         // embedContents=true: try to resolve to the target object
-        String fieldName = schemaField != null ? schemaField.destinationName : null;
+        String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
         String expectedType = extractExpectedTypeFromFieldName(fieldName, idClassName);
 
         // Resolve the reference to find the target object
@@ -104,7 +104,7 @@ public class ReferenceUtil {
                 continue;
             }
 
-            String fullClassName = schemaClass.source;
+            String fullClassName = schemaClass.attributes.source;
 
             // Only search in classes that match the expected type (if
             // specified)

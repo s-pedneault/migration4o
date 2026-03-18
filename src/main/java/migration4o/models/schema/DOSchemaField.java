@@ -2,55 +2,31 @@
 package migration4o.models.schema;
 
 import java.util.ArrayList;
-import java.util.List;
 
 public class DOSchemaField {
-    public String source;
-    public String destinationName;
-    public String type;
-    public String format;
-    public boolean isExported;
-    public String skipWhen; // Comma-separated skip conditions
-                            // (NULL,ZERO,MINUS_ONE,etc.)
-    public String skipUserOption;
-    public boolean isCollection;
-    public boolean embedContents;
-    public String childrenType;
-    public String title;
-    public String description;
-    public String pointsTo;
-    public DOSchemaValueMap valueMap; // Maps database values to export values
-
-    // Shared field definition support
-    public String definitionId; // If set, this field references a shared
-                                // definition
-
-    // Virtual field support (source starts with @)
-    public List<DOFieldCriteria> criterias; // Query criterias for virtual
-                                            // fields
-    public String criteriasOperator; // Logical operator for multiple criterias:
-                                     // "AND" or "OR" (default: "AND")
+    public DOSchema schema;
+    public DOSchemaClass parentClass;
+    public DOSchemaFieldAttributes attributes = new DOSchemaFieldAttributes();
 
     public DOSchemaClass childrenSchemaClass;
-    public DOSchemaClass parentClass; // The class that contains this field
 
-    public DOSchemaField() {
+    public DOSchemaField(DOSchema schema, DOSchemaClass parentClass) {
+        this.schema = schema;
+        this.parentClass = parentClass;
     }
 
     /**
      * Returns true if this field is a reference to a shared field definition.
      */
     public boolean isSharedField() {
-        return definitionId != null && !definitionId.trim().isEmpty();
+        return attributes.definitionId != null && !attributes.definitionId.trim().isEmpty();
     }
 
     /**
-     * Returns true if this is a virtual field (source starts with @). Virtual
-     * fields query the database for related objects instead of reading actual
-     * fields.
+     * Returns true if this is a virtual field (source starts with @). Virtual fields query the database for related objects instead of reading actual fields.
      */
     public boolean isVirtualField() {
-        return source != null && source.startsWith("@");
+        return attributes.source != null && attributes.source.startsWith("@");
     }
 
     /**
@@ -58,45 +34,45 @@ public class DOSchemaField {
      */
     public String getVirtualFieldName() {
         if (isVirtualField()) {
-            return source.substring(1);
+            return attributes.source.substring(1);
         }
-        return source;
+        return attributes.source;
     }
 
     /**
-     * Creates a deep copy of this field (used when instantiating shared
-     * fields).
+     * Creates a deep copy of this field (used when instantiating shared fields).
      */
     public DOSchemaField copy() {
-        DOSchemaField copy = new DOSchemaField();
+        DOSchemaField copy = new DOSchemaField(schema, parentClass);
+        copy.attributes = new DOSchemaFieldAttributes();
 
         // Deep copy criterias
-        if (this.criterias != null) {
-            copy.criterias = new ArrayList<>();
-            for (DOFieldCriteria criteria : this.criterias) {
-                copy.criterias.add(new DOFieldCriteria(criteria.match, criteria.with, criteria.operator));
+        if (this.attributes.criterias != null) {
+            copy.attributes.criterias = new ArrayList<>();
+            for (DOFieldCriteria criteria : this.attributes.criterias) {
+                copy.attributes.criterias.add(new DOFieldCriteria(criteria.match, criteria.with, criteria.operator));
             }
         }
-        copy.criteriasOperator = this.criteriasOperator;
+        copy.attributes.criteriasOperator = this.attributes.criteriasOperator;
 
         // y.source = this.source;
-        copy.destinationName = this.destinationName;
-        copy.type = this.type;
-        copy.format = this.format;
-        copy.isExported = this.isExported;
-        copy.skipWhen = this.skipWhen;
-        copy.skipUserOption = this.skipUserOption;
-        copy.isCollection = this.isCollection;
-        copy.embedContents = this.embedContents;
-        copy.childrenType = this.childrenType;
-        copy.title = this.title;
-        copy.description = this.description;
-        copy.pointsTo = this.pointsTo;
-        copy.definitionId = this.definitionId;
+        copy.attributes.destinationName = this.attributes.destinationName;
+        copy.attributes.type = this.attributes.type;
+        copy.attributes.format = this.attributes.format;
+        copy.attributes.isExported = this.attributes.isExported;
+        copy.attributes.skipWhen = this.attributes.skipWhen;
+        copy.attributes.skipUserOption = this.attributes.skipUserOption;
+        copy.attributes.isCollection = this.attributes.isCollection;
+        copy.attributes.embedContents = this.attributes.embedContents;
+        copy.attributes.childrenType = this.attributes.childrenType;
+        copy.attributes.title = this.attributes.title;
+        copy.attributes.description = this.attributes.description;
+        copy.attributes.pointsTo = this.attributes.pointsTo;
+        copy.attributes.definitionId = this.attributes.definitionId;
 
         // Deep copy value map
-        if (this.valueMap != null) {
-            copy.valueMap = this.valueMap.copy();
+        if (this.attributes.valueMap != null) {
+            copy.attributes.valueMap = this.attributes.valueMap.copy();
         }
 
         // Note: childrenSchemaClass and parentClass are not copied as they're

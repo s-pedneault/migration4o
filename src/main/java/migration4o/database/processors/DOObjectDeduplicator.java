@@ -56,7 +56,7 @@ public class DOObjectDeduplicator {
         // Create a map for quick class lookup
         Map<String, DOSchemaClass> classMap = new HashMap<>();
         for (DOSchemaClass cls : schema.getClasses()) {
-            classMap.put(cls.source, cls);
+            classMap.put(cls.attributes.source, cls);
         }
 
         // Find leaf classes (classes with no subclasses)
@@ -78,7 +78,7 @@ public class DOObjectDeduplicator {
             leafIndex++;
 
             if (monitor != null) {
-                monitor.onProcessingLeafClass(leafClass.source, leafIndex, leafClasses.size());
+                monitor.onProcessingLeafClass(leafClass.attributes.source, leafIndex, leafClasses.size());
             }
 
             if (leafClass.objectIds == null || leafClass.objectIds.length == 0) {
@@ -86,7 +86,7 @@ public class DOObjectDeduplicator {
             }
 
             // Walk up the inheritance chain
-            String parentClassName = leafClass.parentClassName;
+            String parentClassName = leafClass.attributes.parentClassName;
             while (parentClassName != null) {
                 DOSchemaClass parentClass = classMap.get(parentClassName);
                 if (parentClass == null) {
@@ -94,14 +94,14 @@ public class DOObjectDeduplicator {
                 }
 
                 // Mark leaf's object IDs for removal from this parent
-                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.source,
+                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.attributes.source,
                         k -> new java.util.HashSet<>());
                 for (long id : leafClass.objectIds) {
                     toRemove.add(id);
                 }
 
                 // Move to next ancestor
-                parentClassName = parentClass.parentClassName;
+                parentClassName = parentClass.attributes.parentClassName;
             }
         }
 
@@ -109,7 +109,7 @@ public class DOObjectDeduplicator {
         int deduplicatedCount = 0;
         int totalRemoved = 0;
         for (DOSchemaClass cls : schema.getClasses()) {
-            java.util.Set<Long> toRemove = idsToRemove.get(cls.source);
+            java.util.Set<Long> toRemove = idsToRemove.get(cls.attributes.source);
 
             if (toRemove != null && !toRemove.isEmpty() && cls.objectIds != null) {
                 // Filter out the IDs that belong to derived classes
@@ -121,9 +121,9 @@ public class DOObjectDeduplicator {
                     deduplicatedCount++;
                     totalRemoved += removedCount;
                     if (monitor != null) {
-                        monitor.onClassDeduplicated(cls.source, removedCount, uniqueIds.length);
+                        monitor.onClassDeduplicated(cls.attributes.source, removedCount, uniqueIds.length);
                     } else {
-                        System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.source +
+                        System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.attributes.source +
                                 " (" + cls.objectIds.length + " -> " + uniqueIds.length + ")");
                     }
                 }
@@ -158,7 +158,7 @@ public class DOObjectDeduplicator {
 
             // Check if any other class has this as a parent
             for (DOSchemaClass potentialChild : schema.getClasses()) {
-                if (cls.source.equals(potentialChild.parentClassName)) {
+                if (cls.attributes.source.equals(potentialChild.attributes.parentClassName)) {
                     isLeaf = false;
                     break;
                 }

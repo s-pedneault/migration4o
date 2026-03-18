@@ -390,14 +390,14 @@ public class MultiDatabaseComparisonPanel extends JPanel {
         if (schemaClass == null) {
             return null;
         }
-        if (schemaClass.source != null && !schemaClass.source.isBlank()) {
-            return schemaClass.source;
+        if (schemaClass.attributes.source != null && !schemaClass.attributes.source.isBlank()) {
+            return schemaClass.attributes.source;
         }
-        if (schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) {
-            return schemaClass.destinationName;
+        if (schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) {
+            return schemaClass.attributes.destinationName;
         }
-        if (schemaClass.title != null && !schemaClass.title.isBlank()) {
-            return schemaClass.title;
+        if (schemaClass.attributes.title != null && !schemaClass.attributes.title.isBlank()) {
+            return schemaClass.attributes.title;
         }
         return null;
     }

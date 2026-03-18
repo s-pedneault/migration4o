@@ -38,7 +38,7 @@ public class IDReferenceExporter {
         }
 
         // Export the ID object wrapper
-        String idClassName = idClass.source; // e.g., "IDCompartiment"
+        String idClassName = idClass.attributes.source; // e.g., "IDCompartiment"
         String simpleClassName = idClassName.substring(idClassName.lastIndexOf('.') + 1);
 
         xmlWriter.openStructure(simpleClassName);
@@ -46,7 +46,7 @@ public class IDReferenceExporter {
         // Find the mID field in the ID class schema
         DOSchemaField idField = null;
         for (DOSchemaField field : idClass.fields) {
-            if ("mID".equals(field.source)) {
+            if ("mID".equals(field.attributes.source)) {
                 idField = field;
                 break;
             }
@@ -55,7 +55,7 @@ public class IDReferenceExporter {
         if (idField != null) {
             // Export the ID value
             String formattedValue = ValueUtil.formatFieldValue(String.valueOf(entityObjectId), idField);
-            xmlWriter.elementWithContent(idField.destinationName, formattedValue, false);
+            xmlWriter.elementWithContent(idField.attributes.destinationName, formattedValue, false);
         }
 
         xmlWriter.closeStructure(simpleClassName);

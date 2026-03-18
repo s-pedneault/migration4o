@@ -85,7 +85,7 @@ public class ExportModuleLoop {
     }
 
     private void runClass(DOSchemaClass dbSchemaClass) throws Exception {
-        String className = dbSchemaClass.source;
+        String className = dbSchemaClass.attributes.source;
         // Snapshot class/config: ObjectExportLoop nulls ctx.schemaClass in its
         // finally block, so each handler iteration must restore these.
         DOSchemaClass refClass = ctx.schemaClass;

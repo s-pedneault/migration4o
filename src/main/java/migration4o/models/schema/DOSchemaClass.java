@@ -7,30 +7,26 @@ import migration4o.util.TypeUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 
 public class DOSchemaClass {
-    public String source;
-    public String destinationName;
-    public String parentClassName;
-    public boolean migrate;
-    public String schemaNotes;
-    public String title;
-    public String description;
-    public String summary;
+
+    public DOSchema schema;
+    public DOSchemaClassAttributes attributes = new DOSchemaClassAttributes();
     public DOSchemaField[] fields;
     public DOSchemaReference[] schemaReferences;
+
     public long[] objectIds; // Object IDs from database
     public long[] uniqueObjectIds; // Unique object IDs after deduplication
     public long[] reachedObjectIds; // Object IDs reached during reach analysis
-    public String pointsTo; // For IDEntite classes: the target class name this points to
 
-    public DOSchemaClass() {
+    public DOSchemaClass(DOSchema schema) {
+        this.schema = schema;
     }
 
     public String getSourcePackage() {
-        return ClassUtil.getPackageName(source);
+        return ClassUtil.getPackageName(attributes.source);
     }
 
     public String getSourceName() {
-        return ClassUtil.getSimpleName(source);
+        return ClassUtil.getSimpleName(attributes.source);
     }
 
     public boolean isDescendantOf(String ancestorClassName, DOSchema schema) {
@@ -50,13 +46,13 @@ public class DOSchemaClass {
     }
 
     public boolean isPrimitive() {
-        return TypeUtil.isPrimitiveType(source);
+        return TypeUtil.isPrimitiveType(attributes.source);
     }
 
     public DOSchemaField findField(String fieldName) {
         if (fields != null) {
             for (DOSchemaField field : fields) {
-                if (field.destinationName.equals(fieldName)) {
+                if (field.attributes.destinationName.equals(fieldName)) {
                     return field;
                 }
             }
@@ -65,8 +61,7 @@ public class DOSchemaClass {
     }
 
     /**
-     * Sets the fields array and establishes parent links. Each field will have its
-     * parentClass set to this class.
+     * Sets the fields array and establishes parent links. Each field will have its parentClass set to this class.
      */
     public void setFields(DOSchemaField[] fields) {
         this.fields = fields;
@@ -84,7 +79,7 @@ public class DOSchemaClass {
         metadata.generator = "Migration4o";
         metadata.provider = "Gestion Technologies";
         metadata.module = module != null ? module : "";
-        metadata.type = destinationName != null ? destinationName : getSourceName();
+        metadata.type = attributes.destinationName != null ? attributes.destinationName : getSourceName();
         metadata.objects = objectIds != null ? String.valueOf(objectIds.length) : "0";
         return metadata;
     }

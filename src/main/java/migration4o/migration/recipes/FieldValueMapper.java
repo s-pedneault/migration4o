@@ -21,11 +21,11 @@ public class FieldValueMapper {
             return value;
         }
 
-        if (schemaField.valueMap == null || schemaField.valueMap.isEmpty()) {
+        if (schemaField.attributes.valueMap == null || schemaField.attributes.valueMap.isEmpty()) {
             return value;
         }
 
-        String mappedValue = schemaField.valueMap.getMappedValue(value);
+        String mappedValue = schemaField.attributes.valueMap.getMappedValue(value);
         return mappedValue != null ? mappedValue : value;
     }
 
@@ -52,6 +52,6 @@ public class FieldValueMapper {
      * @return true if the field has value mappings, false otherwise
      */
     public static boolean hasMapping(DOSchemaField schemaField) {
-        return schemaField != null && schemaField.valueMap != null && !schemaField.valueMap.isEmpty();
+        return schemaField != null && schemaField.attributes.valueMap != null && !schemaField.attributes.valueMap.isEmpty();
     }
 }

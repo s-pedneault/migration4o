@@ -118,7 +118,7 @@ public class CollectionTypeUtil {
             if (schemaClass == null) {
                 break;
             }
-            currentClassName = schemaClass.parentClassName;
+            currentClassName = schemaClass.attributes.parentClassName;
         }
         return false;
     }
@@ -166,7 +166,7 @@ public class CollectionTypeUtil {
             if (schemaClass == null) {
                 break;
             }
-            currentClassName = schemaClass.parentClassName;
+            currentClassName = schemaClass.attributes.parentClassName;
         }
 
         return false;
@@ -180,7 +180,7 @@ public class CollectionTypeUtil {
             if (schema == null || schema.classes == null)
                 continue;
             for (DOSchemaClass cls : schema.classes) {
-                if (cls != null && className.equals(cls.source)) {
+                if (cls != null && className.equals(cls.attributes.source)) {
                     return cls;
                 }
             }

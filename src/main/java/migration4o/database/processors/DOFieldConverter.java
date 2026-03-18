@@ -7,19 +7,19 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.CollectionTypeUtil;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Converter for transforming DB4O StoredField objects to DOSchemaField objects.
- * Provides static methods for field conversion without requiring instantiation.
+ * Converter for transforming DB4O StoredField objects to DOSchemaField objects. Provides static methods for field conversion without requiring instantiation.
  */
 public class DOFieldConverter {
 
     /**
-     * Type normalization map - converts fully qualified types to their canonical
-     * form.
+     * Type normalization map - converts fully qualified types to their canonical form.
      */
     private static final Map<String, String> TYPE_NORMALIZATION_MAP = new HashMap<String, String>() {
         {
@@ -38,11 +38,14 @@ public class DOFieldConverter {
      * Converts a single StoredField to a DOSchemaField.
      * 
      * @param storedField The DB4O stored field to convert
-     * @param context     The database context containing container and stored class
-     *                    map
+     * @param context The database context containing container and stored class map
      * @return A DOSchemaField representing the stored field
      */
     public static DOSchemaField convertStoredFieldToSchemaField(StoredField storedField, DODatabaseContext context) {
+        return convertStoredFieldToSchemaField(storedField, context, null, null);
+    }
+
+    public static DOSchemaField convertStoredFieldToSchemaField(StoredField storedField, DODatabaseContext context, DOSchema schema, DOSchemaClass parentClass) {
 
         String source = storedField.getName();
         String destination = DatabaseUtil.normalizeFieldName(source);
@@ -60,18 +63,18 @@ public class DOFieldConverter {
         String childrenType = determineChildrenType(typeName, isCollection, context.storedClassMap);
 
         // Create schema field
-        DOSchemaField field = new DOSchemaField();
-        field.source = source;
-        field.destinationName = destination;
-        field.type = type;
-        field.isExported = true; // Assume all database fields are exported
-        field.skipWhen = "DEFAULT"; // Default behavior
-        field.isCollection = isCollection;
-        field.embedContents = false; // Default - don't embed
-        field.childrenType = childrenType;
-        field.title = null;
-        field.description = null;
-        field.pointsTo = null;
+        DOSchemaField field = new DOSchemaField(schema, parentClass);
+        field.attributes.source = source;
+        field.attributes.destinationName = destination;
+        field.attributes.type = type;
+        field.attributes.isExported = true; // Assume all database fields are exported
+        field.attributes.skipWhen = "DEFAULT"; // Default behavior
+        field.attributes.isCollection = isCollection;
+        field.attributes.embedContents = false; // Default - don't embed
+        field.attributes.childrenType = childrenType;
+        field.attributes.title = null;
+        field.attributes.description = null;
+        field.attributes.pointsTo = null;
         field.childrenSchemaClass = null; // Will be linked later if needed
 
         return field;
@@ -81,7 +84,7 @@ public class DOFieldConverter {
      * Determines the type of a field from the stored field information.
      * 
      * @param typeName The type name from the stored field
-     * @param isArray  Whether the field is an array
+     * @param isArray Whether the field is an array
      * @return The normalized type name
      */
     public static String determineFieldType(String typeName, boolean isArray) {
@@ -118,8 +121,8 @@ public class DOFieldConverter {
     /**
      * Determines the children type for collection fields.
      * 
-     * @param typeName       The type name from the stored field
-     * @param isCollection   Whether the field is a collection type
+     * @param typeName The type name from the stored field
+     * @param isCollection Whether the field is a collection type
      * @param storedClassMap Map of stored classes for reference lookups
      * @return The children type name, or empty string if not a collection
      */

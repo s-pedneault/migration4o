@@ -59,7 +59,7 @@ public class SummaryEditorDialog extends JDialog {
     }
 
     public SummaryEditorDialog(Frame owner, DOSchemaClass schemaClass, DOSchema schema) {
-        super(owner, "Edit Summary — " + schemaClass.destinationName, true);
+        super(owner, "Edit Summary — " + schemaClass.attributes.destinationName, true);
         setLayout(new BorderLayout(10, 10));
         setPreferredSize(new Dimension(780, 420));
 
@@ -82,7 +82,7 @@ public class SummaryEditorDialog extends JDialog {
         JPanel textPanel = new JPanel(new BorderLayout(0, 4));
         textPanel.setBorder(BorderFactory.createTitledBorder("Summary (use [fieldName] for field references)"));
 
-        summaryTextArea = new JTextArea(schemaClass.summary != null ? schemaClass.summary : "", 8, 40);
+        summaryTextArea = new JTextArea(schemaClass.attributes.summary != null ? schemaClass.attributes.summary : "", 8, 40);
         summaryTextArea.setLineWrap(true);
         summaryTextArea.setWrapStyleWord(true);
         summaryTextArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 13));
@@ -101,7 +101,7 @@ public class SummaryEditorDialog extends JDialog {
         // Right: field selector tree panel
         // Collect currently-referenced field paths so the tree can highlight
         // them
-        Set<String> referencedPaths = extractReferencedPaths(schemaClass.summary);
+        Set<String> referencedPaths = extractReferencedPaths(schemaClass.attributes.summary);
 
         fieldSelector = new FieldSelectorPanel(schemaClass, referencedPaths, (fieldPath, fieldLabel) -> insertField(fieldPath));
 

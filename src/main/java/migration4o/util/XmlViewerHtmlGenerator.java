@@ -64,8 +64,8 @@ public final class XmlViewerHtmlGenerator {
     }
 
     private static String deriveEntityName(DOSchemaClass schemaClass, String fileName) {
-        if (schemaClass != null && schemaClass.destinationName != null) {
-            return schemaClass.destinationName;
+        if (schemaClass != null && schemaClass.attributes.destinationName != null) {
+            return schemaClass.attributes.destinationName;
         }
         int dot = fileName.lastIndexOf('.');
         return dot > 0 ? fileName.substring(0, dot) : fileName;
@@ -84,10 +84,10 @@ public final class XmlViewerHtmlGenerator {
         sb.append('[');
         boolean first = true;
         for (DOSchemaField field : schemaClass.fields) {
-            if (!field.isExported) {
+            if (!field.attributes.isExported) {
                 continue;
             }
-            String name = field.destinationName != null ? field.destinationName : field.source;
+            String name = field.attributes.destinationName != null ? field.attributes.destinationName : field.attributes.source;
             if (name == null) {
                 continue;
             }
@@ -101,15 +101,15 @@ public final class XmlViewerHtmlGenerator {
             sb.append("\"name\":\"").append(escapeJson(name)).append("\",");
             sb.append("\"path\":\"").append(escapeJson(name)).append("\",");
             sb.append("\"type\":\"").append(dataType).append("\",");
-            sb.append("\"collection\":").append(field.isCollection);
-            if (field.title != null && !field.title.isEmpty()) {
-                sb.append(",\"title\":\"").append(escapeJson(field.title)).append('"');
+            sb.append("\"collection\":").append(field.attributes.isCollection);
+            if (field.attributes.title != null && !field.attributes.title.isEmpty()) {
+                sb.append(",\"title\":\"").append(escapeJson(field.attributes.title)).append('"');
             }
 
             DOSchemaClass childClass = null;
-            if (field.embedContents && !field.isCollection) {
+            if (field.attributes.embedContents && !field.attributes.isCollection) {
                 childClass = resolveChildClass(field, schema);
-            } else if (field.isCollection && field.embedContents) {
+            } else if (field.attributes.isCollection && field.attributes.embedContents) {
                 childClass = resolveCollectionChildClass(field, schema);
             }
 
@@ -118,10 +118,10 @@ public final class XmlViewerHtmlGenerator {
                 boolean childFirst = true;
                 Set<String> seen = new HashSet<>();
                 for (DOSchemaField cf : childClass.fields) {
-                    if (!cf.isExported) {
+                    if (!cf.attributes.isExported) {
                         continue;
                     }
-                    String cn = cf.destinationName != null ? cf.destinationName : cf.source;
+                    String cn = cf.attributes.destinationName != null ? cf.attributes.destinationName : cf.attributes.source;
                     if (cn == null || seen.contains(cn)) {
                         continue;
                     }
@@ -134,10 +134,10 @@ public final class XmlViewerHtmlGenerator {
                     sb.append("\"name\":\"").append(escapeJson(cn)).append("\",");
                     sb.append("\"path\":\"").append(escapeJson(name + "." + cn)).append("\",");
                     sb.append("\"type\":\"").append(categorizeFieldType(cf)).append("\"");
-                    if (cf.title != null && !cf.title.isEmpty()) {
-                        sb.append(",\"title\":\"").append(escapeJson(cf.title)).append('"');
+                    if (cf.attributes.title != null && !cf.attributes.title.isEmpty()) {
+                        sb.append(",\"title\":\"").append(escapeJson(cf.attributes.title)).append('"');
                     }
-                    sb.append(",\"collection\":").append(cf.isCollection);
+                    sb.append(",\"collection\":").append(cf.attributes.isCollection);
                     sb.append('}');
                 }
                 sb.append(']');
@@ -153,8 +153,8 @@ public final class XmlViewerHtmlGenerator {
         if (field.childrenSchemaClass != null) {
             return field.childrenSchemaClass;
         }
-        if (schema != null && field.type != null) {
-            return schema.findClassByName(field.type);
+        if (schema != null && field.attributes.type != null) {
+            return schema.findClassByName(field.attributes.type);
         }
         return null;
     }
@@ -163,8 +163,8 @@ public final class XmlViewerHtmlGenerator {
         if (field.childrenSchemaClass != null) {
             return field.childrenSchemaClass;
         }
-        if (schema != null && field.childrenType != null) {
-            return schema.findClassByName(field.childrenType);
+        if (schema != null && field.attributes.childrenType != null) {
+            return schema.findClassByName(field.attributes.childrenType);
         }
         return null;
     }
@@ -173,10 +173,10 @@ public final class XmlViewerHtmlGenerator {
      * Categorize a field type into a simple category for the viewer UI.
      */
     private static String categorizeFieldType(DOSchemaField field) {
-        if (field.isCollection) {
+        if (field.attributes.isCollection) {
             return "collection";
         }
-        String type = field.type;
+        String type = field.attributes.type;
         if (type == null || type.isEmpty()) {
             return "string";
         }

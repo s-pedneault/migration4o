@@ -58,63 +58,63 @@ public class DOReferenceSchemaWriter {
         writer.write(indent + "<field");
 
         // Write all field attributes (source is used as the definition key)
-        if (field.source != null && !field.source.isEmpty()) {
-            writeAttribute(writer, "source", field.source);
+        if (field.attributes.source != null && !field.attributes.source.isEmpty()) {
+            writeAttribute(writer, "source", field.attributes.source);
         }
-        if (field.destinationName != null && !field.destinationName.isEmpty()) {
-            writeAttribute(writer, "destinationName", field.destinationName);
+        if (field.attributes.destinationName != null && !field.attributes.destinationName.isEmpty()) {
+            writeAttribute(writer, "destinationName", field.attributes.destinationName);
         }
-        writeAttribute(writer, "isExported", String.valueOf(field.isExported));
+        writeAttribute(writer, "isExported", String.valueOf(field.attributes.isExported));
 
-        if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
-            writeAttribute(writer, "skipWhen", field.skipWhen);
-        }
-
-        if (field.skipUserOption != null && !field.skipUserOption.trim().isEmpty()) {
-            writeAttribute(writer, "skipUserOption", field.skipUserOption);
+        if (field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty()) {
+            writeAttribute(writer, "skipWhen", field.attributes.skipWhen);
         }
 
-        if (field.type != null && !field.type.isEmpty()) {
-            writeAttribute(writer, "type", field.type);
+        if (field.attributes.skipUserOption != null && !field.attributes.skipUserOption.trim().isEmpty()) {
+            writeAttribute(writer, "skipUserOption", field.attributes.skipUserOption);
         }
 
-        if (field.format != null && !field.format.isEmpty()) {
-            writeAttribute(writer, "format", field.format);
+        if (field.attributes.type != null && !field.attributes.type.isEmpty()) {
+            writeAttribute(writer, "type", field.attributes.type);
         }
 
-        if (field.isCollection) {
+        if (field.attributes.format != null && !field.attributes.format.isEmpty()) {
+            writeAttribute(writer, "format", field.attributes.format);
+        }
+
+        if (field.attributes.isCollection) {
             writeAttribute(writer, "collection", "true");
         }
 
-        if (field.embedContents) {
+        if (field.attributes.embedContents) {
             writeAttribute(writer, "embedContents", "true");
         }
 
-        if (field.childrenType != null && !field.childrenType.isEmpty()) {
-            writeAttribute(writer, "childrenType", field.childrenType);
+        if (field.attributes.childrenType != null && !field.attributes.childrenType.isEmpty()) {
+            writeAttribute(writer, "childrenType", field.attributes.childrenType);
         }
 
-        if (field.pointsTo != null && !field.pointsTo.isEmpty()) {
-            writeAttribute(writer, "pointsTo", field.pointsTo);
+        if (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", field.attributes.pointsTo);
         }
 
-        if (field.title != null && !field.title.isEmpty()) {
-            writeAttribute(writer, "title", field.title);
+        if (field.attributes.title != null && !field.attributes.title.isEmpty()) {
+            writeAttribute(writer, "title", field.attributes.title);
         }
 
-        if (field.description != null && !field.description.isEmpty()) {
-            writeAttribute(writer, "description", field.description);
+        if (field.attributes.description != null && !field.attributes.description.isEmpty()) {
+            writeAttribute(writer, "description", field.attributes.description);
         }
 
         // Check if we have child elements (valueMap, criterias)
-        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty()) || (field.criterias != null && !field.criterias.isEmpty());
+        boolean hasChildren = (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) || (field.attributes.criterias != null && !field.attributes.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
-            if (field.valueMap != null && !field.valueMap.isEmpty()) {
-                writeValueMap(writer, field.valueMap, indentLevel + 1);
+            if (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+                writeValueMap(writer, field.attributes.valueMap, indentLevel + 1);
             }
-            if (field.criterias != null && !field.criterias.isEmpty()) {
+            if (field.attributes.criterias != null && !field.attributes.criterias.isEmpty()) {
                 writeCriterias(writer, field, indentLevel + 1);
             }
             writer.write(indent + "</field>\n");
@@ -127,32 +127,32 @@ public class DOReferenceSchemaWriter {
         String indent = getIndent(indentLevel);
 
         writer.write(indent + "<class");
-        writeAttribute(writer, "source", schemaClass.source);
-        writeAttribute(writer, "destinationName", schemaClass.destinationName);
-        writeAttribute(writer, "isExported", String.valueOf(schemaClass.migrate));
+        writeAttribute(writer, "source", schemaClass.attributes.source);
+        writeAttribute(writer, "destinationName", schemaClass.attributes.destinationName);
+        writeAttribute(writer, "isExported", String.valueOf(schemaClass.attributes.migrate));
 
-        if (schemaClass.title != null && !schemaClass.title.isEmpty()) {
-            writeAttribute(writer, "title", schemaClass.title);
+        if (schemaClass.attributes.title != null && !schemaClass.attributes.title.isEmpty()) {
+            writeAttribute(writer, "title", schemaClass.attributes.title);
         }
 
-        if (schemaClass.description != null && !schemaClass.description.isEmpty()) {
-            writeAttribute(writer, "description", schemaClass.description);
+        if (schemaClass.attributes.description != null && !schemaClass.attributes.description.isEmpty()) {
+            writeAttribute(writer, "description", schemaClass.attributes.description);
         }
 
-        if (schemaClass.schemaNotes != null && !schemaClass.schemaNotes.isEmpty()) {
-            writeAttribute(writer, "schemaNotes", schemaClass.schemaNotes);
+        if (schemaClass.attributes.schemaNotes != null && !schemaClass.attributes.schemaNotes.isEmpty()) {
+            writeAttribute(writer, "schemaNotes", schemaClass.attributes.schemaNotes);
         }
 
-        if (schemaClass.summary != null && !schemaClass.summary.isEmpty()) {
-            writeAttribute(writer, "summary", schemaClass.summary);
+        if (schemaClass.attributes.summary != null && !schemaClass.attributes.summary.isEmpty()) {
+            writeAttribute(writer, "summary", schemaClass.attributes.summary);
         }
 
-        if (schemaClass.parentClassName != null && !schemaClass.parentClassName.isEmpty() && !"Undetermined".equals(schemaClass.parentClassName)) {
-            writeAttribute(writer, "parentClass", schemaClass.parentClassName);
+        if (schemaClass.attributes.parentClassName != null && !schemaClass.attributes.parentClassName.isEmpty() && !"Undetermined".equals(schemaClass.attributes.parentClassName)) {
+            writeAttribute(writer, "parentClass", schemaClass.attributes.parentClassName);
         }
 
-        if (schemaClass.pointsTo != null && !schemaClass.pointsTo.isEmpty()) {
-            writeAttribute(writer, "pointsTo", schemaClass.pointsTo);
+        if (schemaClass.attributes.pointsTo != null && !schemaClass.attributes.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", schemaClass.attributes.pointsTo);
         }
 
         // Check if we have fields, references or nested content
@@ -189,10 +189,10 @@ public class DOReferenceSchemaWriter {
         // If this is a reference to a shared field, write source and definition
         if (field.isSharedField()) {
             writer.write(indent + "<field");
-            writeAttribute(writer, "source", field.source);
-            writeAttribute(writer, "definition", field.definitionId);
-            if (field.format != null && !field.format.isEmpty()) {
-                writeAttribute(writer, "format", field.format);
+            writeAttribute(writer, "source", field.attributes.source);
+            writeAttribute(writer, "definition", field.attributes.definitionId);
+            if (field.attributes.format != null && !field.attributes.format.isEmpty()) {
+                writeAttribute(writer, "format", field.attributes.format);
             }
             writer.write(" />\n");
             return;
@@ -203,71 +203,71 @@ public class DOReferenceSchemaWriter {
 
         // If field has source, use source and destinationName attributes
         // Otherwise use name attribute (for fields without source mapping)
-        if (field.source != null && !field.source.isEmpty()) {
-            writeAttribute(writer, "source", field.source);
-            if (field.destinationName != null && !field.destinationName.isEmpty()) {
-                writeAttribute(writer, "destinationName", field.destinationName);
+        if (field.attributes.source != null && !field.attributes.source.isEmpty()) {
+            writeAttribute(writer, "source", field.attributes.source);
+            if (field.attributes.destinationName != null && !field.attributes.destinationName.isEmpty()) {
+                writeAttribute(writer, "destinationName", field.attributes.destinationName);
             }
-            writeAttribute(writer, "isExported", String.valueOf(field.isExported));
-            if (field.skipWhen != null && !field.skipWhen.trim().isEmpty()) {
-                writeAttribute(writer, "skipWhen", field.skipWhen);
+            writeAttribute(writer, "isExported", String.valueOf(field.attributes.isExported));
+            if (field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty()) {
+                writeAttribute(writer, "skipWhen", field.attributes.skipWhen);
             }
         } else {
             // No source - use name attribute
-            if (field.destinationName != null && !field.destinationName.isEmpty()) {
-                writeAttribute(writer, "name", field.destinationName);
+            if (field.attributes.destinationName != null && !field.attributes.destinationName.isEmpty()) {
+                writeAttribute(writer, "name", field.attributes.destinationName);
             }
         }
 
-        if (field.type != null && !field.type.isEmpty()) {
-            writeAttribute(writer, "type", field.type);
+        if (field.attributes.type != null && !field.attributes.type.isEmpty()) {
+            writeAttribute(writer, "type", field.attributes.type);
         }
 
-        if (field.format != null && !field.format.isEmpty()) {
-            writeAttribute(writer, "format", field.format);
+        if (field.attributes.format != null && !field.attributes.format.isEmpty()) {
+            writeAttribute(writer, "format", field.attributes.format);
         }
 
-        if (field.isCollection) {
+        if (field.attributes.isCollection) {
             writeAttribute(writer, "collection", "true");
         }
 
-        if (field.skipUserOption != null && !field.skipUserOption.isEmpty()) {
-            writeAttribute(writer, "skipUserOption", field.skipUserOption);
+        if (field.attributes.skipUserOption != null && !field.attributes.skipUserOption.isEmpty()) {
+            writeAttribute(writer, "skipUserOption", field.attributes.skipUserOption);
         }
 
-        if (field.embedContents) {
+        if (field.attributes.embedContents) {
             writeAttribute(writer, "embedContents", "true");
         }
 
-        if (field.childrenType != null && !field.childrenType.isEmpty()) {
-            writeAttribute(writer, "childrenType", field.childrenType);
+        if (field.attributes.childrenType != null && !field.attributes.childrenType.isEmpty()) {
+            writeAttribute(writer, "childrenType", field.attributes.childrenType);
         }
 
-        if (field.pointsTo != null && !field.pointsTo.isEmpty()) {
-            writeAttribute(writer, "pointsTo", field.pointsTo);
+        if (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) {
+            writeAttribute(writer, "pointsTo", field.attributes.pointsTo);
         }
 
-        if (field.title != null && !field.title.isEmpty()) {
-            writeAttribute(writer, "title", field.title);
+        if (field.attributes.title != null && !field.attributes.title.isEmpty()) {
+            writeAttribute(writer, "title", field.attributes.title);
         }
 
-        if (field.description != null && !field.description.isEmpty()) {
-            writeAttribute(writer, "description", field.description);
+        if (field.attributes.description != null && !field.attributes.description.isEmpty()) {
+            writeAttribute(writer, "description", field.attributes.description);
         }
 
         // Check if we have child elements (valueMap, criterias)
-        boolean hasChildren = (field.valueMap != null && !field.valueMap.isEmpty()) || (field.criterias != null && !field.criterias.isEmpty());
+        boolean hasChildren = (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) || (field.attributes.criterias != null && !field.attributes.criterias.isEmpty());
 
         if (hasChildren) {
             writer.write(">\n");
 
             // Write valueMap
-            if (field.valueMap != null && !field.valueMap.isEmpty()) {
-                writeValueMap(writer, field.valueMap, indentLevel + 1);
+            if (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+                writeValueMap(writer, field.attributes.valueMap, indentLevel + 1);
             }
 
             // Write criterias for virtual fields
-            if (field.criterias != null && !field.criterias.isEmpty()) {
+            if (field.attributes.criterias != null && !field.attributes.criterias.isEmpty()) {
                 writeCriterias(writer, field, indentLevel + 1);
             }
 
@@ -281,11 +281,11 @@ public class DOReferenceSchemaWriter {
         String indent = getIndent(indentLevel);
         writer.write(indent + "<criterias");
 
-        String operator = (field.criteriasOperator != null && !field.criteriasOperator.trim().isEmpty()) ? field.criteriasOperator : "AND";
+        String operator = (field.attributes.criteriasOperator != null && !field.attributes.criteriasOperator.trim().isEmpty()) ? field.attributes.criteriasOperator : "AND";
         writeAttribute(writer, "operator", operator);
         writer.write(">\n");
 
-        for (migration4o.models.schema.DOFieldCriteria criteria : field.criterias) {
+        for (migration4o.models.schema.DOFieldCriteria criteria : field.attributes.criterias) {
             if (criteria == null) {
                 continue;
             }

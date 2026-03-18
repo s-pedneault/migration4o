@@ -44,11 +44,11 @@ public class ObjectExportLoop {
         // Use pre-computed smart selection when available for this class
         long[] objectIds = dbSchemaClass.objectIds;
         if (request.preselectedObjectIds != null) {
-            long[] preselected = request.preselectedObjectIds.get(dbSchemaClass.source);
+            long[] preselected = request.preselectedObjectIds.get(dbSchemaClass.attributes.source);
             if (preselected != null) {
                 objectIds = preselected;
-                if (dbSchemaClass.source.contains("DossPrev")) {
-                    System.out.println("[DEBUG-DossPrev] ObjectExportLoop: preselection for '" + dbSchemaClass.source + "': " + preselected.length + " objects (was " + (dbSchemaClass.objectIds != null ? dbSchemaClass.objectIds.length : 0) + ")");
+                if (dbSchemaClass.attributes.source.contains("DossPrev")) {
+                    System.out.println("[DEBUG-DossPrev] ObjectExportLoop: preselection for '" + dbSchemaClass.attributes.source + "': " + preselected.length + " objects (was " + (dbSchemaClass.objectIds != null ? dbSchemaClass.objectIds.length : 0) + ")");
                 }
             }
         }
@@ -58,7 +58,7 @@ public class ObjectExportLoop {
         // closure-driven) and must be exported regardless of the cap.
         int requiredCount = 0;
         if (request.preselectedRequiredCounts != null) {
-            Integer rc = request.preselectedRequiredCounts.get(dbSchemaClass.source);
+            Integer rc = request.preselectedRequiredCounts.get(dbSchemaClass.attributes.source);
             if (rc != null)
                 requiredCount = rc;
         }
@@ -77,12 +77,12 @@ public class ObjectExportLoop {
         migration4o.models.schema.DOSchemaClass loopClass = ctx.schemaClass;
 
         if (request.monitor != null && loopClass != null) {
-            request.monitor.onClassStart(loopClass.source, loopClass.destinationName, actualCount, handler != null ? handler.displayName() : "");
+            request.monitor.onClassStart(loopClass.attributes.source, loopClass.attributes.destinationName, actualCount, handler != null ? handler.displayName() : "");
         }
 
         if (objectIds != null) {
             if (ctx.statistics != null && loopClass != null) {
-                ctx.statistics.setCurrentClass(loopClass.source, actualCount);
+                ctx.statistics.setCurrentClass(loopClass.attributes.source, actualCount);
                 ctx.statistics.setCurrentFormatName(handler != null ? handler.displayName() : "");
             }
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
@@ -112,10 +112,10 @@ public class ObjectExportLoop {
                     System.err.println("[Export error] skipping object " + objectId + ": " + msg);
                     if (ctx.statistics != null) {
                         Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(msg, t);
-                        ctx.statistics.addError(objectId, loopClass != null ? loopClass.source : "unknown", msg, wrapped);
+                        ctx.statistics.addError(objectId, loopClass != null ? loopClass.attributes.source : "unknown", msg, wrapped);
                     }
                     if (request.monitor != null) {
-                        request.monitor.onObjectError(loopClass != null ? loopClass.source : "unknown", objectId, msg);
+                        request.monitor.onObjectError(loopClass != null ? loopClass.attributes.source : "unknown", objectId, msg);
                     }
                 }
                 // Only count objects that were newly written to this file
@@ -134,7 +134,7 @@ public class ObjectExportLoop {
                     // format
                     // name simultaneously, with no shared mutable state.
                     if (request.monitor != null && exportedCount % 10 == 0 && actualCount > 0) {
-                        request.monitor.onObjectProgress(loopClass != null ? loopClass.source : "", loopClass != null ? loopClass.destinationName : "", exportedCount, actualCount, formatName);
+                        request.monitor.onObjectProgress(loopClass != null ? loopClass.attributes.source : "", loopClass != null ? loopClass.attributes.destinationName : "", exportedCount, actualCount, formatName);
                     }
                 }
             }
@@ -143,7 +143,7 @@ public class ObjectExportLoop {
 
         if (request.monitor != null && loopClass != null) {
             int succeeded = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : 0;
-            request.monitor.onClassComplete(loopClass.source, succeeded, handler != null ? handler.displayName() : "");
+            request.monitor.onClassComplete(loopClass.attributes.source, succeeded, handler != null ? handler.displayName() : "");
         }
     }
 }

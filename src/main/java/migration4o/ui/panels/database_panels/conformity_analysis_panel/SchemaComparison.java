@@ -9,9 +9,7 @@ import migration4o.models.schema.comparison.FieldPropertyDifference;
 import java.util.*;
 
 /**
- * Represents the result of comparing two schemas.
- * Identifies classes and fields that exist in one schema but not the other,
- * and fields with different properties.
+ * Represents the result of comparing two schemas. Identifies classes and fields that exist in one schema but not the other, and fields with different properties.
  */
 public class SchemaComparison {
 
@@ -96,22 +94,22 @@ public class SchemaComparison {
         FieldPropertyDifference diff = new FieldPropertyDifference();
 
         // Compare types with normalization
-        String refType = normalizeType(refField.type);
-        String cmpType = normalizeType(cmpField.type);
+        String refType = normalizeType(refField.attributes.type);
+        String cmpType = normalizeType(cmpField.attributes.type);
         if (!Objects.equals(refType, cmpType)) {
-            diff.addDifference("type", refField.type, cmpField.type);
+            diff.addDifference("type", refField.attributes.type, cmpField.attributes.type);
         }
 
         // If reference marks this as collection but compared schema does not,
         // treat reference as authoritative (more precise metadata) and do not flag.
-        boolean referenceMorePreciseCollection = refField.isCollection && !cmpField.isCollection;
-        if (refField.isCollection != cmpField.isCollection && !referenceMorePreciseCollection) {
-            diff.addDifference("collection", refField.isCollection, cmpField.isCollection);
+        boolean referenceMorePreciseCollection = refField.attributes.isCollection && !cmpField.attributes.isCollection;
+        if (refField.attributes.isCollection != cmpField.attributes.isCollection && !referenceMorePreciseCollection) {
+            diff.addDifference("collection", refField.attributes.isCollection, cmpField.attributes.isCollection);
         }
 
         // Compare childrenType with null/empty tolerance
-        String refChildren = normalizeEmptyString(refField.childrenType);
-        String cmpChildren = normalizeEmptyString(cmpField.childrenType);
+        String refChildren = normalizeEmptyString(refField.attributes.childrenType);
+        String cmpChildren = normalizeEmptyString(cmpField.attributes.childrenType);
 
         // If reference has more precise children type metadata, prefer reference and
         // do not flag:
@@ -123,17 +121,14 @@ public class SchemaComparison {
         boolean referenceMorePreciseChildrenType = referenceHasSpecificChildrenType && (comparedMissingChildrenType || comparedIsObjectPlaceholder);
 
         if (!Objects.equals(normalizeType(refChildren), normalizeType(cmpChildren)) && !referenceMorePreciseChildrenType) {
-            diff.addDifference("childrenType", refField.childrenType, cmpField.childrenType);
+            diff.addDifference("childrenType", refField.attributes.childrenType, cmpField.attributes.childrenType);
         }
 
         return diff;
     }
 
     /**
-     * Normalizes type names to handle common equivalences:
-     * - "String" and "java.lang.String" are the same
-     * - "Integer" and "java.lang.Integer" are the same
-     * - etc.
+     * Normalizes type names to handle common equivalences: - "String" and "java.lang.String" are the same - "Integer" and "java.lang.Integer" are the same - etc.
      */
     private String normalizeType(String type) {
         if (type == null) {
@@ -181,24 +176,24 @@ public class SchemaComparison {
         Map<String, DOSchemaClass> map = new HashMap<>();
         if (schema != null && schema.getClasses() != null) {
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                String key = schemaClass.source;
+                String key = schemaClass.attributes.source;
 
                 // Debug ParamConfig specifically
-                if ("ParamConfig".equals(schemaClass.destinationName)) {
-                    String shortName1 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                if ("ParamConfig".equals(schemaClass.attributes.destinationName)) {
+                    String shortName1 = schemaClass.attributes.source != null && schemaClass.attributes.source.contains(".") ? schemaClass.attributes.source.substring(schemaClass.attributes.source.lastIndexOf('.') + 1) : schemaClass.attributes.source;
                     System.out.println("DEBUG buildClassMap: Found ParamConfig - source='" + key + "', dest='" + shortName1 + "'");
                 }
 
                 // Skip classes with null or empty source name
                 if (key == null || key.trim().isEmpty()) {
-                    String shortName2 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                    String shortName2 = schemaClass.attributes.source != null && schemaClass.attributes.source.contains(".") ? schemaClass.attributes.source.substring(schemaClass.attributes.source.lastIndexOf('.') + 1) : schemaClass.attributes.source;
                     System.out.println("WARNING: Skipping class with null/empty source name: " + shortName2);
                     continue;
                 }
 
                 if (map.containsKey(key)) {
-                    String shortName3 = map.get(key).source != null && map.get(key).source.contains(".") ? map.get(key).source.substring(map.get(key).source.lastIndexOf('.') + 1) : map.get(key).source;
-                    String shortName4 = schemaClass.source != null && schemaClass.source.contains(".") ? schemaClass.source.substring(schemaClass.source.lastIndexOf('.') + 1) : schemaClass.source;
+                    String shortName3 = map.get(key).attributes.source != null && map.get(key).attributes.source.contains(".") ? map.get(key).attributes.source.substring(map.get(key).attributes.source.lastIndexOf('.') + 1) : map.get(key).attributes.source;
+                    String shortName4 = schemaClass.attributes.source != null && schemaClass.attributes.source.contains(".") ? schemaClass.attributes.source.substring(schemaClass.attributes.source.lastIndexOf('.') + 1) : schemaClass.attributes.source;
                     System.out.println("WARNING: Duplicate class key '" + key + "' - overwriting " + shortName3 + " with " + shortName4);
                 }
                 map.put(key, schemaClass);
@@ -211,14 +206,14 @@ public class SchemaComparison {
         Map<String, DOSchemaField> map = new HashMap<>();
         if (schemaClass.fields != null) {
             for (DOSchemaField field : schemaClass.fields) {
-                map.put(field.source, field);
+                map.put(field.attributes.source, field);
             }
         }
         return map;
     }
 
     private boolean isVirtualQueryField(DOSchemaField field) {
-        return field != null && field.source != null && field.source.startsWith("@");
+        return field != null && field.attributes.source != null && field.attributes.source.startsWith("@");
     }
 
     public List<ClassDifference> getDifferences() {

@@ -238,15 +238,15 @@ public class IDTracerDataService {
 
         synchronized (this) {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (schemaClass == null || schemaClass.source == null) {
+                if (schemaClass == null || schemaClass.attributes.source == null) {
                     continue;
                 }
 
                 if (schemaClass.objectIds != null) {
                     for (long objectId : schemaClass.objectIds) {
                         allObjectIds.add(objectId);
-                        objectAllClasses.computeIfAbsent(objectId, key -> new HashSet<>()).add(schemaClass.source);
-                        classToObjectIds.computeIfAbsent(schemaClass.source, key -> new LinkedHashSet<>()).add(objectId);
+                        objectAllClasses.computeIfAbsent(objectId, key -> new HashSet<>()).add(schemaClass.attributes.source);
+                        classToObjectIds.computeIfAbsent(schemaClass.attributes.source, key -> new LinkedHashSet<>()).add(objectId);
                     }
                 }
 

@@ -383,7 +383,7 @@ public class MigrationStructurePanel extends JPanel {
                         // (ACTION_MOVE)
                         if (dtde.getDropAction() == DnDConstants.ACTION_MOVE) {
                             // Find and remove the class from its current module
-                            DefaultMutableTreeNode sourceNode = findClassNodeInExportTree(schemaClass.source);
+                            DefaultMutableTreeNode sourceNode = findClassNodeInExportTree(schemaClass.attributes.source);
                             if (sourceNode != null) {
                                 DefaultMutableTreeNode sourceParent = (DefaultMutableTreeNode) sourceNode.getParent();
                                 // Don't move if dropping on the same module
@@ -818,7 +818,7 @@ public class MigrationStructurePanel extends JPanel {
             notifyNodeChanged(treeNode);
 
             // Show feedback message
-            StringBuilder message = new StringBuilder("Configuration saved for " + schemaClass.source);
+            StringBuilder message = new StringBuilder("Configuration saved for " + schemaClass.attributes.source);
             if (newConfig.hasCustomDestination()) {
                 message.append("\n→ Destination: ").append(newConfig.getDestinationFileName());
             }
@@ -833,7 +833,7 @@ public class MigrationStructurePanel extends JPanel {
         DOSchemaClass schemaClass = classNode.getSchemaClass();
         ClassExportConfig config = classNode.getExportConfig();
         if (config == null) {
-            config = new ClassExportConfig(schemaClass.source);
+            config = new ClassExportConfig(schemaClass.attributes.source);
             classNode.setExportConfig(config);
         }
         DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();

@@ -97,7 +97,7 @@ public class FieldExporter {
                     }
 
                     // Skip fields marked as not exported
-                    if (schemaField != null && !schemaField.isExported) {
+                    if (schemaField != null && !schemaField.attributes.isExported) {
                         continue;
                     }
 
@@ -116,7 +116,7 @@ public class FieldExporter {
                     // For collections and arrays, they're always exported if
                     // not null (size
                     // attribute)
-                    if (schemaField != null && schemaField.isCollection) {
+                    if (schemaField != null && schemaField.attributes.isCollection) {
                         count++;
                     } else if (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) {
                         count++;
@@ -125,7 +125,7 @@ public class FieldExporter {
                     } else {
                         // Regular field - would it be exported?
                         // Check Class fields that might be skipped
-                        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+                        boolean isClassField = schemaField != null && (schemaField.attributes.type.equals("java.lang.Class") || schemaField.attributes.type.equals("Class"));
 
                         if (isClassField) {
                             // Extract className for skip check
@@ -205,10 +205,10 @@ public class FieldExporter {
                         continue;
                     }
 
-                    String fieldName = schemaField.destinationName;
+                    String fieldName = schemaField.attributes.destinationName;
 
                     // Skip fields marked as not exported
-                    if (schemaField != null && !schemaField.isExported) {
+                    if (schemaField != null && !schemaField.attributes.isExported) {
                         recordRelationshipSkippedIfPersistent(parentObjectId, sourceClassName, sourceFieldName, fieldValue, "field disabled in reference schema (isExported=false)");
                         // For disabled collection fields, still mark individual
                         // items as reached
@@ -224,10 +224,10 @@ public class FieldExporter {
                     // No exception for primitive-type aliases like UUID — if a
                     // class is explicitly marked migrate=false, the field is
                     // skipped.
-                    if (schemaField != null && schemaField.type != null && !schemaField.type.isEmpty()) {
-                        DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(schemaField.type, operation.referenceSchema);
-                        if (fieldTypeClass != null && !fieldTypeClass.migrate) {
-                            System.err.println("[WARN] Export skipping field '" + schemaField.destinationName + "' — type '" + schemaField.type + "' is not exported (migrate=false).");
+                    if (schemaField != null && schemaField.attributes.type != null && !schemaField.attributes.type.isEmpty()) {
+                        DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(schemaField.attributes.type, operation.referenceSchema);
+                        if (fieldTypeClass != null && !fieldTypeClass.attributes.migrate) {
+                            System.err.println("[WARN] Export skipping field '" + schemaField.attributes.destinationName + "' — type '" + schemaField.attributes.type + "' is not exported (migrate=false).");
                             continue;
                         }
                     }
@@ -249,7 +249,7 @@ public class FieldExporter {
                     // because calling .size() on GenericObject proxies may
                     // return incorrect values before proper activation and
                     // extraction
-                    if (schemaField != null && schemaField.isCollection) {
+                    if (schemaField != null && schemaField.attributes.isCollection) {
                         markCollectionWrapperReached(fieldValue, parentObjectId, sourceClassName, sourceFieldName);
                         // CRITICAL FIX: Activate collection fields directly to
                         // populate their contents
@@ -285,13 +285,13 @@ public class FieldExporter {
                         if (exportMapField(container, (java.util.Map<?, ?>) fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
-                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isMapByAncestry(schemaField.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
+                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isMapByAncestry(schemaField.attributes.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
                         // Map type wrapped in GenericObject (DB4O stored
                         // Hashtable)
                         if (exportGenericMapField(container, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
-                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isCollectionByAncestry(schemaField.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
+                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isCollectionByAncestry(schemaField.attributes.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
                         // Safety net: field type extends a collection base
                         // class (e.g. VectChampPerso extends VectRechID extends
                         // HVector extends Vector)
@@ -355,7 +355,7 @@ public class FieldExporter {
      * @throws IOException if XML writing fails
      */
     private boolean exportCollectionLikeField(ExtObjectContainer container, Iterable<?> items, int size, Object itemsValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField.destinationName;
+        String fieldName = schemaField.attributes.destinationName;
         boolean includeSizeMetadata = xmlWriter.includeCollectionSizeMetadata();
 
         if (size == 0 || items == null) {
@@ -463,7 +463,7 @@ public class FieldExporter {
      * @return true if field was written, false if skipped
      */
     private boolean exportMapField(ExtObjectContainer container, java.util.Map<?, ?> map, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField.destinationName;
+        String fieldName = schemaField.attributes.destinationName;
         int size = map.size();
         boolean includeSizeMetadata = xmlWriter.includeCollectionSizeMetadata();
 
@@ -510,7 +510,7 @@ public class FieldExporter {
      * @return true if field was written, false if skipped
      */
     private boolean exportGenericMapField(ExtObjectContainer container, Object genericObj, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField.destinationName;
+        String fieldName = schemaField.attributes.destinationName;
 
         // Try to activate the GenericObject
         try {
@@ -549,7 +549,7 @@ public class FieldExporter {
     }
 
     private void exportByteArrayField(byte[] byteArray, DOSchemaField schemaField, int indentLevel) throws IOException {
-        String fieldName = schemaField.destinationName;
+        String fieldName = schemaField.attributes.destinationName;
 
         // Check skip conditions for empty byte arrays
         if (byteArray.length == 0) {
@@ -566,13 +566,13 @@ public class FieldExporter {
     }
 
     private void exportRegularField(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
-        String fieldName = schemaField.destinationName;
-        String sourceFieldName = schemaField.source != null ? schemaField.source : fieldName;
+        String fieldName = schemaField.attributes.destinationName;
+        String sourceFieldName = schemaField.attributes.source != null ? schemaField.attributes.source : fieldName;
 
         // Check if this is a Class-typed field based on schema (DB4O may wrap
         // Class in
         // GenericObject)
-        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+        boolean isClassField = schemaField != null && (schemaField.attributes.type.equals("java.lang.Class") || schemaField.attributes.type.equals("Class"));
 
         // Special handling for Class objects - always export as string
         if (isClassField) {
@@ -621,8 +621,8 @@ public class FieldExporter {
             DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, operation.referenceSchema);
             if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
                 // Check if this IDEntite will be skipped due to mID == -1
-                if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
-                    if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.skipWhen.contains("MINUS_ONE")) {
+                if (schemaField != null && schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.isEmpty()) {
+                    if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.attributes.skipWhen.contains("MINUS_ONE")) {
                         if (ctxRef.statistics != null && refId > 0) {
                             ctxRef.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
                         }
@@ -638,7 +638,7 @@ public class FieldExporter {
                 // For non-embedded IDEntite references, export as simple ID
                 // value
                 // instead of nested structure
-                if (schemaField != null && !schemaField.embedContents) {
+                if (schemaField != null && !schemaField.attributes.embedContents) {
                     if (ctxRef.statistics != null) {
                         long idEntiteObjectId = container.ext().getID(fieldValue);
                         if (idEntiteObjectId > 0) {
@@ -745,7 +745,7 @@ public class FieldExporter {
 
         // Iterate through schema fields to find virtual ones
         for (DOSchemaField schemaField : parentClass.fields) {
-            if (schemaField == null || !schemaField.isExported) {
+            if (schemaField == null || !schemaField.attributes.isExported) {
                 continue;
             }
 
@@ -755,7 +755,7 @@ public class FieldExporter {
             }
 
             // Skip if no criteria defined
-            if (schemaField.criterias == null || schemaField.criterias.isEmpty()) {
+            if (schemaField.attributes.criterias == null || schemaField.attributes.criterias.isEmpty()) {
                 continue;
             }
 
@@ -793,8 +793,8 @@ public class FieldExporter {
         // Check if this field is marked for embedding
         // Default behavior: embed regular objects (true), but respect explicit
         // embedContents=false for IDEntite references
-        String fieldName = schemaField != null ? schemaField.destinationName : className;
-        String sourceFieldName = schemaField != null ? schemaField.source : null;
+        String fieldName = schemaField != null ? schemaField.attributes.destinationName : className;
+        String sourceFieldName = schemaField != null ? schemaField.attributes.source : null;
 
         // Check if this is an IDEntite reference (reference object pattern)
         DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, operation.referenceSchema);
@@ -812,7 +812,7 @@ public class FieldExporter {
                 // IDEntite: default to non-embedded (reference by ID), but
                 // allow explicit
                 // embedContents=true
-                isEmbedded = schemaField.embedContents;
+                isEmbedded = schemaField.attributes.embedContents;
             } else {
                 // Regular objects: default to embedded (inline content), unless
                 // explicitly
@@ -836,9 +836,9 @@ public class FieldExporter {
 
             // Resolve and export the IDEntite reference
             // Skip empty references (mID == -1) when MINUS_ONE is in skipWhen
-            if (schemaField != null && schemaField.skipWhen != null && !schemaField.skipWhen.isEmpty()) {
+            if (schemaField != null && schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.isEmpty()) {
                 Long mID = ReferenceUtil.extractMIDField(container, fieldValue);
-                if (mID != null && mID == -1 && schemaField.skipWhen.contains("MINUS_ONE")) {
+                if (mID != null && mID == -1 && schemaField.attributes.skipWhen.contains("MINUS_ONE")) {
                     return;
                 }
             }
@@ -860,7 +860,7 @@ public class FieldExporter {
         long objectId = container.ext().getID(fieldValue);
 
         // Special handling for Class objects based on schema type
-        boolean isClassField = schemaField != null && (schemaField.type.equals("java.lang.Class") || schemaField.type.equals("Class"));
+        boolean isClassField = schemaField != null && (schemaField.attributes.type.equals("java.lang.Class") || schemaField.attributes.type.equals("Class"));
 
         if (isClassField) {
             String classNameValue;
@@ -909,8 +909,8 @@ public class FieldExporter {
             return "field skipped by export rules";
         }
 
-        if (schemaField.skipWhen != null && !schemaField.skipWhen.trim().isEmpty()) {
-            return "field skipped due to skipWhen=" + schemaField.skipWhen;
+        if (schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.trim().isEmpty()) {
+            return "field skipped due to skipWhen=" + schemaField.attributes.skipWhen;
         }
 
         return "field skipped by user/export rules";
@@ -962,9 +962,9 @@ public class FieldExporter {
             reasons.add("user-selected field exclusion");
         }
 
-        boolean bypassedSkipWhen = !operation.applySkipWhenConditions && field.skipWhen != null && !field.skipWhen.trim().isEmpty() && ValueUtil.matchesSkipCondition(value, field.skipWhen, field, schema);
+        boolean bypassedSkipWhen = !operation.applySkipWhenConditions && field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty() && ValueUtil.matchesSkipCondition(value, field.attributes.skipWhen, field, schema);
         if (bypassedSkipWhen) {
-            reasons.add("skipWhen(" + field.skipWhen + ")");
+            reasons.add("skipWhen(" + field.attributes.skipWhen + ")");
         }
 
         if (reasons.isEmpty()) {
@@ -1027,7 +1027,7 @@ public class FieldExporter {
 
         try {
             // Case 1: Collection field — extract items and mark each as reached
-            boolean isCollectionLike = schemaField.isCollection || (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) || fieldValue.getClass().isArray();
+            boolean isCollectionLike = schemaField.attributes.isCollection || (!(fieldValue instanceof GenericObject) && fieldValue instanceof Collection) || fieldValue.getClass().isArray();
 
             if (isCollectionLike) {
                 Collection<?> items = null;
@@ -1148,7 +1148,7 @@ public class FieldExporter {
         DOSchemaClass current = parentClass;
         while (current != null) {
             chain.add(0, current); // prepend so root is first
-            String ancestorName = current.parentClassName;
+            String ancestorName = current.attributes.parentClassName;
             if (ancestorName == null || ancestorName.isEmpty())
                 break;
             DOSchemaClass ancestor = schema.findClassByName(ancestorName);
@@ -1165,8 +1165,8 @@ public class FieldExporter {
             if (cls.fields != null) {
                 for (DOSchemaField f : cls.fields) {
                     // First declaration wins (don't let overrides change depth)
-                    if (!fieldDepth.containsKey(f.source)) {
-                        fieldDepth.put(f.source, depth);
+                    if (!fieldDepth.containsKey(f.attributes.source)) {
+                        fieldDepth.put(f.attributes.source, depth);
                     }
                 }
             }
@@ -1192,7 +1192,7 @@ public class FieldExporter {
                 return Integer.compare(depthA, depthB);
 
             // Within same depth, sort alphabetically by destination name
-            return sfA.destinationName.compareTo(sfB.destinationName);
+            return sfA.attributes.destinationName.compareTo(sfB.attributes.destinationName);
         });
         return sorted;
     }

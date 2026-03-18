@@ -45,7 +45,7 @@ import migration4o.util.TypeUtil;
  * <li>Fetch the value from the DB4O object using
  * {@link StoredClass}/{@link StoredField}.</li>
  * <li>If there are more segments, resolve the schema class for
- * {@code field.type}, then repeat from step 1 with the next object.</li>
+ * {@code field.attributes.type}, then repeat from step 1 with the next object.</li>
  * <li>Convert the final value to a string; on any failure return
  * {@code ""}.</li>
  * </ol>
@@ -120,20 +120,20 @@ public class SummaryGenerator {
      * resolved to empty
      */
     public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DOSchema databaseSchema) {
-        if (schemaClass == null || schemaClass.summary == null || schemaClass.summary.isEmpty()) {
+        if (schemaClass == null || schemaClass.attributes.summary == null || schemaClass.attributes.summary.isEmpty()) {
             return null;
         }
         if (obj == null) {
             return null;
         }
 
-        Matcher matcher = FIELD_REF_PATTERN.matcher(schemaClass.summary);
+        Matcher matcher = FIELD_REF_PATTERN.matcher(schemaClass.attributes.summary);
         StringBuilder result = new StringBuilder();
         int last = 0;
 
         while (matcher.find()) {
             // Append the literal text before this token
-            result.append(schemaClass.summary, last, matcher.start());
+            result.append(schemaClass.attributes.summary, last, matcher.start());
             // Resolve and append the field reference
             String token = matcher.group(1); // e.g. "adresse.rue"
             result.append(resolveToken(container, obj, token, schemaClass, referenceSchema, databaseSchema));
@@ -141,7 +141,7 @@ public class SummaryGenerator {
         }
 
         // Append any trailing literal text
-        result.append(schemaClass.summary, last, schemaClass.summary.length());
+        result.append(schemaClass.attributes.summary, last, schemaClass.attributes.summary.length());
         return result.toString();
     }
 
@@ -190,17 +190,17 @@ public class SummaryGenerator {
 
             // Find field by destinationName, walking the full inheritance chain
             DOSchemaField field = DatabaseUtil.findSchemaFieldByDestinationNameIncludingAncestors(currentClass, parts[i], schema);
-            if (field == null || field.source == null || field.source.isEmpty()) {
+            if (field == null || field.attributes.source == null || field.attributes.source.isEmpty()) {
                 return "";
             }
 
             // Fetch the value via the shared DB4O utility (source = real field
             // name)
-            currentObj = DatabaseUtil.getStoredFieldValue(container, currentObj, field.source);
+            currentObj = DatabaseUtil.getStoredFieldValue(container, currentObj, field.attributes.source);
 
             // If there are more path segments, advance the schema class
             if (i < parts.length - 1) {
-                String type = field.type;
+                String type = field.attributes.type;
                 if (type == null || type.isEmpty() || TypeUtil.isPrimitiveType(type)) {
                     return ""; // Can't go deeper into a primitive
                 }
@@ -208,9 +208,9 @@ public class SummaryGenerator {
 
                 // IDEntite traversal: follow the reference to the target entity
                 if (nextClass != null && nextClass.isIDEntite(schema) && databaseSchema != null && currentObj != null) {
-                    String expectedType = nextClass.pointsTo;
+                    String expectedType = nextClass.attributes.pointsTo;
                     if (expectedType == null || expectedType.isEmpty()) {
-                        expectedType = (field.pointsTo != null && !field.pointsTo.isEmpty()) ? field.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.source);
+                        expectedType = (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) ? field.attributes.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.attributes.source);
                     }
                     Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, currentObj, expectedType, databaseSchema);
                     if (targetObjectId == null) {
@@ -293,9 +293,9 @@ public class SummaryGenerator {
             return new IDEntiteResult(null, null, null);
         }
         try {
-            String expectedType = idEntiteClass.pointsTo;
+            String expectedType = idEntiteClass.attributes.pointsTo;
             if (expectedType == null || expectedType.isEmpty()) {
-                expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.source);
+                expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.attributes.source);
             }
 
             long idEntiteObjId = container.ext().getID(idEntiteObj);
@@ -332,7 +332,7 @@ public class SummaryGenerator {
             String targetClassName = ClassUtil.getClassName(targetObj);
             DOSchemaClass targetSchemaClass = SchemaUtil.findClassByName(targetClassName, referenceSchema);
             String label = null;
-            if (targetSchemaClass != null && targetSchemaClass.summary != null && !targetSchemaClass.summary.isEmpty()) {
+            if (targetSchemaClass != null && targetSchemaClass.attributes.summary != null && !targetSchemaClass.attributes.summary.isEmpty()) {
                 label = generate(container, targetObj, targetSchemaClass, referenceSchema, databaseSchema);
             }
             if ((label == null || label.isBlank()) && targetObj != null) {

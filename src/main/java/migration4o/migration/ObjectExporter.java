@@ -90,7 +90,7 @@ public class ObjectExporter {
                 handler.exportedIds.add(objectId);
 
             DOSchemaClass schemaClass = SchemaElementMapper.getSchemaClass(className, ctx.request.referenceSchema);
-            String elementName = schemaClass != null ? schemaClass.destinationName : SchemaElementMapper.getElementName(className, ctx.request.referenceSchema);
+            String elementName = schemaClass != null ? schemaClass.attributes.destinationName : SchemaElementMapper.getElementName(className, ctx.request.referenceSchema);
 
             ctx.schemaClass = schemaClass;
             ctx.pushObject(obj, objectId);

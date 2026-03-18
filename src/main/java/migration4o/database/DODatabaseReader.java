@@ -11,8 +11,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Database reader that directly creates DOSchema* classes
- * instead of creating intermediary DODatabase* classes.
+ * Database reader that directly creates DOSchema* classes instead of creating intermediary DODatabase* classes.
  */
 public class DODatabaseReader {
 
@@ -59,19 +58,17 @@ public class DODatabaseReader {
             context.container = container;
             context.storedClassMap = DOClassConverter.createStoredClassMap(storedClasses);
 
+            // Create schema object first so it can be referenced during class/field construction
+            DOSchema schema = new DOSchema();
+
             // Convert stored classes to schema classes
             if (monitor != null) {
                 monitor.onConvertingClasses(storedClasses.length);
             }
 
-            DOSchemaClass[] schemaClasses = DOClassesConverter.convertStoredClassesToSchemaClasses(storedClasses, context, monitor);
+            DOSchemaClass[] schemaClasses = DOClassesConverter.convertStoredClassesToSchemaClasses(storedClasses, context, monitor, schema);
 
-            // Create schema
-            if (monitor != null) {
-                monitor.onCreatingSchema(schemaClasses.length);
-            }
-
-            DOSchema schema = new DOSchema();
+            // Assign classes to schema
             schema.classes = schemaClasses;
 
             // Deduplicate object IDs across inheritance hierarchies

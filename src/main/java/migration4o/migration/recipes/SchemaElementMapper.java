@@ -22,7 +22,7 @@ public class SchemaElementMapper {
     public static String getElementName(String className, DOSchema schema) {
         DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
         if (schemaClass != null) {
-            return schemaClass.destinationName;
+            return schemaClass.attributes.destinationName;
         }
         return ClassUtil.getSimpleName(className);
     }

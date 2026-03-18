@@ -189,8 +189,8 @@ public class SchemaAnomaliesPanel extends JPanel {
         // Add rows for each anomaly
         for (DOSchemaAnomaly anomaly : anomalies) {
             String type = getAnomalyType(anomaly);
-            String className = anomaly.schemaClass != null ? anomaly.schemaClass.source : "";
-            String fieldName = anomaly.schemaField != null ? anomaly.schemaField.source : "";
+            String className = anomaly.schemaClass != null ? anomaly.schemaClass.attributes.source : "";
+            String fieldName = anomaly.schemaField != null ? anomaly.schemaField.attributes.source : "";
             String explanation = anomaly.explanation != null ? anomaly.explanation : "";
 
             tableModel.addRow(new Object[] { type, className, fieldName, explanation });
@@ -258,13 +258,13 @@ public class SchemaAnomaliesPanel extends JPanel {
         }
 
         // Set embedContents to true
-        anomaly.schemaField.embedContents = true;
+        anomaly.schemaField.attributes.embedContents = true;
 
         JOptionPane.showMessageDialog(this,
                 String.format(
                         "Field '%s' in class '%s' has been modified.\nembedContents is now set to true.\n\nDon't forget to save the schema!",
-                        anomaly.schemaField.source,
-                        anomaly.schemaClass != null ? anomaly.schemaClass.source : "Unknown"),
+                        anomaly.schemaField.attributes.source,
+                        anomaly.schemaClass != null ? anomaly.schemaClass.attributes.source : "Unknown"),
                 "Field Modified",
                 JOptionPane.INFORMATION_MESSAGE);
 
@@ -317,7 +317,7 @@ public class SchemaAnomaliesPanel extends JPanel {
         int fixed = 0;
         for (DOSchemaAnomaly anomaly : currentAnomalies) {
             if (anomaly instanceof DOSchemaDataLossAnomaly && anomaly.schemaField != null) {
-                anomaly.schemaField.embedContents = true;
+                anomaly.schemaField.attributes.embedContents = true;
                 fixed++;
             }
         }

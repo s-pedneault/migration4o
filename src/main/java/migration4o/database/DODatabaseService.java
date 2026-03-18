@@ -72,17 +72,17 @@ public class DODatabaseService {
         }
 
         for (DOSchemaClass dbClass : databaseSchema.getClasses()) {
-            if (dbClass == null || dbClass.pointsTo != null) {
+            if (dbClass == null || dbClass.attributes.pointsTo != null) {
                 continue;
             }
 
-            DOSchemaClass referenceMatch = referenceSchema.findClassByName(dbClass.source);
-            if (referenceMatch == null && dbClass.destinationName != null) {
-                referenceMatch = referenceSchema.findClassByName(dbClass.destinationName);
+            DOSchemaClass referenceMatch = referenceSchema.findClassByName(dbClass.attributes.source);
+            if (referenceMatch == null && dbClass.attributes.destinationName != null) {
+                referenceMatch = referenceSchema.findClassByName(dbClass.attributes.destinationName);
             }
 
-            if (referenceMatch != null && referenceMatch.isIDEntite(referenceSchema) && referenceMatch.pointsTo != null && !referenceMatch.pointsTo.isBlank()) {
-                dbClass.pointsTo = referenceMatch.pointsTo;
+            if (referenceMatch != null && referenceMatch.isIDEntite(referenceSchema) && referenceMatch.attributes.pointsTo != null && !referenceMatch.attributes.pointsTo.isBlank()) {
+                dbClass.attributes.pointsTo = referenceMatch.attributes.pointsTo;
             }
         }
     }

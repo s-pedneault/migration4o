@@ -49,9 +49,7 @@ import migration4o.models.ui.SyncTreeNode;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 
 /**
- * Panel for displaying schema comparison results. Shows differences between
- * reference schema and compared schema, with actions to add missing elements to
- * the reference.
+ * Panel for displaying schema comparison results. Shows differences between reference schema and compared schema, with actions to add missing elements to the reference.
  */
 public class SchemaComparisonPanel extends JPanel {
 
@@ -386,8 +384,7 @@ public class SchemaComparisonPanel extends JPanel {
     }
 
     /**
-     * Check if a class difference matches the current filter. Checks class name
-     * and field names.
+     * Check if a class difference matches the current filter. Checks class name and field names.
      */
     private boolean matchesFilter(ClassDifference diff) {
         // First apply filter mode
@@ -442,10 +439,10 @@ public class SchemaComparisonPanel extends JPanel {
         DOSchemaClass refClass = diff.getReferenceClass();
         if (refClass != null && refClass.fields != null) {
             for (DOSchemaField field : refClass.fields) {
-                if (field.source != null && field.source.toLowerCase().contains(currentFilter)) {
+                if (field.attributes.source != null && field.attributes.source.toLowerCase().contains(currentFilter)) {
                     return true;
                 }
-                if (field.destinationName != null && field.destinationName.toLowerCase().contains(currentFilter)) {
+                if (field.attributes.destinationName != null && field.attributes.destinationName.toLowerCase().contains(currentFilter)) {
                     return true;
                 }
             }
@@ -455,10 +452,10 @@ public class SchemaComparisonPanel extends JPanel {
         DOSchemaClass cmpClass = diff.getComparedClass();
         if (cmpClass != null && cmpClass.fields != null) {
             for (DOSchemaField field : cmpClass.fields) {
-                if (field.source != null && field.source.toLowerCase().contains(currentFilter)) {
+                if (field.attributes.source != null && field.attributes.source.toLowerCase().contains(currentFilter)) {
                     return true;
                 }
-                if (field.destinationName != null && field.destinationName.toLowerCase().contains(currentFilter)) {
+                if (field.attributes.destinationName != null && field.attributes.destinationName.toLowerCase().contains(currentFilter)) {
                     return true;
                 }
             }
@@ -624,7 +621,7 @@ public class SchemaComparisonPanel extends JPanel {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
 
         // Field properties table
-        String[][] data = { { "Source", field.source }, { "Type", field.type }, { "Collection", String.valueOf(field.isCollection) }, { "Children Type", field.childrenType != null ? field.childrenType : "" }, { "Title", field.title != null ? field.title : "" }, { "Description", field.description != null ? field.description : "" } };
+        String[][] data = { { "Source", field.attributes.source }, { "Type", field.attributes.type }, { "Collection", String.valueOf(field.attributes.isCollection) }, { "Children Type", field.attributes.childrenType != null ? field.attributes.childrenType : "" }, { "Title", field.attributes.title != null ? field.attributes.title : "" }, { "Description", field.attributes.description != null ? field.attributes.description : "" } };
 
         String[] columns = { "Property", "Value" };
         JTable table = new JTable(data, columns);
@@ -637,7 +634,7 @@ public class SchemaComparisonPanel extends JPanel {
             JButton addButton = new JButton("Add Field to " + comparison.getReferenceLabel());
             addButton.addActionListener(e -> {
                 onAddField.accept(parentClass, field);
-                JOptionPane.showMessageDialog(this, "Field '" + field.source + "' has been added to class '" + parentClass.source + "'.\n" + "Please save the reference schema to persist changes.", "Field Added", JOptionPane.INFORMATION_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Field '" + field.attributes.source + "' has been added to class '" + parentClass.attributes.source + "'.\n" + "Please save the reference schema to persist changes.", "Field Added", JOptionPane.INFORMATION_MESSAGE);
             });
             panel.add(addButton, BorderLayout.SOUTH);
         }
@@ -658,8 +655,7 @@ public class SchemaComparisonPanel extends JPanel {
     }
 
     /**
-     * Shows a comprehensive fields table for the selected class. Similar to the
-     * schema editor view.
+     * Shows a comprehensive fields table for the selected class. Similar to the schema editor view.
      */
     private void showClassFieldsTable(ClassDifference diff, DOSchemaField selectedField, boolean isLeftTree) {
         JPanel panel = new JPanel(new BorderLayout(5, 5));
@@ -720,7 +716,7 @@ public class SchemaComparisonPanel extends JPanel {
             if (selectedField != null && scrollPane != null && scrollPane.getViewport().getView() instanceof JTable) {
                 JTable table = (JTable) scrollPane.getViewport().getView();
                 for (int row = 0; row < table.getRowCount(); row++) {
-                    if (selectedField.source.equals(table.getValueAt(row, 0))) {
+                    if (selectedField.attributes.source.equals(table.getValueAt(row, 0))) {
                         table.setRowSelectionInterval(row, row);
                         table.scrollRectToVisible(table.getCellRect(row, 0, true));
                         break;
@@ -756,7 +752,7 @@ public class SchemaComparisonPanel extends JPanel {
         List<DOSchemaField> missingFields = diff.getFieldsOnlyInCompared();
         java.util.Set<String> missingFieldNames = new java.util.HashSet<>();
         for (DOSchemaField f : missingFields) {
-            missingFieldNames.add(f.source);
+            missingFieldNames.add(f.attributes.source);
         }
 
         // Create the table
@@ -775,7 +771,7 @@ public class SchemaComparisonPanel extends JPanel {
             addAllButton.setFont(addAllButton.getFont().deriveFont(Font.BOLD));
             addAllButton.addActionListener(e -> {
                 for (DOSchemaField field : fields) {
-                    if (missingFieldNames.contains(field.source)) {
+                    if (missingFieldNames.contains(field.attributes.source)) {
                         onAddField.accept(diff.getReferenceClass(), field);
                     }
                 }
@@ -795,12 +791,12 @@ public class SchemaComparisonPanel extends JPanel {
 
             // Add individual field buttons
             for (DOSchemaField field : fields) {
-                if (missingFieldNames.contains(field.source)) {
-                    JButton addButton = new JButton("Add " + field.source + " to " + comparison.getReferenceLabel());
+                if (missingFieldNames.contains(field.attributes.source)) {
+                    JButton addButton = new JButton("Add " + field.attributes.source + " to " + comparison.getReferenceLabel());
                     addButton.setAlignmentX(Component.LEFT_ALIGNMENT);
                     addButton.addActionListener(e -> {
                         onAddField.accept(diff.getReferenceClass(), field);
-                        setStatus("Field '" + field.source + "' added - remember to save schema");
+                        setStatus("Field '" + field.attributes.source + "' added - remember to save schema");
 
                         // Refresh comparison
                         SchemaComparison newComparison = new SchemaComparison(comparison.getReferenceSchema(), comparison.getReferenceLabel(), comparison.getComparedSchema(), comparison.getComparedLabel());
@@ -827,8 +823,7 @@ public class SchemaComparisonPanel extends JPanel {
     }
 
     /**
-     * Sorts fields according to the order they appear in the reference schema.
-     * Fields not in reference appear at the end, sorted alphabetically.
+     * Sorts fields according to the order they appear in the reference schema. Fields not in reference appear at the end, sorted alphabetically.
      */
     private DOSchemaField[] sortFieldsByReferenceOrder(DOSchemaField[] fields, DOSchemaClass referenceClass) {
         if (fields == null || fields.length == 0) {
@@ -840,7 +835,7 @@ public class SchemaComparisonPanel extends JPanel {
         if (referenceClass != null && referenceClass.fields != null) {
             DOSchemaField[] refFields = referenceClass.fields;
             for (int i = 0; i < refFields.length; i++) {
-                referenceOrder.put(refFields[i].source, i);
+                referenceOrder.put(refFields[i].attributes.source, i);
             }
         }
 
@@ -849,8 +844,8 @@ public class SchemaComparisonPanel extends JPanel {
         // reference
         DOSchemaField[] sortedFields = fields.clone();
         Arrays.sort(sortedFields, (f1, f2) -> {
-            Integer order1 = referenceOrder.get(f1.source);
-            Integer order2 = referenceOrder.get(f2.source);
+            Integer order1 = referenceOrder.get(f1.attributes.source);
+            Integer order2 = referenceOrder.get(f2.attributes.source);
 
             // Both in reference: sort by reference order
             if (order1 != null && order2 != null) {
@@ -865,7 +860,7 @@ public class SchemaComparisonPanel extends JPanel {
                 return 1;
             }
             // Neither in reference: sort alphabetically
-            return f1.source.compareTo(f2.source);
+            return f1.attributes.source.compareTo(f2.attributes.source);
         });
 
         return sortedFields;
@@ -894,12 +889,12 @@ public class SchemaComparisonPanel extends JPanel {
 
         for (int i = 0; i < fields.length; i++) {
             DOSchemaField field = fields[i];
-            data[i][0] = field.source;
-            data[i][1] = field.type;
-            data[i][2] = field.isCollection ? "Yes" : "No";
-            data[i][3] = field.childrenType != null && !field.childrenType.isEmpty() ? field.childrenType : "-";
-            data[i][4] = field.isExported ? "Yes" : "No";
-            data[i][5] = field.description != null && !field.description.isEmpty() ? field.description : "-";
+            data[i][0] = field.attributes.source;
+            data[i][1] = field.attributes.type;
+            data[i][2] = field.attributes.isCollection ? "Yes" : "No";
+            data[i][3] = field.attributes.childrenType != null && !field.attributes.childrenType.isEmpty() ? field.attributes.childrenType : "-";
+            data[i][4] = field.attributes.isExported ? "Yes" : "No";
+            data[i][5] = field.attributes.description != null && !field.attributes.description.isEmpty() ? field.attributes.description : "-";
         }
 
         JTable table = new JTable(data, columns);
@@ -919,8 +914,7 @@ public class SchemaComparisonPanel extends JPanel {
     }
 
     /**
-     * Checks if the only difference in a field property difference is the
-     * childrenType.
+     * Checks if the only difference in a field property difference is the childrenType.
      */
     private boolean isOnlyChildrenTypeDifference(FieldPropertyDifference propDiff) {
         Map<String, PropertyDiff> differences = propDiff.getDifferences();
@@ -934,8 +928,7 @@ public class SchemaComparisonPanel extends JPanel {
     }
 
     /**
-     * Gets the count of property differences after filtering based on checkbox
-     * state.
+     * Gets the count of property differences after filtering based on checkbox state.
      */
     private int getFilteredPropertyDifferencesCount(ClassDifference diff) {
         if (showCollectionTypeDifferencesCheckbox.isSelected()) {
@@ -993,18 +986,18 @@ public class SchemaComparisonPanel extends JPanel {
 
         if (dialog != null && dialog.isOkClicked()) {
             // Create new field with updated values (fields are immutable)
-            DOSchemaField newField = new DOSchemaField();
-            newField.source = dialog.getFieldSource();
-            newField.destinationName = dialog.getFieldDestination();
-            newField.type = dialog.getFieldType();
-            newField.format = dialog.getFieldFormat();
-            newField.isExported = dialog.isFieldExported();
-            newField.skipWhen = dialog.getFieldSkipWhen();
-            newField.isCollection = dialog.isFieldCollection();
-            newField.embedContents = dialog.isFieldEmbedContents();
-            newField.childrenType = dialog.getFieldChildrenType();
-            newField.title = dialog.getFieldTitle();
-            newField.description = dialog.getFieldDescription();
+            DOSchemaField newField = new DOSchemaField(referenceSchema, oldClass);
+            newField.attributes.source = dialog.getFieldSource();
+            newField.attributes.destinationName = dialog.getFieldDestination();
+            newField.attributes.type = dialog.getFieldType();
+            newField.attributes.format = dialog.getFieldFormat();
+            newField.attributes.isExported = dialog.isFieldExported();
+            newField.attributes.skipWhen = dialog.getFieldSkipWhen();
+            newField.attributes.isCollection = dialog.isFieldCollection();
+            newField.attributes.embedContents = dialog.isFieldEmbedContents();
+            newField.attributes.childrenType = dialog.getFieldChildrenType();
+            newField.attributes.title = dialog.getFieldTitle();
+            newField.attributes.description = dialog.getFieldDescription();
             newField.childrenSchemaClass = oldField.childrenSchemaClass;
 
             // Replace the field in the class's field array
@@ -1019,16 +1012,16 @@ public class SchemaComparisonPanel extends JPanel {
             }
 
             // Create new class with updated fields array
-            DOSchemaClass newClass = new DOSchemaClass();
-            newClass.source = oldClass.source;
-            newClass.destinationName = oldClass.destinationName;
-            newClass.description = oldClass.description;
-            newClass.schemaNotes = oldClass.schemaNotes;
-            newClass.title = oldClass.title;
-            newClass.parentClassName = oldClass.parentClassName;
+            DOSchemaClass newClass = new DOSchemaClass(referenceSchema);
+            newClass.attributes.source = oldClass.attributes.source;
+            newClass.attributes.destinationName = oldClass.attributes.destinationName;
+            newClass.attributes.description = oldClass.attributes.description;
+            newClass.attributes.schemaNotes = oldClass.attributes.schemaNotes;
+            newClass.attributes.title = oldClass.attributes.title;
+            newClass.attributes.parentClassName = oldClass.attributes.parentClassName;
             newClass.setFields(newFields);
             newClass.schemaReferences = oldClass.schemaReferences;
-            newClass.migrate = oldClass.migrate;
+            newClass.attributes.migrate = oldClass.attributes.migrate;
 
             // Replace the class in the schema
             DOSchemaClass[] classes = referenceSchema.getClasses();
@@ -1049,7 +1042,7 @@ public class SchemaComparisonPanel extends JPanel {
             updateComparison(newComparison);
 
             // Show non-intrusive status message
-            setStatus("Field '" + newField.source + "' updated - remember to save schema");
+            setStatus("Field '" + newField.attributes.source + "' updated - remember to save schema");
         }
     }
 

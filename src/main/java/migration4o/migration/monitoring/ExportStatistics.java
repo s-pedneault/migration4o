@@ -188,7 +188,7 @@ public class ExportStatistics {
 
     public void recordClassExport(DOSchemaClass schemaClass, long objectId, DOSchema hierarchySchema) {
         if (schemaClass != null) {
-            String className = schemaClass.source;
+            String className = schemaClass.attributes.source;
             Set<Long> objectIds = exportedObjectIdsSet.computeIfAbsent(className, k -> new HashSet<>());
             if (objectIds.add(objectId)) {
                 int count = exportedClassCounts.getOrDefault(className, 0) + 1;
@@ -216,7 +216,7 @@ public class ExportStatistics {
         if (schemaClass == null) {
             return;
         }
-        String className = schemaClass.source;
+        String className = schemaClass.attributes.source;
         recordReachedOnly(className, objectId, hierarchySchema);
     }
 
@@ -241,10 +241,10 @@ public class ExportStatistics {
             }
 
             DOSchemaClass currentSchemaClass = SchemaUtil.findClassByName(currentClass, hierarchySchema);
-            if (currentSchemaClass == null || currentSchemaClass.parentClassName == null || currentSchemaClass.parentClassName.isBlank()) {
+            if (currentSchemaClass == null || currentSchemaClass.attributes.parentClassName == null || currentSchemaClass.attributes.parentClassName.isBlank()) {
                 break;
             }
-            currentClass = currentSchemaClass.parentClassName;
+            currentClass = currentSchemaClass.attributes.parentClassName;
         }
 
         if (hierarchy.isEmpty()) {

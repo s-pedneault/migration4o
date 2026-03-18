@@ -64,8 +64,8 @@ public class ReachAnalysisService {
             if (schemaClass.isEntite(referenceSchema) || schemaClass.isParam(referenceSchema)) {
                 long[] uniqueIds = schemaClass.uniqueObjectIds;
                 if (uniqueIds != null) {
-                    classTotalCount.put(schemaClass.source, uniqueIds.length);
-                    classProcessedCount.put(schemaClass.source, 0);
+                    classTotalCount.put(schemaClass.attributes.source, uniqueIds.length);
+                    classProcessedCount.put(schemaClass.attributes.source, 0);
                 }
             }
         }
@@ -87,7 +87,7 @@ public class ReachAnalysisService {
         for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
             if (schemaClass.isEntite(referenceSchema) || schemaClass.isParam(referenceSchema)) {
                 processedCount++;
-                String simpleName = schemaClass.source;
+                String simpleName = schemaClass.attributes.source;
                 if (simpleName.contains(".")) {
                     simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
                 }

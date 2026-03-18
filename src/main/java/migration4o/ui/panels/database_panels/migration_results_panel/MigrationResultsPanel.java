@@ -467,7 +467,7 @@ public class MigrationResultsPanel extends JPanel {
 
         DOSchemaClass schemaClass = null;
         for (DOSchemaClass cls : schema.getClasses()) {
-            if (cls.source.equals(sourceClass)) {
+            if (cls.attributes.source.equals(sourceClass)) {
                 schemaClass = cls;
                 break;
             }
@@ -481,7 +481,7 @@ public class MigrationResultsPanel extends JPanel {
         DOSchemaField field = null;
         if (schemaClass.fields != null) {
             for (DOSchemaField f : schemaClass.fields) {
-                if (f.source.equals(sourceField)) {
+                if (f.attributes.source.equals(sourceField)) {
                     field = f;
                     break;
                 }
@@ -499,19 +499,19 @@ public class MigrationResultsPanel extends JPanel {
 
         if (dialog.isOkClicked()) {
             // Apply all changes from the dialog to the field object
-            field.source = dialog.getFieldSource();
-            field.destinationName = dialog.getFieldDestination();
-            field.type = dialog.getFieldType();
-            field.format = dialog.getFieldFormat();
-            field.isExported = dialog.isFieldExported();
-            field.skipWhen = dialog.getFieldSkipWhen();
-            field.isCollection = dialog.isFieldCollection();
-            field.embedContents = dialog.isFieldEmbedContents();
-            field.childrenType = dialog.getFieldChildrenType();
-            field.title = dialog.getFieldTitle();
-            field.description = dialog.getFieldDescription();
-            field.pointsTo = dialog.getFieldPointsTo();
-            field.valueMap = DOSchemaValueMap.copyOf(dialog.getValueMappings());
+            field.attributes.source = dialog.getFieldSource();
+            field.attributes.destinationName = dialog.getFieldDestination();
+            field.attributes.type = dialog.getFieldType();
+            field.attributes.format = dialog.getFieldFormat();
+            field.attributes.isExported = dialog.isFieldExported();
+            field.attributes.skipWhen = dialog.getFieldSkipWhen();
+            field.attributes.isCollection = dialog.isFieldCollection();
+            field.attributes.embedContents = dialog.isFieldEmbedContents();
+            field.attributes.childrenType = dialog.getFieldChildrenType();
+            field.attributes.title = dialog.getFieldTitle();
+            field.attributes.description = dialog.getFieldDescription();
+            field.attributes.pointsTo = dialog.getFieldPointsTo();
+            field.attributes.valueMap = DOSchemaValueMap.copyOf(dialog.getValueMappings());
 
             // Mark this row as edited (highlight in green)
             editedRows.add(row);
@@ -669,7 +669,7 @@ public class MigrationResultsPanel extends JPanel {
 
         DOSchemaClass schemaClass = null;
         for (DOSchemaClass cls : schema.getClasses()) {
-            if (cls.source.equals(sourceClass)) {
+            if (cls.attributes.source.equals(sourceClass)) {
                 schemaClass = cls;
                 break;
             }
@@ -683,7 +683,7 @@ public class MigrationResultsPanel extends JPanel {
         DOSchemaField field = null;
         if (schemaClass.fields != null) {
             for (DOSchemaField f : schemaClass.fields) {
-                if (f.source.equals(sourceField)) {
+                if (f.attributes.source.equals(sourceField)) {
                     field = f;
                     break;
                 }
@@ -696,7 +696,7 @@ public class MigrationResultsPanel extends JPanel {
         }
 
         // Apply the fix: set embedContents to false
-        field.embedContents = false;
+        field.attributes.embedContents = false;
 
         // Mark this row as edited (highlight in green)
         editedRows.add(row);

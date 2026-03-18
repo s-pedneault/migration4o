@@ -52,61 +52,61 @@ public class DOReferenceDetector {
 
             for (DOSchemaField field : schemaClass.fields) {
                 // 1. Check direct field type references (non-primitive, non-collection)
-                if (field.type != null && !field.isCollection) {
-                    DOSchemaClass typeClass = findClass(classMap, field.type);
+                if (field.attributes.type != null && !field.attributes.isCollection) {
+                    DOSchemaClass typeClass = findClass(classMap, field.attributes.type);
                     if (typeClass != null) {
                         if (typeClass.isIDEntite(schema)) {
                             // Field type is an IDEntite pointer - add reference to BOTH the pointer class
                             // AND the concrete class
                             // Add reference to the IDEntite pointer class itself
-                            addReference(referencesMap, fieldContexts, typeClass.source, schemaClass, field);
+                            addReference(referencesMap, fieldContexts, typeClass.attributes.source, schemaClass, field);
 
                             // Add reference to the concrete class it points to
-                            String pointsTo = typeClass.pointsTo;
+                            String pointsTo = typeClass.attributes.pointsTo;
                             if (pointsTo != null && !pointsTo.isEmpty()) {
                                 DOSchemaClass targetClass = findClass(classMap, pointsTo);
                                 if (targetClass != null) {
-                                    addReference(referencesMap, fieldContexts, targetClass.source, schemaClass, field);
+                                    addReference(referencesMap, fieldContexts, targetClass.attributes.source, schemaClass, field);
                                 }
                             }
-                        } else if (isEntityType(field.type)) {
+                        } else if (isEntityType(field.attributes.type)) {
                             // Direct reference to a concrete entity class
-                            addReference(referencesMap, fieldContexts, typeClass.source, schemaClass, field);
+                            addReference(referencesMap, fieldContexts, typeClass.attributes.source, schemaClass, field);
                         }
-                    } else if (isEntityType(field.type)) {
+                    } else if (isEntityType(field.attributes.type)) {
                         // Field type is an entity type but class not found in schema
-                        String explanation = String.format("Field '%s' has type '%s' which is not defined in the schema", field.source, field.type);
-                        schema.anomalies.add(new DOSchemaMissingFieldClass(schemaClass, field, field.type, explanation));
+                        String explanation = String.format("Field '%s' has type '%s' which is not defined in the schema", field.attributes.source, field.attributes.type);
+                        schema.anomalies.add(new DOSchemaMissingFieldClass(schemaClass, field, field.attributes.type, explanation));
                     }
                 }
 
                 // 2. Check collection children type references
-                if (field.childrenType != null) {
-                    DOSchemaClass childrenClass = findClass(classMap, field.childrenType);
+                if (field.attributes.childrenType != null) {
+                    DOSchemaClass childrenClass = findClass(classMap, field.attributes.childrenType);
 
                     if (childrenClass != null) {
                         if (childrenClass.isIDEntite(schema)) {
                             // Collection of IDEntite pointers - add reference to BOTH the pointer class AND
                             // the concrete class
                             // Add reference to the IDEntite pointer class itself
-                            addReference(referencesMap, fieldContexts, childrenClass.source, schemaClass, field);
+                            addReference(referencesMap, fieldContexts, childrenClass.attributes.source, schemaClass, field);
 
                             // Add reference to the concrete class it points to
-                            String pointsTo = childrenClass.pointsTo;
+                            String pointsTo = childrenClass.attributes.pointsTo;
                             if (pointsTo != null && !pointsTo.isEmpty()) {
                                 DOSchemaClass targetClass = findClass(classMap, pointsTo);
                                 if (targetClass != null) {
-                                    addReference(referencesMap, fieldContexts, targetClass.source, schemaClass, field);
+                                    addReference(referencesMap, fieldContexts, targetClass.attributes.source, schemaClass, field);
                                 }
                             }
-                        } else if (isEntityType(field.childrenType)) {
+                        } else if (isEntityType(field.attributes.childrenType)) {
                             // Direct reference to entity class in collection
-                            addReference(referencesMap, fieldContexts, childrenClass.source, schemaClass, field);
+                            addReference(referencesMap, fieldContexts, childrenClass.attributes.source, schemaClass, field);
                         }
-                    } else if (isEntityType(field.childrenType)) {
+                    } else if (isEntityType(field.attributes.childrenType)) {
                         // Collection childrenType is an entity type but class not found in schema
-                        String explanation = String.format("Field '%s' has childrenType '%s' which is not defined in the schema", field.source, field.childrenType);
-                        schema.anomalies.add(new DOSchemaMissingFieldClass(schemaClass, field, field.childrenType, explanation));
+                        String explanation = String.format("Field '%s' has childrenType '%s' which is not defined in the schema", field.attributes.source, field.attributes.childrenType);
+                        schema.anomalies.add(new DOSchemaMissingFieldClass(schemaClass, field, field.attributes.childrenType, explanation));
                     }
                 }
             }
@@ -114,7 +114,7 @@ public class DOReferenceDetector {
 
         // Now update each class's schemaReferences array with the new references
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            List<DOSchemaReference> newRefs = referencesMap.get(schemaClass.source);
+            List<DOSchemaReference> newRefs = referencesMap.get(schemaClass.attributes.source);
             if (newRefs != null && !newRefs.isEmpty()) {
                 // Merge with existing references
                 List<DOSchemaReference> allRefs = new ArrayList<>();
@@ -127,7 +127,7 @@ public class DOReferenceDetector {
                 }
 
                 // Add new references (avoid duplicates)
-                List<FieldContext> contexts = fieldContexts.get(schemaClass.source);
+                List<FieldContext> contexts = fieldContexts.get(schemaClass.attributes.source);
                 for (int i = 0; i < newRefs.size(); i++) {
                     DOSchemaReference newRef = newRefs.get(i);
                     if (!containsReference(allRefs, newRef)) {
@@ -136,7 +136,7 @@ public class DOReferenceDetector {
                         // Register anomaly for dynamically added reference
                         if (contexts != null && i < contexts.size()) {
                             FieldContext ctx = contexts.get(i);
-                            String explanation = String.format("Reference to %s from %s.%s was automatically added (missing from schema)", schemaClass.source, newRef.className, newRef.fieldName);
+                            String explanation = String.format("Reference to %s from %s.%s was automatically added (missing from schema)", schemaClass.attributes.source, newRef.className, newRef.fieldName);
                             schema.anomalies.add(new DOSchemaReferenceAnomaly(ctx.schemaClass, ctx.field, newRef, explanation));
                         }
                     }
@@ -197,9 +197,9 @@ public class DOReferenceDetector {
     private static Map<String, DOSchemaClass> buildClassMap(DOSchema schema) {
         Map<String, DOSchemaClass> map = new HashMap<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            map.put(schemaClass.source, schemaClass);
-            if (schemaClass.destinationName != null) {
-                map.put(schemaClass.destinationName, schemaClass);
+            map.put(schemaClass.attributes.source, schemaClass);
+            if (schemaClass.attributes.destinationName != null) {
+                map.put(schemaClass.attributes.destinationName, schemaClass);
             }
         }
         return map;
@@ -228,7 +228,7 @@ public class DOReferenceDetector {
      * Add a reference to the map.
      */
     private static void addReference(Map<String, List<DOSchemaReference>> referencesMap, Map<String, List<FieldContext>> fieldContexts, String targetClassName, DOSchemaClass sourceClass, DOSchemaField sourceField) {
-        referencesMap.computeIfAbsent(targetClassName, k -> new ArrayList<>()).add(new DOSchemaReference(sourceClass.source, sourceField.source));
+        referencesMap.computeIfAbsent(targetClassName, k -> new ArrayList<>()).add(new DOSchemaReference(sourceClass.attributes.source, sourceField.attributes.source));
         fieldContexts.computeIfAbsent(targetClassName, k -> new ArrayList<>()).add(new FieldContext(sourceClass, sourceField));
     }
 
@@ -261,16 +261,16 @@ public class DOReferenceDetector {
     private static void inferPointsTo(DOSchema schema, Map<String, DOSchemaClass> classMap) {
         for (DOSchemaClass cls : schema.getClasses()) {
             // Only process IDEntite subclasses that don't already have pointsTo set
-            if (cls.isIDEntite(schema) && (cls.pointsTo == null || cls.pointsTo.isEmpty())) {
+            if (cls.isIDEntite(schema) && (cls.attributes.pointsTo == null || cls.attributes.pointsTo.isEmpty())) {
                 // Try to infer from source name: gest.cours.IDProgramme → gest.cours.Programme
-                String sourceName = cls.source;
+                String sourceName = cls.attributes.source;
                 if (sourceName.contains(".ID")) {
                     // Replace .IDXxx with .Xxx
                     String inferredTarget = sourceName.replaceFirst("\\.ID([A-Z])", ".$1");
 
                     // Check if this target class exists
                     if (findClass(classMap, inferredTarget) != null) {
-                        cls.pointsTo = inferredTarget;
+                        cls.attributes.pointsTo = inferredTarget;
                     }
                 }
             }

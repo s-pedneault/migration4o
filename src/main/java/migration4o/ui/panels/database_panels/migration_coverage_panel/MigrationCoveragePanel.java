@@ -204,7 +204,7 @@ public class MigrationCoveragePanel extends JPanel {
 
         MigrationStatus(DOSchemaClass refClass, int unique, int objects, int reached) {
             // Check if class is not set to migrate
-            this.isNotSetToMigrate = refClass != null && !refClass.migrate;
+            this.isNotSetToMigrate = refClass != null && !refClass.attributes.migrate;
 
             // Categories are mutually exclusive for classes with objects > 0:
             // 1. Not migrated: class not set to migrate OR (objects > 0 AND reached == 0)
@@ -478,13 +478,13 @@ public class MigrationCoveragePanel extends JPanel {
 
         if (referenceSchema != null && referenceSchema.getClasses() != null) {
             for (DOSchemaClass schemaClass : referenceSchema.getClasses()) {
-                refClassMap.put(schemaClass.source, schemaClass);
+                refClassMap.put(schemaClass.attributes.source, schemaClass);
             }
         }
 
         if (databaseSchema != null && databaseSchema.getClasses() != null) {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                dbClassMap.put(schemaClass.source, schemaClass);
+                dbClassMap.put(schemaClass.attributes.source, schemaClass);
             }
         }
 
@@ -571,7 +571,7 @@ public class MigrationCoveragePanel extends JPanel {
                 DOSchemaClass dbClass = findClassInSchema(databaseSchema, className);
 
                 // Determine color based on rules
-                if (refClass != null && !refClass.migrate) {
+                if (refClass != null && !refClass.attributes.migrate) {
                     // Grey: class not set to migrate
                     c.setForeground(Color.GRAY);
                 } else if (dbClass != null && (dbClass.uniqueObjectIds == null || dbClass.uniqueObjectIds.length == 0)) {
@@ -596,7 +596,7 @@ public class MigrationCoveragePanel extends JPanel {
                 return null;
             }
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass.source.equals(className)) {
+                if (schemaClass.attributes.source.equals(className)) {
                     return schemaClass;
                 }
             }
@@ -761,7 +761,7 @@ public class MigrationCoveragePanel extends JPanel {
                 return null;
             }
             for (DOSchemaClass schemaClass : schema.getClasses()) {
-                if (schemaClass.source.equals(className)) {
+                if (schemaClass.attributes.source.equals(className)) {
                     return schemaClass;
                 }
             }
@@ -876,8 +876,8 @@ public class MigrationCoveragePanel extends JPanel {
 
                     // Pre-calculate total counts for each class
                     for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                        classTotalCount.put(schemaClass.source, schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0);
-                        classProcessedCount.put(schemaClass.source, 0);
+                        classTotalCount.put(schemaClass.attributes.source, schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0);
+                        classProcessedCount.put(schemaClass.attributes.source, 0);
                     }
 
                     // Count classes to process
@@ -896,7 +896,7 @@ public class MigrationCoveragePanel extends JPanel {
                         if (schemaClass.isEntite(referenceSchema) || schemaClass.isParam(referenceSchema)) {
 
                             processedCount++;
-                            String simpleName = schemaClass.source;
+                            String simpleName = schemaClass.attributes.source;
                             if (simpleName.contains(".")) {
                                 simpleName = simpleName.substring(simpleName.lastIndexOf('.') + 1);
                             }
@@ -1238,7 +1238,7 @@ public class MigrationCoveragePanel extends JPanel {
         if (itemClass != null && itemClass.isIDEntite(referenceSchema)) {
             // This is an IDEntite - get target type from pointsTo or extract from field
             // name
-            String expectedType = itemClass.pointsTo;
+            String expectedType = itemClass.attributes.pointsTo;
             if (expectedType == null) {
                 // Fallback to name extraction
                 expectedType = extractExpectedTypeFromFieldName(fieldName, className);
@@ -1294,7 +1294,7 @@ public class MigrationCoveragePanel extends JPanel {
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
                 if (schemaClass.isEntite(referenceSchema)) {
                     // Check if this class matches the expected type (if specified)
-                    String simpleClassName = schemaClass.source;
+                    String simpleClassName = schemaClass.attributes.source;
                     if (simpleClassName.contains(".")) {
                         simpleClassName = simpleClassName.substring(simpleClassName.lastIndexOf('.') + 1);
                     }
@@ -1389,7 +1389,7 @@ public class MigrationCoveragePanel extends JPanel {
             return null;
         }
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.source.equals(className)) {
+            if (schemaClass.attributes.source.equals(className)) {
                 return schemaClass;
             }
         }
@@ -1438,10 +1438,10 @@ public class MigrationCoveragePanel extends JPanel {
                 if (databaseSchema != null && databaseSchema.getClasses() != null) {
                     // Sort classes by name for consistent output
                     List<DOSchemaClass> sortedClasses = new ArrayList<>(Arrays.asList(databaseSchema.getClasses()));
-                    sortedClasses.sort(Comparator.comparing(sc -> sc.source));
+                    sortedClasses.sort(Comparator.comparing(sc -> sc.attributes.source));
 
                     for (DOSchemaClass schemaClass : sortedClasses) {
-                        String className = schemaClass.source;
+                        String className = schemaClass.attributes.source;
 
                         // Get all object IDs (entries) - export all classes even with no IDs
                         long[] allObjectIds = schemaClass.objectIds;
@@ -1926,11 +1926,11 @@ public class MigrationCoveragePanel extends JPanel {
         }
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             // Try matching by source (fully qualified name)
-            if (schemaClass.source.equals(className)) {
+            if (schemaClass.attributes.source.equals(className)) {
                 return schemaClass;
             }
             // Also try matching by destinationName (simple name)
-            if (schemaClass.destinationName != null && schemaClass.destinationName.equals(className)) {
+            if (schemaClass.attributes.destinationName != null && schemaClass.attributes.destinationName.equals(className)) {
                 return schemaClass;
             }
         }

@@ -145,7 +145,7 @@ public class ExportOptions {
         if (available != null) {
             List<String> savedNames = config.getSelectedSkipOptionNames();
             for (DOSchemaField field : available) {
-                if (savedNames.contains(field.skipUserOption)) {
+                if (savedNames.contains(field.attributes.skipUserOption)) {
                     selectedSkipFields.add(field);
                 }
             }

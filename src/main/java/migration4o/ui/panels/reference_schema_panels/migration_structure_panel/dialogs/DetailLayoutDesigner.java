@@ -41,7 +41,7 @@ public class DetailLayoutDesigner extends JFrame {
     private static final DataFlavor LAYOUT_NODE_FLAVOR = new DataFlavor(DefaultMutableTreeNode.class, "LayoutTreeNode");
 
     public DetailLayoutDesigner(ClassExportConfig config, DOSchemaClass schemaClass, DOSchema refSchema) {
-        super("Detail Layout Designer — " + schemaClass.destinationName);
+        super("Detail Layout Designer — " + schemaClass.attributes.destinationName);
         this.config = config;
         this.schemaClass = schemaClass;
         this.refSchema = refSchema;
@@ -141,23 +141,23 @@ public class DetailLayoutDesigner extends JFrame {
         DefaultMutableTreeNode refsNode = new DefaultMutableTreeNode("References (IDEntite)");
 
         for (DOSchemaField field : allFields) {
-            if (!field.isExported)
+            if (!field.attributes.isExported)
                 continue;
-            String dest = field.destinationName;
+            String dest = field.attributes.destinationName;
             if (dest == null || dest.isEmpty())
                 continue;
 
-            if (field.isCollection) {
+            if (field.attributes.isCollection) {
                 if (!usedRefs.contains(dest)) {
                     DefaultMutableTreeNode collNode = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, true));
-                    if (field.embedContents)
-                        addEmbeddedSubFields(collNode, field.childrenType, dest, usedRefs);
+                    if (field.attributes.embedContents)
+                        addEmbeddedSubFields(collNode, field.attributes.childrenType, dest, usedRefs);
                     collectionsNode.add(collNode);
                 }
-            } else if (field.embedContents && !isPrimitiveType(field.type)) {
+            } else if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type)) {
                 // Embedded entity — show if it or any sub-field is not yet used
                 DefaultMutableTreeNode embNode = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), dest, false));
-                addEmbeddedSubFields(embNode, field.type, dest, usedRefs);
+                addEmbeddedSubFields(embNode, field.attributes.type, dest, usedRefs);
                 if (!usedRefs.contains(dest) || embNode.getChildCount() > 0)
                     embeddedNode.add(embNode);
             } else if (isIDEntiteType(field)) {
@@ -218,14 +218,14 @@ public class DetailLayoutDesigner extends JFrame {
 
         List<DOSchemaField> subFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema);
         for (DOSchemaField sf : subFields) {
-            if (!sf.isExported || sf.destinationName == null)
+            if (!sf.attributes.isExported || sf.attributes.destinationName == null)
                 continue;
-            String dotPath = parentPath + "." + sf.destinationName;
+            String dotPath = parentPath + "." + sf.attributes.destinationName;
             if (usedRefs.contains(dotPath))
                 continue;
-            DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(sf), dotPath, sf.isCollection));
-            if (sf.embedContents && !isPrimitiveType(sf.type) && !sf.isCollection) {
-                addEmbeddedSubFields(child, sf.type, dotPath, usedRefs);
+            DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(sf), dotPath, sf.attributes.isCollection));
+            if (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type) && !sf.attributes.isCollection) {
+                addEmbeddedSubFields(child, sf.attributes.type, dotPath, usedRefs);
             }
             parentNode.add(child);
         }
@@ -239,7 +239,7 @@ public class DetailLayoutDesigner extends JFrame {
             return cls;
         String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
         for (DOSchemaClass c : refSchema.getClasses()) {
-            if (c.source != null && c.source.endsWith("." + shortName))
+            if (c.attributes.source != null && c.attributes.source.endsWith("." + shortName))
                 return c;
         }
         return null;
@@ -252,9 +252,9 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     private boolean isIDEntiteType(DOSchemaField field) {
-        if (field.type == null)
+        if (field.attributes.type == null)
             return false;
-        DOSchemaClass typeClass = findClassByType(field.type);
+        DOSchemaClass typeClass = findClassByType(field.attributes.type);
         if (typeClass == null)
             return false;
         return typeClass.isIDEntite(refSchema);
@@ -425,7 +425,7 @@ public class DetailLayoutDesigner extends JFrame {
     private void addFormatEditor(LayoutNode node) {
         String ref = node.prop("ref", "");
         DOSchemaField field = resolveFieldByRef(ref);
-        String fieldType = (field != null && field.type != null) ? field.type : "string";
+        String fieldType = (field != null && field.attributes.type != null) ? field.attributes.type : "string";
 
         String currentFormat = node.prop("format", "");
 
@@ -713,17 +713,17 @@ public class DetailLayoutDesigner extends JFrame {
         collectionRefs.add(""); // allow empty
         List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema);
         for (DOSchemaField f : allFields) {
-            if (f.isExported && f.isCollection && f.destinationName != null)
-                collectionRefs.add(f.destinationName);
+            if (f.attributes.isExported && f.attributes.isCollection && f.attributes.destinationName != null)
+                collectionRefs.add(f.attributes.destinationName);
         }
         // Also check embedded entities for nested collections
         for (DOSchemaField f : allFields) {
-            if (f.isExported && f.embedContents && !isPrimitiveType(f.type) && !f.isCollection) {
-                DOSchemaClass embClass = findClassByType(f.type);
+            if (f.attributes.isExported && f.attributes.embedContents && !isPrimitiveType(f.attributes.type) && !f.attributes.isCollection) {
+                DOSchemaClass embClass = findClassByType(f.attributes.type);
                 if (embClass != null) {
                     for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embClass, refSchema)) {
-                        if (sf.isExported && sf.isCollection && sf.destinationName != null)
-                            collectionRefs.add(f.destinationName + "." + sf.destinationName);
+                        if (sf.attributes.isExported && sf.attributes.isCollection && sf.attributes.destinationName != null)
+                            collectionRefs.add(f.attributes.destinationName + "." + sf.attributes.destinationName);
                     }
                 }
             }
@@ -769,16 +769,16 @@ public class DetailLayoutDesigner extends JFrame {
 
         // Resolve the child type's fields
         DOSchemaField collField = resolveFieldByRef(ref);
-        if (collField == null || collField.childrenType == null) {
+        if (collField == null || collField.attributes.childrenType == null) {
             container.add(new JLabel("Cannot resolve children type"));
             container.revalidate();
             container.repaint();
             return;
         }
 
-        DOSchemaClass childClass = findClassByType(collField.childrenType);
+        DOSchemaClass childClass = findClassByType(collField.attributes.childrenType);
         if (childClass == null) {
-            container.add(new JLabel("Unknown child class: " + collField.childrenType));
+            container.add(new JLabel("Unknown child class: " + collField.attributes.childrenType));
             container.revalidate();
             container.repaint();
             return;
@@ -787,9 +787,9 @@ public class DetailLayoutDesigner extends JFrame {
         List<DOSchemaField> childFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema);
         List<DOSchemaField> availableFields = new ArrayList<>();
         for (DOSchemaField sf : childFields) {
-            if (!sf.isExported || sf.destinationName == null)
+            if (!sf.attributes.isExported || sf.attributes.destinationName == null)
                 continue;
-            if (sf.isCollection || (sf.embedContents && !isPrimitiveType(sf.type)))
+            if (sf.attributes.isCollection || (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type)))
                 continue;
             availableFields.add(sf);
         }
@@ -812,13 +812,13 @@ public class DetailLayoutDesigner extends JFrame {
                 orderedNames.add(name);
         }
         for (DOSchemaField sf : availableFields) {
-            if (!orderedNames.contains(sf.destinationName))
-                orderedNames.add(sf.destinationName);
+            if (!orderedNames.contains(sf.attributes.destinationName))
+                orderedNames.add(sf.attributes.destinationName);
         }
 
         Map<String, String> labelsByFieldName = new HashMap<>();
         for (DOSchemaField sf : availableFields) {
-            labelsByFieldName.put(sf.destinationName, getFieldLabel(sf));
+            labelsByFieldName.put(sf.attributes.destinationName, getFieldLabel(sf));
         }
 
         // Column rows — each is a panel with: [grip] [checkbox] [name] [title
@@ -1037,7 +1037,7 @@ public class DetailLayoutDesigner extends JFrame {
             if (field == null)
                 return null;
             if (i < parts.length - 1) {
-                String nextType = field.isCollection && field.childrenType != null ? field.childrenType : field.type;
+                String nextType = field.attributes.isCollection && field.attributes.childrenType != null ? field.attributes.childrenType : field.attributes.type;
                 current = findClassByType(nextType);
                 if (current == null)
                     return null;
@@ -1252,12 +1252,12 @@ public class DetailLayoutDesigner extends JFrame {
     private String getFieldLabel(DOSchemaField field) {
         if (field == null)
             return "";
-        if (field.title != null && !field.title.trim().isEmpty())
-            return field.title.trim();
-        if (field.destinationName != null && !field.destinationName.trim().isEmpty())
-            return humanize(field.destinationName.trim());
-        if (field.source != null && !field.source.trim().isEmpty())
-            return humanize(field.source.trim());
+        if (field.attributes.title != null && !field.attributes.title.trim().isEmpty())
+            return field.attributes.title.trim();
+        if (field.attributes.destinationName != null && !field.attributes.destinationName.trim().isEmpty())
+            return humanize(field.attributes.destinationName.trim());
+        if (field.attributes.source != null && !field.attributes.source.trim().isEmpty())
+            return humanize(field.attributes.source.trim());
         return "";
     }
 
@@ -1289,13 +1289,13 @@ public class DetailLayoutDesigner extends JFrame {
         List<DOSchemaField> collections = new ArrayList<>();
 
         for (DOSchemaField field : allFields) {
-            if (!field.isExported)
+            if (!field.attributes.isExported)
                 continue;
-            if (field.destinationName == null || field.destinationName.isEmpty())
+            if (field.attributes.destinationName == null || field.attributes.destinationName.isEmpty())
                 continue;
-            if (field.isCollection)
+            if (field.attributes.isCollection)
                 collections.add(field);
-            else if (field.embedContents && !isPrimitiveType(field.type))
+            else if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type))
                 embedded.add(field);
             else
                 primitives.add(field);
@@ -1303,7 +1303,7 @@ public class DetailLayoutDesigner extends JFrame {
 
         for (DOSchemaField field : primitives) {
             LayoutNode node = new LayoutNode(LayoutNodeType.FIELD);
-            node.setProp("ref", field.destinationName);
+            node.setProp("ref", field.attributes.destinationName);
             applyAutoFormat(node, field);
             root.add(buildTreeNode(node));
         }
@@ -1312,19 +1312,19 @@ public class DetailLayoutDesigner extends JFrame {
             LayoutNode section = new LayoutNode(LayoutNodeType.SECTION);
             section.setProp("title", getFieldLabel(field));
             section.setProp("collapsible", "true");
-            DOSchemaClass embeddedClass = findClassByType(field.type);
+            DOSchemaClass embeddedClass = findClassByType(field.attributes.type);
             if (embeddedClass != null) {
                 for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema)) {
-                    if (!sf.isExported || sf.destinationName == null)
+                    if (!sf.attributes.isExported || sf.attributes.destinationName == null)
                         continue;
-                    if (sf.isCollection) {
+                    if (sf.attributes.isCollection) {
                         LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
-                        table.setProp("ref", field.destinationName + "." + sf.destinationName);
+                        table.setProp("ref", field.attributes.destinationName + "." + sf.attributes.destinationName);
                         addAutoTableColumns(table, sf);
                         section.children.add(table);
                     } else {
                         LayoutNode fn = new LayoutNode(LayoutNodeType.FIELD);
-                        fn.setProp("ref", field.destinationName + "." + sf.destinationName);
+                        fn.setProp("ref", field.attributes.destinationName + "." + sf.attributes.destinationName);
                         applyAutoFormat(fn, sf);
                         section.children.add(fn);
                     }
@@ -1339,7 +1339,7 @@ public class DetailLayoutDesigner extends JFrame {
 
         for (DOSchemaField field : collections) {
             LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
-            table.setProp("ref", field.destinationName);
+            table.setProp("ref", field.attributes.destinationName);
             addAutoTableColumns(table, field);
             root.add(buildTreeNode(table));
         }
@@ -1351,9 +1351,9 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     private void applyAutoFormat(LayoutNode node, DOSchemaField field) {
-        if (field.type == null)
+        if (field.attributes.type == null)
             return;
-        switch (field.type) {
+        switch (field.attributes.type) {
         case "date":
         case "java.util.Date":
         case "java.sql.Timestamp":
@@ -1365,7 +1365,7 @@ public class DetailLayoutDesigner extends JFrame {
             break;
         case "long":
         case "java.lang.Long":
-            String name = field.destinationName.toLowerCase();
+            String name = field.attributes.destinationName.toLowerCase();
             if (name.contains("date") || name.contains("modification") || name.contains("creation") || name.contains("debut") || name.contains("fin") || name.contains("echeance"))
                 node.setProp("format", "longdate:yyyy-MM-dd HH:mm");
             break;
@@ -1373,7 +1373,7 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     private void addAutoTableColumns(LayoutNode table, DOSchemaField collectionField) {
-        String childType = collectionField.childrenType;
+        String childType = collectionField.attributes.childrenType;
         if (childType == null || isPrimitiveType(childType))
             return;
         DOSchemaClass childClass = findClassByType(childType);
@@ -1383,12 +1383,12 @@ public class DetailLayoutDesigner extends JFrame {
         List<String> colNames = new ArrayList<>();
         List<String> colTitles = new ArrayList<>();
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
-            if (!sf.isExported || sf.destinationName == null)
+            if (!sf.attributes.isExported || sf.attributes.destinationName == null)
                 continue;
-            if (sf.isCollection || (sf.embedContents && !isPrimitiveType(sf.type)))
+            if (sf.attributes.isCollection || (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type)))
                 continue;
-            colNames.add(sf.destinationName);
-            colTitles.add(sf.title != null ? sf.title : "");
+            colNames.add(sf.attributes.destinationName);
+            colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
         }
         if (!colNames.isEmpty()) {
             table.setProp("columns", String.join(",", colNames));

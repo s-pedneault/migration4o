@@ -61,14 +61,14 @@ public class ReachResultAggregator {
         // Add to all parent classes in the hierarchy
         DOSchemaClass schemaClass = SchemaUtil.findClassInSchemaByName(databaseSchema, className);
         if (schemaClass != null) {
-            String parentClassName = schemaClass.parentClassName;
+            String parentClassName = schemaClass.attributes.parentClassName;
             while (parentClassName != null && !parentClassName.isEmpty()) {
                 reachedByClass.computeIfAbsent(parentClassName, k -> new HashSet<>()).add(objectId);
 
                 // Move up to next parent
                 DOSchemaClass parentClass = SchemaUtil.findClassInSchemaByName(databaseSchema, parentClassName);
                 if (parentClass != null) {
-                    parentClassName = parentClass.parentClassName;
+                    parentClassName = parentClass.attributes.parentClassName;
                 } else {
                     break;
                 }
@@ -111,7 +111,7 @@ public class ReachResultAggregator {
                 combinedIds[index++] = id;
             }
             schemaClass.reachedObjectIds = combinedIds;
-            System.out.println("Added " + newIds.size() + " reached objects to class " + schemaClass.source + " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
+            System.out.println("Added " + newIds.size() + " reached objects to class " + schemaClass.attributes.source + " (was " + currentReachedIds.length + ", now " + combinedIds.length + ")");
         }
     }
 

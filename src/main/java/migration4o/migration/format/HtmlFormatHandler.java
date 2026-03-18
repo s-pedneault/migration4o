@@ -191,7 +191,7 @@ public class HtmlFormatHandler extends FormatHandler {
             }
             if (result.label != null && !result.label.isBlank()) {
                 Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
-                writer.elementWithContent(SchemaUtil.stripIdPrefix(ctx.schemaClass.destinationName), idEntiteAttrs, result.label, false);
+                writer.elementWithContent(SchemaUtil.stripIdPrefix(ctx.schemaClass.attributes.destinationName), idEntiteAttrs, result.label, false);
                 return true; // fully written — skip field loop
             }
             // No label resolved — fall through to default structure export
@@ -232,7 +232,7 @@ public class HtmlFormatHandler extends FormatHandler {
                 objectIdToHtmlPath.put(currentRootObjectId, writer.outputPath);
             }
         }
-        writer.openStructure(ctx.schemaClass.destinationName, attrs);
+        writer.openStructure(ctx.schemaClass.attributes.destinationName, attrs);
         return false;
     }
 
@@ -242,7 +242,7 @@ public class HtmlFormatHandler extends FormatHandler {
      */
     @Override
     public boolean onField(ExportCurrentState ctx) throws Exception {
-        if (ctx.field == null || ctx.field.embedContents || ctx.fieldValue == null)
+        if (ctx.field == null || ctx.field.attributes.embedContents || ctx.fieldValue == null)
             return false;
 
         try {
@@ -272,7 +272,7 @@ public class HtmlFormatHandler extends FormatHandler {
                     // data key matches
                     // the SCHEMA_FIELDS path used by pointsToByPath in the JS
                     // viewer.
-                    writer.elementWithContent(ctx.field.destinationName, idEntiteAttrs, displayText, false);
+                    writer.elementWithContent(ctx.field.attributes.destinationName, idEntiteAttrs, displayText, false);
                     return true;
                 }
             }
@@ -291,15 +291,15 @@ public class HtmlFormatHandler extends FormatHandler {
      */
     private void collectBackRef(ExportCurrentState ctx, DOSchemaClass idEntiteClass, long targetObjectId) {
         try {
-            // Resolve target entity class via idEntiteClass.pointsTo
-            String expectedType = idEntiteClass.pointsTo;
+            // Resolve target entity class via idEntiteClass.attributes.pointsTo
+            String expectedType = idEntiteClass.attributes.pointsTo;
             if (expectedType == null || expectedType.isEmpty())
                 return;
             DOSchemaClass targetClass = SchemaUtil.findClassByName(expectedType, ctx.request.referenceSchema);
-            if (targetClass == null || targetClass.destinationName == null)
+            if (targetClass == null || targetClass.attributes.destinationName == null)
                 return;
 
-            String targetDestName = targetClass.destinationName;
+            String targetDestName = targetClass.attributes.destinationName;
             String targetId = String.valueOf(targetObjectId);
 
             // Cap refs per target record to avoid bloating the index
@@ -318,13 +318,13 @@ public class HtmlFormatHandler extends FormatHandler {
             }
 
             // Source is always the root entity currently being exported
-            String sourceDestName = currentSchemaClass.destinationName;
+            String sourceDestName = currentSchemaClass.attributes.destinationName;
 
             // Skip self-references: a record referencing itself is meaningless
             if (sourceDestName != null && sourceDestName.equals(targetDestName) && sourceIdStr.equals(targetId))
                 return;
 
-            String sourceEntityLabel = (currentSchemaClass.title != null && !currentSchemaClass.title.isBlank()) ? currentSchemaClass.title : sourceDestName;
+            String sourceEntityLabel = (currentSchemaClass.attributes.title != null && !currentSchemaClass.attributes.title.isBlank()) ? currentSchemaClass.attributes.title : sourceDestName;
 
             BackRefEntry entry = new BackRefEntry();
             entry.sourceEntityDestName = sourceDestName;
@@ -332,7 +332,7 @@ public class HtmlFormatHandler extends FormatHandler {
             entry.sourceId = sourceIdStr;
             entry.sourceSummary = currentRootObjectSummary;
             entry.sourceHref = null; // backfilled in close()
-            entry.fieldTitle = (ctx.field != null && ctx.field.title != null) ? ctx.field.title : null;
+            entry.fieldTitle = (ctx.field != null && ctx.field.attributes.title != null) ? ctx.field.attributes.title : null;
 
             existing.add(entry);
             pendingHrefEntries.add(entry);
@@ -512,6 +512,6 @@ public class HtmlFormatHandler extends FormatHandler {
     // ───────────────────────────────────────────────────────
 
     private static boolean hasSummary(DOSchemaClass sc) {
-        return sc != null && sc.summary != null && !sc.summary.isEmpty();
+        return sc != null && sc.attributes.summary != null && !sc.attributes.summary.isEmpty();
     }
 }

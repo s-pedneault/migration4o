@@ -308,10 +308,10 @@ public class ClassObjectsDialog extends JFrame {
         while (currentClass != null) {
             if (currentClass.fields != null) {
                 for (DOSchemaField field : currentClass.fields) {
-                    String fieldName = field.source;
+                    String fieldName = field.attributes.source;
                     if (!addedFields.contains(fieldName)) {
-                        String currentShortName = currentClass.source != null && currentClass.source.contains(".") ? currentClass.source.substring(currentClass.source.lastIndexOf('.') + 1) : currentClass.source;
-                        String displayName = currentClass.source.equals(targetClass.source) ? fieldName : currentShortName + "." + fieldName;
+                        String currentShortName = currentClass.attributes.source != null && currentClass.attributes.source.contains(".") ? currentClass.attributes.source.substring(currentClass.attributes.source.lastIndexOf('.') + 1) : currentClass.attributes.source;
+                        String displayName = currentClass.attributes.source.equals(targetClass.attributes.source) ? fieldName : currentShortName + "." + fieldName;
                         allFields.add(new FieldInfo(fieldName, displayName));
                         addedFields.add(fieldName);
                     }
@@ -319,7 +319,7 @@ public class ClassObjectsDialog extends JFrame {
             }
 
             // Move to parent class
-            String parentName = currentClass.parentClassName;
+            String parentName = currentClass.attributes.parentClassName;
             if (parentName == null || parentName.isEmpty() || parentName.equals("Undetermined")) {
                 break;
             }
@@ -338,8 +338,8 @@ public class ClassObjectsDialog extends JFrame {
             return null;
         }
         for (DOSchemaClass cls : schema.getClasses()) {
-            String clsShortName = cls.source != null && cls.source.contains(".") ? cls.source.substring(cls.source.lastIndexOf('.') + 1) : cls.source;
-            if (className.equals(clsShortName) || className.equals(cls.source)) {
+            String clsShortName = cls.attributes.source != null && cls.attributes.source.contains(".") ? cls.attributes.source.substring(cls.attributes.source.lastIndexOf('.') + 1) : cls.attributes.source;
+            if (className.equals(clsShortName) || className.equals(cls.attributes.source)) {
                 return cls;
             }
         }
@@ -594,7 +594,7 @@ public class ClassObjectsDialog extends JFrame {
             return null;
         }
         for (DOSchemaClass cls : schema.getClasses()) {
-            if (className.equals(cls.source)) {
+            if (className.equals(cls.attributes.source)) {
                 return cls;
             }
         }

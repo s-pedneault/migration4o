@@ -67,8 +67,8 @@ import java.util.List;
  * (private helper {@code resolveToken()})</td>
  * <td>Walks the DB4O object graph segment by segment: looks up the field by
  * {@code destinationName} (including ancestors), reads the value via
- * {@code field.source}, then advances the schema class using
- * {@code field.type}. For IDEntite segments the IDEntite reference is resolved
+ * {@code field.attributes.source}, then advances the schema class using
+ * {@code field.attributes.type}. For IDEntite segments the IDEntite reference is resolved
  * to its target entity before continuing.</td>
  * </tr>
  * <tr>
@@ -79,8 +79,8 @@ import java.util.List;
  * + {@link migration4o.util.DatabaseUtil#getFieldValueByPath
  * DatabaseUtil.getFieldValueByPath()}</td>
  * <td>Two-phase: first translates the destination-name path to a source-name
- * path (segment by segment, advancing via {@code field.type} or
- * {@code field.childrenType}), then reads the live object value using the
+ * path (segment by segment, advancing via {@code field.attributes.type} or
+ * {@code field.attributes.childrenType}), then reads the live object value using the
  * source path via {@code DatabaseUtil.getFieldValueByPath()}.</td>
  * </tr>
  * <tr>
@@ -285,30 +285,30 @@ public class FieldSelectorPanel extends JPanel {
         List<DOSchemaField> allFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema) : (schemaClass.fields != null ? Arrays.asList(schemaClass.fields) : new ArrayList<>());
 
         for (DOSchemaField field : allFields) {
-            if (!field.isExported)
+            if (!field.attributes.isExported)
                 continue;
-            String dest = field.destinationName;
+            String dest = field.attributes.destinationName;
             if (dest == null || dest.isEmpty())
                 continue;
 
             String fieldLabel = getFieldLabel(field);
 
-            if (field.isCollection && field.embedContents) {
+            if (field.attributes.isCollection && field.attributes.embedContents) {
                 // Collection with embedded contents: group node with children
-                DOSchemaClass childClass = resolveClass(field.childrenType);
+                DOSchemaClass childClass = resolveClass(field.attributes.childrenType);
                 if (childClass != null) {
                     DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
                     addSummaryNodeIfAvailable(groupNode, childClass, dest, fieldLabel);
                     Set<String> visited = new HashSet<>();
-                    if (schemaClass.source != null)
-                        visited.add(schemaClass.source);
+                    if (schemaClass.attributes.source != null)
+                        visited.add(schemaClass.attributes.source);
                     addSubFields(groupNode, childClass, dest, fieldLabel, 1, visited);
                     if (groupNode.getChildCount() > 0) {
                         root.add(groupNode);
                     }
                 }
-            } else if (!field.isCollection && !TypeUtil.isPrimitiveType(field.type)) {
-                DOSchemaClass embClass = resolveClass(field.type);
+            } else if (!field.attributes.isCollection && !TypeUtil.isPrimitiveType(field.attributes.type)) {
+                DOSchemaClass embClass = resolveClass(field.attributes.type);
                 if (embClass != null && embClass.isIDEntite(refSchema)) {
                     // IDEntite reference — resolve target entity and show its
                     // fields as children (regardless of embedContents) so users
@@ -319,8 +319,8 @@ public class FieldSelectorPanel extends JPanel {
                         DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
                         addSummaryNodeIfAvailable(groupNode, targetClass, dest, fieldLabel);
                         Set<String> visited = new HashSet<>();
-                        if (schemaClass.source != null)
-                            visited.add(schemaClass.source);
+                        if (schemaClass.attributes.source != null)
+                            visited.add(schemaClass.attributes.source);
                         addSubFields(groupNode, targetClass, dest, fieldLabel, 1, visited);
                         if (groupNode.getChildCount() > 0) {
                             root.add(groupNode);
@@ -330,13 +330,13 @@ public class FieldSelectorPanel extends JPanel {
                     } else {
                         root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
                     }
-                } else if (embClass != null && field.embedContents) {
+                } else if (embClass != null && field.attributes.embedContents) {
                     // Regular embedded entity: group node with leaf children
                     DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(fieldLabel, dest));
                     addSummaryNodeIfAvailable(groupNode, embClass, dest, fieldLabel);
                     Set<String> visited = new HashSet<>();
-                    if (schemaClass.source != null)
-                        visited.add(schemaClass.source);
+                    if (schemaClass.attributes.source != null)
+                        visited.add(schemaClass.attributes.source);
                     addSubFields(groupNode, embClass, dest, fieldLabel, 1, visited);
                     if (groupNode.getChildCount() > 0) {
                         root.add(groupNode);
@@ -347,7 +347,7 @@ public class FieldSelectorPanel extends JPanel {
                     // Non-embedded complex type — leaf
                     root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
                 }
-            } else if (!field.isCollection) {
+            } else if (!field.attributes.isCollection) {
                 // Primitive / scalar field — leaf node
                 root.add(new DefaultMutableTreeNode(new FieldItem(fieldLabel, dest, fieldLabel)));
             }
@@ -367,31 +367,31 @@ public class FieldSelectorPanel extends JPanel {
             return;
         // Cycle detection: if this class is already an ancestor on this path,
         // stop
-        if (cls.source != null && visited.contains(cls.source))
+        if (cls.attributes.source != null && visited.contains(cls.attributes.source))
             return;
 
         // Mark this class as visited for descendants on this branch
         Set<String> branchVisited = new HashSet<>(visited);
-        if (cls.source != null)
-            branchVisited.add(cls.source);
+        if (cls.attributes.source != null)
+            branchVisited.add(cls.attributes.source);
 
         List<DOSchemaField> subFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(cls, refSchema) : (cls.fields != null ? Arrays.asList(cls.fields) : new ArrayList<>());
 
         for (DOSchemaField sf : subFields) {
-            if (!sf.isExported || sf.destinationName == null || sf.destinationName.isEmpty())
+            if (!sf.attributes.isExported || sf.attributes.destinationName == null || sf.attributes.destinationName.isEmpty())
                 continue;
 
-            String dotPath = parentPath + "." + sf.destinationName;
+            String dotPath = parentPath + "." + sf.attributes.destinationName;
             String childLabel = getFieldLabel(sf);
             String fullLabel = parentLabel + " \u203a " + childLabel;
 
-            if (sf.isCollection) {
+            if (sf.attributes.isCollection) {
                 // Nested collection — skip (matches HTML viewer behavior)
                 continue;
             }
 
-            if (!TypeUtil.isPrimitiveType(sf.type)) {
-                DOSchemaClass embClass = resolveClass(sf.type);
+            if (!TypeUtil.isPrimitiveType(sf.attributes.type)) {
+                DOSchemaClass embClass = resolveClass(sf.attributes.type);
                 if (embClass != null && embClass.isIDEntite(refSchema)) {
                     // IDEntite reference — resolve target entity
                     DOSchemaClass targetClass = resolveIDEntiteTargetClass(embClass, sf);
@@ -407,7 +407,7 @@ public class FieldSelectorPanel extends JPanel {
                     } else {
                         parentNode.add(new DefaultMutableTreeNode(new FieldItem(childLabel, dotPath, fullLabel)));
                     }
-                } else if (embClass != null && sf.embedContents) {
+                } else if (embClass != null && sf.attributes.embedContents) {
                     // Regular embedded entity
                     DefaultMutableTreeNode groupNode = new DefaultMutableTreeNode(new GroupItem(childLabel, dotPath));
                     addSummaryNodeIfAvailable(groupNode, embClass, dotPath, fullLabel);
@@ -551,7 +551,7 @@ public class FieldSelectorPanel extends JPanel {
      * and recursively generate the target entity's summary.
      */
     private void addSummaryNodeIfAvailable(DefaultMutableTreeNode groupNode, DOSchemaClass cls, String parentPath, String parentLabel) {
-        if (cls != null && cls.summary != null && !cls.summary.isEmpty()) {
+        if (cls != null && cls.attributes.summary != null && !cls.attributes.summary.isEmpty()) {
             String dotPath = parentPath + "." + SUMMARY_FIELD_NAME;
             String label = "Sommaire";
             String fullLabel = parentLabel + " \u203a Sommaire";
@@ -571,10 +571,10 @@ public class FieldSelectorPanel extends JPanel {
      */
     private DOSchemaClass resolveIDEntiteTargetClass(DOSchemaClass idEntiteClass, DOSchemaField field) {
         // 1. Try IDEntite class-level pointsTo
-        String target = idEntiteClass.pointsTo;
+        String target = idEntiteClass.attributes.pointsTo;
         // 2. Fall back to field-level pointsTo
         if ((target == null || target.isEmpty()) && field != null) {
-            target = field.pointsTo;
+            target = field.attributes.pointsTo;
         }
         if (target == null || target.isEmpty()) {
             return null;
@@ -591,7 +591,7 @@ public class FieldSelectorPanel extends JPanel {
         // Try short name match
         String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
         for (DOSchemaClass c : refSchema.getClasses()) {
-            if (c.source != null && c.source.endsWith("." + shortName))
+            if (c.attributes.source != null && c.attributes.source.endsWith("." + shortName))
                 return c;
         }
         return null;
@@ -600,12 +600,12 @@ public class FieldSelectorPanel extends JPanel {
     private String getFieldLabel(DOSchemaField field) {
         if (field == null)
             return "";
-        if (field.title != null && !field.title.trim().isEmpty())
-            return field.title.trim();
-        if (field.destinationName != null && !field.destinationName.trim().isEmpty())
-            return humanize(field.destinationName.trim());
-        if (field.source != null && !field.source.trim().isEmpty())
-            return humanize(field.source.trim());
+        if (field.attributes.title != null && !field.attributes.title.trim().isEmpty())
+            return field.attributes.title.trim();
+        if (field.attributes.destinationName != null && !field.attributes.destinationName.trim().isEmpty())
+            return humanize(field.attributes.destinationName.trim());
+        if (field.attributes.source != null && !field.attributes.source.trim().isEmpty())
+            return humanize(field.attributes.source.trim());
         return "";
     }
 

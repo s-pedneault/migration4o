@@ -21,9 +21,7 @@ import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
 
 /**
- * Reader for the new reference-schema.xml format. This format uses <classes> as
- * root element with direct class children. Attributes use 'source' and
- * 'isExported' instead of 'sourceName' and 'migrate'.
+ * Reader for the new reference-schema.xml format. This format uses <classes> as root element with direct class children. Attributes use 'source' and 'isExported' instead of 'sourceName' and 'migrate'.
  */
 public class DOReferenceSchemaReader {
 
@@ -93,12 +91,13 @@ public class DOReferenceSchemaReader {
             Element fieldElement = (Element) fieldNodes.item(i);
             // Only parse direct child fields
             if (fieldElement.getParentNode() == fieldsElement) {
-                DOSchemaField field = parseField(fieldElement);
+                // Shared field definitions have no owning class — null is semantically correct here
+                DOSchemaField field = parseField(fieldElement, schema, null);
                 // Use source attribute as the key for shared field definitions
-                if (field.source != null && !field.source.trim().isEmpty()) {
-                    field.definitionId = field.source; // Mark as shared field
-                                                       // definition
-                    schema.sharedFields.put(field.source, field);
+                if (field.attributes.source != null && !field.attributes.source.trim().isEmpty()) {
+                    field.attributes.definitionId = field.attributes.source; // Mark as shared field
+                    // definition
+                    schema.sharedFields.put(field.attributes.source, field);
                 }
             }
         }
@@ -142,14 +141,26 @@ public class DOReferenceSchemaReader {
         // Use null if pointsTo is empty
         String pointsToValue = pointsTo.isEmpty() ? null : pointsTo;
 
-        // Parse fields
+        // Create the class object first so fields can reference their parent
+        DOSchemaClass newClass = new DOSchemaClass(schema);
+        newClass.attributes.source = absoluteName;
+        newClass.attributes.destinationName = simpleName;
+        newClass.attributes.description = description;
+        newClass.attributes.title = title;
+        newClass.attributes.schemaNotes = schemaNotes != null && !schemaNotes.trim().isEmpty() ? schemaNotes : null;
+        newClass.attributes.summary = summary != null && !summary.trim().isEmpty() ? summary : null;
+        newClass.attributes.parentClassName = parentClassName;
+        newClass.attributes.migrate = migrate;
+        newClass.attributes.pointsTo = pointsToValue;
+
+        // Parse fields, passing newClass so each field knows its parent
         List<DOSchemaField> fieldList = new ArrayList<>();
         NodeList fieldNodes = classElement.getElementsByTagName("field");
         for (int i = 0; i < fieldNodes.getLength(); i++) {
             Element fieldElement = (Element) fieldNodes.item(i);
             // Only parse direct child fields, not nested ones
             if (fieldElement.getParentNode() == classElement) {
-                DOSchemaField field = parseFieldOrReference(fieldElement, schema);
+                DOSchemaField field = parseFieldOrReference(fieldElement, schema, newClass);
                 if (field != null) {
                     fieldList.add(field);
                 }
@@ -172,28 +183,15 @@ public class DOReferenceSchemaReader {
         DOSchemaField[] fields = fieldList.toArray(new DOSchemaField[0]);
         DOSchemaReference[] references = referenceList.toArray(new DOSchemaReference[0]);
 
-        // Create new constructor that accepts references and pointsTo
-        DOSchemaClass newClass = new DOSchemaClass();
-        newClass.source = absoluteName;
-        newClass.destinationName = simpleName;
-        newClass.description = description;
-        newClass.title = title;
-        newClass.schemaNotes = schemaNotes != null && !schemaNotes.trim().isEmpty() ? schemaNotes : null;
-        newClass.summary = summary != null && !summary.trim().isEmpty() ? summary : null;
-        newClass.parentClassName = parentClassName;
         newClass.setFields(fields);
         newClass.schemaReferences = references;
-        newClass.migrate = migrate;
-        newClass.pointsTo = pointsToValue;
         return newClass;
     }
 
     /**
-     * Parse a field element which could be either a full field definition or a
-     * reference to a shared field. If it's a reference (has 'definition'
-     * attribute), resolve it from the schema's shared fields.
+     * Parse a field element which could be either a full field definition or a reference to a shared field. If it's a reference (has 'definition' attribute), resolve it from the schema's shared fields.
      */
-    private DOSchemaField parseFieldOrReference(Element fieldElement, DOSchema schema) {
+    private DOSchemaField parseFieldOrReference(Element fieldElement, DOSchema schema, DOSchemaClass parentClass) {
         String definitionRef = fieldElement.getAttribute("definition");
 
         // Check if this is a reference to a shared field
@@ -205,9 +203,10 @@ public class DOReferenceSchemaReader {
                 return null;
             }
 
-            // Create a copy of the shared field
+            // Create a copy of the shared field and bind it to its owning class
             DOSchemaField field = sharedField.copy();
-            field.definitionId = definitionRef; // Keep the reference ID
+            field.parentClass = parentClass;
+            field.attributes.definitionId = definitionRef; // Keep the reference ID
 
             // CRITICAL: Use the source from THIS element, not from the shared
             // definition
@@ -215,22 +214,22 @@ public class DOReferenceSchemaReader {
             // mIDEntite)
             String classSpecificSource = fieldElement.getAttribute("source");
             if (classSpecificSource != null && !classSpecificSource.trim().isEmpty()) {
-                field.source = classSpecificSource;
+                field.attributes.source = classSpecificSource;
             }
 
             String classSpecificFormat = fieldElement.getAttribute("format");
             if (classSpecificFormat != null && !classSpecificFormat.trim().isEmpty()) {
-                field.format = classSpecificFormat;
+                field.attributes.format = classSpecificFormat;
             }
 
             return field;
         }
 
         // Not a reference - parse as regular field
-        return parseField(fieldElement);
+        return parseField(fieldElement, schema, parentClass);
     }
 
-    private DOSchemaField parseField(Element fieldElement) {
+    private DOSchemaField parseField(Element fieldElement, DOSchema schema, DOSchemaClass parentClass) {
         String source = fieldElement.getAttribute("source");
         String destinationName = fieldElement.getAttribute("destinationName");
         String type = fieldElement.getAttribute("type");
@@ -253,20 +252,20 @@ public class DOReferenceSchemaReader {
         // Children class name
         String childrenClassName = !childrenType.isEmpty() ? childrenType : null;
 
-        DOSchemaField field = new DOSchemaField();
-        field.source = source;
-        field.destinationName = destinationName;
-        field.type = type;
-        field.format = format.isEmpty() ? null : format;
-        field.isExported = isExported;
-        field.skipWhen = skipWhen != null && !skipWhen.trim().isEmpty() ? skipWhen : null;
-        field.skipUserOption = skipUserOption != null && !skipUserOption.trim().isEmpty() ? skipUserOption : null;
-        field.isCollection = isCollection;
-        field.embedContents = isEmbedContents;
-        field.childrenType = childrenClassName;
-        field.title = title.isEmpty() ? null : title;
-        field.description = description.isEmpty() ? null : description;
-        field.pointsTo = pointsTo.isEmpty() ? null : pointsTo;
+        DOSchemaField field = new DOSchemaField(schema, parentClass);
+        field.attributes.source = source;
+        field.attributes.destinationName = destinationName;
+        field.attributes.type = type;
+        field.attributes.format = format.isEmpty() ? null : format;
+        field.attributes.isExported = isExported;
+        field.attributes.skipWhen = skipWhen != null && !skipWhen.trim().isEmpty() ? skipWhen : null;
+        field.attributes.skipUserOption = skipUserOption != null && !skipUserOption.trim().isEmpty() ? skipUserOption : null;
+        field.attributes.isCollection = isCollection;
+        field.attributes.embedContents = isEmbedContents;
+        field.attributes.childrenType = childrenClassName;
+        field.attributes.title = title.isEmpty() ? null : title;
+        field.attributes.description = description.isEmpty() ? null : description;
+        field.attributes.pointsTo = pointsTo.isEmpty() ? null : pointsTo;
         field.childrenSchemaClass = null;
 
         // Parse value mappings from child elements
@@ -280,14 +279,14 @@ public class DOReferenceSchemaReader {
                 String fromValue = mappingElement.getAttribute("from");
                 String toValue = mappingElement.getAttribute("to");
                 if (!fromValue.isEmpty() && !toValue.isEmpty()) {
-                    if (field.valueMap == null) {
-                        field.valueMap = new DOSchemaValueMap();
+                    if (field.attributes.valueMap == null) {
+                        field.attributes.valueMap = new DOSchemaValueMap();
                     }
-                    field.valueMap.add(fromValue, toValue);
+                    field.attributes.valueMap.add(fromValue, toValue);
                 }
             }
-            if (field.valueMap != null && "true".equalsIgnoreCase(bitmaskAttr)) {
-                field.valueMap.bitmask = true;
+            if (field.attributes.valueMap != null && "true".equalsIgnoreCase(bitmaskAttr)) {
+                field.attributes.valueMap.bitmask = true;
             }
         }
 
@@ -298,18 +297,18 @@ public class DOReferenceSchemaReader {
 
             // Read the operator attribute (AND/OR) from the criterias element
             String criteriasOperator = criteriasElement.getAttribute("operator");
-            field.criteriasOperator = criteriasOperator.isEmpty() ? "AND" : criteriasOperator;
+            field.attributes.criteriasOperator = criteriasOperator.isEmpty() ? "AND" : criteriasOperator;
 
             NodeList criteriaNodes = criteriasElement.getElementsByTagName("criteria");
             if (criteriaNodes.getLength() > 0) {
-                field.criterias = new ArrayList<>();
+                field.attributes.criterias = new ArrayList<>();
                 for (int i = 0; i < criteriaNodes.getLength(); i++) {
                     Element criteriaElement = (Element) criteriaNodes.item(i);
                     String match = criteriaElement.getAttribute("match");
                     String with = criteriaElement.getAttribute("with");
                     String operator = criteriaElement.getAttribute("operator");
                     if (!match.isEmpty() && !with.isEmpty()) {
-                        field.criterias.add(new DOFieldCriteria(match, with, operator.isEmpty() ? "equals" : operator));
+                        field.attributes.criterias.add(new DOFieldCriteria(match, with, operator.isEmpty() ? "equals" : operator));
                     }
                 }
             }

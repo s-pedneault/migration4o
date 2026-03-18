@@ -131,53 +131,53 @@ public class SchemaDiagramExporter {
 
         List<DOSchemaClass> allClasses = new ArrayList<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass != null && schemaClass.source != null && !schemaClass.source.isBlank()) {
+            if (schemaClass != null && schemaClass.attributes.source != null && !schemaClass.attributes.source.isBlank()) {
                 allClasses.add(schemaClass);
             }
         }
-        allClasses.sort(Comparator.comparing(c -> c.source));
+        allClasses.sort(Comparator.comparing(c -> c.attributes.source));
 
         Map<String, DOSchemaClass> allClassMap = new HashMap<>();
         for (DOSchemaClass schemaClass : allClasses) {
-            allClassMap.put(schemaClass.source, schemaClass);
+            allClassMap.put(schemaClass.attributes.source, schemaClass);
         }
 
         Set<String> canonicalFilter = resolveClassFilter(classNameFilter, allClassMap);
 
         Map<String, Integer> childCountByClass = new HashMap<>();
         for (DOSchemaClass schemaClass : allClasses) {
-            childCountByClass.put(schemaClass.source, 0);
+            childCountByClass.put(schemaClass.attributes.source, 0);
         }
         for (DOSchemaClass schemaClass : allClasses) {
-            if (schemaClass.parentClassName == null || schemaClass.parentClassName.isBlank()) {
+            if (schemaClass.attributes.parentClassName == null || schemaClass.attributes.parentClassName.isBlank()) {
                 continue;
             }
-            DOSchemaClass parent = findByName(allClassMap, schemaClass.parentClassName);
+            DOSchemaClass parent = findByName(allClassMap, schemaClass.attributes.parentClassName);
             if (parent != null) {
-                childCountByClass.put(parent.source, childCountByClass.getOrDefault(parent.source, 0) + 1);
+                childCountByClass.put(parent.attributes.source, childCountByClass.getOrDefault(parent.attributes.source, 0) + 1);
             }
         }
 
         List<DOSchemaClass> classes = new ArrayList<>();
         for (DOSchemaClass schemaClass : allClasses) {
-            if (!canonicalFilter.isEmpty() && !canonicalFilter.contains(schemaClass.source)) {
+            if (!canonicalFilter.isEmpty() && !canonicalFilter.contains(schemaClass.attributes.source)) {
                 continue;
             }
-            boolean isLeaf = childCountByClass.getOrDefault(schemaClass.source, 0) == 0;
+            boolean isLeaf = childCountByClass.getOrDefault(schemaClass.attributes.source, 0) == 0;
             boolean isIDPointer = schemaClass.isIDEntite(schema);
             if (isLeaf && !isIDPointer) {
                 classes.add(schemaClass);
             }
         }
-        classes.sort(Comparator.comparing(c -> c.source));
+        classes.sort(Comparator.comparing(c -> c.attributes.source));
 
         Set<String> includedNodeNames = new HashSet<>();
         for (DOSchemaClass schemaClass : classes) {
-            includedNodeNames.add(schemaClass.source);
+            includedNodeNames.add(schemaClass.attributes.source);
         }
 
         for (DOSchemaClass schemaClass : classes) {
-            dot.append("  \"").append(escapeDot(schemaClass.source)).append("\"");
+            dot.append("  \"").append(escapeDot(schemaClass.attributes.source)).append("\"");
             dot.append(" [label=\"").append(buildClassLabel(schemaClass, allClassMap, includedNodeNames, schema)).append("\"];\n");
         }
 
@@ -186,7 +186,7 @@ public class SchemaDiagramExporter {
         Set<String> emittedEdges = new HashSet<>();
 
         for (DOSchemaClass schemaClass : classes) {
-            String source = schemaClass.source;
+            String source = schemaClass.attributes.source;
 
             if (schemaClass.schemaReferences != null) {
                 for (DOSchemaReference reference : schemaClass.schemaReferences) {
@@ -195,10 +195,10 @@ public class SchemaDiagramExporter {
                     }
                     DOSchemaClass refSource = resolveGraphClass(allClassMap, schema, reference.className);
                     DOSchemaClass refTarget = resolveGraphClass(allClassMap, schema, source);
-                    if (refSource != null && refTarget != null && includedNodeNames.contains(refSource.source) && includedNodeNames.contains(refTarget.source) && !refSource.source.equals(refTarget.source)) {
+                    if (refSource != null && refTarget != null && includedNodeNames.contains(refSource.attributes.source) && includedNodeNames.contains(refTarget.attributes.source) && !refSource.attributes.source.equals(refTarget.attributes.source)) {
                         String referenceField = getDisplayFieldName(schemaClass, reference.fieldName);
                         String label = referenceField != null && !referenceField.isBlank() ? "ref:" + referenceField : "reference";
-                        addEdge(dot, emittedEdges, refSource.source, refTarget.source, label, "#F58518", "normal", "solid", 1);
+                        addEdge(dot, emittedEdges, refSource.attributes.source, refTarget.attributes.source, label, "#F58518", "normal", "solid", 1);
                     }
                 }
             }
@@ -209,8 +209,8 @@ public class SchemaDiagramExporter {
                         continue;
                     }
 
-                    addFieldTypeEdge(dot, emittedEdges, allClassMap, includedNodeNames, schema, source, field, field.type, false);
-                    addFieldTypeEdge(dot, emittedEdges, allClassMap, includedNodeNames, schema, source, field, field.childrenType, true);
+                    addFieldTypeEdge(dot, emittedEdges, allClassMap, includedNodeNames, schema, source, field, field.attributes.type, false);
+                    addFieldTypeEdge(dot, emittedEdges, allClassMap, includedNodeNames, schema, source, field, field.attributes.childrenType, true);
                 }
             }
         }
@@ -227,8 +227,8 @@ public class SchemaDiagramExporter {
 
         for (String className : requestedClassNames) {
             DOSchemaClass schemaClass = findByName(classMap, className);
-            if (schemaClass != null && schemaClass.source != null) {
-                resolved.add(schemaClass.source);
+            if (schemaClass != null && schemaClass.attributes.source != null) {
+                resolved.add(schemaClass.attributes.source);
             }
         }
 
@@ -241,7 +241,7 @@ public class SchemaDiagramExporter {
         }
 
         DOSchemaClass target = resolveGraphClass(classMap, schema, rawTypeName);
-        if (target == null || sourceClassName.equals(target.source) || !includedNodeNames.contains(target.source)) {
+        if (target == null || sourceClassName.equals(target.attributes.source) || !includedNodeNames.contains(target.attributes.source)) {
             return;
         }
 
@@ -253,7 +253,7 @@ public class SchemaDiagramExporter {
         String targetName = getDisplayClassName(target);
         String label = kind + ":" + safeField + " -> " + targetName;
 
-        addEdge(dot, emittedEdges, sourceClassName, target.source, label, "#9C755F", "normal", "dotted", 1);
+        addEdge(dot, emittedEdges, sourceClassName, target.attributes.source, label, "#9C755F", "normal", "dotted", 1);
     }
 
     private DOSchemaClass resolveGraphClass(Map<String, DOSchemaClass> classMap, DOSchema schema, String className) {
@@ -262,8 +262,8 @@ public class SchemaDiagramExporter {
             return null;
         }
 
-        if (resolved.isIDEntite(schema) && resolved.pointsTo != null && !resolved.pointsTo.isBlank()) {
-            DOSchemaClass pointed = findByName(classMap, resolved.pointsTo);
+        if (resolved.isIDEntite(schema) && resolved.attributes.pointsTo != null && !resolved.attributes.pointsTo.isBlank()) {
+            DOSchemaClass pointed = findByName(classMap, resolved.attributes.pointsTo);
             if (pointed != null) {
                 return pointed;
             }
@@ -358,20 +358,20 @@ public class SchemaDiagramExporter {
         if (schemaClass == null) {
             return "Unknown";
         }
-        if (schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) {
-            return schemaClass.destinationName;
+        if (schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) {
+            return schemaClass.attributes.destinationName;
         }
-        return getSimpleName(schemaClass.source);
+        return getSimpleName(schemaClass.attributes.source);
     }
 
     private String getDisplayFieldName(DOSchemaField field) {
         if (field == null) {
             return null;
         }
-        if (field.destinationName != null && !field.destinationName.isBlank()) {
-            return field.destinationName;
+        if (field.attributes.destinationName != null && !field.attributes.destinationName.isBlank()) {
+            return field.attributes.destinationName;
         }
-        return field.source;
+        return field.attributes.source;
     }
 
     private String getDisplayFieldName(DOSchemaClass schemaClass, String sourceFieldName) {
@@ -383,7 +383,7 @@ public class SchemaDiagramExporter {
                 if (field == null) {
                     continue;
                 }
-                if (sourceFieldName.equals(field.source) || sourceFieldName.equals(field.destinationName)) {
+                if (sourceFieldName.equals(field.attributes.source) || sourceFieldName.equals(field.attributes.destinationName)) {
                     String display = getDisplayFieldName(field);
                     if (display != null && !display.isBlank()) {
                         return display;
@@ -395,13 +395,13 @@ public class SchemaDiagramExporter {
     }
 
     private String resolveDisplayRelationType(Map<String, DOSchemaClass> classMap, Set<String> includedNodeNames, DOSchema schema, DOSchemaField field) {
-        DOSchemaClass childrenTarget = resolveRelationTarget(classMap, schema, field != null ? field.childrenType : null);
-        if (childrenTarget != null && includedNodeNames.contains(childrenTarget.source)) {
+        DOSchemaClass childrenTarget = resolveRelationTarget(classMap, schema, field != null ? field.attributes.childrenType : null);
+        if (childrenTarget != null && includedNodeNames.contains(childrenTarget.attributes.source)) {
             return getDisplayClassName(childrenTarget);
         }
 
-        DOSchemaClass typeTarget = resolveRelationTarget(classMap, schema, field != null ? field.type : null);
-        if (typeTarget != null && includedNodeNames.contains(typeTarget.source)) {
+        DOSchemaClass typeTarget = resolveRelationTarget(classMap, schema, field != null ? field.attributes.type : null);
+        if (typeTarget != null && includedNodeNames.contains(typeTarget.attributes.source)) {
             return getDisplayClassName(typeTarget);
         }
 

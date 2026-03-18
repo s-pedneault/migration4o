@@ -54,7 +54,7 @@ public class ExportSelectionAdvisor {
     static final class ReferenceEdge {
         final String sourceClass; // fully-qualified source class name
         final String fieldName; // DB4O / source field name (from schema
-                                // field.source)
+                                // field.attributes.source)
         final String targetClass; // fully-qualified target class name
         final boolean isIDEntite; // true → resolve via
                                   // ReferenceUtil.resolveIDEntiteReference
@@ -371,8 +371,8 @@ public class ExportSelectionAdvisor {
                     srcNames.add(declaringClass);
                 } else {
                     for (DOSchemaClass candidate : exportedClasses) {
-                        if (!candidate.source.equals(seedClassName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
-                            srcNames.add(candidate.source);
+                        if (!candidate.attributes.source.equals(seedClassName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                            srcNames.add(candidate.attributes.source);
                         }
                     }
                 }
@@ -389,11 +389,11 @@ public class ExportSelectionAdvisor {
                     DOSchemaField schemaField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(srcClass, ref.fieldName, referenceSchema);
                     DOSchemaField effectiveField = schemaField;
                     if (schemaField != null && schemaField.isSharedField()) {
-                        DOSchemaField def = referenceSchema.sharedFields.get(schemaField.definitionId);
+                        DOSchemaField def = referenceSchema.sharedFields.get(schemaField.attributes.definitionId);
                         if (def != null)
                             effectiveField = def;
                     }
-                    if (effectiveField != null && !effectiveField.isExported)
+                    if (effectiveField != null && !effectiveField.attributes.isExported)
                         continue;
 
                     boolean isIDEntite = effectiveField != null && TypeUtil.isIDEntiteField(effectiveField, referenceSchema);
@@ -570,8 +570,8 @@ public class ExportSelectionAdvisor {
                     srcNames.add(declaringClass);
                 } else {
                     for (DOSchemaClass candidate : exportedClasses) {
-                        if (!candidate.source.equals(tgtName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
-                            srcNames.add(candidate.source);
+                        if (!candidate.attributes.source.equals(tgtName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                            srcNames.add(candidate.attributes.source);
                         }
                     }
                 }
@@ -589,13 +589,13 @@ public class ExportSelectionAdvisor {
                     // the shared definition.
                     DOSchemaField effectiveField = schemaField;
                     if (schemaField != null && schemaField.isSharedField()) {
-                        DOSchemaField def = referenceSchema.sharedFields.get(schemaField.definitionId);
+                        DOSchemaField def = referenceSchema.sharedFields.get(schemaField.attributes.definitionId);
                         if (def != null)
                             effectiveField = def;
                     }
                     // Skip if the effective field is explicitly marked not
                     // exported.
-                    if (effectiveField != null && !effectiveField.isExported)
+                    if (effectiveField != null && !effectiveField.attributes.isExported)
                         continue;
 
                     boolean isIDEntite = effectiveField != null && TypeUtil.isIDEntiteField(effectiveField, referenceSchema);
@@ -923,7 +923,7 @@ public class ExportSelectionAdvisor {
             DOSchemaField field = null;
             List<DOSchemaField> allFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(currentClass, referenceSchema);
             for (DOSchemaField f : allFields) {
-                if (segments[i].equals(f.destinationName)) {
+                if (segments[i].equals(f.attributes.destinationName)) {
                     field = f;
                     break;
                 }
@@ -933,12 +933,12 @@ public class ExportSelectionAdvisor {
 
             if (sourcePath.length() > 0)
                 sourcePath.append(".");
-            sourcePath.append(field.source);
+            sourcePath.append(field.attributes.source);
 
             // If there are more segments, resolve the embedded type for the
             // next level
             if (i < segments.length - 1) {
-                String typeName = field.isCollection ? field.childrenType : field.type;
+                String typeName = field.attributes.isCollection ? field.attributes.childrenType : field.attributes.type;
                 currentClass = (typeName != null) ? referenceSchema.findClassByName(typeName) : null;
             }
         }

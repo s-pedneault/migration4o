@@ -7,13 +7,13 @@ import com.db4o.ext.StoredClass;
 
 import migration4o.database.DODatabaseContext;
 import migration4o.database.DODatabaseMonitor;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Converter for transforming DB4O StoredClass objects to DOSchemaClass objects.
- * Provides static methods for class conversion without requiring instantiation.
+ * Converter for transforming DB4O StoredClass objects to DOSchemaClass objects. Provides static methods for class conversion without requiring instantiation.
  */
 public class DOClassConverter {
 
@@ -21,29 +21,26 @@ public class DOClassConverter {
      * Converts a StoredClass directly to a DOSchemaClass.
      * 
      * @param storedClass The DB4O stored class to convert
-     * @param context     The database context containing container and stored class
-     *                    map
+     * @param context The database context containing container and stored class map
      * @return A DOSchemaClass representing the stored class
      */
-    public static DOSchemaClass convertStoredClassToSchemaClass(
-            StoredClass storedClass,
-            DODatabaseContext context) {
-        return convertStoredClassToSchemaClass(storedClass, context, null);
+    public static DOSchemaClass convertStoredClassToSchemaClass(StoredClass storedClass, DODatabaseContext context) {
+        return convertStoredClassToSchemaClass(storedClass, context, null, null);
     }
 
     /**
      * Converts a StoredClass directly to a DOSchemaClass.
      * 
      * @param storedClass The DB4O stored class to convert
-     * @param context     The database context containing container and stored class
-     *                    map
-     * @param monitor     Optional monitor for progress feedback
+     * @param context The database context containing container and stored class map
+     * @param monitor Optional monitor for progress feedback
      * @return A DOSchemaClass representing the stored class
      */
-    public static DOSchemaClass convertStoredClassToSchemaClass(
-            StoredClass storedClass,
-            DODatabaseContext context,
-            DODatabaseMonitor monitor) {
+    public static DOSchemaClass convertStoredClassToSchemaClass(StoredClass storedClass, DODatabaseContext context, DODatabaseMonitor monitor) {
+        return convertStoredClassToSchemaClass(storedClass, context, monitor, null);
+    }
+
+    public static DOSchemaClass convertStoredClassToSchemaClass(StoredClass storedClass, DODatabaseContext context, DODatabaseMonitor monitor, DOSchema schema) {
 
         String absoluteName = storedClass.getName();
         String simpleName = DatabaseUtil.getSimpleClassName(absoluteName);
@@ -58,10 +55,14 @@ public class DOClassConverter {
             parentClassName = parentStoredClass.getName();
         }
 
-        // Convert fields
-        DOSchemaField[] schemaFields = DOFieldsConverter.convertStoredFieldsToSchemaFields(
-                storedClass,
-                context);
+        // Create schema class first so it can be referenced by its fields
+        DOSchemaClass newClass = new DOSchemaClass(schema);
+        newClass.attributes.source = absoluteName;
+        newClass.attributes.destinationName = simpleName;
+        newClass.attributes.parentClassName = parentClassName;
+
+        // Convert fields, linking them to their parent class
+        DOSchemaField[] schemaFields = DOFieldsConverter.convertStoredFieldsToSchemaFields(storedClass, context, monitor, schema, newClass);
 
         // Get object IDs - this can be very expensive for classes with many objects
         if (monitor != null) {
@@ -78,17 +79,11 @@ public class DOClassConverter {
         }
 
         // Create schema class - all database classes are marked as migrate=true
-        DOSchemaClass newClass = new DOSchemaClass();
-        newClass.source = absoluteName;
-        newClass.destinationName = simpleName;
-        // newClass.description = description;
-        // newClass.title = title;
-        newClass.parentClassName = parentClassName;
         newClass.setFields(schemaFields);
         newClass.schemaReferences = null; // Will be resolved later if needed
-        newClass.migrate = true; // All database classes are migratable
+        newClass.attributes.migrate = true; // All database classes are migratable
         newClass.objectIds = objectIds;
-        newClass.pointsTo = null;
+        newClass.attributes.pointsTo = null;
 
         return newClass;
     }

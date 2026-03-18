@@ -42,7 +42,7 @@ class XSDContext {
         DOSchemaClass current = schemaClass;
         while (current != null) {
             chain.add(0, current); // prepend so root is first
-            String parentName = current.parentClassName;
+            String parentName = current.attributes.parentClassName;
             if (parentName == null || parentName.isEmpty())
                 break;
             DOSchemaClass parent = schema.findClassByName(parentName);
@@ -56,8 +56,8 @@ class XSDContext {
         for (DOSchemaClass cls : chain) {
             if (cls.fields != null) {
                 for (DOSchemaField f : cls.fields) {
-                    if (f.isExported) {
-                        result.put(f.destinationName, f);
+                    if (f.attributes.isExported) {
+                        result.put(f.attributes.destinationName, f);
                     }
                 }
             }
@@ -75,26 +75,26 @@ class XSDContext {
         // Collect all ancestor field destinationNames so we can exclude them
         Set<String> ancestorFieldNames = new HashSet<>();
         DOSchema schema = getReferenceSchema();
-        String parentName = schemaClass.parentClassName;
+        String parentName = schemaClass.attributes.parentClassName;
         while (parentName != null && !parentName.isEmpty()) {
             DOSchemaClass parent = schema.findClassByName(parentName);
             if (parent == null)
                 break;
             if (parent.fields != null) {
                 for (DOSchemaField f : parent.fields) {
-                    if (f.isExported) {
-                        ancestorFieldNames.add(f.destinationName);
+                    if (f.attributes.isExported) {
+                        ancestorFieldNames.add(f.attributes.destinationName);
                     }
                 }
             }
-            parentName = parent.parentClassName;
+            parentName = parent.attributes.parentClassName;
         }
 
         Map<String, DOSchemaField> result = new LinkedHashMap<>();
         if (schemaClass.fields != null) {
             for (DOSchemaField f : schemaClass.fields) {
-                if (f.isExported && !ancestorFieldNames.contains(f.destinationName)) {
-                    result.put(f.destinationName, f);
+                if (f.attributes.isExported && !ancestorFieldNames.contains(f.attributes.destinationName)) {
+                    result.put(f.attributes.destinationName, f);
                 }
             }
         }
@@ -108,9 +108,9 @@ class XSDContext {
         if (schemaClass == null)
             return false;
         DOSchema schema = getReferenceSchema();
-        String targetName = schemaClass.source;
+        String targetName = schemaClass.attributes.source;
         for (DOSchemaClass c : schema.getClasses()) {
-            if (targetName.equals(c.parentClassName)) {
+            if (targetName.equals(c.attributes.parentClassName)) {
                 return true;
             }
         }
@@ -125,17 +125,17 @@ class XSDContext {
         DOSchema schema = getReferenceSchema();
         List<DOSchemaClass> descendants = new ArrayList<>();
         List<String> queue = new ArrayList<>();
-        queue.add(schemaClass.source);
+        queue.add(schemaClass.attributes.source);
 
         int idx = 0;
         while (idx < queue.size()) {
             String parentName = queue.get(idx++);
             for (DOSchemaClass c : schema.getClasses()) {
-                if (parentName.equals(c.parentClassName)) {
-                    if (c.migrate) {
+                if (parentName.equals(c.attributes.parentClassName)) {
+                    if (c.attributes.migrate) {
                         descendants.add(c);
                     }
-                    queue.add(c.source);
+                    queue.add(c.attributes.source);
                 }
             }
         }
@@ -147,12 +147,12 @@ class XSDContext {
      * xs:extension. Returns the parent class if it's exported, null otherwise.
      */
     DOSchemaClass getExportedParent(DOSchemaClass schemaClass) {
-        if (schemaClass.parentClassName == null || schemaClass.parentClassName.isEmpty()) {
+        if (schemaClass.attributes.parentClassName == null || schemaClass.attributes.parentClassName.isEmpty()) {
             return null;
         }
         DOSchema schema = getReferenceSchema();
-        DOSchemaClass parent = schema.findClassByName(schemaClass.parentClassName);
-        if (parent != null && parent.migrate) {
+        DOSchemaClass parent = schema.findClassByName(schemaClass.attributes.parentClassName);
+        if (parent != null && parent.attributes.migrate) {
             return parent;
         }
         return null;

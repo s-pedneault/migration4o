@@ -7,12 +7,11 @@ import com.db4o.ext.StoredClass;
 
 import migration4o.database.DODatabaseContext;
 import migration4o.database.DODatabaseMonitor;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 
 /**
- * Converter for transforming DB4O StoredClass arrays to DOSchemaClass arrays.
- * Provides static methods for batch class conversion without requiring
- * instantiation.
+ * Converter for transforming DB4O StoredClass arrays to DOSchemaClass arrays. Provides static methods for batch class conversion without requiring instantiation.
  */
 public class DOClassesConverter {
 
@@ -23,34 +22,29 @@ public class DOClassesConverter {
     }
 
     /**
-     * Converts an array of StoredClass objects to an array of DOSchemaClass
-     * objects.
+     * Converts an array of StoredClass objects to an array of DOSchemaClass objects.
      * 
      * @param storedClasses The array of DB4O stored classes to convert
-     * @param context       The database context containing container and stored
-     *                      class map
+     * @param context The database context containing container and stored class map
      * @return Array of converted schema classes
      */
-    public static DOSchemaClass[] convertStoredClassesToSchemaClasses(
-            StoredClass[] storedClasses,
-            DODatabaseContext context) {
-        return convertStoredClassesToSchemaClasses(storedClasses, context, null);
+    public static DOSchemaClass[] convertStoredClassesToSchemaClasses(StoredClass[] storedClasses, DODatabaseContext context) {
+        return convertStoredClassesToSchemaClasses(storedClasses, context, null, null);
     }
 
     /**
-     * Converts an array of StoredClass objects to an array of DOSchemaClass
-     * objects.
+     * Converts an array of StoredClass objects to an array of DOSchemaClass objects.
      * 
      * @param storedClasses The array of DB4O stored classes to convert
-     * @param context       The database context containing container and stored
-     *                      class map
-     * @param monitor       Optional monitor for progress feedback
+     * @param context The database context containing container and stored class map
+     * @param monitor Optional monitor for progress feedback
      * @return Array of converted schema classes
      */
-    public static DOSchemaClass[] convertStoredClassesToSchemaClasses(
-            StoredClass[] storedClasses,
-            DODatabaseContext context,
-            DODatabaseMonitor monitor) {
+    public static DOSchemaClass[] convertStoredClassesToSchemaClasses(StoredClass[] storedClasses, DODatabaseContext context, DODatabaseMonitor monitor) {
+        return convertStoredClassesToSchemaClasses(storedClasses, context, monitor, null);
+    }
+
+    public static DOSchemaClass[] convertStoredClassesToSchemaClasses(StoredClass[] storedClasses, DODatabaseContext context, DODatabaseMonitor monitor, DOSchema schema) {
 
         List<DOSchemaClass> schemaClasses = new ArrayList<>();
 
@@ -61,17 +55,14 @@ public class DOClassesConverter {
                     monitor.onConvertingClass(storedClass.getName(), i + 1, storedClasses.length);
                 }
 
-                DOSchemaClass schemaClass = DOClassConverter.convertStoredClassToSchemaClass(storedClass, context,
-                        monitor);
+                DOSchemaClass schemaClass = DOClassConverter.convertStoredClassToSchemaClass(storedClass, context, monitor, schema);
                 schemaClasses.add(schemaClass);
 
                 if (monitor != null) {
-                    monitor.onClassConverted(storedClass.getName(),
-                            schemaClass.fields != null ? schemaClass.fields.length : 0);
+                    monitor.onClassConverted(storedClass.getName(), schemaClass.fields != null ? schemaClass.fields.length : 0);
                 }
             } catch (Exception e) {
-                String errorMsg = "Could not convert stored class '" +
-                        storedClass.getName() + "' to schema class: " + e.getMessage();
+                String errorMsg = "Could not convert stored class '" + storedClass.getName() + "' to schema class: " + e.getMessage();
                 if (monitor != null) {
                     monitor.onClassConversionWarning(storedClass.getName(), e.getMessage());
                 } else {

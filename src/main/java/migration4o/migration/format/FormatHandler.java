@@ -133,12 +133,12 @@ public abstract class FormatHandler {
      * 
      * <pre>
      * Map&lt;String, String&gt; attrs = exportNativeIds ? Map.of("id", objectId) : null;
-     * writer.openStructure(ctx.schemaClass.destinationName, attrs);
+     * writer.openStructure(ctx.schemaClass.attributes.destinationName, attrs);
      * return false;
      * </pre>
      * 
      * When {@code false} is returned the engine calls
-     * {@code writer.closeStructure(ctx.schemaClass.destinationName)} after the
+     * {@code writer.closeStructure(ctx.schemaClass.attributes.destinationName)} after the
      * field loop.
      */
     public boolean onObject(ExportCurrentState ctx) throws Exception {
@@ -148,7 +148,7 @@ public abstract class FormatHandler {
         if (ctx.request.exportNativeIds) {
             attrs = Map.of("id", String.valueOf(ctx.currentObject().objectId));
         }
-        writer.openStructure(ctx.schemaClass.destinationName, attrs);
+        writer.openStructure(ctx.schemaClass.attributes.destinationName, attrs);
         return false;
     }
 

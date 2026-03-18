@@ -39,9 +39,9 @@ public class IDReferenceDetector {
         }
 
         // Check if this field should NOT embed contents and has a childrenType
-        if (!schemaField.embedContents && schemaField.childrenType != null) {
+        if (!schemaField.attributes.embedContents && schemaField.attributes.childrenType != null) {
             // Find the corresponding ID class for this entity type
-            DOSchemaClass idClass = IDClassResolver.findIDClass(schemaField.childrenType, referenceSchema);
+            DOSchemaClass idClass = IDClassResolver.findIDClass(schemaField.attributes.childrenType, referenceSchema);
             if (idClass != null) {
                 return new DetectionResult(true, idClass);
             }

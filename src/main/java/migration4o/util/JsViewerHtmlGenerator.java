@@ -86,7 +86,7 @@ public final class JsViewerHtmlGenerator {
         }
 
         String title = baseName;
-        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
+        String entityName = (schemaClass != null && schemaClass.attributes.title != null && !schemaClass.attributes.title.isBlank()) ? schemaClass.attributes.title : ((schemaClass != null && schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) ? schemaClass.attributes.destinationName : baseName);
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
@@ -117,7 +117,7 @@ public final class JsViewerHtmlGenerator {
         }
 
         String title = baseName;
-        String entityName = (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
+        String entityName = (schemaClass != null && schemaClass.attributes.title != null && !schemaClass.attributes.title.isBlank()) ? schemaClass.attributes.title : ((schemaClass != null && schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) ? schemaClass.attributes.destinationName : baseName);
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
@@ -214,7 +214,7 @@ public final class JsViewerHtmlGenerator {
             baseName = fileName.substring(0, extensionIndex);
 
         String title = baseName;
-        String entityName = (configTitle != null && !configTitle.isBlank()) ? configTitle : (schemaClass != null && schemaClass.title != null && !schemaClass.title.isBlank()) ? schemaClass.title : ((schemaClass != null && schemaClass.destinationName != null && !schemaClass.destinationName.isBlank()) ? schemaClass.destinationName : baseName);
+        String entityName = (configTitle != null && !configTitle.isBlank()) ? configTitle : (schemaClass != null && schemaClass.attributes.title != null && !schemaClass.attributes.title.isBlank()) ? schemaClass.attributes.title : ((schemaClass != null && schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) ? schemaClass.attributes.destinationName : baseName);
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String base = (baseHref != null && !baseHref.isBlank()) ? baseHref : "./";
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
@@ -339,10 +339,10 @@ public final class JsViewerHtmlGenerator {
         Set<String> seen = new HashSet<>();
 
         for (DOSchemaField field : schemaClass.fields) {
-            if (!field.isExported) {
+            if (!field.attributes.isExported) {
                 continue;
             }
-            String name = field.destinationName != null ? field.destinationName : field.source;
+            String name = field.attributes.destinationName != null ? field.attributes.destinationName : field.attributes.source;
             if (name == null || name.isBlank()) {
                 continue;
             }
@@ -362,31 +362,31 @@ public final class JsViewerHtmlGenerator {
     }
 
     private static void appendFieldJson(StringBuilder sb, DOSchemaField field, String path, int depth, DOSchema refSchema) {
-        String name = field.destinationName != null ? field.destinationName : field.source;
+        String name = field.attributes.destinationName != null ? field.attributes.destinationName : field.attributes.source;
         sb.append('{');
         sb.append("\"name\":\"").append(escapeJson(name != null ? name : path)).append("\",");
         sb.append("\"path\":\"").append(escapeJson(path)).append("\",");
         sb.append("\"type\":\"").append(categorizeFieldType(field)).append("\",");
-        sb.append("\"collection\":").append(field.isCollection);
+        sb.append("\"collection\":").append(field.attributes.isCollection);
 
-        if (field.title != null && !field.title.isBlank()) {
-            sb.append(",\"title\":\"").append(escapeJson(field.title)).append('"');
+        if (field.attributes.title != null && !field.attributes.title.isBlank()) {
+            sb.append(",\"title\":\"").append(escapeJson(field.attributes.title)).append('"');
         }
 
         // Mark IDEntite fields that do not embed their contents — the HTML
         // viewer
         // will render these inline (multicolumn) inside the parent section.
-        if (!field.isCollection && !field.embedContents && field.type != null && refSchema != null) {
-            DOSchemaClass typeClass = refSchema.findClassByName(field.type);
+        if (!field.attributes.isCollection && !field.attributes.embedContents && field.attributes.type != null && refSchema != null) {
+            DOSchemaClass typeClass = refSchema.findClassByName(field.attributes.type);
             if (typeClass != null && typeClass.isIDEntite(refSchema)) {
                 sb.append(",\"idEntite\":true");
                 // Resolve the target entity destination name for cross-page
                 // deep-linking
-                String targetFqn = typeClass.pointsTo;
+                String targetFqn = typeClass.attributes.pointsTo;
                 if (targetFqn != null && !targetFqn.isBlank()) {
                     DOSchemaClass targetClass = refSchema.findClassByName(targetFqn);
-                    if (targetClass != null && targetClass.destinationName != null && !targetClass.destinationName.isBlank()) {
-                        sb.append(",\"pointsTo\":\"").append(escapeJson(targetClass.destinationName)).append('"');
+                    if (targetClass != null && targetClass.attributes.destinationName != null && !targetClass.attributes.destinationName.isBlank()) {
+                        sb.append(",\"pointsTo\":\"").append(escapeJson(targetClass.attributes.destinationName)).append('"');
                     }
                 }
             }
@@ -397,10 +397,10 @@ public final class JsViewerHtmlGenerator {
             boolean childFirst = true;
             Set<String> childSeen = new HashSet<>();
             for (DOSchemaField cf : field.childrenSchemaClass.fields) {
-                if (!cf.isExported) {
+                if (!cf.attributes.isExported) {
                     continue;
                 }
-                String cn = cf.destinationName != null ? cf.destinationName : cf.source;
+                String cn = cf.attributes.destinationName != null ? cf.attributes.destinationName : cf.attributes.source;
                 if (cn == null || cn.isBlank() || !childSeen.add(cn)) {
                     continue;
                 }
@@ -417,10 +417,10 @@ public final class JsViewerHtmlGenerator {
     }
 
     private static String categorizeFieldType(DOSchemaField field) {
-        if (field.isCollection) {
+        if (field.attributes.isCollection) {
             return "collection";
         }
-        String type = field.type;
+        String type = field.attributes.type;
         if (type == null || type.isEmpty()) {
             return "string";
         }
