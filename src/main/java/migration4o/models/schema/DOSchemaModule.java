@@ -6,8 +6,7 @@ import java.util.List;
 import migration4o.models.ui.ClassExportConfig;
 
 /**
- * A module grouping related classes for export. Loaded from
- * migration-format.xml via DOModuleStructureReader.
+ * A module grouping related classes for export. Loaded from migration-format.xml via DOModuleStructureReader.
  */
 public class DOSchemaModule {
 
@@ -19,7 +18,12 @@ public class DOSchemaModule {
     public String tileIconColor;
     public String tileFontSize;
     public List<ClassExportConfig> classConfigs = new ArrayList<>();
+    public DOSchemaModule parentModule;
     public List<DOSchemaModule> children = new ArrayList<>();
+
+    public DOSchemaModule(DOSchemaModule parentModule) {
+        this.parentModule = parentModule;
+    }
 
     @Override
     public String toString() {

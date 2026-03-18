@@ -63,8 +63,7 @@ import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.d
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.ModuleDialog;
 
 /**
- * Panel for organizing classes into a migration structure with modules. Left
- * pane shows available classes, right pane shows export structure with modules.
+ * Panel for organizing classes into a migration structure with modules. Left pane shows available classes, right pane shows export structure with modules.
  */
 public class MigrationStructurePanel extends JPanel {
     private migration4o.database.DODatabaseContext activeContext;
@@ -110,8 +109,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Sets up the callback for export results to update the migration coverage
-     * panel.
+     * Sets up the callback for export results to update the migration coverage panel.
      */
     private void setupExportStatisticsCallback() {
         exportOrchestrator.setResultCallback(new MigrationServiceCallback.ExportStatisticsCallback() {
@@ -560,7 +558,19 @@ public class MigrationStructurePanel extends JPanel {
             String tileFontSize = dialog.getTileFontSize();
 
             DefaultMutableTreeNode root = getExportRoot();
-            DOSchemaModule moduleNode = new DOSchemaModule();
+
+            // Determine parent module before constructing: if a module node is selected, it becomes the parent;
+            // if nothing is selected or the root is selected, this is a top-level module (parent = null)
+            DOSchemaModule parentModule = null;
+            TreePath selectedPath = getSelectedTreePath();
+            if (selectedPath != null) {
+                DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
+                if (selectedNode.getUserObject() instanceof DOSchemaModule) {
+                    parentModule = (DOSchemaModule) selectedNode.getUserObject();
+                }
+            }
+
+            DOSchemaModule moduleNode = new DOSchemaModule(parentModule);
             moduleNode.name = moduleName;
             moduleNode.id = moduleId;
             moduleNode.icon = icon;
@@ -571,7 +581,6 @@ public class MigrationStructurePanel extends JPanel {
             DefaultMutableTreeNode newModule = new DefaultMutableTreeNode(moduleNode);
 
             // Check if a module is selected - if so, add as child
-            TreePath selectedPath = getSelectedTreePath();
             if (selectedPath != null) {
                 DefaultMutableTreeNode selectedNode = (DefaultMutableTreeNode) selectedPath.getLastPathComponent();
                 // Only add as child if selected node is a module (not a class)
@@ -743,8 +752,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Removes all currently selected classes from export. Handles multiple
-     * class selection.
+     * Removes all currently selected classes from export. Handles multiple class selection.
      */
     private void removeSelectedClassesFromExport() {
         TreePath[] selectedPaths = getSelectedTreePaths();
@@ -788,8 +796,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Opens the configuration dialog for a class export. Allows editing
-     * destination file name and export criteria.
+     * Opens the configuration dialog for a class export. Allows editing destination file name and export criteria.
      */
     private void configureClassExport(DefaultMutableTreeNode treeNode) {
         if (!(treeNode.getUserObject() instanceof ClassNode)) {
@@ -967,8 +974,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Redirects to the Export tab where the user can configure and launch
-     * exports.
+     * Redirects to the Export tab where the user can configure and launch exports.
      */
     private void exportSelectedModules(migration4o.database.DODatabaseContext dbContext) {
         // Validate prerequisites
@@ -1050,8 +1056,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Repeats the last export using the persisted {@link ExportConfig}. This
-     * follows the exact same code path as the UI Export button.
+     * Repeats the last export using the persisted {@link ExportConfig}. This follows the exact same code path as the UI Export button.
      */
     public void repeatLastExport() {
         // Validate export prerequisites
@@ -1156,8 +1161,7 @@ public class MigrationStructurePanel extends JPanel {
     }
 
     /**
-     * Right-aligned table cell renderer for monetary values. Formats values as
-     * "0.50 $"
+     * Right-aligned table cell renderer for monetary values. Formats values as "0.50 $"
      */
     private static class RightAlignedRenderer extends javax.swing.table.DefaultTableCellRenderer {
         public RightAlignedRenderer() {

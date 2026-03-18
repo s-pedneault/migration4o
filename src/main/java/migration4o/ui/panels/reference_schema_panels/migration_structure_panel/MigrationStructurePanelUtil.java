@@ -144,9 +144,23 @@ public class MigrationStructurePanelUtil {
      * @return a MigrationModule object with all nested data
      */
     public static DOSchemaModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
+        return extractModule(moduleTreeNode, null);
+    }
+
+    public static DOSchemaModule extractModule(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule parentModule) {
         DOSchemaModule module = (DOSchemaModule) moduleTreeNode.getUserObject();
         List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<DOSchemaModule> childModules = new ArrayList<>();
+
+        // Create result first so it can be passed as parent to child modules
+        DOSchemaModule result = new DOSchemaModule(parentModule);
+        result.name = module.name;
+        result.id = module.id;
+        result.icon = module.icon;
+        result.tileBg = module.tileBg;
+        result.tileTextColor = module.tileTextColor;
+        result.tileIconColor = module.tileIconColor;
+        result.tileFontSize = module.tileFontSize;
 
         Enumeration<?> children = moduleTreeNode.children();
         while (children.hasMoreElements()) {
@@ -163,18 +177,10 @@ public class MigrationStructurePanelUtil {
                 }
                 classConfigs.add(config);
             } else if (childNode.getUserObject() instanceof DOSchemaModule) {
-                childModules.add(extractModule(childNode));
+                childModules.add(extractModule(childNode, result));
             }
         }
 
-        DOSchemaModule result = new DOSchemaModule();
-        result.name = module.name;
-        result.id = module.id;
-        result.icon = module.icon;
-        result.tileBg = module.tileBg;
-        result.tileTextColor = module.tileTextColor;
-        result.tileIconColor = module.tileIconColor;
-        result.tileFontSize = module.tileFontSize;
         result.classConfigs = classConfigs;
         result.children = childModules;
         return result;
@@ -524,8 +530,22 @@ public class MigrationStructurePanelUtil {
      * @return the constructed MigrationModule
      */
     public static DOSchemaModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule moduleNode) {
+        return buildModuleFromTree(moduleTreeNode, moduleNode, null);
+    }
+
+    public static DOSchemaModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule moduleNode, DOSchemaModule parentModule) {
         List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<DOSchemaModule> childModules = new ArrayList<>();
+
+        // Create result first so it can be passed as parent to child modules
+        DOSchemaModule result = new DOSchemaModule(parentModule);
+        result.name = moduleNode.name;
+        result.id = moduleNode.id;
+        result.icon = moduleNode.icon;
+        result.tileBg = moduleNode.tileBg;
+        result.tileTextColor = moduleNode.tileTextColor;
+        result.tileIconColor = moduleNode.tileIconColor;
+        result.tileFontSize = moduleNode.tileFontSize;
 
         // Iterate through children
         for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
@@ -544,21 +564,13 @@ public class MigrationStructurePanelUtil {
 
                 classConfigs.add(config);
             } else if (userObject instanceof DOSchemaModule) {
-                // Recursively build child module
+                // Recursively build child module — pass result as parent
                 DOSchemaModule childModuleNode = (DOSchemaModule) userObject;
-                DOSchemaModule childModule = buildModuleFromTree(childNode, childModuleNode);
+                DOSchemaModule childModule = buildModuleFromTree(childNode, childModuleNode, result);
                 childModules.add(childModule);
             }
         }
 
-        DOSchemaModule result = new DOSchemaModule();
-        result.name = moduleNode.name;
-        result.id = moduleNode.id;
-        result.icon = moduleNode.icon;
-        result.tileBg = moduleNode.tileBg;
-        result.tileTextColor = moduleNode.tileTextColor;
-        result.tileIconColor = moduleNode.tileIconColor;
-        result.tileFontSize = moduleNode.tileFontSize;
         result.classConfigs = classConfigs;
         result.children = childModules;
         return result;

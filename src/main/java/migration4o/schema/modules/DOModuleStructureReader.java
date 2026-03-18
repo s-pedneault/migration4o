@@ -15,8 +15,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Reads migration structure from migration-format.xml file. Supports both old
- * format (simple classRef) and new format (classRef with criteria).
+ * Reads migration structure from migration-format.xml file. Supports both old format (simple classRef) and new format (classRef with criteria).
  */
 public class DOModuleStructureReader {
 
@@ -40,7 +39,7 @@ public class DOModuleStructureReader {
             for (int i = 0; i < children.getLength(); i++) {
                 Node node = children.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE && "module".equals(node.getNodeName())) {
-                    modules.add(parseModule((Element) node));
+                    modules.add(parseModule((Element) node, null));
                 }
             }
         }
@@ -48,7 +47,7 @@ public class DOModuleStructureReader {
         return modules;
     }
 
-    private DOSchemaModule parseModule(Element moduleElement) {
+    private DOSchemaModule parseModule(Element moduleElement, DOSchemaModule parentModule) {
         String name = moduleElement.getAttribute("name");
         String id = moduleElement.getAttribute("id");
         if (id == null || id.isEmpty()) {
@@ -75,6 +74,16 @@ public class DOModuleStructureReader {
             tileFontSize = null;
         }
 
+        // Create module first so it can be referenced as parent by its children
+        DOSchemaModule module = new DOSchemaModule(parentModule);
+        module.name = name;
+        module.id = id;
+        module.icon = icon;
+        module.tileBg = tileBg;
+        module.tileTextColor = tileTextColor;
+        module.tileIconColor = tileIconColor;
+        module.tileFontSize = tileFontSize;
+
         List<ClassExportConfig> classConfigs = new ArrayList<>();
         List<DOSchemaModule> childModules = new ArrayList<>();
 
@@ -90,31 +99,19 @@ public class DOModuleStructureReader {
                         classConfigs.add(config);
                     }
                 } else if ("module".equals(childElement.getNodeName())) {
-                    // Recursive call for nested modules
-                    childModules.add(parseModule(childElement));
+                    // Recursive call for nested modules — pass current module as parent
+                    childModules.add(parseModule(childElement, module));
                 }
             }
         }
 
-        DOSchemaModule module = new DOSchemaModule();
-        module.name = name;
-        module.id = id;
-        module.icon = icon;
-        module.tileBg = tileBg;
-        module.tileTextColor = tileTextColor;
-        module.tileIconColor = tileIconColor;
-        module.tileFontSize = tileFontSize;
         module.classConfigs = classConfigs;
         module.children = childModules;
         return module;
     }
 
     /**
-     * Parses a classRef element which can be: - Old format:
-     * <classRef sourceName="gest.config.ParamConfig"/> - New format:
-     * <classRef sourceName="..." destinationFile="..." description=
-     * "..."><criteria field="..." operator="..." value="..."/><unitCost
-     * priceList="..." cost="..."/></classRef>
+     * Parses a classRef element which can be: - Old format: <classRef sourceName="gest.config.ParamConfig"/> - New format: <classRef sourceName="..." destinationFile="..." description= "..."><criteria field="..." operator="..." value="..."/><unitCost priceList="..." cost="..."/></classRef>
      */
     private ClassExportConfig parseClassRef(Element classRefElement) {
         String sourceName = classRefElement.getAttribute("sourceName");
@@ -207,8 +204,7 @@ public class DOModuleStructureReader {
     }
 
     /**
-     * Parses a criteria element:
-     * <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
+     * Parses a criteria element: <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
      */
     private ExportCriteria parseCriteria(Element criteriaElement) {
         String field = criteriaElement.getAttribute("field");
