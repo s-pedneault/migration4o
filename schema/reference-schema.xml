@@ -6112,14 +6112,14 @@
         <reference class="gest.prevention.Prevention" field="mIDPrevAvisAssoc" />
         <reference class="gest.prevention.Prevention" field="mIDPrevSrc" />
         <field source="mID" definition="mID" />
-        <field source="mAvisEmission" destinationName="avisEmission" isExported="true" skipWhen="DEFAULT" type="int" title="Avis émission" />
-        <field source="mCmptInspect" destinationName="compteurInspection" isExported="true" skipWhen="DEFAULT" type="int" title="Compteur inspection" />
-        <field source="mCodeAccesFormWeb" destinationName="codeAccesFormulaireWeb" isExported="true" skipWhen="DEFAULT" type="string" title="Code accès formulaire web" />
+        <field source="mAvisEmission" destinationName="avisEmission" isExported="true" skipWhen="DEFAULT" type="int" title="Émission d'avis" />
+        <field source="mCmptInspect" destinationName="compteurInspection" isExported="true" skipWhen="DEFAULT" type="int" title="Compteur d'inspection" />
+        <field source="mCodeAccesFormWeb" destinationName="codeAccesFormulaireWeb" isExported="true" skipWhen="DEFAULT" type="string" title="Code d'accès au formulaire web" />
         <field source="mDateActivite" definition="mDateActivite" />
         <field source="mDateCompletee" definition="mDateCompletee" />
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mDateIdent" definition="mDateIdent" />
-        <field source="mIdentJour" destinationName="identifiantJour" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Identifiant jour" />
+        <field source="mIdentJour" destinationName="identifiantJour" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Identifiant du jour" />
         <field source="mMD5Avis" destinationName="md5Avis" isExported="true" skipWhen="DEFAULT" type="byte[]" title="MD5 de l'avis" />
         <field source="mNarratif" destinationName="narratif" isExported="true" skipWhen="DEFAULT" type="string" title="Narratif" />
         <field source="mNarratifsPrec" destinationName="narratifsPrecedents" isExported="true" skipWhen="DEFAULT" type="string" title="Narratifs précédents" />
@@ -6127,34 +6127,34 @@
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="DEFAULT" type="int" title="Statut" />
         <field source="mTexteAvis" destinationName="texteAvis" isExported="true" skipWhen="DEFAULT" type="string" title="Texte avis" />
         <field source="mTexteIntro" destinationName="texteIntro" isExported="true" skipWhen="DEFAULT" type="string" title="Texte intro" />
-        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" title="Liste de champ personnalisé" />
-        <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" title="Liste d'étape" />
-        <field source="mVectHistoActivite" destinationName="listeHistoActivite" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.activite.HistoActivite" title="Liste d'histo activité" />
-        <field source="mVectInfoHistoEmploye" destinationName="listeInfoHistoEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.InfoHistoEmploye" title="Liste d'info histo employé" />
+        <field source="mVectChampPerso" destinationName="listeChampPersonnalise" isExported="true" skipWhen="DEFAULT" type="gest.champPerso.VectChampPerso" collection="true" embedContents="true" childrenType="gest.champPerso.ChampPerso" title="Champs personnalisés" />
+        <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" title="Étapes" />
+        <field source="mVectHistoActivite" destinationName="listeHistoActivite" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.activite.HistoActivite" title="Historiques d'activités" />
+        <field source="mVectInfoHistoEmploye" destinationName="listeInfoHistoEmploye" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.activite.InfoHistoEmploye" title="Informations historiques des employés" />
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
-        <field source="mVectPrevAnom" destinationName="listePreventionAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.prevention.PrevAnom" title="Liste de prévention anomalie" />
-        <field source="mVectReport" destinationName="listeReport" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.prevention.Report" title="Liste de report" />
-        <field source="mIDAssigneA" destinationName="idAssigneA" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="ID d'assigne à" />
-        <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="ID d'auteur" />
-        <field source="mIDAvis" destinationName="idAvis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="ID d'avis" />
-        <field source="mIDAvisAvecSignature" destinationName="idAvisAvecSignature" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="ID d'avis avec signature" />
+        <field source="mVectPrevAnom" destinationName="listePreventionAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.prevention.PrevAnom" title="Anomalies de prévention" />
+        <field source="mVectReport" destinationName="listeReport" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.prevention.Report" title="Reports" />
+        <field source="mIDAssigneA" destinationName="idAssigneA" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Assigné à" />
+        <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Auteur" />
+        <field source="mIDAvis" destinationName="idAvis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Avis" />
+        <field source="mIDAvisAvecSignature" destinationName="idAvisAvecSignature" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Avis avec signature" />
         <field source="mIDCaserne" definition="mIDCaserne" />
         <field source="mIDDossPrev" definition="mIDDossPrev" />
-        <field source="mIDPrevAvisAssoc" destinationName="idPreventionAvisAssocie" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.prevention.IDPrevention" embedContents="true" title="ID de prévention avis associé" />
-        <field source="mIDPrevSrc" destinationName="idPreventionSource" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.prevention.IDPrevention" title="ID de prévention source" />
-        <field source="mIDPreventionSrc" destinationName="idPreventionSource" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" title="ID de prévention source" />
-        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="ID de responsable" />
+        <field source="mIDPrevAvisAssoc" destinationName="idPreventionAvisAssocie" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.prevention.IDPrevention" embedContents="true" title="Prévention associée à l'avis" />
+        <field source="mIDPrevSrc" destinationName="idPreventionSource" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.prevention.IDPrevention" title="Prévention source" />
+        <field source="mIDPreventionSrc" destinationName="idPreventionSourceNumero" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" embedContents="true" title="Prévention source" />
+        <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Responsable" />
         <field source="mIDSSI" definition="mIDSSI" />
-        <field source="mIDTypePrev" destinationName="idTypePrevention" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.typePrev.IDTypePrev" title="ID de type prévention" />
+        <field source="mIDTypePrev" destinationName="idTypePrevention" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.typePrev.IDTypePrev" title="Type de prévention" />
         <field source="mFormWebEnqueteUUID" destinationName="formulaireWebEnqueteUUID" isExported="true" skipWhen="DEFAULT" type="java.util.UUID" embedContents="true" title="Formulaire web enquête UUID" />
         <field source="mFormWebOwnerUUID" destinationName="formulaireWebOwnerUUID" isExported="true" skipWhen="DEFAULT" type="java.util.UUID" embedContents="true" title="Formulaire web owner UUID" />
         <field source="mFormWebStatut" destinationName="formulaireWebStatut" isExported="true" skipWhen="DEFAULT" type="int" title="Formulaire web statut" />
-        <field source="mHshSectCondValeurCPOri" destinationName="tableSectionConditionnelleValeurCPOriginal" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Table section conditionnelle valeur CP original" />
-        <field source="mHshSectCondValeurCPOriDossPrev" destinationName="tableSectionConditionnelleValeurCPOriginalDossierAdresse" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Table section conditionnelle valeur CP original dossier adresse" />
-        <field source="mHshSectCondValeursOri" destinationName="tableSectionConditionnelleValeursOriginal" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Table section conditionnelle valeurs original" />
-        <field source="mHshSectCondValeursOriDossPrev" destinationName="tableSectionConditionnelleValeursOriginalDossierAdresse" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Table section conditionnelle valeurs original dossier adresse" />
+        <field source="mHshSectCondValeurCPOri" destinationName="tableSectionConditionnelleValeurCPOriginal" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Valeurs originales de champs personnalisés conditionnels" />
+        <field source="mHshSectCondValeurCPOriDossPrev" destinationName="tableSectionConditionnelleValeurCPOriginalDossierAdresse" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Valeurs originales de champs personnalisés conditionnels du dossier adresse" />
+        <field source="mHshSectCondValeursOri" destinationName="tableSectionConditionnelleValeursOriginal" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Valeurs originales de section conditionnelles" />
+        <field source="mHshSectCondValeursOriDossPrev" destinationName="tableSectionConditionnelleValeursOriginalDossierAdresse" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="Valeurs originales de section conditionnelles du dossier adresse" />
     </class>
-    <class source="gest.prevention.RapportAvis" destinationName="RapportAvis" isExported="true" title="Rapport avis" parentClass="gest.gen.Entite">
+    <class source="gest.prevention.RapportAvis" destinationName="RapportAvis" isExported="true" title="Avis" parentClass="gest.gen.Entite">
         <reference class="gest.prevention.PrevAvis" field="mVectRapportAvis" />
         <field source="mID" definition="mID" />
         <field source="mDesc" definition="mDescription" />
