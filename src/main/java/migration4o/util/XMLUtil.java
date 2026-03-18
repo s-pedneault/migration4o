@@ -2,8 +2,8 @@ package migration4o.util;
 
 public class XMLUtil {
     /**
-     * Removes characters that are invalid in XML 1.0. Control characters (except
-     * tab, newline, carriage return) are replaced with space.
+     * Removes characters that are invalid in XML 1.0. Control characters
+     * (except tab, newline, carriage return) are replaced with space.
      */
     public static String sanitizeXMLCharacters(String text) {
         if (text == null || text.isEmpty()) {
@@ -27,8 +27,8 @@ public class XMLUtil {
 
     /**
      * Escapes special XML characters in text content and removes invalid XML
-     * characters. XML 1.0 only allows: - #x9 (tab), #xA (line feed), #xD (carriage
-     * return) - #x20-#xD7FF, #xE000-#xFFFD, #x10000-#x10FFFF
+     * characters. XML 1.0 only allows: - #x9 (tab), #xA (line feed), #xD
+     * (carriage return) - #x20-#xD7FF, #xE000-#xFFFD, #x10000-#x10FFFF
      */
     public static String xmlEscape(String text) {
         if (text == null) {
@@ -39,7 +39,7 @@ public class XMLUtil {
         text = sanitizeXMLCharacters(text);
 
         // Then, escape XML entities
-        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
 }

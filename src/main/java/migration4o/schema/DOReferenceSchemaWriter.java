@@ -338,7 +338,7 @@ public class DOReferenceSchemaWriter {
         if (text == null) {
             return "";
         }
-        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     private String getIndent(int level) {

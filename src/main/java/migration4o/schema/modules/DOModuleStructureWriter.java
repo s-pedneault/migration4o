@@ -154,7 +154,7 @@ public class DOModuleStructureWriter {
         if (text == null) {
             return "";
         }
-        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;").replace("'", "&apos;");
+        return text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace("\"", "&quot;");
     }
 
     private void writeLayout(FileWriter writer, DetailLayout layout, int indentLevel) throws IOException {
