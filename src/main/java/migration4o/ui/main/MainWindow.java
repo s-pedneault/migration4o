@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.swing.JButton;
@@ -48,18 +47,14 @@ import migration4o.ui.common.DatabaseProgressMonitor;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparison;
 import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaComparisonPanel;
 import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
-import migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel;
-import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.IDTracerDataService;
 import migration4o.ui.panels.database_panels.multi_database_comparison_panel.MultiDatabaseComparisonPanel;
-import migration4o.ui.panels.database_panels.reachability_analysis_panel.ReachabilityAnalysisPanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
 import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 import migration4o.ui.panels.welcome_panel.WelcomePanel;
 
 /**
- * Main application window with tabbed interface for migration tools.
- * Responsible for initializing and coordinating all application tabs.
+ * Main application window with tabbed interface for migration tools. Responsible for initializing and coordinating all application tabs.
  */
 public class MainWindow extends JFrame {
 
@@ -86,11 +81,9 @@ public class MainWindow extends JFrame {
     // Track database-related tabs (dynamically created)
     private Component databaseSchemaTab = null;
     private Component conformityAnalysisTab = null;
-    private Component reachabilityAnalysisTab = null;
-    private Component migrationCoverageTab = null;
     private Component costTab = null;
+    private JTabbedPane exportTabPane = null;
     private migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel = null;
-    private migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel migrationResultsPanel = null;
     private DOSchema currentDatabaseSchema = null;
     private DODatabaseContext currentContext = null;
     private final Map<String, DatabaseSession> databaseSessions = new LinkedHashMap<>();
@@ -107,11 +100,9 @@ public class MainWindow extends JFrame {
         Component tabContainer;
         Component databaseSchemaTab;
         Component conformityAnalysisTab;
-        Component reachabilityAnalysisTab;
-        Component migrationCoverageTab;
         Component costTab;
+        JTabbedPane exportTabPane;
         migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel;
-        migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel migrationResultsPanel;
     }
 
     public interface ExportCompletionListener {
@@ -132,35 +123,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Navigate to the coverage tab and filter by the specified class names.
-     * 
-     * @param classNames the set of class names to filter by
-     */
-    public void navigateToCoverageWithFilter(Set<String> classNames) {
-        if (classNames == null || classNames.isEmpty()) {
-            return;
-        }
-
-        // Switch to Database tab
-        if (databaseTabPane != null && databaseTabContainer != null) {
-            tabbedPane.setSelectedComponent(databaseTabContainer);
-
-            // Switch to Migration Coverage sub-tab
-            if (migrationCoverageTab != null) {
-                databaseTabPane.setSelectedComponent(migrationCoverageTab);
-
-                // Apply filter
-                if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
-                    migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
-                    coveragePanel.filterByClassNames(classNames);
-                }
-            }
-        }
-    }
-
-    /**
-     * Navigate to a class in the reference schema tab. Switches to the Schema
-     * tab and selects the specified class.
+     * Navigate to a class in the reference schema tab. Switches to the Schema tab and selects the specified class.
      * 
      * @param className the fully qualified class name to navigate to
      */
@@ -335,9 +298,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Initializes all static application tabs. This includes reference schema,
-     * schema structure, and migration structure. Called after MainWindow
-     * construction and before showing the window.
+     * Initializes all static application tabs. This includes reference schema, schema structure, and migration structure. Called after MainWindow construction and before showing the window.
      */
     public void initialize() {
         try {
@@ -371,8 +332,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Automatically opens a database file (used for command-line auto-open).
-     * Shows appropriate error messages if the file doesn't exist.
+     * Automatically opens a database file (used for command-line auto-open). Shows appropriate error messages if the file doesn't exist.
      * 
      * @param databasePath the absolute path to the database file
      */
@@ -514,7 +474,13 @@ public class MainWindow extends JFrame {
         databaseTabPathByContainer.put(session.tabContainer, session.databasePath);
 
         migration4o.ui.panels.database_panels.database_export_panel.DatabaseExportPanel exportPanel = new migration4o.ui.panels.database_panels.database_export_panel.DatabaseExportPanel(session.databasePath, session.context);
-        session.tabPane.addTab("Export", exportPanel);
+        session.migrationReportPanel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
+        JTabbedPane exportTabPane = new JTabbedPane();
+        exportTabPane.setFont(new Font("Arial", Font.PLAIN, 12));
+        exportTabPane.addTab("Configuration", exportPanel);
+        exportTabPane.addTab("Results", session.migrationReportPanel);
+        session.exportTabPane = exportTabPane;
+        session.tabPane.addTab("Export", exportTabPane);
 
         SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName(), session.context);
         schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
@@ -522,11 +488,7 @@ public class MainWindow extends JFrame {
         addSchemaTabToDatabaseSection(session.tabPane, "Database structure", schemaEditor, inferredSchema, false);
 
         createComparisonWithReference(session);
-        createReachabilityAnalysisTab(session);
-        createMigrationCoverageTab(session);
         createCostTab(session);
-        createMigrationReportTab(session);
-        createMigrationResultsTab(session);
 
         databaseSessions.put(session.databasePath, session);
         setActiveDatabaseSession(session);
@@ -588,11 +550,9 @@ public class MainWindow extends JFrame {
         currentDatabaseSchema = session.databaseSchema;
         databaseSchemaTab = session.databaseSchemaTab;
         conformityAnalysisTab = session.conformityAnalysisTab;
-        reachabilityAnalysisTab = session.reachabilityAnalysisTab;
-        migrationCoverageTab = session.migrationCoverageTab;
         costTab = session.costTab;
+        exportTabPane = session.exportTabPane;
         migrationReportPanel = session.migrationReportPanel;
-        migrationResultsPanel = session.migrationResultsPanel;
     }
 
     private void compareSelectedDatabases(List<String> selectedPaths) {
@@ -619,8 +579,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Automatically creates a comparison between the reference schema and a
-     * newly loaded database schema.
+     * Automatically creates a comparison between the reference schema and a newly loaded database schema.
      */
     private void createComparisonWithReference(DatabaseSession session) {
         // Find the reference schema
@@ -659,68 +618,6 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Creates the reachability analysis tab.
-     */
-    private void createReachabilityAnalysisTab(DatabaseSession session) {
-        try {
-            System.out.println("Creating reachability analysis tab...");
-
-            // Find the reference schema
-            SchemaTabInfo referenceTab = null;
-            for (SchemaTabInfo tabInfo : schemaTabs.values()) {
-                if (tabInfo.isReference) {
-                    referenceTab = tabInfo;
-                    break;
-                }
-            }
-
-            if (referenceTab == null) {
-                System.out.println("Warning: No reference schema found for reachability analysis");
-                return;
-            }
-
-            // Create reachability analysis panel
-            ReachabilityAnalysisPanel reachabilityPanel = new ReachabilityAnalysisPanel(session.databaseSchema, referenceTab.editorPanel.getSchema());
-
-            // Store and add reachability analysis tab to Database section
-            session.reachabilityAnalysisTab = reachabilityPanel;
-            session.tabPane.addTab("Reachability", reachabilityPanel);
-
-            System.out.println("Reachability analysis tab created successfully");
-        } catch (Exception e) {
-            System.err.println("Error creating reachability analysis tab: " + e.getMessage());
-            e.printStackTrace();
-            // Don't rethrow - allow other tabs to be created
-        }
-    }
-
-    /**
-     * Creates the migration coverage tab.
-     */
-    private void createMigrationCoverageTab(DatabaseSession session) {
-        // Find the reference schema
-        SchemaTabInfo referenceTab = null;
-        for (SchemaTabInfo tabInfo : schemaTabs.values()) {
-            if (tabInfo.isReference) {
-                referenceTab = tabInfo;
-                break;
-            }
-        }
-
-        if (referenceTab == null) {
-            System.out.println("Warning: No reference schema found for migration coverage");
-            return;
-        }
-
-        // Create migration coverage panel
-        MigrationCoveragePanel coveragePanel = new MigrationCoveragePanel(referenceTab.editorPanel.getSchema(), session.databaseSchema, session.context.databaseFilePath, session.context);
-
-        // Store and add migration coverage tab to Database section
-        session.migrationCoverageTab = coveragePanel;
-        session.tabPane.addTab("Migration coverage", coveragePanel);
-    }
-
-    /**
      * Creates the cost analysis tab.
      */
     private void createCostTab(DatabaseSession session) {
@@ -730,28 +627,6 @@ public class MainWindow extends JFrame {
         // Store and add processing costs tab to Database section
         session.costTab = costPanel;
         session.tabPane.addTab("Processing costs", costPanel);
-    }
-
-    /**
-     * Creates the migration results tab.
-     */
-    private void createMigrationResultsTab(DatabaseSession session) {
-        // Create migration results panel
-        session.migrationResultsPanel = new migration4o.ui.panels.database_panels.migration_results_panel.MigrationResultsPanel();
-
-        // Add to Database section with new name
-        session.tabPane.addTab("Warnings & errors", session.migrationResultsPanel);
-    }
-
-    /**
-     * Creates the migration report tab.
-     */
-    private void createMigrationReportTab(DatabaseSession session) {
-        // Create migration report panel
-        session.migrationReportPanel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
-
-        // Add to Database section
-        session.tabPane.addTab("Migration report", session.migrationReportPanel);
     }
 
     /**
@@ -792,11 +667,9 @@ public class MainWindow extends JFrame {
             databaseTabContainer = null;
             databaseSchemaTab = null;
             conformityAnalysisTab = null;
-            reachabilityAnalysisTab = null;
-            migrationCoverageTab = null;
             costTab = null;
+            exportTabPane = null;
             migrationReportPanel = null;
-            migrationResultsPanel = null;
             currentContext = null;
             currentDatabaseSchema = null;
             tabbedPane.setSelectedIndex(0);
@@ -807,8 +680,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the current in-memory database container from the context. This
-     * allows reusing the same in-memory instance across all operations.
+     * Gets the current in-memory database container from the context. This allows reusing the same in-memory instance across all operations.
      * 
      * @return The database container, or null if no database is open
      */
@@ -830,27 +702,12 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Notifies all tabs that a database has been opened. Updates migration
-     * structure panel that database schema has changed.
+     * Notifies all tabs that a database has been opened. Updates migration structure panel that database schema has changed.
      */
     private void notifyTabsDatabaseOpened(String databasePath, DOSchema inferredSchema) {
         if (migrationStructurePanel != null) {
             migrationStructurePanel.setActiveContext(currentContext);
             migrationStructurePanel.onDatabaseSchemaChanged();
-        }
-    }
-
-    /**
-     * Notify the migration coverage panel about exported objects.
-     * 
-     * @param exportedClasses Map of class name to number of exported objects
-     * @param exportedObjectIds Map of class name to list of actual exported
-     * object IDs
-     */
-    public void notifyExportCompleted(Map<String, Integer> exportedClasses, Map<String, List<Long>> exportedObjectIds) {
-        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
-            migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
-            coveragePanel.updateExportedCounts(exportedClasses, exportedObjectIds);
         }
     }
 
@@ -870,9 +727,6 @@ public class MainWindow extends JFrame {
                 setActiveDatabaseSession(session);
             }
         }
-
-        notifyExportCompleted(result.exportedClassCounts, result.exportedObjectIds);
-        IDTracerDataService.getInstance().setLatestExportDiagnostics(result, dbContext);
 
         if (databasePath != null) {
             latestExportByDatabasePath.put(databasePath, result);
@@ -900,58 +754,16 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Reset reached values in the migration coverage panel. Should be called
-     * before starting a new export.
-     */
-    public void resetCoverageReachedValues() {
-        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
-            migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel coveragePanel = (migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) migrationCoverageTab;
-            coveragePanel.resetReachedValues();
-        }
-    }
-
-    /**
-     * Enables or disables the migration coverage panel. Should be called after
-     * an export completes: pass {@code true} when the export ran with full
-     * tracking, {@code false} otherwise. When disabled, all interactive
-     * controls in the panel are greyed out because the data required for
-     * coverage analysis was not collected.
-     */
-    public void setCoveragePanelEnabled(boolean enabled) {
-        if (migrationCoverageTab instanceof migration4o.ui.panels.database_panels.migration_coverage_panel.MigrationCoveragePanel) {
-            migrationCoverageTab.setEnabled(enabled);
-        }
-    }
-
-    /**
-     * Updates the migration results tab with new export statistics. Also
-     * switches to the Database tab and Warnings & errors sub-tab.
-     * 
-     * @param result The export statistics to display
-     */
-    public void showMigrationResults(ExportStatistics result) {
-        if (migrationResultsPanel != null && databaseTabContainer != null) {
-            migrationResultsPanel.updateResults(result);
-
-            // Switch to Database tab
-            tabbedPane.setSelectedComponent(databaseTabContainer);
-
-            // Switch to Warnings & errors sub-tab
-            databaseTabPane.setSelectedComponent(migrationResultsPanel);
-        }
-    }
-
-    /**
-     * Switches to the Migration report tab in the Database section. This is
-     * called when an export operation starts.
+     * Switches to the Migration report tab in the Database section. This is called when an export operation starts.
      */
     public void showMigrationReportTab() {
-        if (migrationReportPanel != null && databaseTabContainer != null) {
+        if (migrationReportPanel != null && databaseTabContainer != null && exportTabPane != null) {
             // Switch to Database tab
             tabbedPane.setSelectedComponent(databaseTabContainer);
-
-            // Switch to Migration report sub-tab
-            databaseTabPane.setSelectedComponent(migrationReportPanel);
+            // Switch to Export outer tab
+            databaseTabPane.setSelectedComponent(exportTabPane);
+            // Switch to Migration report sub-tab inside Export
+            exportTabPane.setSelectedComponent(migrationReportPanel);
         }
     }
 
@@ -969,8 +781,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the migration report panel as a DOExportMonitor for real-time
-     * progress updates.
+     * Gets the migration report panel as a DOExportMonitor for real-time progress updates.
      * 
      * @return The migration report monitor, or null if no database is loaded
      */
@@ -986,8 +797,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab to the Schema nested section and track it for
-     * comparison.
+     * Add a schema tab to the Schema nested section and track it for comparison.
      */
     public void addSchemaTabToSchemaSection(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         schemaTabPane.addTab(title, editor);
@@ -998,8 +808,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab to the Database nested section and track it for
-     * comparison.
+     * Add a schema tab to the Database nested section and track it for comparison.
      */
     public void addSchemaTabToDatabaseSection(JTabbedPane targetPane, String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         targetPane.addTab(title, editor);
@@ -1010,8 +819,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Add a schema tab and track it for comparison (legacy method for backward
-     * compatibility).
+     * Add a schema tab and track it for comparison (legacy method for backward compatibility).
      */
     public void addSchemaTab(String title, SchemaEditorPanel editor, DOSchema schema, boolean isReference) {
         tabbedPane.addTab(title, editor);
@@ -1269,9 +1077,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Request repeat export to be triggered after database loads. If database
-     * is already open, triggers immediately. Otherwise, sets flag to trigger
-     * after next database open.
+     * Request repeat export to be triggered after database loads. If database is already open, triggers immediately. Otherwise, sets flag to trigger after next database open.
      */
     public void triggerRepeatExport() {
         if (currentDatabaseSchema != null) {

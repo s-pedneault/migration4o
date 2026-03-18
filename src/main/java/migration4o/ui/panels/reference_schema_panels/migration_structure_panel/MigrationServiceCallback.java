@@ -18,9 +18,7 @@ import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
 
 /**
- * UI adapter that manages async export operations using SwingWorker. Handles
- * progress dialogs and result displays for export operations. All business
- * logic is delegated to MigrationExportService.
+ * UI adapter that manages async export operations using SwingWorker. Handles progress dialogs and result displays for export operations. All business logic is delegated to MigrationExportService.
  */
 public class MigrationServiceCallback {
 
@@ -58,11 +56,6 @@ public class MigrationServiceCallback {
      * @param options export options selected by user
      */
     public void exportModulesAsync(DODatabaseContext dbContext, List<ModuleExportInfo> modulesToExport, ExportOptions options) {
-        // Reset reached values before starting export
-        resetReachedValuesInCoveragePanel();
-
-        final boolean fullTracking = options.isFullTracking();
-
         // Extract modules
         List<DOSchemaModule> modules = new ArrayList<>();
         for (ModuleExportInfo info : modulesToExport) {
@@ -95,7 +88,7 @@ public class MigrationServiceCallback {
             protected void done() {
                 try {
                     ExportStatistics result = get();
-                    handleExportCompleted(result, dbContext, fullTracking);
+                    handleExportCompleted(result, dbContext);
                 } catch (Exception e) {
                     handleExportError(e);
                 }
@@ -108,37 +101,9 @@ public class MigrationServiceCallback {
     // ==================== HELPER METHODS ====================
 
     /**
-     * Resets reached values in the migration coverage panel before starting a
-     * new export.
-     */
-    private void resetReachedValuesInCoveragePanel() {
-        if (parentComponent != null) {
-            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
-            if (window instanceof MainWindow) {
-                MainWindow mainWindow = (MainWindow) window;
-                mainWindow.resetCoverageReachedValues();
-            }
-        }
-    }
-
-    /**
      * Handles successful export completion.
-     *
-     * @param fullTracking whether full tracking was enabled for this export;
-     * when {@code false} the coverage panel is disabled after completion
      */
-    private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext, boolean fullTracking) {
-        // Show results in the Migration results tab instead of a dialog
-        if (parentComponent != null) {
-            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
-            if (window instanceof migration4o.ui.main.MainWindow) {
-                migration4o.ui.main.MainWindow mainWindow = (migration4o.ui.main.MainWindow) window;
-                mainWindow.showMigrationResults(result);
-                // Enable/disable coverage panel depending on tracking mode
-                mainWindow.setCoveragePanelEnabled(fullTracking);
-            }
-        }
-
+    private void handleExportCompleted(ExportStatistics result, migration4o.database.DODatabaseContext dbContext) {
         // Notify external callback
         if (resultCallback != null) {
             resultCallback.onExportCompleted(result, dbContext);
@@ -173,8 +138,7 @@ public class MigrationServiceCallback {
     }
 
     /**
-     * Switches the main window to the Migration report tab in the Database
-     * section.
+     * Switches the main window to the Migration report tab in the Database section.
      */
     private void showMigrationReportTab() {
         if (parentComponent != null) {

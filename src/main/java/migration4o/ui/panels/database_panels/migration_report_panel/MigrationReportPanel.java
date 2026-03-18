@@ -1,11 +1,14 @@
 package migration4o.ui.panels.database_panels.migration_report_panel;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
+import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Font;
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Insets;
+import javax.swing.SwingConstants;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -23,13 +26,13 @@ import javax.swing.SwingUtilities;
 import migration4o.ui.common.DOExportMonitor;
 
 /**
- * Panel that displays real-time export progress with detailed status updates.
- * Replaces ExportProgressDialog and is embedded in the Database tab.
- * Implements DOExportMonitor to receive callbacks from export engine.
+ * Panel that displays real-time export progress with detailed status updates. Replaces ExportProgressDialog and is embedded in the Database tab. Implements DOExportMonitor to receive callbacks from export engine.
  */
 public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     // UI Components
+    private JPanel northContainer;
+    private JLabel successLabel;
     private JLabel titleLabel;
     private JProgressBar overallProgressBar;
     private JLabel overallStatsLabel;
@@ -120,7 +123,11 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         gbc.insets = new Insets(5, 0, 0, 0);
         topPanel.add(statsPanel, gbc);
 
-        add(topPanel, BorderLayout.NORTH);
+        JPanel successPanel = createSuccessPanel();
+        northContainer = new JPanel(new CardLayout());
+        northContainer.add(topPanel, "progress");
+        northContainer.add(successPanel, "success");
+        add(northContainer, BorderLayout.NORTH);
 
         // Center: Log area
         logArea = new JTextArea();
@@ -136,6 +143,19 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         clearButton.addActionListener(e -> clearLog());
         bottomPanel.add(clearButton);
         add(bottomPanel, BorderLayout.SOUTH);
+    }
+
+    private JPanel createSuccessPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBackground(new Color(198, 239, 206));
+        panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
+
+        successLabel = new JLabel("Export successful!", SwingConstants.CENTER);
+        successLabel.setFont(successLabel.getFont().deriveFont(Font.BOLD, 22f));
+        successLabel.setForeground(new Color(0, 97, 0));
+        panel.add(successLabel, BorderLayout.CENTER);
+
+        return panel;
     }
 
     private void clearLog() {
@@ -182,10 +202,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     }
 
     /**
-     * Resets only the row for the format that is starting a new class.
-     * Other format rows keep their last state until that format itself
-     * starts a new class — otherwise the XML row wipes the HTML row's
-     * in-progress display before the timer can paint it.
+     * Resets only the row for the format that is starting a new class. Other format rows keep their last state until that format itself starts a new class — otherwise the XML row wipes the HTML row's in-progress display before the timer can paint it.
      */
     private void resetFormatRow(String formatName) {
         FormatRow row = formatRows.get(formatName);
@@ -227,6 +244,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         formatRowsPanel.revalidate();
         formatRowsPanel.repaint();
         updateStats();
+        ((CardLayout) northContainer.getLayout()).show(northContainer, "progress");
     }
 
     // ========== DOExportMonitor Implementation ==========
@@ -251,18 +269,28 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         formatRowsPanel.repaint();
         updateStats();
 
+        ((CardLayout) northContainer.getLayout()).show(northContainer, "progress");
         appendLog(String.format("=== EXPORT STARTED: %s ===\n", exportName));
         appendLog(String.format("Total classes to export: %,d\n\n", totalClasses));
     }
 
     @Override
     public void onExportComplete(String exportName, int objectsExported, int warnings) {
-        titleLabel.setText("Export Complete: " + exportName);
-
         appendLog(String.format("\n=== EXPORT COMPLETED ===\n"));
         appendLog(String.format("Total objects exported: %,d\n", objectsExported));
         appendLog(String.format("Total warnings: %,d\n", warnings));
         appendLog(String.format("Total errors: %,d\n", errorCount));
+
+        if (errorCount == 0) {
+            String statsText = String.format("%,d objects exported", objectsExported);
+            if (warnings > 0) {
+                statsText += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
+            }
+            successLabel.setText(String.format("<html><center><b>Export successful!</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
+            ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
+        } else {
+            titleLabel.setText("Export complete with errors: " + exportName);
+        }
     }
 
     @Override

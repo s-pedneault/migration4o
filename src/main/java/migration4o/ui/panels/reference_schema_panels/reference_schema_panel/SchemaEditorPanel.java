@@ -52,7 +52,6 @@ import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
-import migration4o.ui.panels.database_panels.migration_coverage_panel.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.SummaryEditorDialog;
@@ -1187,46 +1186,8 @@ public class SchemaEditorPanel extends JPanel {
         int fieldCount = schemaClass.fields != null ? schemaClass.fields.length : 0;
         propertyPanel.addReadOnlyTextField("Field Count", String.valueOf(fieldCount));
 
-        // Add View Objects button if database is open
-        if (dbContext != null && dbContext.isDatabaseOpen()) {
-            JButton viewObjectsButton = new JButton("View Objects...");
-            viewObjectsButton.addActionListener(e -> viewClassObjects(schemaClass));
-            propertyPanel.addCustomField("", viewObjectsButton);
-        }
-
         // Populate fields table
         populateFieldsTable(schemaClass);
-    }
-
-    /**
-     * Opens the ClassObjectsDialog to view objects of the given class
-     */
-    private void viewClassObjects(DOSchemaClass schemaClass) {
-        // Get database schema
-        DOSchema databaseSchema = dbContext.databaseSchema;
-        if (databaseSchema == null) {
-            JOptionPane.showMessageDialog(this, "Database schema not available.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Find the class in the database schema
-        DOSchemaClass dbSchemaClass = null;
-        for (DOSchemaClass cls : databaseSchema.getClasses()) {
-            if (cls.attributes.source.equals(schemaClass.attributes.source)) {
-                dbSchemaClass = cls;
-                break;
-            }
-        }
-
-        if (dbSchemaClass == null) {
-            JOptionPane.showMessageDialog(this, "Class not found in database schema: " + schemaClass.attributes.source, "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-
-        // Open dialog
-        String databasePath = dbContext.databaseFilePath;
-        ClassObjectsDialog dialog = new ClassObjectsDialog((Frame) SwingUtilities.getWindowAncestor(this), schemaClass.attributes.source, dbSchemaClass, databaseSchema, databasePath, dbContext);
-        dialog.setVisible(true);
     }
 
     private JComboBox<String> createParentClassComboBox(String currentParent) {
