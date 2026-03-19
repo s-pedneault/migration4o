@@ -4,7 +4,6 @@ package migration4o.models.schema;
 import java.util.ArrayList;
 
 import migration4o.util.ClassUtil;
-import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 
@@ -32,15 +31,15 @@ public class DOSchemaClass {
     }
 
     public boolean isIDEntite() {
-        return isDescendantOf("gest.gen.IDEntite");
+        return isDescendantOf(DOSchemaConstants.ANCESTOR_IDENTITE);
     }
 
     public boolean isEntite() {
-        return isDescendantOf("gest.gen.EntiteContientID");
+        return isDescendantOf(DOSchemaConstants.ANCESTOR_ENTITE_CONTIENT_ID);
     }
 
     public boolean isParam() {
-        return isDescendantOf("gest.gen.EntiteParam");
+        return isDescendantOf(DOSchemaConstants.ANCESTOR_ENTITE_PARAM);
     }
 
     public boolean isPrimitive() {
@@ -98,7 +97,7 @@ public class DOSchemaClass {
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (schemaClass.attributes.parentClassName != null && schemaClass.attributes.parentClassName.equals(attributes.source)) {
                 // Found a direct subclass - now verify it's an Entite type
-                if (schemaClass.isDescendantOf("gest.gen.Entite")) {
+                if (schemaClass.isDescendantOf(DOSchemaConstants.ANCESTOR_ENTITE)) {
                     return true;
                 }
             }
@@ -146,8 +145,8 @@ public class DOSchemaClass {
 
     public StructuredWriterMetadata getMetadata(String module) {
         StructuredWriterMetadata metadata = new StructuredWriterMetadata();
-        metadata.generator = "Migration4o";
-        metadata.provider = "Gestion Technologies";
+        metadata.generator = DOSchemaConstants.METADATA_GENERATOR;
+        metadata.provider = DOSchemaConstants.METADATA_PROVIDER;
         metadata.module = module != null ? module : "";
         metadata.type = attributes.destinationName != null ? attributes.destinationName : getSourceName();
         metadata.objects = objectIds != null ? String.valueOf(objectIds.length) : "0";

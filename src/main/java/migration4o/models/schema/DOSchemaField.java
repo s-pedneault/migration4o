@@ -26,7 +26,7 @@ public class DOSchemaField {
      * Returns true if this is a virtual field (source starts with @). Virtual fields query the database for related objects instead of reading actual fields.
      */
     public boolean isVirtualField() {
-        return attributes.source != null && attributes.source.startsWith("@");
+        return attributes.source != null && attributes.source.startsWith(DOSchemaConstants.VIRTUAL_FIELD_PREFIX);
     }
 
     /**
@@ -34,7 +34,7 @@ public class DOSchemaField {
      */
     public String getVirtualFieldName() {
         if (isVirtualField()) {
-            return attributes.source.substring(1);
+            return attributes.source.substring(DOSchemaConstants.VIRTUAL_FIELD_PREFIX.length());
         }
         return attributes.source;
     }
