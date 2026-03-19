@@ -22,18 +22,11 @@ import migration4o.util.tools.structuredwriter.StructuredWriter;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
 
 /**
- * Format handler that produces self-contained {@code .html} files — one per
- * exported class — with the data embedded inline as a {@code <script>} block.
+ * Format handler that produces self-contained {@code .html} files — one per exported class — with the data embedded inline as a {@code <script>} block.
  * <p>
- * No intermediate {@code .js} file is written to disk. The JS serialisation
- * layer ({@link StructuredWriterJS}) writes into an in-memory
- * {@link StringWriter}; {@link #close(ExportCurrentState)} wraps the
- * accumulated script in the full HTML template and writes the single
- * {@code .html} file.
+ * No intermediate {@code .js} file is written to disk. The JS serialisation layer ({@link StructuredWriterJS}) writes into an in-memory {@link StringWriter}; {@link #close(ExportCurrentState)} wraps the accumulated script in the full HTML template and writes the single {@code .html} file.
  * <p>
- * Own state: {@code cachedNavJson}, {@code idEntiteTargetCache},
- * {@code idEntiteSummaryCache}. Overrides four hooks: {@code init},
- * {@code onObject}, {@code onField}, {@code close}.
+ * Own state: {@code cachedNavJson}, {@code idEntiteTargetCache}, {@code idEntiteSummaryCache}. Overrides four hooks: {@code init}, {@code onObject}, {@code onField}, {@code close}.
  */
 public class HtmlFormatHandler extends FormatHandler {
 
@@ -41,20 +34,17 @@ public class HtmlFormatHandler extends FormatHandler {
     private final Map<String, Long> idEntiteTargetCache = new HashMap<>();
     private final Map<Long, String> idEntiteSummaryCache = new HashMap<>();
     /**
-     * Captured in {@link #open} so {@link #close} has the class even after
-     * exportObject nulls ctx.schemaClass.
+     * Captured in {@link #open} so {@link #close} has the class even after exportObject nulls ctx.schemaClass.
      */
     private migration4o.models.schema.DOSchemaClass currentSchemaClass;
     /** Captured in {@link #open} — classRef title override (may be null). */
     private String currentConfigTitle;
     /**
-     * Captured in {@link #open} — default columns JSON ("null" when not
-     * configured).
+     * Captured in {@link #open} — default columns JSON ("null" when not configured).
      */
     private String currentDefaultColumnsJson;
     /**
-     * Temp file path for streaming JS data to disk; cleaned up in
-     * {@link #close}.
+     * Temp file path for streaming JS data to disk; cleaned up in {@link #close}.
      */
     private Path currentTempJsPath;
 
@@ -62,8 +52,7 @@ public class HtmlFormatHandler extends FormatHandler {
     // ────────────────────────────────────────────────
 
     /**
-     * One back-reference entry: a record in a source entity that references a
-     * record in a target entity.
+     * One back-reference entry: a record in a source entity that references a record in a target entity.
      */
     static final class BackRefEntry {
         String sourceEntityDestName;
@@ -77,8 +66,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Registry for all back-references collected during the full export.
-     * Structure: targetEntityDestName → targetId → list of sources.
+     * Registry for all back-references collected during the full export. Structure: targetEntityDestName → targetId → list of sources.
      */
     private final Map<String, Map<String, List<BackRefEntry>>> crossRefMap = new LinkedHashMap<>();
 
@@ -87,17 +75,13 @@ public class HtmlFormatHandler extends FormatHandler {
     /** Summary of the root object currently being exported. */
     private String currentRootObjectSummary = null;
     /**
-     * Entries added for the current entity class (href set later in
-     * {@link #close}).
+     * Entries added for the current entity class (href set later in {@link #close}).
      */
     private final List<BackRefEntry> pendingHrefEntries = new ArrayList<>();
     /** HTML output root — set in {@link #init}. */
     private Path htmlBasePath = null;
     /**
-     * Maps each exported root record's DB4O native object ID to the HTML file
-     * it was written into. Used by {@link #patchCrossRefsIntoHtmlFiles()} to
-     * find the exact file that contains a given target record, regardless of
-     * how many HTML files the same class is split across.
+     * Maps each exported root record's DB4O native object ID to the HTML file it was written into. Used by {@link #patchCrossRefsIntoHtmlFiles()} to find the exact file that contains a given target record, regardless of how many HTML files the same class is split across.
      */
     private final Map<Long, Path> objectIdToHtmlPath = new LinkedHashMap<>();
 
@@ -116,10 +100,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Creates a disk-backed writer that streams JS data to a temp file
-     * ({@code baseName.js.tmp}) so large exports never accumulate in memory.
-     * {@link #close(ExportCurrentState)} assembles the final HTML by streaming
-     * the temp file into the template, then deletes it.
+     * Creates a disk-backed writer that streams JS data to a temp file ({@code baseName.js.tmp}) so large exports never accumulate in memory. {@link #close(ExportCurrentState)} assembles the final HTML by streaming the temp file into the template, then deletes it.
      */
     @Override
     protected StructuredWriter createWriter(Path filePath) throws IOException {
@@ -135,9 +116,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Builds the nav tree from the operation's exported modules and serialises
-     * it to JSON. Also writes the {@code index.html} welcome page at the db
-     * output root.
+     * Builds the nav tree from the operation's exported modules and serialises it to JSON. Also writes the {@code index.html} welcome page at the db output root.
      */
     @Override
     public void init(ExportCurrentState ctx) throws Exception {
@@ -158,8 +137,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Captures the class and config title so {@link #close} can use them after
-     * exportObject nulls ctx.
+     * Captures the class and config title so {@link #close} can use them after exportObject nulls ctx.
      */
     @Override
     public void open(ExportCurrentState ctx) throws Exception {
@@ -171,9 +149,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * For IDEntite classes: resolves a human-readable label and writes a flat
-     * element, skipping the nested field loop. Falls through to the default
-     * open-structure behaviour for all other classes.
+     * For IDEntite classes: resolves a human-readable label and writes a flat element, skipping the nested field loop. Falls through to the default open-structure behaviour for all other classes.
      */
     @Override
     public boolean onObject(ExportCurrentState ctx) throws Exception {
@@ -181,12 +157,12 @@ public class HtmlFormatHandler extends FormatHandler {
             return false;
 
         // IDEntite: attempt to resolve to a human-readable label
-        if (ctx.schemaClass.isIDEntite(ctx.request.databaseSchema)) {
+        if (ctx.schemaClass.isIDEntite()) {
             Object obj = ctx.currentObject().obj;
             IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-ref for embedded IDEntite objects
             // (embedContents=true path)
-            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.request.databaseSchema)) {
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {
                 collectBackRef(ctx, ctx.schemaClass, result.targetObjectId);
             }
             if (result.label != null && !result.label.isBlank()) {
@@ -237,8 +213,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * For non-embedded IDEntite field references: resolves a human-readable
-     * label and writes it as flat content, skipping the default pipeline.
+     * For non-embedded IDEntite field references: resolves a human-readable label and writes it as flat content, skipping the default pipeline.
      */
     @Override
     public boolean onField(ExportCurrentState ctx) throws Exception {
@@ -247,14 +222,14 @@ public class HtmlFormatHandler extends FormatHandler {
 
         try {
             String className = ClassUtil.getClassName(ctx.fieldValue);
-            DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, ctx.request.referenceSchema);
-            if (fieldClass == null || !fieldClass.isIDEntite(ctx.request.databaseSchema))
+            DOSchemaClass fieldClass = ctx.request.referenceSchema.findClassByName(className);
+            if (fieldClass == null || !fieldClass.isIDEntite())
                 return false;
 
             IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-reference whenever target is resolved (even if label
             // is absent)
-            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite(ctx.request.databaseSchema)) {
+            if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {
                 collectBackRef(ctx, fieldClass, result.targetObjectId);
             }
             if (result.targetObjectId != null) {
@@ -286,8 +261,7 @@ public class HtmlFormatHandler extends FormatHandler {
     private static final int BACK_REF_CAP_PER_RECORD = 25;
 
     /**
-     * Records a back-reference from the root entity currently being exported to
-     * the target entity identified by {@code targetObjectId}.
+     * Records a back-reference from the root entity currently being exported to the target entity identified by {@code targetObjectId}.
      */
     private void collectBackRef(ExportCurrentState ctx, DOSchemaClass idEntiteClass, long targetObjectId) {
         try {
@@ -295,7 +269,7 @@ public class HtmlFormatHandler extends FormatHandler {
             String expectedType = idEntiteClass.attributes.pointsTo;
             if (expectedType == null || expectedType.isEmpty())
                 return;
-            DOSchemaClass targetClass = SchemaUtil.findClassByName(expectedType, ctx.request.referenceSchema);
+            DOSchemaClass targetClass = ctx.request.referenceSchema.findClassByName(expectedType);
             if (targetClass == null || targetClass.attributes.destinationName == null)
                 return;
 
@@ -342,9 +316,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Flushes and closes the temp JS file, then streams it into the HTML
-     * template (never loading the full JS data into memory). Deletes the temp
-     * file when done.
+     * Flushes and closes the temp JS file, then streams it into the HTML template (never loading the full JS data into memory). Deletes the temp file when done.
      */
     @Override
     public void close(ExportCurrentState ctx) throws Exception {
@@ -396,8 +368,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * After all classes (including referenced ones) are exported, regenerates
-     * the welcome page so it can report the definitive exported-object count.
+     * After all classes (including referenced ones) are exported, regenerates the welcome page so it can report the definitive exported-object count.
      */
     @Override
     public void done(ExportCurrentState ctx) throws Exception {
@@ -422,11 +393,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * For each entity that has back-references pointing to it, reads its
-     * already-written HTML file and replaces the cross-ref placeholder
-     * ({@code null} followed by the XREF comment token) with the per-entity
-     * cross-ref JSON inline — keeping every HTML file completely self-contained
-     * (no external {@code crossrefs.js} dependency).
+     * For each entity that has back-references pointing to it, reads its already-written HTML file and replaces the cross-ref placeholder ({@code null} followed by the XREF comment token) with the per-entity cross-ref JSON inline — keeping every HTML file completely self-contained (no external {@code crossrefs.js} dependency).
      */
     private void patchCrossRefsIntoHtmlFiles() {
         final String PLACEHOLDER = "null/*XREF*/";
@@ -466,8 +433,7 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Serialises the id→refs map for a single target entity. Produces:
-     * {@code {"id1":[{...}],"id2":[{...}]}}.
+     * Serialises the id→refs map for a single target entity. Produces: {@code {"id1":[{...}],"id2":[{...}]}}.
      */
     private void appendEntityRecordsJson(StringBuilder sb, Map<String, List<BackRefEntry>> idMap) {
         sb.append('{');

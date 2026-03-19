@@ -2,6 +2,7 @@
 package migration4o.models.schema;
 
 import migration4o.models.schema.analysis.DOSchemaAnomaly;
+import migration4o.util.ClassUtil;
 import migration4o.util.SchemaUtil;
 
 import java.util.ArrayList;
@@ -23,10 +24,27 @@ public class DOSchema implements DOReferenceSchema, DODatabaseSchema {
     }
 
     public boolean isDescendant(DOSchemaClass schemaClass, String ancestorClassName) {
-        return SchemaUtil.isDescendantOf(schemaClass, ancestorClassName, this);
+        return schemaClass.isDescendantOf(ancestorClassName);
     }
 
     public DOSchemaClass findClassByName(String className) {
-        return SchemaUtil.findClassByName(className, this);
+        if (className == null || classes == null) {
+            return null;
+        }
+        for (DOSchemaClass schemaClass : classes) {
+            if (schemaClass.attributes.source.equals(className)) {
+                return schemaClass;
+            }
+        }
+        String searchSimpleName = ClassUtil.getSimpleName(className);
+        for (DOSchemaClass schemaClass : classes) {
+            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
+            if (schemaSimpleName.equals(searchSimpleName)) {
+                System.err.println("Warning: Used simple-class-name fallback, but we should not have done that.");
+                return schemaClass;
+            }
+        }
+
+        return null;
     }
 }

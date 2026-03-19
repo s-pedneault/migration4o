@@ -8,7 +8,6 @@ import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.util.ClassUtil;
-import migration4o.util.SchemaUtil;
 
 import javax.swing.*;
 import javax.swing.event.TreeExpansionEvent;
@@ -22,15 +21,12 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Panel that displays the schema structure as a tree, showing class
- * relationships through field references to help understand object
- * reachability.
+ * Panel that displays the schema structure as a tree, showing class relationships through field references to help understand object reachability.
  */
 public class SchemaStructurePanel extends JPanel {
 
     /**
-     * Custom tree node that stores both display text and full class name for
-     * coloring.
+     * Custom tree node that stores both display text and full class name for coloring.
      */
     private static class ClassTreeNode {
         final String displayText;
@@ -220,8 +216,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Loads all class names from all modules to track which classes are
-     * exported.
+     * Loads all class names from all modules to track which classes are exported.
      */
     private void loadClassesFromModules() {
         classesInModules.clear();
@@ -251,13 +246,11 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Checks if this is the first class in modules encountered in the branch
-     * from root to this node.
+     * Checks if this is the first class in modules encountered in the branch from root to this node.
      * 
      * @param node The current node
      * @param className The full class name to check (must be in modules)
-     * @return true if no other module class appears in ancestors, false if any
-     * module class appeared earlier
+     * @return true if no other module class appears in ancestors, false if any module class appeared earlier
      */
     private boolean isFirstOccurrenceInBranch(DefaultMutableTreeNode node, String className) {
         // Walk up the tree from parent to root, checking if ANY class in
@@ -283,9 +276,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Recursively checks if this node or any of its descendants contains a red
-     * node (a module class that appears after another module class in the
-     * branch).
+     * Recursively checks if this node or any of its descendants contains a red node (a module class that appears after another module class in the branch).
      * 
      * @param node The node to check
      * @return true if any descendant is a red node
@@ -354,15 +345,14 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Builds the Entities branch by finding all classes that descend from
-     * EntiteContientID and recursively showing their field references.
+     * Builds the Entities branch by finding all classes that descend from EntiteContientID and recursively showing their field references.
      */
     private void buildEntitiesBranch(DefaultMutableTreeNode parentNode) {
         List<DOSchemaClass> entiteContientIDClasses = new ArrayList<>();
 
         // Find all classes that descend from EntiteContientID
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.isEntite(schema)) {
+            if (schemaClass.isEntite()) {
                 entiteContientIDClasses.add(schemaClass);
             }
         }
@@ -405,15 +395,14 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Builds the Params branch by finding all classes that descend from
-     * EntiteParam and recursively showing their field references.
+     * Builds the Params branch by finding all classes that descend from EntiteParam and recursively showing their field references.
      */
     private void buildParamsBranch(DefaultMutableTreeNode parentNode) {
         List<DOSchemaClass> entiteParamClasses = new ArrayList<>();
 
         // Find all classes that descend from EntiteParam
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.isParam(schema)) {
+            if (schemaClass.isParam()) {
                 entiteParamClasses.add(schemaClass);
             }
         }
@@ -456,8 +445,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Expands a class node by showing its fields that reference other schema
-     * classes.
+     * Expands a class node by showing its fields that reference other schema classes.
      */
     private void expandClassFields(DefaultMutableTreeNode classNode, DOSchemaClass schemaClass) {
         DOSchemaField[] fields = schemaClass.fields;
@@ -475,10 +463,10 @@ public class SchemaStructurePanel extends JPanel {
             if (field.attributes.isCollection) {
                 String childrenType = field.attributes.childrenType;
                 if (childrenType != null) {
-                    DOSchemaClass childClass = SchemaUtil.findClassByName(childrenType, schema);
+                    DOSchemaClass childClass = schema.findClassByName(childrenType);
                     if (childClass != null) {
                         // Check if children type is an IDEntite descendant
-                        if (childClass.isIDEntite(schema)) {
+                        if (childClass.isIDEntite()) {
                             // Special handling for IDEntite collections
                             handleIDEntiteField(classNode, field, childClass);
                         } else {
@@ -489,10 +477,10 @@ public class SchemaStructurePanel extends JPanel {
                 }
             } else {
                 // Non-collection field - check the field type itself
-                DOSchemaClass referencedClass = SchemaUtil.findClassByName(fieldType, schema);
+                DOSchemaClass referencedClass = schema.findClassByName(fieldType);
                 if (referencedClass != null) {
                     // Check if this is an IDEntite descendant
-                    if (referencedClass.isIDEntite(schema)) {
+                    if (referencedClass.isIDEntite()) {
                         // Special handling for IDEntite fields
                         handleIDEntiteField(classNode, field, referencedClass);
                     } else {
@@ -505,8 +493,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Handles an IDEntite field by showing what EntiteContientID class it
-     * refers to.
+     * Handles an IDEntite field by showing what EntiteContientID class it refers to.
      */
     private void handleIDEntiteField(DefaultMutableTreeNode classNode, DOSchemaField field, DOSchemaClass idEntiteClass) {
         // Mark the IDEntite class as reached
@@ -524,9 +511,9 @@ public class SchemaStructurePanel extends JPanel {
             // Find the target class by absolute name (with simple name fallback
             // in
             // SchemaUtil)
-            DOSchemaClass targetClass = SchemaUtil.findClassByName(targetClassName, schema);
+            DOSchemaClass targetClass = schema.findClassByName(targetClassName);
 
-            if (targetClass != null && (targetClass.isEntite(schema) || targetClass.isParam(schema))) {
+            if (targetClass != null && (targetClass.isEntite() || targetClass.isParam())) {
                 // Mark the target class as reached
                 unreachedClasses.remove(targetClass.attributes.source);
 
@@ -568,8 +555,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Checks if we should allow expansion of a node. Returns false if the class
-     * has already appeared once in the ancestor chain.
+     * Checks if we should allow expansion of a node. Returns false if the class has already appeared once in the ancestor chain.
      */
     private boolean shouldAllowExpansion(DOSchemaClass schemaClass, DefaultMutableTreeNode node) {
         if (schemaClass == null) {
@@ -601,9 +587,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Checks if a class should be expandable. Any class in the schema can be
-     * expanded, but only if it hasn't appeared more than once already in the
-     * ancestor path (prevents infinite loops).
+     * Checks if a class should be expandable. Any class in the schema can be expanded, but only if it hasn't appeared more than once already in the ancestor path (prevents infinite loops).
      */
     private boolean hasExpandableFields(DOSchemaClass schemaClass) {
         // Any class in the schema can be expanded
@@ -611,9 +595,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Checks if we should add an expandable placeholder for this class. Returns
-     * false if the class has already appeared once in the branch (prevents
-     * infinite loops like A→B→A→B→A...).
+     * Checks if we should add an expandable placeholder for this class. Returns false if the class has already appeared once in the branch (prevents infinite loops like A→B→A→B→A...).
      */
     private boolean shouldAddPlaceholder(DOSchemaClass schemaClass, DefaultMutableTreeNode fieldNode) {
         if (schemaClass == null) {
@@ -651,14 +633,13 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Builds the Unreached branch showing all classes not encountered during
-     * tree building.
+     * Builds the Unreached branch showing all classes not encountered during tree building.
      */
     private void buildUnreachedBranch(DefaultMutableTreeNode parentNode) {
         // Convert unreached class names to DOSchemaClass objects and sort
         List<DOSchemaClass> unreachedClassList = new ArrayList<>();
         for (String className : unreachedClasses) {
-            DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
+            DOSchemaClass schemaClass = schema.findClassByName(className);
             if (schemaClass != null) {
                 unreachedClassList.add(schemaClass);
             }
@@ -685,9 +666,7 @@ public class SchemaStructurePanel extends JPanel {
     }
 
     /**
-     * Drills backwards from an unreached class to find all fields that
-     * reference it. Continues recursively to understand the chain of
-     * unreachability.
+     * Drills backwards from an unreached class to find all fields that reference it. Continues recursively to understand the chain of unreachability.
      */
     private void drillBackwards(DefaultMutableTreeNode classNode, DOSchemaClass targetClass, Set<String> visitedBackward) {
         String targetClassName = targetClass.attributes.source;
@@ -723,8 +702,8 @@ public class SchemaStructurePanel extends JPanel {
                     // Also check if children type is IDEntite pointing to our
                     // target
                     else if (childrenType != null) {
-                        DOSchemaClass childTypeClass = SchemaUtil.findClassByName(childrenType, schema);
-                        if (childTypeClass != null && childTypeClass.isIDEntite(schema)) {
+                        DOSchemaClass childTypeClass = schema.findClassByName(childrenType);
+                        if (childTypeClass != null && childTypeClass.isIDEntite()) {
                             // Use pointsTo if available, otherwise fall back to
                             // name extraction
                             String pointsTo = childTypeClass.attributes.pointsTo;
@@ -745,8 +724,8 @@ public class SchemaStructurePanel extends JPanel {
                 }
                 // Check if it's an IDEntite that might point to this class
                 else {
-                    DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(fieldType, schema);
-                    if (fieldTypeClass != null && fieldTypeClass.isIDEntite(schema)) {
+                    DOSchemaClass fieldTypeClass = schema.findClassByName(fieldType);
+                    if (fieldTypeClass != null && fieldTypeClass.isIDEntite()) {
                         // Use pointsTo if available, otherwise fall back to
                         // name extraction
                         String pointsTo = fieldTypeClass.attributes.pointsTo;
@@ -793,8 +772,7 @@ public class SchemaStructurePanel extends JPanel {
      * Helper class to store field reference information.
      */
     /**
-     * Extracts expected EntiteContientID type from field name. Example:
-     * "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+     * Extracts expected EntiteContientID type from field name. Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
      */
     private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
         // If field name starts with "mID", extract the part after it
@@ -816,7 +794,7 @@ public class SchemaStructurePanel extends JPanel {
     private int countEntities() {
         int count = 0;
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.isEntite(schema)) {
+            if (schemaClass.isEntite()) {
                 count++;
             }
         }
@@ -829,7 +807,7 @@ public class SchemaStructurePanel extends JPanel {
     private int countParams() {
         int count = 0;
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.isParam(schema)) {
+            if (schemaClass.isParam()) {
                 count++;
             }
         }

@@ -10,24 +10,19 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
 /**
- * Utility class for resolving object references, particularly IDEntite
- * patterns.
+ * Utility class for resolving object references, particularly IDEntite patterns.
  */
 public class ReferenceUtil {
 
     /**
-     * Determines which object ID should be exported for an IDEntite reference.
-     * If embedContents is false, returns the IDEntite object ID itself. If
-     * embedContents is true, attempts to resolve to the target object. Returns
-     * null if resolution fails (caller must skip the export).
+     * Determines which object ID should be exported for an IDEntite reference. If embedContents is false, returns the IDEntite object ID itself. If embedContents is true, attempts to resolve to the target object. Returns null if resolution fails (caller must skip the export).
      * 
      * @param container Database container
      * @param idEntiteObj The IDEntite object
      * @param idClassName Class name of the IDEntite object
      * @param schemaField Schema field definition (may be null)
      * @param databaseSchema The database schema containing all classes
-     * @return The object ID to export, or null if embedContents resolution
-     * failed
+     * @return The object ID to export, or null if embedContents resolution failed
      */
     public static Long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DOSchema databaseSchema) {
         long idEntiteId = container.ext().getID(idEntiteObj);
@@ -60,8 +55,7 @@ public class ReferenceUtil {
      * 
      * @param container Database container
      * @param idEntiteObj The IDEntite object to resolve
-     * @param expectedType Expected type name (simple or absolute class name) -
-     * can be null
+     * @param expectedType Expected type name (simple or absolute class name) - can be null
      * @param databaseSchema The database schema containing all classes
      * @return The object ID of the target object, or null if not found
      */
@@ -89,8 +83,7 @@ public class ReferenceUtil {
      * 
      * @param container Database container
      * @param mID The mID value to search for
-     * @param expectedType Expected type name (simple or absolute class name) -
-     * can be null
+     * @param expectedType Expected type name (simple or absolute class name) - can be null
      * @param databaseSchema The database schema containing all classes
      * @return The object ID of the matching object, or null if not found
      */
@@ -100,7 +93,7 @@ public class ReferenceUtil {
         }
 
         for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-            if (!schemaClass.isEntite(databaseSchema)) {
+            if (!schemaClass.isEntite()) {
                 continue;
             }
 
@@ -176,9 +169,7 @@ public class ReferenceUtil {
     }
 
     /**
-     * Extracts expected type name from a field name or ID class name. Example:
-     * "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere" Example:
-     * "gest.gen.IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+     * Extracts expected type name from a field name or ID class name. Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere" Example: "gest.gen.IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
      * 
      * @param fieldName The field name
      * @param idClassName The ID class name (fully qualified)

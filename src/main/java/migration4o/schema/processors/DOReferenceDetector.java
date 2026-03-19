@@ -13,19 +13,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Post-processor that detects and adds missing references to schema classes.
- * Specifically handles indirect references through IDEntite collections.
+ * Post-processor that detects and adds missing references to schema classes. Specifically handles indirect references through IDEntite collections.
  * 
- * For example, if a field has childrenType="IDProgramme" and IDProgramme has
- * pointsTo="Programme", this detector will add a reference to Programme.
+ * For example, if a field has childrenType="IDProgramme" and IDProgramme has pointsTo="Programme", this detector will add a reference to Programme.
  */
 public class DOReferenceDetector {
 
     /**
-     * Scans all classes in the schema and adds missing references.
-     * This includes indirect references through IDEntite collections where
-     * the collection's childrenType points to an IDEntite that has a pointsTo
-     * attribute.
+     * Scans all classes in the schema and adds missing references. This includes indirect references through IDEntite collections where the collection's childrenType points to an IDEntite that has a pointsTo attribute.
      * 
      * @param schema The schema to process
      */
@@ -55,7 +50,7 @@ public class DOReferenceDetector {
                 if (field.attributes.type != null && !field.attributes.isCollection) {
                     DOSchemaClass typeClass = findClass(classMap, field.attributes.type);
                     if (typeClass != null) {
-                        if (typeClass.isIDEntite(schema)) {
+                        if (typeClass.isIDEntite()) {
                             // Field type is an IDEntite pointer - add reference to BOTH the pointer class
                             // AND the concrete class
                             // Add reference to the IDEntite pointer class itself
@@ -85,7 +80,7 @@ public class DOReferenceDetector {
                     DOSchemaClass childrenClass = findClass(classMap, field.attributes.childrenType);
 
                     if (childrenClass != null) {
-                        if (childrenClass.isIDEntite(schema)) {
+                        if (childrenClass.isIDEntite()) {
                             // Collection of IDEntite pointers - add reference to BOTH the pointer class AND
                             // the concrete class
                             // Add reference to the IDEntite pointer class itself
@@ -149,8 +144,7 @@ public class DOReferenceDetector {
     }
 
     /**
-     * Check if a type represents an entity class (not a primitive or built-in
-     * type).
+     * Check if a type represents an entity class (not a primitive or built-in type).
      */
     private static boolean isEntityType(String typeName) {
         if (typeName == null || typeName.isEmpty()) {
@@ -255,13 +249,12 @@ public class DOReferenceDetector {
     }
 
     /**
-     * Infer pointsTo for IDEntite subclasses based on naming convention.
-     * For example: gest.cours.IDProgramme → gest.cours.Programme
+     * Infer pointsTo for IDEntite subclasses based on naming convention. For example: gest.cours.IDProgramme → gest.cours.Programme
      */
     private static void inferPointsTo(DOSchema schema, Map<String, DOSchemaClass> classMap) {
         for (DOSchemaClass cls : schema.getClasses()) {
             // Only process IDEntite subclasses that don't already have pointsTo set
-            if (cls.isIDEntite(schema) && (cls.attributes.pointsTo == null || cls.attributes.pointsTo.isEmpty())) {
+            if (cls.isIDEntite() && (cls.attributes.pointsTo == null || cls.attributes.pointsTo.isEmpty())) {
                 // Try to infer from source name: gest.cours.IDProgramme → gest.cours.Programme
                 String sourceName = cls.attributes.source;
                 if (sourceName.contains(".ID")) {

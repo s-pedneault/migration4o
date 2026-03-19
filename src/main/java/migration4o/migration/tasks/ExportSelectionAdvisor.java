@@ -24,27 +24,15 @@ import migration4o.util.ObjectResolverUtil;
 import migration4o.util.TypeUtil;
 
 /**
- * Pre-flight analyser that selects the best N objects per class when an export
- * cap is active, favouring objects that are mutually cross-referenced with
- * objects in other exported classes.
+ * Pre-flight analyser that selects the best N objects per class when an export cap is active, favouring objects that are mutually cross-referenced with objects in other exported classes.
  *
  * <h2>Algorithm overview</h2>
  * <ol>
  * <li>Collect all classes being exported and their DB object ID arrays.</li>
- * <li>Find <em>reference edges</em> by reading each exported class's
- * {@code DOSchemaClass.schemaReferences} — populated at startup by
- * {@code DOReferenceDetector}, which already resolves IDEntite indirection.
- * Each edge carries whether it is IDEntite-mediated so the DB scan below can
- * choose the right resolution path.</li>
- * <li>Scan every source-class object: read the relevant field via
- * {@link DatabaseUtil#getStoredFieldValue}, then resolve to the target object
- * ID — directly via {@code container.ext().getID()} for plain references, or
- * via {@link ReferenceUtil#resolveIDEntiteReference} for IDEntite-mediated
- * ones.</li>
- * <li>Run iterative scoring passes (source pass then target pass) until stable,
- * keeping the top-N objects per class at each step.</li>
- * <li>Return the final selections as {@code Map<className, long[]>} in original
- * DB order for deterministic output.</li>
+ * <li>Find <em>reference edges</em> by reading each exported class's {@code DOSchemaClass.schemaReferences} — populated at startup by {@code DOReferenceDetector}, which already resolves IDEntite indirection. Each edge carries whether it is IDEntite-mediated so the DB scan below can choose the right resolution path.</li>
+ * <li>Scan every source-class object: read the relevant field via {@link DatabaseUtil#getStoredFieldValue}, then resolve to the target object ID — directly via {@code container.ext().getID()} for plain references, or via {@link ReferenceUtil#resolveIDEntiteReference} for IDEntite-mediated ones.</li>
+ * <li>Run iterative scoring passes (source pass then target pass) until stable, keeping the top-N objects per class at each step.</li>
+ * <li>Return the final selections as {@code Map<className, long[]>} in original DB order for deterministic output.</li>
  * </ol>
  */
 public class ExportSelectionAdvisor {
@@ -73,8 +61,7 @@ public class ExportSelectionAdvisor {
      * Holds both outputs of {@link #computeSelection}:
      * <ul>
      * <li>{@code rankedIds} — full per-class ID arrays, required objects first.
-     * <li>{@code requiredCounts} — how many leading IDs in each array are
-     * "required" (closure-driven) and must be exported unconditionally.
+     * <li>{@code requiredCounts} — how many leading IDs in each array are "required" (closure-driven) and must be exported unconditionally.
      * </ul>
      */
     public static final class SelectionResult {
@@ -106,9 +93,7 @@ public class ExportSelectionAdvisor {
     }
 
     /**
-     * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0,
-     * seed query results are limited to that many objects per seed class before
-     * closure propagation.
+     * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0, seed query results are limited to that many objects per seed class before closure propagation.
      */
     public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
         this.container = container;
@@ -121,9 +106,7 @@ public class ExportSelectionAdvisor {
     // ── Public entry point ───────────────────────────────────────────────────
 
     /**
-     * Analyses the modules to export and returns a {@link SelectionResult}
-     * containing per-class ranked ID arrays (required objects first) and the
-     * count of required objects at the front of each array.
+     * Analyses the modules to export and returns a {@link SelectionResult} containing per-class ranked ID arrays (required objects first) and the count of required objects at the front of each array.
      *
      * @param modules modules that will be exported
      * @param monitor optional progress monitor (may be null)
@@ -161,19 +144,14 @@ public class ExportSelectionAdvisor {
     // ── Seed-based entry point ───────────────────────────────────────────────
 
     /**
-     * Seed-based selection: executes user-defined queries to find initial
-     * objects, then examines each seed class's {@code schemaReferences} to
-     * discover objects in other classes that reference the seed objects.
+     * Seed-based selection: executes user-defined queries to find initial objects, then examines each seed class's {@code schemaReferences} to discover objects in other classes that reference the seed objects.
      *
      * <h3>Algorithm</h3>
      * <ol>
      * <li>Execute seed queries to find matching objects.</li>
-     * <li>For each seed class, read its {@code schemaReferences} to find which
-     * exported classes reference it.</li>
-     * <li>Scan those referencing classes to find the specific objects that
-     * point to seed objects — these become <em>required</em> (cap-exempt).</li>
-     * <li>All other classes are left without preselection, so the normal cap
-     * applies at export time via {@link ObjectExportLoop}.</li>
+     * <li>For each seed class, read its {@code schemaReferences} to find which exported classes reference it.</li>
+     * <li>Scan those referencing classes to find the specific objects that point to seed objects — these become <em>required</em> (cap-exempt).</li>
+     * <li>All other classes are left without preselection, so the normal cap applies at export time via {@link ObjectExportLoop}.</li>
      * </ol>
      *
      * @param modules modules that will be exported
@@ -241,8 +219,7 @@ public class ExportSelectionAdvisor {
     // ── Seed query execution ────────────────────────────────────────────────
 
     /**
-     * Executes each SeedQuery against the database and collects matching object
-     * IDs.
+     * Executes each SeedQuery against the database and collects matching object IDs.
      */
     private Map<String, Set<Long>> executeSeedQueries(Map<String, long[]> classObjectIds, DOExportMonitor monitor) {
         Map<String, Set<Long>> result = new LinkedHashMap<>();
@@ -326,9 +303,7 @@ public class ExportSelectionAdvisor {
     // ── Seed reference scan ────────────────────────────────────────────────
 
     /**
-     * For each seed class, examines its {@code schemaReferences} to find which
-     * exported classes reference it, then scans those classes to find the
-     * specific objects that point to seed objects.
+     * For each seed class, examines its {@code schemaReferences} to find which exported classes reference it, then scans those classes to find the specific objects that point to seed objects.
      *
      * @return map of className → set of object IDs that reference seed objects
      */
@@ -371,7 +346,7 @@ public class ExportSelectionAdvisor {
                     srcNames.add(declaringClass);
                 } else {
                     for (DOSchemaClass candidate : exportedClasses) {
-                        if (!candidate.attributes.source.equals(seedClassName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                        if (!candidate.attributes.source.equals(seedClassName) && candidate.isDescendantOf(declaringClass)) {
                             srcNames.add(candidate.attributes.source);
                         }
                     }
@@ -437,15 +412,11 @@ public class ExportSelectionAdvisor {
     }
 
     /**
-     * Builds the final {@link SelectionResult} from seed objects and their
-     * related objects.
+     * Builds the final {@link SelectionResult} from seed objects and their related objects.
      * <ul>
-     * <li><b>Seed classes</b>: export ONLY seed-matched objects (all required,
-     * cap-exempt).</li>
-     * <li><b>Referencing classes</b>: related objects are required (cap-exempt)
-     * and placed first, then remaining objects fill up to cap.</li>
-     * <li><b>Other classes</b>: not included in preselection — the normal cap
-     * applies at export time via {@link ObjectExportLoop}.</li>
+     * <li><b>Seed classes</b>: export ONLY seed-matched objects (all required, cap-exempt).</li>
+     * <li><b>Referencing classes</b>: related objects are required (cap-exempt) and placed first, then remaining objects fill up to cap.</li>
+     * <li><b>Other classes</b>: not included in preselection — the normal cap applies at export time via {@link ObjectExportLoop}.</li>
      * </ul>
      */
     private SelectionResult buildSeedResult(Map<String, long[]> classObjectIds, Map<String, Set<Long>> seedObjects, Map<String, Set<Long>> relatedObjects) {
@@ -523,20 +494,10 @@ public class ExportSelectionAdvisor {
     // ── Step 2: find reference edges ─────────────────────────────────────────
 
     /**
-     * Builds the edge list from the pre-built {@code schemaReferences} graph.
-     * {@code DOReferenceDetector} populates
-     * {@code schemaClass.schemaReferences} at startup and already resolves
-     * IDEntite indirection, so we don't need to re-scan fields manually.
+     * Builds the edge list from the pre-built {@code schemaReferences} graph. {@code DOReferenceDetector} populates {@code schemaClass.schemaReferences} at startup and already resolves IDEntite indirection, so we don't need to re-scan fields manually.
      *
      * <p>
-     * <b>Inherited-field expansion:</b> {@code DOReferenceDetector} records the
-     * <em>declaring</em> class of each field as the reference source (e.g.
-     * {@code gest.gen.EntiteContientID} for the inherited {@code mIDDossPrev}
-     * field). When that declaring class is not itself exported, we expand the
-     * edge to every exported subclass of the declaring class — for example
-     * {@code Prevention}, {@code Intervention}, etc. — so that each concrete
-     * exported class that inherits the field is properly connected to its
-     * target.
+     * <b>Inherited-field expansion:</b> {@code DOReferenceDetector} records the <em>declaring</em> class of each field as the reference source (e.g. {@code gest.gen.EntiteContientID} for the inherited {@code mIDDossPrev} field). When that declaring class is not itself exported, we expand the edge to every exported subclass of the declaring class — for example {@code Prevention}, {@code Intervention}, etc. — so that each concrete exported class that inherits the field is properly connected to its target.
      */
     private List<ReferenceEdge> findReferenceEdges(Set<String> exportedNames) {
         List<ReferenceEdge> edges = new ArrayList<>();
@@ -570,7 +531,7 @@ public class ExportSelectionAdvisor {
                     srcNames.add(declaringClass);
                 } else {
                     for (DOSchemaClass candidate : exportedClasses) {
-                        if (!candidate.attributes.source.equals(tgtName) && candidate.isDescendantOf(declaringClass, referenceSchema)) {
+                        if (!candidate.attributes.source.equals(tgtName) && candidate.isDescendantOf(declaringClass)) {
                             srcNames.add(candidate.attributes.source);
                         }
                     }
@@ -620,10 +581,7 @@ public class ExportSelectionAdvisor {
     // ── Step 3a: build mID → objectId index for IDEntite target classes ──────
 
     /**
-     * Pre-builds a lookup map {@code targetClassName → (mID → objectId)} for
-     * every class that is the target of an IDEntite edge. This avoids O(n²)
-     * linear scans inside {@link ReferenceUtil#findObjectByMID} per source
-     * object.
+     * Pre-builds a lookup map {@code targetClassName → (mID → objectId)} for every class that is the target of an IDEntite edge. This avoids O(n²) linear scans inside {@link ReferenceUtil#findObjectByMID} per source object.
      */
     private Map<String, Map<Long, Long>> buildMIDIndex(List<ReferenceEdge> edges) {
         // Collect the IDEntite target class names we care about.
@@ -667,10 +625,7 @@ public class ExportSelectionAdvisor {
     // ──────────────────────────────────────────────
 
     /**
-     * For each edge, builds a map {@code sourceObjectId → targetObjectId}. Uses
-     * {@link ObjectActivator#getAndActivate} for retrieval,
-     * {@link DatabaseUtil#getAllFieldsIncludingAncestors} for field reading,
-     * and {@link ObjectResolverUtil} for target ID resolution.
+     * For each edge, builds a map {@code sourceObjectId → targetObjectId}. Uses {@link ObjectActivator#getAndActivate} for retrieval, {@link DatabaseUtil#getAllFieldsIncludingAncestors} for field reading, and {@link ObjectResolverUtil} for target ID resolution.
      */
     private Map<ReferenceEdge, Map<Long, Long>> scanReferences(List<ReferenceEdge> edges, Map<String, long[]> classObjectIds, DOExportMonitor monitor) {
 
@@ -751,28 +706,17 @@ public class ExportSelectionAdvisor {
     /**
      * Builds the final per-class selection using two-phase referential closure.
      *
-     * <h3>Phase 1 — Seed</h3> Each class is seeded with the first
-     * {@code min(cap, total)} object IDs in original DB order.
+     * <h3>Phase 1 — Seed</h3> Each class is seeded with the first {@code min(cap, total)} object IDs in original DB order.
      *
-     * <h3>Phase 2 — Closure propagation</h3> For every reference edge
-     * {@code S → T}, every target object that is actually referenced by a
-     * currently-selected source object is unconditionally added to
-     * {@code required[T]}, even if that pushes the count above {@code cap}.
-     * Iteration continues until stable, naturally covering multi-hop chains.
+     * <h3>Phase 2 — Closure propagation</h3> For every reference edge {@code S → T}, every target object that is actually referenced by a currently-selected source object is unconditionally added to {@code required[T]}, even if that pushes the count above {@code cap}. Iteration continues until stable, naturally covering multi-hop chains.
      *
-     * <h3>Phase 3 — Ranked output</h3> The FULL object-ID array is returned for
-     * each class with this ordering:
+     * <h3>Phase 3 — Ranked output</h3> The FULL object-ID array is returned for each class with this ordering:
      * <ol>
-     * <li><b>Required</b> objects (added by closure) in original DB order —
-     * these appear first regardless of their DB position, and are exempt from
-     * the cap check in {@link ObjectExportLoop}.</li>
-     * <li><b>Seed-only</b> objects (seeded but not required) in original DB
-     * order — fill available cap slots after required.</li>
-     * <li><b>Unselected</b> objects in original DB order — fallback pool for
-     * criteria-filtered objects that eat into the cap.</li>
+     * <li><b>Required</b> objects (added by closure) in original DB order — these appear first regardless of their DB position, and are exempt from the cap check in {@link ObjectExportLoop}.</li>
+     * <li><b>Seed-only</b> objects (seeded but not required) in original DB order — fill available cap slots after required.</li>
+     * <li><b>Unselected</b> objects in original DB order — fallback pool for criteria-filtered objects that eat into the cap.</li>
      * </ol>
-     * The required count is recorded so {@link ObjectExportLoop} can skip the
-     * cap check for the leading required IDs.
+     * The required count is recorded so {@link ObjectExportLoop} can skip the cap check for the leading required IDs.
      */
     private SelectionResult buildRankedOrder(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData) {
 
@@ -898,12 +842,9 @@ public class ExportSelectionAdvisor {
     // ── Field path resolution ──────────────────────────────────────────────
 
     /**
-     * Translates a destinationName-based field path (e.g. "adresse.rue") into
-     * the corresponding DB4O source field path (e.g. "mAdresse.mRue") by
-     * walking the reference schema class hierarchy.
+     * Translates a destinationName-based field path (e.g. "adresse.rue") into the corresponding DB4O source field path (e.g. "mAdresse.mRue") by walking the reference schema class hierarchy.
      *
-     * @param className fully-qualified class name (e.g.
-     * "gest.dossPrev.DossPrev")
+     * @param className fully-qualified class name (e.g. "gest.dossPrev.DossPrev")
      * @param destPath dot-separated destinationName path from the UI
      * @return dot-separated source field path, or null if resolution fails
      */

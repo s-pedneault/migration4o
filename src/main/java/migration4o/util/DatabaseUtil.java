@@ -77,7 +77,7 @@ public class DatabaseUtil {
 
         // Search in parent class if it exists
         if (schemaClass.attributes.parentClassName != null && !schemaClass.attributes.parentClassName.isEmpty() && schema != null) {
-            DOSchemaClass parentClass = SchemaUtil.findClassByName(schemaClass.attributes.parentClassName, schema);
+            DOSchemaClass parentClass = schema.findClassByName(schemaClass.attributes.parentClassName);
             if (parentClass != null) {
                 return findSchemaFieldByNameIncludingAncestors(parentClass, fieldName, schema);
             }
@@ -106,7 +106,7 @@ public class DatabaseUtil {
             }
         }
         if (schemaClass.attributes.parentClassName != null && !schemaClass.attributes.parentClassName.isEmpty() && schema != null) {
-            DOSchemaClass parent = SchemaUtil.findClassByName(schemaClass.attributes.parentClassName, schema);
+            DOSchemaClass parent = schema.findClassByName(schemaClass.attributes.parentClassName);
             if (parent != null) {
                 return findSchemaFieldByDestinationNameIncludingAncestors(parent, destName, schema);
             }
@@ -133,7 +133,7 @@ public class DatabaseUtil {
                     }
                 }
             }
-            current = (current.attributes.parentClassName != null && !current.attributes.parentClassName.isEmpty() && schema != null) ? SchemaUtil.findClassByName(current.attributes.parentClassName, schema) : null;
+            current = (current.attributes.parentClassName != null && !current.attributes.parentClassName.isEmpty() && schema != null) ? schema.findClassByName(current.attributes.parentClassName) : null;
         }
         return result;
     }

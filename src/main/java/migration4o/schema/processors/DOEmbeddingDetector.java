@@ -15,13 +15,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * Schema processor that validates embedContents configuration based on
- * reference counts and module membership.
- * Implements validation rules from schema/guides/schema-validation-rules.md
+ * Schema processor that validates embedContents configuration based on reference counts and module membership. Implements validation rules from schema/guides/schema-validation-rules.md
  * 
- * This detector processes fields whose types are descendants of Entite or
- * IDEntite, applying specific validation rules based on whether the target
- * class has multiple references (shared) or single reference (composition).
+ * This detector processes fields whose types are descendants of Entite or IDEntite, applying specific validation rules based on whether the target class has multiple references (shared) or single reference (composition).
  */
 public class DOEmbeddingDetector {
 
@@ -33,8 +29,7 @@ public class DOEmbeddingDetector {
     private static Set<String> reportedCommonFieldDataLoss = new HashSet<>();
 
     /**
-     * Validates embedContents configuration for all fields in the schema.
-     * Generates specific anomaly types for configuration issues.
+     * Validates embedContents configuration for all fields in the schema. Generates specific anomaly types for configuration issues.
      * 
      * @param schema The schema to validate
      */
@@ -82,12 +77,11 @@ public class DOEmbeddingDetector {
     /**
      * Process a non-collection field type.
      */
-    private static void processFieldType(DOSchema schema, DOSchemaClass containingClass,
-            DOSchemaField field, DOSchemaClass typeClass) {
+    private static void processFieldType(DOSchema schema, DOSchemaClass containingClass, DOSchemaField field, DOSchemaClass typeClass) {
 
         // CRITICAL DATA LOSS CHECK: If embedContents=false but type is not an IDEntite,
         // the field will not be exported at all (data loss!)
-        if (!field.attributes.embedContents && !typeClass.isIDEntite(schema)) {
+        if (!field.attributes.embedContents && !typeClass.isIDEntite()) {
             // Check if this is a common field reference
             if (field.isSharedField()) {
                 // Only report once per common field definition
@@ -97,37 +91,25 @@ public class DOEmbeddingDetector {
                 reportedCommonFieldDataLoss.add(field.attributes.definitionId);
 
                 // Generate warning for the common field definition
-                String explanation = String.format(
-                        "CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') has embedContents=false " +
-                                "but type '%s' is NOT an IDEntite. All uses of this common field will NOT be exported "
-                                +
-                                "(neither as ID nor as embedded object), resulting in complete data loss! " +
-                                "Fix: Set embedContents=true on the common field definition.",
-                        field.attributes.source, field.attributes.definitionId, field.attributes.type);
+                String explanation = String.format("CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') has embedContents=false " + "but type '%s' is NOT an IDEntite. All uses of this common field will NOT be exported " + "(neither as ID nor as embedded object), resulting in complete data loss! " + "Fix: Set embedContents=true on the common field definition.", field.attributes.source, field.attributes.definitionId, field.attributes.type);
                 schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.type, explanation));
             } else {
                 // Regular field (not a common field reference)
                 String containingModule = ModuleUtil.findModuleForClass(containingClass);
                 String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                String explanation = String.format(
-                        "CRITICAL DATA LOSS: Field '%s.%s'%s has embedContents=false " +
-                                "but type '%s' is NOT an IDEntite. This field will NOT be exported " +
-                                "(neither as ID nor as embedded object), resulting in complete data loss for this field! "
-                                +
-                                "Fix: Set embedContents=true to export the field as an embedded object.",
-                        containingClass.attributes.source, field.attributes.source, moduleInfo, field.attributes.type);
+                String explanation = String.format("CRITICAL DATA LOSS: Field '%s.%s'%s has embedContents=false " + "but type '%s' is NOT an IDEntite. This field will NOT be exported " + "(neither as ID nor as embedded object), resulting in complete data loss for this field! " + "Fix: Set embedContents=true to export the field as an embedded object.", containingClass.attributes.source, field.attributes.source, moduleInfo, field.attributes.type);
                 schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.type, explanation));
             }
             return; // Don't process further since this is a critical issue
         }
 
         // If type is a descendant of IDEntite, use PROCEDURE 1
-        if (typeClass.isIDEntite(schema)) {
+        if (typeClass.isIDEntite()) {
             processIDEntiteType(schema, containingClass, field, typeClass);
         }
         // If type is a descendant of Entite (but not IDEntite), use PROCEDURE 2
-        else if (typeClass.isEntite(schema)) {
+        else if (typeClass.isEntite()) {
             processEntiteType(schema, containingClass, field, typeClass);
         }
     }
@@ -135,13 +117,12 @@ public class DOEmbeddingDetector {
     /**
      * Process a collection field's children type.
      */
-    private static void processCollectionType(DOSchema schema, DOSchemaClass containingClass,
-            DOSchemaField field, DOSchemaClass childrenClass) {
+    private static void processCollectionType(DOSchema schema, DOSchemaClass containingClass, DOSchemaField field, DOSchemaClass childrenClass) {
 
         // CRITICAL DATA LOSS CHECK: If embedContents=false but childrenType is not an
         // IDEntite,
         // the collection will not be exported at all (data loss!)
-        if (!field.attributes.embedContents && !childrenClass.isIDEntite(schema)) {
+        if (!field.attributes.embedContents && !childrenClass.isIDEntite()) {
             // Check if this is a common field reference
             if (field.isSharedField()) {
                 // Only report once per common field definition
@@ -151,52 +132,33 @@ public class DOEmbeddingDetector {
                 reportedCommonFieldDataLoss.add(field.attributes.definitionId);
 
                 // Generate warning for the common field definition
-                String explanation = String.format(
-                        "CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') is a collection with embedContents=false "
-                                +
-                                "but childrenType '%s' is NOT an IDEntite. All uses of this common field will NOT be exported "
-                                +
-                                "(neither as IDs nor as embedded objects), resulting in complete data loss! " +
-                                "Fix: Set embedContents=true on the common field definition.",
-                        field.attributes.source, field.attributes.definitionId, field.attributes.childrenType);
-                schema.anomalies
-                        .add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.childrenType, explanation));
+                String explanation = String.format("CRITICAL DATA LOSS: Common field '%s' (definitionId='%s') is a collection with embedContents=false " + "but childrenType '%s' is NOT an IDEntite. All uses of this common field will NOT be exported " + "(neither as IDs nor as embedded objects), resulting in complete data loss! " + "Fix: Set embedContents=true on the common field definition.", field.attributes.source, field.attributes.definitionId, field.attributes.childrenType);
+                schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.childrenType, explanation));
             } else {
                 // Regular field (not a common field reference)
                 String containingModule = ModuleUtil.findModuleForClass(containingClass);
                 String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                String explanation = String.format(
-                        "CRITICAL DATA LOSS: Field '%s.%s'%s is a collection with embedContents=false " +
-                                "but childrenType '%s' is NOT an IDEntite. This collection will NOT be exported " +
-                                "(neither as IDs nor as embedded objects), resulting in complete data loss for this field! "
-                                +
-                                "Fix: Set embedContents=true to export the collection items as embedded objects.",
-                        containingClass.attributes.source, field.attributes.source, moduleInfo, field.attributes.childrenType);
-                schema.anomalies
-                        .add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.childrenType, explanation));
+                String explanation = String.format("CRITICAL DATA LOSS: Field '%s.%s'%s is a collection with embedContents=false " + "but childrenType '%s' is NOT an IDEntite. This collection will NOT be exported " + "(neither as IDs nor as embedded objects), resulting in complete data loss for this field! " + "Fix: Set embedContents=true to export the collection items as embedded objects.", containingClass.attributes.source, field.attributes.source, moduleInfo, field.attributes.childrenType);
+                schema.anomalies.add(new DOSchemaDataLossAnomaly(containingClass, field, field.attributes.childrenType, explanation));
             }
             return; // Don't process further since this is a critical issue
         }
 
         // If childrenType is a descendant of IDEntite, use PROCEDURE 1
-        if (childrenClass.isIDEntite(schema)) {
+        if (childrenClass.isIDEntite()) {
             processIDEntiteType(schema, containingClass, field, childrenClass);
         }
         // If childrenType is a descendant of Entite (but not IDEntite), use PROCEDURE 2
-        else if (childrenClass.isEntite(schema)) {
+        else if (childrenClass.isEntite()) {
             processEntiteType(schema, containingClass, field, childrenClass);
         }
     }
 
     /**
-     * PROCEDURE 1: Process a type that is a descendant of IDEntite.
-     * 1. Lookup the IDEntite-type definition in the schema
-     * 2. Lookup the concrete class mentioned in its pointsTo attribute
-     * 3. Process that concrete class with PROCEDURE 2
+     * PROCEDURE 1: Process a type that is a descendant of IDEntite. 1. Lookup the IDEntite-type definition in the schema 2. Lookup the concrete class mentioned in its pointsTo attribute 3. Process that concrete class with PROCEDURE 2
      */
-    private static void processIDEntiteType(DOSchema schema, DOSchemaClass containingClass,
-            DOSchemaField field, DOSchemaClass idEntiteClass) {
+    private static void processIDEntiteType(DOSchema schema, DOSchemaClass containingClass, DOSchemaField field, DOSchemaClass idEntiteClass) {
 
         // Lookup the concrete class mentioned in pointsTo attribute
         if (idEntiteClass.attributes.pointsTo == null || idEntiteClass.attributes.pointsTo.isEmpty()) {
@@ -213,19 +175,16 @@ public class DOEmbeddingDetector {
     }
 
     /**
-     * PROCEDURE 2: Process a type that is a descendant of Entite.
-     * Validates based on whether it's a superclass, reference count, and module
-     * membership.
+     * PROCEDURE 2: Process a type that is a descendant of Entite. Validates based on whether it's a superclass, reference count, and module membership.
      */
-    private static void processEntiteType(DOSchema schema, DOSchemaClass containingClass,
-            DOSchemaField field, DOSchemaClass concreteClass) {
+    private static void processEntiteType(DOSchema schema, DOSchemaClass containingClass, DOSchemaField field, DOSchemaClass concreteClass) {
 
         if (concreteClass.schemaReferences == null) {
             return;
         }
 
         // Check if this class is actually a superclass of other Entite-type classes
-        boolean isSuperclass = SchemaUtil.hasSubclasses(schema, concreteClass);
+        boolean isSuperclass = concreteClass.hasSubclasses();
 
         if (isSuperclass) {
             // If concrete class is a superclass, only warn about embedding
@@ -233,10 +192,7 @@ public class DOEmbeddingDetector {
                 String containingModule = ModuleUtil.findModuleForClass(containingClass);
                 String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                String explanation = String.format(
-                        "Field '%s.%s'%s has embedContents=true but points to class '%s' " +
-                                "which is a superclass of other Entite-type classes. Should be embedContents=false to avoid issues.",
-                        containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source);
+                String explanation = String.format("Field '%s.%s'%s has embedContents=true but points to class '%s' " + "which is a superclass of other Entite-type classes. Should be embedContents=false to avoid issues.", containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source);
                 schema.anomalies.add(new DOSchemaSharedEmbeddedAnomaly(containingClass, field, explanation));
             }
         } else {
@@ -250,10 +206,7 @@ public class DOEmbeddingDetector {
                     String containingModule = ModuleUtil.findModuleForClass(containingClass);
                     String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                    String explanation = String.format(
-                            "Field '%s.%s'%s has embedContents=true but points to class '%s' " +
-                                    "which has %d references (shared object). Should be embedContents=false to avoid duplication.",
-                            containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source, referenceCount);
+                    String explanation = String.format("Field '%s.%s'%s has embedContents=true but points to class '%s' " + "which has %d references (shared object). Should be embedContents=false to avoid duplication.", containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source, referenceCount);
                     schema.anomalies.add(new DOSchemaSharedEmbeddedAnomaly(containingClass, field, explanation));
                 }
 
@@ -265,12 +218,7 @@ public class DOEmbeddingDetector {
                     String containingModule = ModuleUtil.findModuleForClass(containingClass);
                     String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                    String explanation = String.format(
-                            "Class '%s' is referenced by %d fields but is NOT listed in any module. " +
-                                    "Shared objects with multiple references should be listed in a module for proper export. "
-                                    +
-                                    "First detected on field '%s.%s'%s.",
-                            concreteClass.attributes.source, referenceCount, containingClass.attributes.source, field.attributes.source, moduleInfo);
+                    String explanation = String.format("Class '%s' is referenced by %d fields but is NOT listed in any module. " + "Shared objects with multiple references should be listed in a module for proper export. " + "First detected on field '%s.%s'%s.", concreteClass.attributes.source, referenceCount, containingClass.attributes.source, field.attributes.source, moduleInfo);
                     schema.anomalies.add(new DOSchemaSharedNotExportedAnomaly(containingClass, field, explanation));
                 }
             } else if (referenceCount == 1) {
@@ -281,10 +229,7 @@ public class DOEmbeddingDetector {
                     String containingModule = ModuleUtil.findModuleForClass(containingClass);
                     String moduleInfo = containingModule != null ? " (in module " + containingModule + ")" : "";
 
-                    String explanation = String.format(
-                            "Field '%s.%s'%s has embedContents=false but points to class '%s' " +
-                                    "which has only 1 reference (single-use object). Should be embedContents=true for efficiency.",
-                            containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source);
+                    String explanation = String.format("Field '%s.%s'%s has embedContents=false but points to class '%s' " + "which has only 1 reference (single-use object). Should be embedContents=true for efficiency.", containingClass.attributes.source, field.attributes.source, moduleInfo, concreteClass.attributes.source);
                     schema.anomalies.add(new DOSchemaShouldBeEmbeddedAnomaly(containingClass, field, explanation));
                 }
             }

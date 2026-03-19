@@ -763,7 +763,7 @@ public class SchemaEditorPanel extends JPanel {
         }
         SchemaTreeNode classNode = new SchemaTreeNode(className, NodeType.CLASS, schemaClass);
 
-        if (schemaClass.isIDEntite(schema) && (schemaClass.attributes.pointsTo == null || schemaClass.attributes.pointsTo.isBlank())) {
+        if (schemaClass.isIDEntite() && (schemaClass.attributes.pointsTo == null || schemaClass.attributes.pointsTo.isBlank())) {
             SchemaTreeNode warningNode = new SchemaTreeNode("⚠ IDEntite missing pointsTo attribute", NodeType.FIELD, null);
             classNode.add(warningNode);
         }
@@ -863,7 +863,7 @@ public class SchemaEditorPanel extends JPanel {
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             if (typeName.equals(schemaClass.attributes.destinationName) || typeName.equals(schemaClass.attributes.source)) {
-                return schemaClass.isIDEntite(schema);
+                return schemaClass.isIDEntite();
             }
         }
         return false;

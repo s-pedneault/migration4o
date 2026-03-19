@@ -13,8 +13,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ObjectResolverUtil;
 
 /**
- * Handles IDEntite relationship resolution during reach analysis.
- * IDEntite objects point to EntiteContientID objects via mID field matching.
+ * Handles IDEntite relationship resolution during reach analysis. IDEntite objects point to EntiteContientID objects via mID field matching.
  */
 public class IDEntiteResolver {
 
@@ -29,28 +28,18 @@ public class IDEntiteResolver {
     }
 
     /**
-     * Handles IDEntite relationships: marks the IDEntite as reached, then finds
-     * the corresponding EntiteContientID object with matching mID and type.
+     * Handles IDEntite relationships: marks the IDEntite as reached, then finds the corresponding EntiteContientID object with matching mID and type.
      * 
-     * @param idEntiteObj         The IDEntite object
-     * @param idEntiteId          The IDEntite object ID
-     * @param expectedType        The expected type of the target EntiteContientID
-     *                            (optional)
-     * @param reachedObjectIds    Set of all reached object IDs
-     * @param traverser           The object traverser for recursive exploration
+     * @param idEntiteObj The IDEntite object
+     * @param idEntiteId The IDEntite object ID
+     * @param expectedType The expected type of the target EntiteContientID (optional)
+     * @param reachedObjectIds Set of all reached object IDs
+     * @param traverser The object traverser for recursive exploration
      * @param classProcessedCount Map tracking processed count per class
-     * @param classTotalCount     Map tracking total count per class
-     * @param progressCallback    Optional callback for progress updates
+     * @param classTotalCount Map tracking total count per class
+     * @param progressCallback Optional callback for progress updates
      */
-    public void handleIDEntiteRelationship(
-            Object idEntiteObj,
-            long idEntiteId,
-            String expectedType,
-            Set<Long> reachedObjectIds,
-            ObjectTraverser traverser,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    public void handleIDEntiteRelationship(Object idEntiteObj, long idEntiteId, String expectedType, Set<Long> reachedObjectIds, ObjectTraverser traverser, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         // Mark the IDEntite object itself as reached
         if (!reachedObjectIds.contains(idEntiteId)) {
@@ -68,7 +57,7 @@ public class IDEntiteResolver {
 
             // Find EntiteContientID objects with the same mID and matching type
             for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-                if (schemaClass.isEntite(referenceSchema)) {
+                if (schemaClass.isEntite()) {
                     // Check if this class matches the expected type (if specified)
                     String simpleClassName = schemaClass.attributes.source;
                     if (simpleClassName.contains(".")) {
@@ -91,12 +80,7 @@ public class IDEntiteResolver {
 
                                     // If mIDs match, explore this EntiteContientID object
                                     if (mID.equals(objMID)) {
-                                        traverser.exploreObjectRecursively(
-                                                objectId,
-                                                reachedObjectIds,
-                                                classProcessedCount,
-                                                classTotalCount,
-                                                progressCallback);
+                                        traverser.exploreObjectRecursively(objectId, reachedObjectIds, classProcessedCount, classTotalCount, progressCallback);
                                         // Only process the first matching object for this field
                                         break;
                                     }

@@ -7,7 +7,6 @@ import migration4o.models.ui.ClassExportConfig;
 import migration4o.models.ui.ClassNode;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.modules.DOModuleService;
-import migration4o.util.SchemaUtil;
 
 import javax.swing.tree.DefaultMutableTreeNode;
 import java.util.ArrayList;
@@ -73,9 +72,9 @@ public class MigrationStructurePanelUtil {
             String className = classNode.getSchemaClass().attributes.source;
 
             // Get from reference schema first (has destinationName)
-            DOSchemaClass referenceClass = SchemaUtil.findClassByName(className, schema);
+            DOSchemaClass referenceClass = schema != null ? schema.findClassByName(className) : null;
             // Get from database schema (has object counts)
-            DOSchemaClass dbClass = SchemaUtil.findClassByName(className, databaseSchema);
+            DOSchemaClass dbClass = databaseSchema != null ? databaseSchema.findClassByName(className) : null;
 
             // Merge: use reference class properties, but copy object counts
             // from database
@@ -200,24 +199,24 @@ public class MigrationStructurePanelUtil {
 
         for (DOSchemaClass schemaClass : schema.getClasses()) {
             // Skip IDEntite classes if the flag is false
-            if (!includeIDEntites && schemaClass.isIDEntite(schema)) {
+            if (!includeIDEntites && schemaClass.isIDEntite()) {
                 continue;
             }
 
             if (exportedClasses.contains(schemaClass.attributes.source)) {
                 // Add to Exported section
-                if (schemaClass.isEntite(schema)) {
+                if (schemaClass.isEntite()) {
                     categorized.exportedEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
+                } else if (schemaClass.isParam()) {
                     categorized.exportedParams.add(schemaClass);
                 } else {
                     categorized.exportedOthers.add(schemaClass);
                 }
             } else {
                 // Add to Available section
-                if (schemaClass.isEntite(schema)) {
+                if (schemaClass.isEntite()) {
                     categorized.availableEntities.add(schemaClass);
-                } else if (schemaClass.isParam(schema)) {
+                } else if (schemaClass.isParam()) {
                     categorized.availableParams.add(schemaClass);
                 } else {
                     categorized.availableOthers.add(schemaClass);
@@ -283,9 +282,9 @@ public class MigrationStructurePanelUtil {
             // Use reference schema first (has destinationName), fall back to
             // database
             // schema
-            DOSchemaClass schemaClass = SchemaUtil.findClassByName(className, schema);
+            DOSchemaClass schemaClass = schema != null ? schema.findClassByName(className) : null;
             if (schemaClass == null && databaseSchema != null) {
-                schemaClass = SchemaUtil.findClassByName(className, databaseSchema);
+                schemaClass = databaseSchema.findClassByName(className);
             }
             if (schemaClass != null) {
                 ClassNode classNode = new ClassNode(schemaClass);

@@ -10,11 +10,9 @@ import java.util.Set;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.ui.common.DOExportMonitor;
-import migration4o.util.SchemaUtil;
 
 /**
- * Tracks statistics and errors during export operations. Also serves as the
- * export result.
+ * Tracks statistics and errors during export operations. Also serves as the export result.
  */
 public class ExportStatistics {
     public String exportName = "";
@@ -36,21 +34,12 @@ public class ExportStatistics {
     public final ObjectDuplicationDetector duplicationDetector = new ObjectDuplicationDetector();
 
     /**
-     * When {@code true}, expensive per-object diagnostic tracking
-     * ({@link #recordObjectDecision}, {@link #recordRelationshipExported},
-     * {@link #recordRelationshipSkipped}) is skipped. Set by the export engine
-     * on non-primary format-handler passes to avoid accumulating duplicate
-     * diagnostics while still tracking progress counters.
+     * When {@code true}, expensive per-object diagnostic tracking ({@link #recordObjectDecision}, {@link #recordRelationshipExported}, {@link #recordRelationshipSkipped}) is skipped. Set by the export engine on non-primary format-handler passes to avoid accumulating duplicate diagnostics while still tracking progress counters.
      */
     public boolean skipDiagnostics = false;
 
     /**
-     * When {@code false}, all expensive analytical tracking is disabled:
-     * {@link #allExportedObjectIds} is not populated, per-object decision notes
-     * and relationship notes are not collected, and {@link #exportedObjectIds}
-     * is not built in {@link #setExportInfo}. {@link #exportedClassCounts} is
-     * always maintained for the count column in the coverage panel. Defaults to
-     * {@code true} for full backwards-compatible behaviour.
+     * When {@code false}, all expensive analytical tracking is disabled: {@link #allExportedObjectIds} is not populated, per-object decision notes and relationship notes are not collected, and {@link #exportedObjectIds} is not built in {@link #setExportInfo}. {@link #exportedClassCounts} is always maintained for the count column in the coverage panel. Defaults to {@code true} for full backwards-compatible behaviour.
      */
     public boolean fullTracking = true;
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
@@ -58,8 +47,7 @@ public class ExportStatistics {
     public String currentFormatName = "";
     public int currentClassTotal = 0;
     /**
-     * Resets to 0 each time {@link #setCurrentClass} is called; counts every
-     * activation attempt, including embedded objects.
+     * Resets to 0 each time {@link #setCurrentClass} is called; counts every activation attempt, including embedded objects.
      */
     public int currentClassAttempted = 0;
 
@@ -93,12 +81,9 @@ public class ExportStatistics {
     }
 
     /**
-     * Records a unique exported object ID. Because DB4O object IDs are globally
-     * unique, using a set naturally deduplicates across classes and embedding
-     * depths.
+     * Records a unique exported object ID. Because DB4O object IDs are globally unique, using a set naturally deduplicates across classes and embedding depths.
      * <p>
-     * No-op when {@link #fullTracking} is {@code false} — the global ID set is
-     * only used for reachability coverage analysis.
+     * No-op when {@link #fullTracking} is {@code false} — the global ID set is only used for reachability coverage analysis.
      * </p>
      */
     public void recordExportedObjectId(long objectId) {
@@ -108,9 +93,7 @@ public class ExportStatistics {
     }
 
     /**
-     * Returns the count of unique objects exported (root + embedded). When
-     * {@link #fullTracking} is off, falls back to the always-populated
-     * {@link #exportedObjectIdsSet} totals.
+     * Returns the count of unique objects exported (root + embedded). When {@link #fullTracking} is off, falls back to the always-populated {@link #exportedObjectIdsSet} totals.
      */
     public int getUniqueExportedCount() {
         if (!allExportedObjectIds.isEmpty()) {
@@ -203,10 +186,7 @@ public class ExportStatistics {
     }
 
     /**
-     * Records an object as reached for coverage tracking without counting it as
-     * a successfully exported object in progress metrics. Used for objects
-     * encountered during resolution flows (e.g. IDEntite) where another
-     * resolved object may be exported instead.
+     * Records an object as reached for coverage tracking without counting it as a successfully exported object in progress metrics. Used for objects encountered during resolution flows (e.g. IDEntite) where another resolved object may be exported instead.
      */
     public void recordReachedOnly(DOSchemaClass schemaClass, long objectId) {
         recordReachedOnly(schemaClass, objectId, null);
@@ -240,7 +220,7 @@ public class ExportStatistics {
                 break;
             }
 
-            DOSchemaClass currentSchemaClass = SchemaUtil.findClassByName(currentClass, hierarchySchema);
+            DOSchemaClass currentSchemaClass = hierarchySchema.findClassByName(currentClass);
             if (currentSchemaClass == null || currentSchemaClass.attributes.parentClassName == null || currentSchemaClass.attributes.parentClassName.isBlank()) {
                 break;
             }

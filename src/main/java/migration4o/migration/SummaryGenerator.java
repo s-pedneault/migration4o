@@ -16,18 +16,13 @@ import migration4o.util.ClassUtil;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.ObjectResolverUtil;
 import migration4o.util.ReferenceUtil;
-import migration4o.util.SchemaUtil;
 import migration4o.util.TypeUtil;
 
 /**
- * Generates a human-readable summary string for a DB4O object using the
- * {@code summary} template defined in its {@link DOSchemaClass}.
+ * Generates a human-readable summary string for a DB4O object using the {@code summary} template defined in its {@link DOSchemaClass}.
  *
  * <p>
- * Template syntax: literal text plus {@code [fieldRef]} tokens. A
- * {@code fieldRef} is a dot-separated path of <em>destination names</em> as
- * defined in the reference schema. The path may span an embedded (non-IDEntite,
- * non-collection) object one level deep.
+ * Template syntax: literal text plus {@code [fieldRef]} tokens. A {@code fieldRef} is a dot-separated path of <em>destination names</em> as defined in the reference schema. The path may span an embedded (non-IDEntite, non-collection) object one level deep.
  *
  * <p>
  * Examples:
@@ -40,14 +35,10 @@ import migration4o.util.TypeUtil;
  * <p>
  * Field resolution algorithm for each token {@code seg1.seg2...}:
  * <ol>
- * <li>Look up {@code seg1} in the current class by {@code destinationName} →
- * get its {@code source} (real DB4O field name).</li>
- * <li>Fetch the value from the DB4O object using
- * {@link StoredClass}/{@link StoredField}.</li>
- * <li>If there are more segments, resolve the schema class for
- * {@code field.attributes.type}, then repeat from step 1 with the next object.</li>
- * <li>Convert the final value to a string; on any failure return
- * {@code ""}.</li>
+ * <li>Look up {@code seg1} in the current class by {@code destinationName} → get its {@code source} (real DB4O field name).</li>
+ * <li>Fetch the value from the DB4O object using {@link StoredClass}/{@link StoredField}.</li>
+ * <li>If there are more segments, resolve the schema class for {@code field.attributes.type}, then repeat from step 1 with the next object.</li>
+ * <li>Convert the final value to a string; on any failure return {@code ""}.</li>
  * </ol>
  */
 public class SummaryGenerator {
@@ -55,18 +46,14 @@ public class SummaryGenerator {
     private static final Pattern FIELD_REF_PATTERN = Pattern.compile("\\[([^\\]]+)\\]");
 
     /**
-     * Export language code ({@code "fr"} or {@code "en"}). Set once before the
-     * export starts by the format handler; read by {@link #formatValue} for
-     * locale-aware date rendering. Defaults to French.
+     * Export language code ({@code "fr"} or {@code "en"}). Set once before the export starts by the format handler; read by {@link #formatValue} for locale-aware date rendering. Defaults to French.
      */
     private static volatile String exportLanguage = "fr";
 
     /**
-     * Sets the export language used for locale-aware date formatting in
-     * summaries.
+     * Sets the export language used for locale-aware date formatting in summaries.
      *
-     * @param language ISO language code: {@code "fr"} for French (default),
-     * {@code "en"} for English
+     * @param language ISO language code: {@code "fr"} for French (default), {@code "en"} for English
      */
     public static void setExportLanguage(String language) {
         exportLanguage = (language != null && !language.isBlank()) ? language : "fr";
@@ -77,47 +64,33 @@ public class SummaryGenerator {
     }
 
     /**
-     * Generates a summary string for {@code obj} using the summary template on
-     * its schema class.
+     * Generates a summary string for {@code obj} using the summary template on its schema class.
      *
      * <p>
-     * This overload does not support traversing IDEntite references in field
-     * paths. Use
-     * {@link #generate(ExtObjectContainer, Object, DOSchemaClass, DOSchema, DOSchema)}
-     * when IDEntite traversal is needed.
+     * This overload does not support traversing IDEntite references in field paths. Use {@link #generate(ExtObjectContainer, Object, DOSchemaClass, DOSchema, DOSchema)} when IDEntite traversal is needed.
      *
      * @param container open DB4O container
      * @param obj the root object to read field values from
-     * @param schemaClass the schema class whose {@code summary} template is
-     * used
+     * @param schemaClass the schema class whose {@code summary} template is used
      * @param referenceSchema full reference schema for embedded-class lookups
-     * @return the generated summary, or {@code null} if the class has no
-     * summary template, or {@code ""} if the template is defined but all tokens
-     * resolved to empty
+     * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
     public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema) {
         return generate(container, obj, schemaClass, referenceSchema, null);
     }
 
     /**
-     * Generates a summary string for {@code obj} using the summary template on
-     * its schema class, with support for traversing IDEntite references.
+     * Generates a summary string for {@code obj} using the summary template on its schema class, with support for traversing IDEntite references.
      *
      * <p>
-     * When {@code databaseSchema} is provided, field paths that pass through an
-     * IDEntite reference (e.g. {@code idDossierAdresse.adresse.rue}) are
-     * resolved by following the IDEntite to its target entity in the database.
+     * When {@code databaseSchema} is provided, field paths that pass through an IDEntite reference (e.g. {@code idDossierAdresse.adresse.rue}) are resolved by following the IDEntite to its target entity in the database.
      *
      * @param container open DB4O container
      * @param obj the root object to read field values from
-     * @param schemaClass the schema class whose {@code summary} template is
-     * used
+     * @param schemaClass the schema class whose {@code summary} template is used
      * @param referenceSchema full reference schema for embedded-class lookups
-     * @param databaseSchema database schema for IDEntite resolution (may be
-     * {@code null} to disable IDEntite traversal)
-     * @return the generated summary, or {@code null} if the class has no
-     * summary template, or {@code ""} if the template is defined but all tokens
-     * resolved to empty
+     * @param databaseSchema database schema for IDEntite resolution (may be {@code null} to disable IDEntite traversal)
+     * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
     public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DOSchema databaseSchema) {
         if (schemaClass == null || schemaClass.attributes.summary == null || schemaClass.attributes.summary.isEmpty()) {
@@ -149,25 +122,16 @@ public class SummaryGenerator {
     // ────────────────────────────────────────────────────
 
     /**
-     * Resolves a single {@code [token]} (already stripped of brackets). Returns
-     * {@code ""} whenever the path cannot be traversed.
+     * Resolves a single {@code [token]} (already stripped of brackets). Returns {@code ""} whenever the path cannot be traversed.
      *
      * <p>
-     * Each segment in the dot-path is a <em>destination name</em> as defined in
-     * the reference schema. It is translated to the DB4O source name via
-     * {@link DOSchemaClass#findField(String)}, and the actual field value is
-     * then read from the live object using
-     * {@link DatabaseUtil#getStoredFieldValue}.
+     * Each segment in the dot-path is a <em>destination name</em> as defined in the reference schema. It is translated to the DB4O source name via {@link DOSchemaClass#findField(String)}, and the actual field value is then read from the live object using {@link DatabaseUtil#getStoredFieldValue}.
      *
      * <p>
-     * When {@code databaseSchema} is non-null, IDEntite segments are traversed
-     * by resolving the reference to the target entity before continuing with
-     * the remaining path segments.
+     * When {@code databaseSchema} is non-null, IDEntite segments are traversed by resolving the reference to the target entity before continuing with the remaining path segments.
      */
     /**
-     * Well-known virtual field name that triggers recursive summary generation
-     * for the current entity. Must match
-     * {@code FieldSelectorPanel.SUMMARY_FIELD_NAME}.
+     * Well-known virtual field name that triggers recursive summary generation for the current entity. Must match {@code FieldSelectorPanel.SUMMARY_FIELD_NAME}.
      */
     private static final String SUMMARY_TOKEN = "sommaire";
 
@@ -204,10 +168,10 @@ public class SummaryGenerator {
                 if (type == null || type.isEmpty() || TypeUtil.isPrimitiveType(type)) {
                     return ""; // Can't go deeper into a primitive
                 }
-                DOSchemaClass nextClass = SchemaUtil.findClassByName(type, schema);
+                DOSchemaClass nextClass = schema.findClassByName(type);
 
                 // IDEntite traversal: follow the reference to the target entity
-                if (nextClass != null && nextClass.isIDEntite(schema) && databaseSchema != null && currentObj != null) {
+                if (nextClass != null && nextClass.isIDEntite() && databaseSchema != null && currentObj != null) {
                     String expectedType = nextClass.attributes.pointsTo;
                     if (expectedType == null || expectedType.isEmpty()) {
                         expectedType = (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) ? field.attributes.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.attributes.source);
@@ -222,7 +186,7 @@ public class SummaryGenerator {
                     }
                     ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
                     String targetClassName = ClassUtil.getClassName(targetObj);
-                    nextClass = SchemaUtil.findClassByName(targetClassName, schema);
+                    nextClass = schema.findClassByName(targetClassName);
                     currentObj = targetObj;
                 }
 
@@ -241,9 +205,7 @@ public class SummaryGenerator {
     }
 
     /**
-     * Formats the final resolved value as a string. Dates are rendered in a
-     * human-friendly locale format (e.g. "18 juil. 2019, 17:13" for French,
-     * "Jul 18, 2019, 5:13 PM" for English).
+     * Formats the final resolved value as a string. Dates are rendered in a human-friendly locale format (e.g. "18 juil. 2019, 17:13" for French, "Jul 18, 2019, 5:13 PM" for English).
      */
     private static String formatValue(Object value) {
         if (value == null)
@@ -262,14 +224,11 @@ public class SummaryGenerator {
         /** Human-readable label for the referenced entity; may be null. */
         public final String label;
         /**
-         * DB4O native object ID of the resolved target entity; used to build
-         * cross-reference indices and deep-links.
+         * DB4O native object ID of the resolved target entity; used to build cross-reference indices and deep-links.
          */
         public final Long targetObjectId;
         /**
-         * Application-level mID extracted from the IDEntite object. Used as
-         * fallback display text when no human-readable label is available, so
-         * the viewer never exports the raw mID as a plain unlinked primitive.
+         * Application-level mID extracted from the IDEntite object. Used as fallback display text when no human-readable label is available, so the viewer never exports the raw mID as a plain unlinked primitive.
          */
         public final Long mId;
 
@@ -281,12 +240,9 @@ public class SummaryGenerator {
     }
 
     /**
-     * Resolves an IDEntite reference and returns both the human-readable label
-     * and the target entity's native DB4O object ID in a single pass (with
-     * caching).
+     * Resolves an IDEntite reference and returns both the human-readable label and the target entity's native DB4O object ID in a single pass (with caching).
      *
-     * @return an {@link IDEntiteResult} with the resolved label (possibly null)
-     * and the target's DB4O object ID (possibly null if unresolvable)
+     * @return an {@link IDEntiteResult} with the resolved label (possibly null) and the target's DB4O object ID (possibly null if unresolvable)
      */
     public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
         if (container == null || idEntiteObj == null || idEntiteClass == null) {
@@ -330,7 +286,7 @@ public class SummaryGenerator {
             ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
 
             String targetClassName = ClassUtil.getClassName(targetObj);
-            DOSchemaClass targetSchemaClass = SchemaUtil.findClassByName(targetClassName, referenceSchema);
+            DOSchemaClass targetSchemaClass = referenceSchema.findClassByName(targetClassName);
             String label = null;
             if (targetSchemaClass != null && targetSchemaClass.attributes.summary != null && !targetSchemaClass.attributes.summary.isEmpty()) {
                 label = generate(container, targetObj, targetSchemaClass, referenceSchema, databaseSchema);
@@ -363,8 +319,7 @@ public class SummaryGenerator {
     };
 
     /**
-     * Builds a human-readable label by reading common naming fields directly
-     * from the DB4O object. Returns {@code null} if no usable value is found.
+     * Builds a human-readable label by reading common naming fields directly from the DB4O object. Returns {@code null} if no usable value is found.
      */
     private static String generateFallbackLabel(ExtObjectContainer container, Object obj) {
         if (obj == null) {

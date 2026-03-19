@@ -13,8 +13,7 @@ import migration4o.util.ObjectResolverUtil;
 import migration4o.util.SchemaUtil;
 
 /**
- * Handles recursive traversal of the database object graph.
- * Explores objects and their fields to determine reachability.
+ * Handles recursive traversal of the database object graph. Explores objects and their fields to determine reachability.
  */
 public class ObjectTraverser {
 
@@ -34,19 +33,13 @@ public class ObjectTraverser {
     /**
      * Recursively explores an object and all its field references.
      * 
-     * @param objectId            The object ID to explore
-     * @param reachedObjectIds    Set of all reached object IDs (updated during
-     *                            traversal)
+     * @param objectId The object ID to explore
+     * @param reachedObjectIds Set of all reached object IDs (updated during traversal)
      * @param classProcessedCount Map tracking processed count per class
-     * @param classTotalCount     Map tracking total count per class
-     * @param progressCallback    Optional callback for progress updates
+     * @param classTotalCount Map tracking total count per class
+     * @param progressCallback Optional callback for progress updates
      */
-    public void exploreObjectRecursively(
-            long objectId,
-            Set<Long> reachedObjectIds,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    public void exploreObjectRecursively(long objectId, Set<Long> reachedObjectIds, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         // Avoid processing the same object twice - check and add atomically
         if (!reachedObjectIds.add(objectId)) {
@@ -80,14 +73,7 @@ public class ObjectTraverser {
 
                 StoredClass storedClass = container.ext().storedClass(genericObj);
                 if (storedClass != null) {
-                    fieldProcessor.exploreAllFields(
-                            genericObj,
-                            className,
-                            reachedObjectIds,
-                            this,
-                            classProcessedCount,
-                            classTotalCount,
-                            progressCallback);
+                    fieldProcessor.exploreAllFields(genericObj, className, reachedObjectIds, this, classProcessedCount, classTotalCount, progressCallback);
                 }
             }
         } catch (Exception e) {
@@ -96,8 +82,7 @@ public class ObjectTraverser {
     }
 
     /**
-     * Gets the class name of an object (handles both GenericObject and regular
-     * objects).
+     * Gets the class name of an object (handles both GenericObject and regular objects).
      */
     private String getClassName(Object obj) {
         if (obj instanceof GenericObject) {
@@ -109,8 +94,7 @@ public class ObjectTraverser {
     }
 
     /**
-     * Checks if an object is important (descendant of EntiteContientID or
-     * IDEntite).
+     * Checks if an object is important (descendant of EntiteContientID or IDEntite).
      */
     public boolean isImportantObject(Object obj) {
         if (obj == null) {
@@ -122,9 +106,9 @@ public class ObjectTraverser {
             return false;
         }
 
-        DOSchemaClass objClass = SchemaUtil.findClassInSchemaByName(databaseSchema, className);
+        DOSchemaClass objClass = databaseSchema.findClassByName(className);
         if (objClass != null) {
-            return objClass.isEntite(referenceSchema) || objClass.isIDEntite(referenceSchema);
+            return objClass.isEntite() || objClass.isIDEntite();
         }
 
         return false;

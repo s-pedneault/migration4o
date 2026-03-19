@@ -18,8 +18,7 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.util.DatabaseUtil;
 
 /**
- * Designer for record detail view layouts. Tree-based layout builder with field
- * palette, property panel, and live HTML preview.
+ * Designer for record detail view layouts. Tree-based layout builder with field palette, property panel, and live HTML preview.
  */
 public class DetailLayoutDesigner extends JFrame {
 
@@ -257,7 +256,7 @@ public class DetailLayoutDesigner extends JFrame {
         DOSchemaClass typeClass = findClassByType(field.attributes.type);
         if (typeClass == null)
             return false;
-        return typeClass.isIDEntite(refSchema);
+        return typeClass.isIDEntite();
     }
 
     // ── Layout Tree ────────────────────────────────────────────────
@@ -1641,8 +1640,7 @@ public class DetailLayoutDesigner extends JFrame {
     // ── DnD Handlers ───────────────────────────────────────────────
 
     /**
-     * Drag handler for the field palette — creates COPY transfers of
-     * FieldPaletteItem.
+     * Drag handler for the field palette — creates COPY transfers of FieldPaletteItem.
      */
     private class FieldPaletteDragHandler extends TransferHandler {
         @Override
@@ -1663,9 +1661,7 @@ public class DetailLayoutDesigner extends JFrame {
     }
 
     /**
-     * Unified DnD handler for the layout tree. Supports: - Drops from field
-     * palette (creates new FIELD/TABLE nodes) - Internal tree rearrangement
-     * (move nodes via drag & drop)
+     * Unified DnD handler for the layout tree. Supports: - Drops from field palette (creates new FIELD/TABLE nodes) - Internal tree rearrangement (move nodes via drag & drop)
      */
     private class LayoutTreeDnDHandler extends TransferHandler {
 

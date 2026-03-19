@@ -18,71 +18,9 @@ public class SchemaUtil {
         }
         ArrayList<DOSchemaField> list = new ArrayList<>();
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            for (DOSchemaField field : schemaClass.fields) {
-                if (field.attributes.skipUserOption != null && !field.attributes.skipUserOption.trim().isEmpty()) {
-                    list.add(field);
-                }
-            }
+            list.addAll(schemaClass.getSkipUserOptions());
         }
         return list;
-    }
-
-    /**
-     * Finds a class by name in a schema array.
-     * 
-     * @param schema The schema to search
-     * @param className The class name to find
-     * @return The schema class, or null if not found
-     */
-    public static DOSchemaClass findClassInSchemaByName(DOSchema schema, String className) {
-        if (schema == null || schema.getClasses() == null) {
-            return null;
-        }
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.attributes.source.equals(className)) {
-                return schemaClass;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Checks if a schema class is a descendant of a given ancestor class.
-     * 
-     * @param schemaClass the class to check
-     * @param ancestorClassName the name of the ancestor class
-     * @param schema the schema containing all classes
-     * @return true if schemaClass is a descendant of ancestorClassName
-     */
-    public static boolean isDescendantOf(DOSchemaClass schemaClass, String ancestorClassName, DOSchema schema) {
-        if (schemaClass == null || ancestorClassName == null) {
-            return false;
-        }
-
-        String currentClassName = schemaClass.attributes.source;
-        if (currentClassName.equals(ancestorClassName)) {
-            return true;
-        }
-
-        String parentClassName = schemaClass.attributes.parentClassName;
-        if (parentClassName == null || parentClassName.isEmpty()) {
-            return false;
-        }
-
-        if (parentClassName.equals(ancestorClassName)) {
-            return true;
-        }
-
-        // Look up parent class and recurse
-        if (schema != null && schema.getClasses() != null) {
-            for (DOSchemaClass candidate : schema.getClasses()) {
-                if (candidate.attributes.source.equals(parentClassName)) {
-                    return isDescendantOf(candidate, ancestorClassName, schema);
-                }
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -159,57 +97,6 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a class in the schemas by its absolute name. Searches the schemas in reverse order, and returns the first class found.
-     * 
-     * @param className the absolute class name to find
-     * @param schemas the array of schemas to search
-     * @return the schema class, or null if not found
-     */
-    public static DOSchemaClass findClassByName(String className, DOSchema[] schemas) {
-        if (schemas == null || className == null) {
-            return null;
-        }
-        for (int i = schemas.length - 1; i >= 0; i--) {
-            DOSchemaClass foundClass = findClassByName(className, schemas[i]);
-            if (foundClass != null) {
-                return foundClass;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Finds a class in the schema by its absolute name. If not found, falls back to searching by simple name (class name without package).
-     * 
-     * @param className the absolute class name to find (or simple name as fallback)
-     * @param schema the reference schema
-     * @return the schema class, or null if not found
-     */
-    public static DOSchemaClass findClassByName(String className, DOSchema schema) {
-        if (className == null || schema == null || schema.getClasses() == null) {
-            return null;
-        }
-
-        // First, try exact match by absolute name
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.attributes.source.equals(className)) {
-                return schemaClass;
-            }
-        }
-
-        // Fallback: try matching by simple name (class name without package)
-        String searchSimpleName = ClassUtil.getSimpleName(className);
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
-            if (schemaSimpleName.equals(searchSimpleName)) {
-                return schemaClass;
-            }
-        }
-
-        return null;
-    }
-
-    /**
      * Finds a schema class by its absolute name.
      */
     public static DOSchemaClass findSchemaClassByName(DOSchema schema, String className) {
@@ -239,77 +126,6 @@ public class SchemaUtil {
             }
         }
         return null;
-    }
-
-    /**
-     * Checks if the given class is a superclass of other Entite-type classes in the schema.
-     * 
-     * @param schema the schema to search
-     * @param targetClass the class to check
-     * @return true if at least one other class in the schema has this class as a parent
-     */
-    public static boolean hasSubclasses(DOSchema schema, DOSchemaClass targetClass) {
-        if (schema == null || schema.getClasses() == null || targetClass == null) {
-            return false;
-        }
-
-        String targetClassName = targetClass.attributes.source;
-
-        // Check if any class has this class as its parent
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (schemaClass.attributes.parentClassName != null && schemaClass.attributes.parentClassName.equals(targetClassName)) {
-                // Found a direct subclass - now verify it's an Entite type
-                if (isDescendantOf(schemaClass, "gest.gen.Entite", schema)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * Given a set of class names that represent the same object (due to inheritance), finds the leaf (most derived) class using the reference schema.
-     * 
-     * @param classNames set of class names for the same object
-     * @return the leaf class name, or the first class name if schema lookup fails
-     */
-    public static String findLeafClass(Set<String> classNames) {
-        if (classNames == null || classNames.isEmpty()) {
-            return "Unknown";
-        }
-        if (classNames.size() == 1) {
-            return classNames.iterator().next();
-        }
-
-        // Get reference schema
-        DOSchema schema = migration4o.schema.DOSchemaService.getInstance().getReferenceSchema();
-        if (schema == null) {
-            return classNames.iterator().next();
-        }
-
-        // Build a map of class -> parent for all classes in the set
-        Map<String, String> parentMap = new HashMap<>();
-        for (String className : classNames) {
-            DOSchemaClass schemaClass = findClassByName(className, schema);
-            if (schemaClass != null && schemaClass.attributes.parentClassName != null) {
-                parentMap.put(className, schemaClass.attributes.parentClassName);
-            }
-        }
-
-        // Find the class that is NOT a parent of any other class in the set
-        // (i.e., the leaf class)
-        Set<String> parentClasses = new HashSet<>(parentMap.values());
-        for (String className : classNames) {
-            // If this class is not a parent of any other class in our set,
-            // it must be the leaf
-            if (!parentClasses.contains(className)) {
-                return className;
-            }
-        }
-
-        // Fallback: return first class
-        return classNames.iterator().next();
     }
 
     /**

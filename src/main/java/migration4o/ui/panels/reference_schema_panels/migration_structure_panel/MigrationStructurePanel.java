@@ -1026,7 +1026,7 @@ public class MigrationStructurePanel extends JPanel {
 
     private void addModuleToTree(DefaultMutableTreeNode parentNode, DOSchemaModule module) {
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = null;
+        DOSchema databaseSchema = activeContext != null ? activeContext.databaseSchema : null;
         MigrationStructurePanelUtil.addModuleToTree(parentNode, module, referenceSchema, databaseSchema, exportedClasses);
     }
 
@@ -1036,7 +1036,7 @@ public class MigrationStructurePanel extends JPanel {
     private void reloadExportTree() {
         DefaultMutableTreeNode root = getExportRoot();
         DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        DOSchema databaseSchema = null;
+        DOSchema databaseSchema = activeContext != null ? activeContext.databaseSchema : null;
         MigrationStructurePanelUtil.updateNodeCounts(root, referenceSchema, databaseSchema);
         reloadExportModel();
     }

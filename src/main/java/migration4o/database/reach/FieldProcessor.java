@@ -15,8 +15,7 @@ import migration4o.recipes.RecipeCollectionItems;
 import migration4o.util.SchemaUtil;
 
 /**
- * Processes fields of database objects during reach analysis.
- * Handles collections, arrays, and references to other objects.
+ * Processes fields of database objects during reach analysis. Handles collections, arrays, and references to other objects.
  */
 public class FieldProcessor {
 
@@ -36,14 +35,7 @@ public class FieldProcessor {
     /**
      * Explores all fields of a GenericObject, following references recursively.
      */
-    public void exploreAllFields(
-            GenericObject obj,
-            String parentClassName,
-            Set<Long> reachedObjectIds,
-            ObjectTraverser traverser,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    public void exploreAllFields(GenericObject obj, String parentClassName, Set<Long> reachedObjectIds, ObjectTraverser traverser, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         try {
             StoredClass storedClass = container.ext().storedClass(obj);
@@ -62,41 +54,17 @@ public class FieldProcessor {
                     // Try to extract as collection (handles both Collection and GenericObject)
                     Collection<?> extractedCollection = RecipeCollectionItems.getItems(container, fieldValue);
                     if (extractedCollection != null && !extractedCollection.isEmpty()) {
-                        processCollectionField(
-                                extractedCollection,
-                                field.getName(),
-                                parentClassName,
-                                reachedObjectIds,
-                                traverser,
-                                classProcessedCount,
-                                classTotalCount,
-                                progressCallback);
+                        processCollectionField(extractedCollection, field.getName(), parentClassName, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
                     }
                     // Handle arrays (excluding byte arrays which are primitives)
                     else if (fieldValue.getClass().isArray() && !(fieldValue instanceof byte[])) {
-                        processArrayField(
-                                fieldValue,
-                                field.getName(),
-                                parentClassName,
-                                reachedObjectIds,
-                                traverser,
-                                classProcessedCount,
-                                classTotalCount,
-                                progressCallback);
+                        processArrayField(fieldValue, field.getName(), parentClassName, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
                     }
                     // Handle single object references
                     else {
                         long refId = container.ext().getID(fieldValue);
                         if (refId > 0) {
-                            processFieldReference(
-                                    fieldValue,
-                                    field.getName(),
-                                    parentClassName,
-                                    reachedObjectIds,
-                                    traverser,
-                                    classProcessedCount,
-                                    classTotalCount,
-                                    progressCallback);
+                            processFieldReference(fieldValue, field.getName(), parentClassName, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
                         }
                         // Primitives and non-persistent values are ignored
                     }
@@ -112,27 +80,11 @@ public class FieldProcessor {
     /**
      * Processes a collection field, exploring all items.
      */
-    private void processCollectionField(
-            Collection<?> collection,
-            String fieldName,
-            String parentClassName,
-            Set<Long> reachedObjectIds,
-            ObjectTraverser traverser,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    private void processCollectionField(Collection<?> collection, String fieldName, String parentClassName, Set<Long> reachedObjectIds, ObjectTraverser traverser, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         for (Object item : collection) {
             if (item != null) {
-                processFieldReference(
-                        item,
-                        fieldName,
-                        parentClassName,
-                        reachedObjectIds,
-                        traverser,
-                        classProcessedCount,
-                        classTotalCount,
-                        progressCallback);
+                processFieldReference(item, fieldName, parentClassName, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
             }
         }
     }
@@ -140,46 +92,21 @@ public class FieldProcessor {
     /**
      * Processes an array field, exploring all items.
      */
-    private void processArrayField(
-            Object fieldValue,
-            String fieldName,
-            String parentClassName,
-            Set<Long> reachedObjectIds,
-            ObjectTraverser traverser,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    private void processArrayField(Object fieldValue, String fieldName, String parentClassName, Set<Long> reachedObjectIds, ObjectTraverser traverser, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         int length = java.lang.reflect.Array.getLength(fieldValue);
         for (int i = 0; i < length; i++) {
             Object item = java.lang.reflect.Array.get(fieldValue, i);
             if (item != null) {
-                processFieldReference(
-                        item,
-                        fieldName,
-                        parentClassName,
-                        reachedObjectIds,
-                        traverser,
-                        classProcessedCount,
-                        classTotalCount,
-                        progressCallback);
+                processFieldReference(item, fieldName, parentClassName, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
             }
         }
     }
 
     /**
-     * Processes a field value that might be a reference to another object.
-     * Handles special IDEntite relationships with type matching.
+     * Processes a field value that might be a reference to another object. Handles special IDEntite relationships with type matching.
      */
-    private void processFieldReference(
-            Object item,
-            String fieldName,
-            String parentClassName,
-            Set<Long> reachedObjectIds,
-            ObjectTraverser traverser,
-            Map<String, Integer> classProcessedCount,
-            Map<String, Integer> classTotalCount,
-            ReachProgressCallback progressCallback) {
+    private void processFieldReference(Object item, String fieldName, String parentClassName, Set<Long> reachedObjectIds, ObjectTraverser traverser, Map<String, Integer> classProcessedCount, Map<String, Integer> classTotalCount, ReachProgressCallback progressCallback) {
 
         long childId = container.ext().getID(item);
         if (childId <= 0) {
@@ -192,8 +119,8 @@ public class FieldProcessor {
         }
 
         // Check if this is an IDEntite descendant
-        DOSchemaClass itemClass = SchemaUtil.findClassInSchemaByName(databaseSchema, className);
-        if (itemClass != null && itemClass.isIDEntite(referenceSchema)) {
+        DOSchemaClass itemClass = databaseSchema.findClassByName(className);
+        if (itemClass != null && itemClass.isIDEntite()) {
             // This is an IDEntite - get target type from pointsTo or extract from field
             // name
             String expectedType = itemClass.attributes.pointsTo;
@@ -203,29 +130,15 @@ public class FieldProcessor {
             }
 
             // Handle the special mID relationship with type filtering
-            idEntiteResolver.handleIDEntiteRelationship(
-                    item,
-                    childId,
-                    expectedType,
-                    reachedObjectIds,
-                    traverser,
-                    classProcessedCount,
-                    classTotalCount,
-                    progressCallback);
+            idEntiteResolver.handleIDEntiteRelationship(item, childId, expectedType, reachedObjectIds, traverser, classProcessedCount, classTotalCount, progressCallback);
         } else {
             // Regular object - explore it recursively
-            traverser.exploreObjectRecursively(
-                    childId,
-                    reachedObjectIds,
-                    classProcessedCount,
-                    classTotalCount,
-                    progressCallback);
+            traverser.exploreObjectRecursively(childId, reachedObjectIds, classProcessedCount, classTotalCount, progressCallback);
         }
     }
 
     /**
-     * Extracts expected EntiteContientID type from field name.
-     * Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
+     * Extracts expected EntiteContientID type from field name. Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
      */
     private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
         // If field name starts with "mID", extract the part after it
@@ -242,8 +155,7 @@ public class FieldProcessor {
     }
 
     /**
-     * Gets the class name of an object (handles both GenericObject and regular
-     * objects).
+     * Gets the class name of an object (handles both GenericObject and regular objects).
      */
     private String getClassName(Object obj) {
         if (obj instanceof GenericObject) {

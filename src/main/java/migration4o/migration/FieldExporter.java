@@ -33,13 +33,11 @@ import migration4o.util.ClassUtil;
 import migration4o.util.CollectionTypeUtil;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.ReferenceUtil;
-import migration4o.util.SchemaUtil;
 import migration4o.util.ValueUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
- * Handles field-level export operations. Responsible for exporting all fields
- * of an object, handling arrays, collections, and references.
+ * Handles field-level export operations. Responsible for exporting all fields of an object, handling arrays, collections, and references.
  */
 public class FieldExporter {
     private final ExportRequest operation;
@@ -57,9 +55,7 @@ public class FieldExporter {
     }
 
     /**
-     * Counts how many fields would be exported from this GenericObject (dry
-     * run). Goes through all the same skip logic as exportAllFields but doesn't
-     * write anything.
+     * Counts how many fields would be exported from this GenericObject (dry run). Goes through all the same skip logic as exportAllFields but doesn't write anything.
      * 
      * @param container DB4O container
      * @param obj The GenericObject to analyze
@@ -162,15 +158,11 @@ public class FieldExporter {
      * 
      * @param container DB4O container for object activation and ID lookups
      * @param obj The GenericObject whose fields are being exported
-     * @param parentClass Schema class definition for the object being exported
-     * (not the parent in object graph)
+     * @param parentClass Schema class definition for the object being exported (not the parent in object graph)
      * @param indentLevel Current XML indentation level
-     * @param destinationClassName Destination class name from schema (e.g.,
-     * "Vehicule") - used for tracking field context
-     * @param sourceClassName Source class name from schema (e.g.,
-     * "gest.vehicule.Vehicule") - used for tracking field context
-     * @param parentObjectId DB4O object ID of the object being exported - used
-     * for duplicate detection and tracking
+     * @param destinationClassName Destination class name from schema (e.g., "Vehicule") - used for tracking field context
+     * @param sourceClassName Source class name from schema (e.g., "gest.vehicule.Vehicule") - used for tracking field context
+     * @param parentObjectId DB4O object ID of the object being exported - used for duplicate detection and tracking
      * @return the number of fields actually written to XML
      * @throws IOException if XML writing fails
      */
@@ -225,7 +217,7 @@ public class FieldExporter {
                     // class is explicitly marked migrate=false, the field is
                     // skipped.
                     if (schemaField != null && schemaField.attributes.type != null && !schemaField.attributes.type.isEmpty()) {
-                        DOSchemaClass fieldTypeClass = SchemaUtil.findClassByName(schemaField.attributes.type, operation.referenceSchema);
+                        DOSchemaClass fieldTypeClass = operation.referenceSchema.findClassByName(schemaField.attributes.type);
                         if (fieldTypeClass != null && !fieldTypeClass.attributes.migrate) {
                             System.err.println("[WARN] Export skipping field '" + schemaField.attributes.destinationName + "' — type '" + schemaField.attributes.type + "' is not exported (migrate=false).");
                             continue;
@@ -336,16 +328,12 @@ public class FieldExporter {
     }
 
     /**
-     * Unified method to export any collection-like field (Collection, array, or
-     * schema collection). Handles all the common logic: skip conditions, size
-     * attributes, ID reference detection, and item export.
+     * Unified method to export any collection-like field (Collection, array, or schema collection). Handles all the common logic: skip conditions, size attributes, ID reference detection, and item export.
      * 
      * @param container DB4O container
-     * @param items Iterable of items to export (extracted from
-     * collection/array)
+     * @param items Iterable of items to export (extracted from collection/array)
      * @param size Number of items
-     * @param itemsValue Original collection/array value for skip condition
-     * checking
+     * @param itemsValue Original collection/array value for skip condition checking
      * @param schemaField Schema field definition
      * @param indentLevel Current indentation level
      * @param parentClassName Parent class name for tracking
@@ -411,9 +399,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a collection field that is marked as collection in the schema but
-     * may be stored as a DB4O persistent object (like VectRechID). This method
-     * extracts the collection items from the DB4O object structure.
+     * Exports a collection field that is marked as collection in the schema but may be stored as a DB4O persistent object (like VectRechID). This method extracts the collection items from the DB4O object structure.
      * 
      * @return true if field was written, false if skipped
      */
@@ -456,9 +442,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a Java Map field (Hashtable, HashMap, etc.) like a collection.
-     * Each map entry is written as an &lt;entry&gt; element with key and value
-     * children.
+     * Exports a Java Map field (Hashtable, HashMap, etc.) like a collection. Each map entry is written as an &lt;entry&gt; element with key and value children.
      *
      * @return true if field was written, false if skipped
      */
@@ -503,9 +487,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a map field stored as a DB4O GenericObject. Attempts to activate
-     * the object and extract entries. If the map is empty or cannot be read,
-     * handles skip conditions gracefully.
+     * Exports a map field stored as a DB4O GenericObject. Attempts to activate the object and extract entries. If the map is empty or cannot be read, handles skip conditions gracefully.
      *
      * @return true if field was written, false if skipped
      */
@@ -618,8 +600,8 @@ public class FieldExporter {
             // Additional check for IDEntite objects - check if they'll be
             // filtered by
             // resolveAndExport
-            DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, operation.referenceSchema);
-            if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
+            DOSchemaClass fieldClass = operation.referenceSchema.findClassByName(className);
+            if (fieldClass != null && fieldClass.isIDEntite()) {
                 // Check if this IDEntite will be skipped due to mID == -1
                 if (schemaField != null && schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.isEmpty()) {
                     if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(container, fieldValue) && schemaField.attributes.skipWhen.contains("MINUS_ONE")) {
@@ -728,11 +710,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports virtual fields defined in schema but not present in database.
-     * Virtual fields use @ prefix in source and criteria-based queries.
-     * Example: source="@mVectRapportOfficier" with criteria match="this.mID"
-     * with="mIDIntervention" Queries database for objects where mIDIntervention
-     * equals this object's mID.
+     * Exports virtual fields defined in schema but not present in database. Virtual fields use @ prefix in source and criteria-based queries. Example: source="@mVectRapportOfficier" with criteria match="this.mID" with="mIDIntervention" Queries database for objects where mIDIntervention equals this object's mID.
      * 
      * @return number of virtual fields written
      */
@@ -797,7 +775,7 @@ public class FieldExporter {
         String sourceFieldName = schemaField != null ? schemaField.attributes.source : null;
 
         // Check if this is an IDEntite reference (reference object pattern)
-        DOSchemaClass fieldClass = SchemaUtil.findClassByName(className, operation.referenceSchema);
+        DOSchemaClass fieldClass = operation.referenceSchema.findClassByName(className);
 
         // Determine if object should be embedded:
         // - IDEntite objects: only embed if explicitly set to
@@ -808,7 +786,7 @@ public class FieldExporter {
         // (default is true for value objects)
         boolean isEmbedded;
         if (schemaField != null) {
-            if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
+            if (fieldClass != null && fieldClass.isIDEntite()) {
                 // IDEntite: default to non-embedded (reference by ID), but
                 // allow explicit
                 // embedContents=true
@@ -826,7 +804,7 @@ public class FieldExporter {
             isEmbedded = true;
         }
 
-        if (fieldClass != null && fieldClass.isIDEntite(operation.databaseSchema)) {
+        if (fieldClass != null && fieldClass.isIDEntite()) {
             if (ctxRef.statistics != null) {
                 long idEntiteObjectId = container.ext().getID(fieldValue);
                 if (idEntiteObjectId > 0) {
@@ -1010,15 +988,11 @@ public class FieldExporter {
     }
 
     /**
-     * When a field has isExported=false, we skip its export but must still mark
-     * all descendant objects as reached. This handles two cases:
+     * When a field has isExported=false, we skip its export but must still mark all descendant objects as reached. This handles two cases:
      * 
-     * 1. Collection fields: extract items and mark each as reached 2.
-     * Persistent GenericObject fields: traverse one level and mark child
-     * persistent objects as reached
+     * 1. Collection fields: extract items and mark each as reached 2. Persistent GenericObject fields: traverse one level and mark child persistent objects as reached
      * 
-     * Without this, objects only reachable through disabled fields would appear
-     * as "unreached" even though the engine encountered them.
+     * Without this, objects only reachable through disabled fields would appear as "unreached" even though the engine encountered them.
      */
     private void markDisabledFieldDescendantsReached(ExtObjectContainer container, Object fieldValue, DOSchemaField schemaField) {
         if (ctxRef.statistics == null) {
@@ -1062,9 +1036,7 @@ public class FieldExporter {
     }
 
     /**
-     * Recursively marks a persistent object and its immediate children as
-     * reached, without generating any XML output. Traverses up to maxDepth
-     * levels.
+     * Recursively marks a persistent object and its immediate children as reached, without generating any XML output. Traverses up to maxDepth levels.
      * 
      * @param container DB4O container
      * @param obj The object to mark
@@ -1131,15 +1103,10 @@ public class FieldExporter {
     }
 
     /**
-     * Sorts StoredField[] in inheritance-aware order to match the XSD
-     * {@code xs:extension} content model. Fields declared by ancestor classes
-     * come first (sorted alphabetically within each level), followed by the
-     * current class's own fields (also alphabetical). Fields without a schema
-     * mapping are placed at the end.
+     * Sorts StoredField[] in inheritance-aware order to match the XSD {@code xs:extension} content model. Fields declared by ancestor classes come first (sorted alphabetically within each level), followed by the current class's own fields (also alphabetical). Fields without a schema mapping are placed at the end.
      *
      * <p>
-     * This ensures the XML output satisfies the XSD content model where base
-     * type fields precede extension fields.
+     * This ensures the XML output satisfies the XSD content model where base type fields precede extension fields.
      * </p>
      */
     private StoredField[] sortFieldsByDestinationName(StoredField[] fields, DOSchemaClass parentClass, DOSchema schema) {

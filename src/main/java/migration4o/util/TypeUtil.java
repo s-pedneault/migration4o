@@ -7,10 +7,9 @@ import migration4o.models.schema.DOSchemaField;
 public class TypeUtil {
 
     /**
-     * Checks if a field contains IDEntite values by examining its type against the
-     * schema.
+     * Checks if a field contains IDEntite values by examining its type against the schema.
      * 
-     * @param field  The field to check
+     * @param field The field to check
      * @param schema The schema containing class definitions
      * @return true if the field's type is an IDEntite class
      */
@@ -19,8 +18,8 @@ public class TypeUtil {
             return false;
         }
 
-        DOSchemaClass fieldClass = SchemaUtil.findClassByName(field.attributes.type, schema);
-        return fieldClass != null && fieldClass.isIDEntite(schema);
+        DOSchemaClass fieldClass = schema.findClassByName(field.attributes.type);
+        return fieldClass != null && fieldClass.isIDEntite();
     }
 
     public static boolean isPrimitiveType(String typeName) {
@@ -34,42 +33,18 @@ public class TypeUtil {
         String lowerTypeName = baseTypeName.toLowerCase();
 
         // Java primitive types
-        if (lowerTypeName.equals("boolean") || lowerTypeName.equals("byte") || lowerTypeName.equals("char") ||
-                lowerTypeName.equals("short") || lowerTypeName.equals("int") || lowerTypeName.equals("long") ||
-                lowerTypeName.equals("float") || lowerTypeName.equals("double")) {
+        if (lowerTypeName.equals("boolean") || lowerTypeName.equals("byte") || lowerTypeName.equals("char") || lowerTypeName.equals("short") || lowerTypeName.equals("int") || lowerTypeName.equals("long") || lowerTypeName.equals("float") || lowerTypeName.equals("double")) {
             return true;
         }
 
         // Common Java standard library types that are considered "primitive" for our
         // purposes
         // Check both fully qualified names and simple class names (case-insensitive)
-        return matchesType(lowerTypeName, "java.lang.object") ||
-                matchesType(lowerTypeName, "java.lang.string") ||
-                matchesType(lowerTypeName, "java.lang.integer") ||
-                matchesType(lowerTypeName, "java.lang.long") ||
-                matchesType(lowerTypeName, "java.lang.double") ||
-                matchesType(lowerTypeName, "java.lang.float") ||
-                matchesType(lowerTypeName, "java.lang.boolean") ||
-                matchesType(lowerTypeName, "java.lang.character") ||
-                matchesType(lowerTypeName, "java.lang.byte") ||
-                matchesType(lowerTypeName, "java.lang.short") ||
-                matchesType(lowerTypeName, "java.math.bigdecimal") ||
-                matchesType(lowerTypeName, "java.math.biginteger") ||
-                matchesType(lowerTypeName, "java.util.date") ||
-                matchesType(lowerTypeName, "java.sql.date") ||
-                matchesType(lowerTypeName, "java.sql.time") ||
-                matchesType(lowerTypeName, "java.sql.timestamp") ||
-                matchesType(lowerTypeName, "java.time.localdate") ||
-                matchesType(lowerTypeName, "java.time.localtime") ||
-                matchesType(lowerTypeName, "java.time.localdatetime") ||
-                matchesType(lowerTypeName, "java.time.zoneddatetime") ||
-                matchesType(lowerTypeName, "java.util.uuid");
+        return matchesType(lowerTypeName, "java.lang.object") || matchesType(lowerTypeName, "java.lang.string") || matchesType(lowerTypeName, "java.lang.integer") || matchesType(lowerTypeName, "java.lang.long") || matchesType(lowerTypeName, "java.lang.double") || matchesType(lowerTypeName, "java.lang.float") || matchesType(lowerTypeName, "java.lang.boolean") || matchesType(lowerTypeName, "java.lang.character") || matchesType(lowerTypeName, "java.lang.byte") || matchesType(lowerTypeName, "java.lang.short") || matchesType(lowerTypeName, "java.math.bigdecimal") || matchesType(lowerTypeName, "java.math.biginteger") || matchesType(lowerTypeName, "java.util.date") || matchesType(lowerTypeName, "java.sql.date") || matchesType(lowerTypeName, "java.sql.time") || matchesType(lowerTypeName, "java.sql.timestamp") || matchesType(lowerTypeName, "java.time.localdate") || matchesType(lowerTypeName, "java.time.localtime") || matchesType(lowerTypeName, "java.time.localdatetime") || matchesType(lowerTypeName, "java.time.zoneddatetime") || matchesType(lowerTypeName, "java.util.uuid");
     }
 
     /**
-     * Check if typeName matches either the full qualified name or the simple class
-     * name.
-     * Both parameters should be in lowercase.
+     * Check if typeName matches either the full qualified name or the simple class name. Both parameters should be in lowercase.
      */
     private static boolean matchesType(String lowerTypeName, String lowerFullName) {
         if (lowerTypeName.equals(lowerFullName)) {

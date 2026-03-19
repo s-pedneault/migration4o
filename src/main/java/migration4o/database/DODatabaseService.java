@@ -7,10 +7,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.schema.DOSchemaService;
 
 /**
- * Singleton service for managing the DB4O database connection.
- * Ensures only one in-memory database instance exists across the entire
- * application.
- * All components should use this service instead of opening databases directly.
+ * Singleton service for managing the DB4O database connection. Ensures only one in-memory database instance exists across the entire application. All components should use this service instead of opening databases directly.
  */
 public class DODatabaseService {
 
@@ -81,7 +78,7 @@ public class DODatabaseService {
                 referenceMatch = referenceSchema.findClassByName(dbClass.attributes.destinationName);
             }
 
-            if (referenceMatch != null && referenceMatch.isIDEntite(referenceSchema) && referenceMatch.attributes.pointsTo != null && !referenceMatch.attributes.pointsTo.isBlank()) {
+            if (referenceMatch != null && referenceMatch.isIDEntite() && referenceMatch.attributes.pointsTo != null && !referenceMatch.attributes.pointsTo.isBlank()) {
                 dbClass.attributes.pointsTo = referenceMatch.attributes.pointsTo;
             }
         }

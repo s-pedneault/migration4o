@@ -24,8 +24,7 @@ import java.util.Set;
 import java.util.LinkedHashSet;
 
 /**
- * Exports a visual class-reference mapping of the reference schema to Graphviz
- * DOT and optionally renders an SVG when Graphviz is available.
+ * Exports a visual class-reference mapping of the reference schema to Graphviz DOT and optionally renders an SVG when Graphviz is available.
  */
 public class SchemaDiagramExporter {
 
@@ -164,7 +163,7 @@ public class SchemaDiagramExporter {
                 continue;
             }
             boolean isLeaf = childCountByClass.getOrDefault(schemaClass.attributes.source, 0) == 0;
-            boolean isIDPointer = schemaClass.isIDEntite(schema);
+            boolean isIDPointer = schemaClass.isIDEntite();
             if (isLeaf && !isIDPointer) {
                 classes.add(schemaClass);
             }
@@ -262,7 +261,7 @@ public class SchemaDiagramExporter {
             return null;
         }
 
-        if (resolved.isIDEntite(schema) && resolved.attributes.pointsTo != null && !resolved.attributes.pointsTo.isBlank()) {
+        if (resolved.isIDEntite() && resolved.attributes.pointsTo != null && !resolved.attributes.pointsTo.isBlank()) {
             DOSchemaClass pointed = findByName(classMap, resolved.attributes.pointsTo);
             if (pointed != null) {
                 return pointed;

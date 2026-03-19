@@ -318,7 +318,7 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
         DOSchema schema = context.databaseSchema;
         for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (!SchemaUtil.isDescendantOf(schemaClass, "gest.gen.EntiteContientID", schema)) {
+            if (!schemaClass.isDescendantOf("gest.gen.EntiteContientID")) {
                 continue;
             }
 
