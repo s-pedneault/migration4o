@@ -15,21 +15,6 @@ import migration4o.models.schema.DOSchemaField;
 public class DatabaseUtil {
 
     /**
-     * Counts total objects across all stored classes.
-     */
-    public static int countTotalObjects(StoredClass[] storedClasses) {
-        int total = 0;
-        for (StoredClass storedClass : storedClasses) {
-            try {
-                total += storedClass.instanceCount();
-            } catch (Exception e) {
-                System.out.println("Warning: Could not get instance count for class: " + storedClass.getName());
-            }
-        }
-        return total;
-    }
-
-    /**
      * Extracts simple class name from absolute class name.
      */
     public static String getSimpleClassName(String absoluteName) {
@@ -72,14 +57,11 @@ public class DatabaseUtil {
     }
 
     /**
-     * Finds a schema field by its name, searching the schema class and all its
-     * ancestor classes.
-     * This is CRITICAL for proper field lookup - fields may be defined in parent
-     * classes.
+     * Finds a schema field by its name, searching the schema class and all its ancestor classes. This is CRITICAL for proper field lookup - fields may be defined in parent classes.
      * 
      * @param schemaClass the schema class to start searching from
-     * @param fieldName   the field name to find
-     * @param schema      the schema containing all class definitions
+     * @param fieldName the field name to find
+     * @param schema the schema containing all class definitions
      * @return the schema field definition, or null if not found
      */
     public static DOSchemaField findSchemaFieldByNameIncludingAncestors(DOSchemaClass schemaClass, String fieldName, DOSchema schema) {
@@ -105,12 +87,11 @@ public class DatabaseUtil {
     }
 
     /**
-     * Finds a schema field by its <em>destination name</em> within a schema
-     * class and all its ancestor classes.
+     * Finds a schema field by its <em>destination name</em> within a schema class and all its ancestor classes.
      *
      * @param schemaClass the class to start from
-     * @param destName    the {@code destinationName} to look for
-     * @param schema      schema for ancestor resolution
+     * @param destName the {@code destinationName} to look for
+     * @param schema schema for ancestor resolution
      * @return the matching field, or {@code null} if not found
      */
     public static DOSchemaField findSchemaFieldByDestinationNameIncludingAncestors(DOSchemaClass schemaClass, String destName, DOSchema schema) {
@@ -134,13 +115,10 @@ public class DatabaseUtil {
     }
 
     /**
-     * Returns all fields declared on {@code schemaClass} and every ancestor
-     * class, in declaration order (most-derived class first). Fields with the
-     * same {@code destinationName} are deduplicated (the most-derived
-     * definition wins).
+     * Returns all fields declared on {@code schemaClass} and every ancestor class, in declaration order (most-derived class first). Fields with the same {@code destinationName} are deduplicated (the most-derived definition wins).
      *
      * @param schemaClass starting class
-     * @param schema      schema for ancestor resolution
+     * @param schema schema for ancestor resolution
      * @return ordered, deduplicated list of all fields
      */
     public static java.util.List<DOSchemaField> getAllSchemaFieldsIncludingAncestors(DOSchemaClass schemaClass, DOSchema schema) {
@@ -161,19 +139,9 @@ public class DatabaseUtil {
     }
 
     /**
-     * Normalizes a database field name to XML-friendly camelCase format.
-     * Replicates the Python transform_destination_name() logic:
-     * - Removes leading 'm' prefix if followed by uppercase letter
-     * - Converts 'ID' prefix at start to lowercase 'id'
-     * - Lowercases the first letter
+     * Normalizes a database field name to XML-friendly camelCase format. Replicates the Python transform_destination_name() logic: - Removes leading 'm' prefix if followed by uppercase letter - Converts 'ID' prefix at start to lowercase 'id' - Lowercases the first letter
      * 
-     * Examples:
-     * - mNom → nom
-     * - mDateCreation → dateCreation
-     * - mID → id
-     * - mIDSSI → idssi
-     * - IDDossPrev → idDossPrev
-     * - Name → name
+     * Examples: - mNom → nom - mDateCreation → dateCreation - mID → id - mIDSSI → idssi - IDDossPrev → idDossPrev - Name → name
      * 
      * @param sourceName The original field name from the database
      * @return The normalized field name
@@ -203,174 +171,8 @@ public class DatabaseUtil {
         return name;
     }
 
-    // /**
-    // * Converts a StoredField to a DODatabaseField with schema enhancement.
-    // */
-    // public static DODatabaseField convertStoredFieldToDOField(StoredField
-    // storedField, DOSchemaField schemaField) {
-    // String fieldName = storedField.getName();
-    // String typeName = storedField.getStoredType().getName();
-    // String description = "";
-    // boolean isPrimitive = TypeUtil.isPrimitiveType(typeName);
-    // boolean isArray = storedField.isArray();
-    // boolean isCollection = isArray ||
-    // CollectionTypeUtil.isCollectionType(typeName);
-
-    // String contentTypeName = null;
-    // if (isCollection) {
-    // if (schemaField != null && schemaField.attributes.childrenType != null) {
-    // contentTypeName = schemaField.attributes.childrenType;
-    // System.out.println("Enhanced field " + fieldName + " with schema content
-    // type: " + contentTypeName);
-    // } else {
-    // contentTypeName = CollectionTypeUtil.extractContentTypeFromTypeName(typeName,
-    // isArray);
-    // }
-    // }
-
-    // return new DODatabaseField(fieldName, description, typeName, null,
-    // isPrimitive, isCollection, contentTypeName,
-    // null);
-    // }
-
-    // /**
-    // * Extracts class name from a resolved object.
-    // */
-    // public static String getClassNameFromObject(DODatabaseObject obj) {
-    // if (obj.getMostSpecificClass() != null) {
-    // return obj.getMostSpecificClass().getAbsoluteName();
-    // }
-
-    // DODatabaseClass[] allClasses = obj.getAllClasses();
-    // if (allClasses != null && allClasses.length > 0) {
-    // return allClasses[0].getAbsoluteName();
-    // }
-
-    // return null;
-    // }
-
-    // /**
-    // * Finds resolved objects for a database class using multiple name lookup
-    // * strategies.
-    // */
-    // public static java.util.List<DODatabaseObject> findResolvedObjectsForClass(
-    // DODatabaseClass databaseClass,
-    // java.util.Map<String, java.util.List<DODatabaseObject>> classToObjectsMap) {
-
-    // // Try absolute name first
-    // java.util.List<DODatabaseObject> objects =
-    // classToObjectsMap.get(databaseClass.getAbsoluteName());
-    // if (objects != null) {
-    // return objects;
-    // }
-
-    // // Try short name
-    // objects = classToObjectsMap.get(databaseClass.getShortName());
-    // if (objects != null) {
-    // return objects;
-    // }
-
-    // // Try simple class name as fallback
-    // objects =
-    // classToObjectsMap.get(getSimpleClassName(databaseClass.getAbsoluteName()));
-    // if (objects != null) {
-    // return objects;
-    // }
-
-    // return new java.util.ArrayList<>();
-    // }
-
-    // /**
-    // * Creates a single database class from a stored class and schema information.
-    // */
-    // public static DODatabaseClass createDatabaseClass(StoredClass storedClass,
-    // DOSchema schema) {
-    // String className = storedClass.getName();
-    // int objectCount = storedClass.instanceCount();
-
-    // String superClassName = null;
-    // StoredClass parentStoredClass = storedClass.getParentStoredClass();
-    // if (parentStoredClass != null) {
-    // superClassName = parentStoredClass.getName();
-    // }
-
-    // DOSchemaClass matchingSchemaClass = findSchemaClassByName(schema, className);
-    // DODatabaseField[] fields = extractFieldsFromStoredClass(storedClass,
-    // matchingSchemaClass);
-
-    // // Get object IDs while database is still open
-    // long[] objectIds = storedClass.getIDs();
-    // if (objectIds == null) {
-    // objectIds = new long[0];
-    // }
-
-    // return new DODatabaseClass(
-    // className,
-    // getSimpleClassName(className),
-    // "Class from database",
-    // getSimpleClassName(className),
-    // superClassName,
-    // fields,
-    // objectCount,
-    // 0,
-    // objectIds);
-    // }
-
-    // /**
-    // * Extracts fields from a stored class with schema enhancement.
-    // * Deduplicates fields with the same name (keeps array version if both exist).
-    // */
-    // public static DODatabaseField[] extractFieldsFromStoredClass(StoredClass
-    // storedClass, DOSchemaClass schemaClass) {
-    // try {
-    // StoredField[] storedFields = storedClass.getStoredFields();
-
-    // // Use a map to deduplicate fields by name
-    // // Key: field name, Value: StoredField
-    // java.util.Map<String, StoredField> fieldMap = new
-    // java.util.LinkedHashMap<>();
-
-    // for (StoredField sf : storedFields) {
-    // String fieldName = sf.getName();
-    // StoredField existing = fieldMap.get(fieldName);
-
-    // if (existing == null) {
-    // // First occurrence of this field name
-    // fieldMap.put(fieldName, sf);
-    // } else {
-    // // Duplicate field name - prefer array version
-    // if (sf.isArray() && !existing.isArray()) {
-    // // New field is array, existing is not - replace with array version
-    // fieldMap.put(fieldName, sf);
-    // }
-    // // else keep existing (either both are arrays, both are non-arrays, or
-    // existing
-    // // is already array)
-    // }
-    // }
-
-    // // Convert deduplicated fields to DODatabaseField array
-    // DODatabaseField[] fields = new DODatabaseField[fieldMap.size()];
-    // int index = 0;
-    // for (StoredField sf : fieldMap.values()) {
-    // DOSchemaField matchingSchemaField = findSchemaFieldByName(schemaClass,
-    // sf.getName());
-    // fields[index++] = convertStoredFieldToDOField(sf, matchingSchemaField);
-    // }
-
-    // return fields;
-    // } catch (Exception e) {
-    // System.out.println(
-    // "Warning: Could not extract fields for class " + storedClass.getName() + ": "
-    // + e.getMessage());
-    // return new DODatabaseField[0];
-    // }
-    // }
-
     /**
-     * Reads a single stored field value from a DB4O {@link GenericObject} by
-     * source field name. Returns {@code null} if the field is not found or the
-     * object is not a {@link GenericObject}.
+     * Reads a single stored field value from a DB4O {@link GenericObject} by source field name. Returns {@code null} if the field is not found or the object is not a {@link GenericObject}.
      */
     public static Object getStoredFieldValue(ExtObjectContainer container, Object obj, String fieldName) {
         if (!(obj instanceof GenericObject)) {
@@ -394,14 +196,10 @@ public class DatabaseUtil {
     }
 
     /**
-     * Traverses a dotted <em>source</em> field path (e.g. {@code "mAdresse.mRue"})
-     * through a chain of DB4O {@link GenericObject}s and returns the leaf value,
-     * or {@code null} if any step fails. Each path segment must be the raw DB4O
-     * field name (i.e. the {@code source} attribute in the schema, not the
-     * {@code destinationName}).
+     * Traverses a dotted <em>source</em> field path (e.g. {@code "mAdresse.mRue"}) through a chain of DB4O {@link GenericObject}s and returns the leaf value, or {@code null} if any step fails. Each path segment must be the raw DB4O field name (i.e. the {@code source} attribute in the schema, not the {@code destinationName}).
      *
      * @param container DB4O container
-     * @param obj       starting object
+     * @param obj starting object
      * @param fieldPath dot-separated source field path
      * @return value at the end of the path, or {@code null} on any failure
      */
@@ -420,16 +218,6 @@ public class DatabaseUtil {
     }
 
     /**
-     * Checks if a stored class should be included in database analysis.
-     * Filters out db4o internal classes and empty classes.
-     */
-    public static boolean isValidDatabaseClass(StoredClass storedClass) {
-        String className = storedClass.getName();
-        long instanceCount = storedClass.instanceCount();
-        return !className.startsWith("com.db4o.") && instanceCount > 0;
-    }
-
-    /**
      * Safely gets stored classes from container with error handling.
      */
     public static StoredClass[] getStoredClassesSafely(com.db4o.ext.ExtObjectContainer container) {
@@ -441,23 +229,8 @@ public class DatabaseUtil {
         }
     }
 
-    // /**
-    // * Creates a fallback empty database when there are errors.
-    // */
-    // public static DODatabase createEmptyDatabase(com.db4o.ext.ExtObjectContainer
-    // container,
-    // DODatabaseEncoding encoding,
-    // String databaseSize) {
-    // return new DODatabase(container, encoding, 0, 0, databaseSize,
-    // new DODatabaseClass[0]);
-    // }
-
     /**
-     * Gets all fields from a StoredClass including fields from all ancestor
-     * classes.
-     * This is CRITICAL for proper object export - DB4O's getStoredFields() only
-     * returns
-     * fields declared in that specific class, missing inherited fields.
+     * Gets all fields from a StoredClass including fields from all ancestor classes. This is CRITICAL for proper object export - DB4O's getStoredFields() only returns fields declared in that specific class, missing inherited fields.
      * 
      * @param storedClass the stored class to get fields from
      * @return array of all fields including those from ancestors

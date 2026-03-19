@@ -10,7 +10,6 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.util.SchemaUtil;
 
 import javax.swing.tree.DefaultMutableTreeNode;
-import javax.swing.tree.TreePath;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.Enumeration;
@@ -58,26 +57,6 @@ public class MigrationStructurePanelUtil {
         }
 
         return null;
-    }
-
-    /**
-     * Recursively collects all class names from a module and its children.
-     * 
-     * @param moduleNode the module tree node to collect from
-     * @param classNames the list to add class names to (modified in place)
-     */
-    public static void collectClassNamesFromModule(DefaultMutableTreeNode moduleNode, List<String> classNames) {
-        Enumeration<?> children = moduleNode.children();
-        while (children.hasMoreElements()) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            if (child.getUserObject() instanceof ClassNode) {
-                ClassNode classNode = (ClassNode) child.getUserObject();
-                classNames.add(classNode.getSchemaClass().attributes.source);
-            } else if (child.getUserObject() instanceof DOSchemaModule) {
-                // Recursively collect from child modules
-                collectClassNamesFromModule(child, classNames);
-            }
-        }
     }
 
     /**
@@ -141,12 +120,9 @@ public class MigrationStructurePanelUtil {
      * Extracts a MigrationModule from a tree node and its children. Recursively processes all child modules and classes.
      * 
      * @param moduleTreeNode the tree node representing the module
+     * @param parentModule the parent module (may be null for root modules)
      * @return a MigrationModule object with all nested data
      */
-    public static DOSchemaModule extractModule(DefaultMutableTreeNode moduleTreeNode) {
-        return extractModule(moduleTreeNode, null);
-    }
-
     public static DOSchemaModule extractModule(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule parentModule) {
         DOSchemaModule module = (DOSchemaModule) moduleTreeNode.getUserObject();
         List<ClassExportConfig> classConfigs = new ArrayList<>();
@@ -200,7 +176,7 @@ public class MigrationStructurePanelUtil {
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode moduleNode = (DefaultMutableTreeNode) children.nextElement();
             if (moduleNode.getUserObject() instanceof DOSchemaModule) {
-                modules.add(extractModule(moduleNode));
+                modules.add(extractModule(moduleNode, null));
             }
         }
 
@@ -397,80 +373,6 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Collects all module paths from a tree recursively.
-     * 
-     * @param node the current node
-     * @param currentPath the current tree path
-     * @param modulePaths the list to collect module paths into
-     */
-    public static void collectAllModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
-        Object userObject = node.getUserObject();
-
-        // If this node is a module, add it to the list
-        if (userObject instanceof DOSchemaModule) {
-            modulePaths.add(currentPath);
-        }
-
-        // Recursively process all children
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
-            TreePath childPath = currentPath.pathByAddingChild(child);
-            collectAllModulePaths(child, childPath, modulePaths);
-        }
-    }
-
-    /**
-     * Collects only root-level module paths (modules without a parent module). This prevents nested modules from being exported multiple times.
-     * 
-     * @param node the current node
-     * @param currentPath the current tree path
-     * @param modulePaths the list to collect module paths into
-     */
-    public static void collectRootModulePaths(DefaultMutableTreeNode node, TreePath currentPath, List<TreePath> modulePaths) {
-        Object userObject = node.getUserObject();
-
-        // If this node is a module, add it (it's a root level module)
-        // and don't recurse into its children (they are nested modules)
-        if (userObject instanceof DOSchemaModule) {
-            modulePaths.add(currentPath);
-            return; // Don't recurse - nested modules will be exported as part
-                    // of their parent
-        }
-
-        // Recursively process all children (only if current node is NOT a
-        // module)
-        for (int i = 0; i < node.getChildCount(); i++) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) node.getChildAt(i);
-            TreePath childPath = currentPath.pathByAddingChild(child);
-            collectRootModulePaths(child, childPath, modulePaths);
-        }
-    }
-
-    /**
-     * Collects all module nodes from a selection of tree paths.
-     * 
-     * @param selectedPaths the selected tree paths
-     * @return list of module nodes with their associated data
-     */
-    public static List<ModuleTreeInfo> collectModulesFromSelection(TreePath[] selectedPaths) {
-        List<ModuleTreeInfo> modules = new ArrayList<>();
-
-        if (selectedPaths == null || selectedPaths.length == 0) {
-            return modules;
-        }
-
-        for (TreePath path : selectedPaths) {
-            DefaultMutableTreeNode node = (DefaultMutableTreeNode) path.getLastPathComponent();
-            if (node.getUserObject() instanceof DOSchemaModule) {
-                DOSchemaModule moduleNode = (DOSchemaModule) node.getUserObject();
-                modules.add(new ModuleTreeInfo(node, moduleNode));
-            }
-        }
-
-        return modules;
-    }
-
-    /**
      * Helper class to hold module tree node information.
      */
     public static class ModuleTreeInfo {
@@ -494,86 +396,6 @@ public class MigrationStructurePanelUtil {
             this.name = name;
             this.module = module;
         }
-    }
-
-    /**
-     * Builds the full hierarchical path for a module by walking up the tree. For example, if "Intervention" is under "Activités", returns "Activités/Intervention"
-     * 
-     * @param moduleTreeNode the tree node representing the selected module
-     * @return the full path from root to this module
-     */
-    public static String buildFullModulePath(DefaultMutableTreeNode moduleTreeNode) {
-        List<String> pathParts = new ArrayList<>();
-        DefaultMutableTreeNode currentNode = moduleTreeNode;
-
-        // Walk up the tree collecting module names
-        while (currentNode != null) {
-            Object userObject = currentNode.getUserObject();
-            if (userObject instanceof DOSchemaModule) {
-                DOSchemaModule moduleNode = (DOSchemaModule) userObject;
-                String part = (moduleNode.id != null && !moduleNode.id.isBlank()) ? moduleNode.id : moduleNode.name;
-                pathParts.add(0, part); // Add at beginning to build path from
-                                        // root
-            }
-            currentNode = (DefaultMutableTreeNode) currentNode.getParent();
-        }
-
-        // Join path parts with "/"
-        return String.join("/", pathParts);
-    }
-
-    /**
-     * Builds a MigrationModule from a tree node with all its children.
-     * 
-     * @param moduleTreeNode the tree node representing the module
-     * @param moduleNode the module metadata
-     * @return the constructed MigrationModule
-     */
-    public static DOSchemaModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule moduleNode) {
-        return buildModuleFromTree(moduleTreeNode, moduleNode, null);
-    }
-
-    public static DOSchemaModule buildModuleFromTree(DefaultMutableTreeNode moduleTreeNode, DOSchemaModule moduleNode, DOSchemaModule parentModule) {
-        List<ClassExportConfig> classConfigs = new ArrayList<>();
-        List<DOSchemaModule> childModules = new ArrayList<>();
-
-        // Create result first so it can be passed as parent to child modules
-        DOSchemaModule result = new DOSchemaModule(parentModule);
-        result.name = moduleNode.name;
-        result.id = moduleNode.id;
-        result.icon = moduleNode.icon;
-        result.tileBg = moduleNode.tileBg;
-        result.tileTextColor = moduleNode.tileTextColor;
-        result.tileIconColor = moduleNode.tileIconColor;
-        result.tileFontSize = moduleNode.tileFontSize;
-
-        // Iterate through children
-        for (int i = 0; i < moduleTreeNode.getChildCount(); i++) {
-            DefaultMutableTreeNode childNode = (DefaultMutableTreeNode) moduleTreeNode.getChildAt(i);
-            Object userObject = childNode.getUserObject();
-
-            if (userObject instanceof ClassNode) {
-                // Add class configuration
-                ClassNode classNode = (ClassNode) userObject;
-                ClassExportConfig config = classNode.getExportConfig();
-
-                // If no configuration exists, create a simple one
-                if (config == null) {
-                    config = new ClassExportConfig(classNode.getSchemaClass().attributes.source);
-                }
-
-                classConfigs.add(config);
-            } else if (userObject instanceof DOSchemaModule) {
-                // Recursively build child module — pass result as parent
-                DOSchemaModule childModuleNode = (DOSchemaModule) userObject;
-                DOSchemaModule childModule = buildModuleFromTree(childNode, childModuleNode, result);
-                childModules.add(childModule);
-            }
-        }
-
-        result.classConfigs = classConfigs;
-        result.children = childModules;
-        return result;
     }
 
 }
