@@ -97,38 +97,6 @@ public class SchemaUtil {
     }
 
     /**
-     * Finds a schema class by its absolute name.
-     */
-    public static DOSchemaClass findSchemaClassByName(DOSchema schema, String className) {
-        if (schema == null || schema.getClasses() == null) {
-            return null;
-        }
-
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (className.equals(schemaClass.attributes.source)) {
-                return schemaClass;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * Finds a schema field by its name within a schema class.
-     */
-    public static DOSchemaField findSchemaFieldByName(DOSchemaClass schemaClass, String fieldName) {
-        if (schemaClass == null || schemaClass.fields == null) {
-            return null;
-        }
-
-        for (DOSchemaField field : schemaClass.fields) {
-            if (fieldName.equals(field.attributes.source)) {
-                return field;
-            }
-        }
-        return null;
-    }
-
-    /**
      * Strips a leading "id" or "ID" prefix (optionally followed by a space) from a field or element name, lowercasing the new first character if it was uppercase. Examples: "IDTypeChampPerso" → "typeChampPerso", "IDPersonne" → "personne", "id type" → "type".
      */
     public static String stripIdPrefix(String name) {

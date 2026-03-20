@@ -46,7 +46,18 @@ public class DOSchemaClass {
         return TypeUtil.isPrimitiveType(attributes.source);
     }
 
-    public DOSchemaField findField(String fieldName) {
+    public DOSchemaField findFieldBySourceName(String fieldName) {
+        if (fields != null) {
+            for (DOSchemaField field : fields) {
+                if (field.attributes.source.equals(fieldName)) {
+                    return field;
+                }
+            }
+        }
+        return null;
+    }
+
+    public DOSchemaField findFieldByDestinationName(String fieldName) {
         if (fields != null) {
             for (DOSchemaField field : fields) {
                 if (field.attributes.destinationName.equals(fieldName)) {
