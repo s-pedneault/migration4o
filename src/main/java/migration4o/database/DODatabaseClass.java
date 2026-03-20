@@ -9,9 +9,7 @@ public class DODatabaseClass {
     public DOSchemaClass schemaClass;
     public DODatabaseClassAttributes attributes = new DODatabaseClassAttributes();
     public DODatabaseField[] fields;
-
-    public long[] objectIds;
-    public long[] uniqueObjectIds;
+    public final DODatabaseClassObjects objects = new DODatabaseClassObjects(this);
 
     public DODatabaseClass(DODatabase database) {
         this.database = database;

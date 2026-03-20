@@ -81,7 +81,7 @@ public class DODatabaseLoader {
 
         // Object IDs
         long[] objectIds = storedClass.getIDs();
-        dbClass.objectIds = objectIds != null ? objectIds : new long[0];
+        dbClass.objects.objectIds = objectIds != null ? objectIds : new long[0];
 
         // Fields
         DODatabaseField[] dbFields = loadFields(database, dbClass, storedClass, storedClassMap);
