@@ -172,9 +172,11 @@ public class DatabaseStructurePanel extends JPanel {
     }
 
     private static boolean hasUnlinkedFields(DODatabaseClass dbClass) {
-        if (dbClass.fields == null) return false;
+        if (dbClass.fields == null)
+            return false;
         for (DODatabaseField field : dbClass.fields) {
-            if (field.schemaField == null) return true;
+            if (field.schemaField == null)
+                return true;
         }
         return false;
     }
