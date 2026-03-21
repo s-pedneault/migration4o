@@ -1,5 +1,6 @@
 package migration4o.migration.tasks;
 
+import migration4o.database.DODatabaseClass;
 import migration4o.migration.ExportRequest;
 import migration4o.migration.ObjectExporter;
 import migration4o.migration.format.ExportCurrentState;
@@ -33,22 +34,22 @@ public class ObjectExportLoop {
     }
 
     /**
-     * New-path variant: iterates {@code dbSchemaClass.objectIds} and exports
+     * New-path variant: iterates {@code dbClass.objects.objectIds} and exports
      * each via {@link ObjectExporter#exportObject}. The reference schema class
      * is taken from {@code ctx.schemaClass} (set by the caller before invoking
      * this method).
      *
-     * @param dbSchemaClass Database-schema class (carries object IDs)
+     * @param dbClass Database class (carries object IDs)
      */
-    public void run(DOSchemaClass dbSchemaClass) throws Exception {
+    public void run(DODatabaseClass dbClass) throws Exception {
         // Use pre-computed smart selection when available for this class
-        long[] objectIds = dbSchemaClass.objectIds;
+        long[] objectIds = dbClass.objects.objectIds;
         if (request.preselectedObjectIds != null) {
-            long[] preselected = request.preselectedObjectIds.get(dbSchemaClass.attributes.source);
+            long[] preselected = request.preselectedObjectIds.get(dbClass.attributes.source);
             if (preselected != null) {
                 objectIds = preselected;
-                if (dbSchemaClass.attributes.source.contains("DossPrev")) {
-                    System.out.println("[DEBUG-DossPrev] ObjectExportLoop: preselection for '" + dbSchemaClass.attributes.source + "': " + preselected.length + " objects (was " + (dbSchemaClass.objectIds != null ? dbSchemaClass.objectIds.length : 0) + ")");
+                if (dbClass.attributes.source.contains("DossPrev")) {
+                    System.out.println("[DEBUG-DossPrev] ObjectExportLoop: preselection for '" + dbClass.attributes.source + "': " + preselected.length + " objects (was " + (dbClass.objects.objectIds != null ? dbClass.objects.objectIds.length : 0) + ")");
                 }
             }
         }
@@ -58,7 +59,7 @@ public class ObjectExportLoop {
         // closure-driven) and must be exported regardless of the cap.
         int requiredCount = 0;
         if (request.preselectedRequiredCounts != null) {
-            Integer rc = request.preselectedRequiredCounts.get(dbSchemaClass.attributes.source);
+            Integer rc = request.preselectedRequiredCounts.get(dbClass.attributes.source);
             if (rc != null)
                 requiredCount = rc;
         }

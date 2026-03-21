@@ -1,5 +1,8 @@
 package migration4o.ui.panels.database_panels.conformity_analysis_panel;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
+import migration4o.database.DODatabaseField;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -15,6 +18,7 @@ public class SchemaComparison {
 
     private final DOSchema referenceSchema;
     private final DOSchema comparedSchema;
+    private final DODatabase comparedDatabase;
     private final String referenceLabel;
     private final String comparedLabel;
 
@@ -24,6 +28,18 @@ public class SchemaComparison {
     public SchemaComparison(DOSchema referenceSchema, String referenceLabel, DOSchema comparedSchema, String comparedLabel) {
         this.referenceSchema = referenceSchema;
         this.comparedSchema = comparedSchema;
+        this.comparedDatabase = null;
+        this.referenceLabel = referenceLabel;
+        this.comparedLabel = comparedLabel;
+        this.differences = new ArrayList<>();
+
+        performComparison();
+    }
+
+    public SchemaComparison(DOSchema referenceSchema, String referenceLabel, DODatabase comparedDatabase, String comparedLabel) {
+        this.referenceSchema = referenceSchema;
+        this.comparedSchema = null;
+        this.comparedDatabase = comparedDatabase;
         this.referenceLabel = referenceLabel;
         this.comparedLabel = comparedLabel;
         this.differences = new ArrayList<>();
@@ -32,6 +48,14 @@ public class SchemaComparison {
     }
 
     private void performComparison() {
+        if (comparedDatabase != null) {
+            performCrossTypeComparison();
+        } else {
+            performSchemaComparison();
+        }
+    }
+
+    private void performSchemaComparison() {
         Map<String, DOSchemaClass> referenceClasses = buildClassMap(referenceSchema);
         Map<String, DOSchemaClass> comparedClasses = buildClassMap(comparedSchema);
 
@@ -58,6 +82,117 @@ public class SchemaComparison {
 
         // Sort by class name
         differences.sort(Comparator.comparing(ClassDifference::getClassName));
+    }
+
+    private void performCrossTypeComparison() {
+        Map<String, DOSchemaClass> referenceClasses = buildClassMap(referenceSchema);
+        Map<String, DODatabaseClass> databaseClasses = buildDatabaseClassMap(comparedDatabase);
+
+        Set<String> allClassNames = new HashSet<>();
+        allClassNames.addAll(referenceClasses.keySet());
+        allClassNames.addAll(databaseClasses.keySet());
+
+        for (String className : allClassNames) {
+            DOSchemaClass refClass = referenceClasses.get(className);
+            DODatabaseClass dbClass = databaseClasses.get(className);
+            // For the compared side, use the schema link if available
+            DOSchemaClass cmpClass = dbClass != null ? dbClass.schemaClass : null;
+
+            ClassDifference diff = new ClassDifference(className, refClass, cmpClass, dbClass);
+
+            if (refClass != null && dbClass != null) {
+                // Both exist - compare fields using database field attributes
+                compareCrossTypeFields(diff, refClass, dbClass);
+            }
+
+            if (diff.hasDifferences() || showAllClasses) {
+                differences.add(diff);
+            }
+        }
+
+        // Sort by class name
+        differences.sort(Comparator.comparing(ClassDifference::getClassName));
+    }
+
+    private void compareCrossTypeFields(ClassDifference diff, DOSchemaClass refClass, DODatabaseClass dbClass) {
+        Map<String, DOSchemaField> refFields = buildFieldMap(refClass);
+        Map<String, DODatabaseField> dbFields = new HashMap<>();
+        if (dbClass.fields != null) {
+            for (DODatabaseField field : dbClass.fields) {
+                dbFields.put(field.attributes.source, field);
+            }
+        }
+
+        Set<String> allFieldNames = new HashSet<>();
+        allFieldNames.addAll(refFields.keySet());
+        allFieldNames.addAll(dbFields.keySet());
+
+        for (String fieldName : allFieldNames) {
+            DOSchemaField refField = refFields.get(fieldName);
+            DODatabaseField dbField = dbFields.get(fieldName);
+
+            if (refField == null) {
+                // Field only in database — create a synthetic DOSchemaField for display
+                DOSchemaField syntheticField = new DOSchemaField(null, null);
+                syntheticField.attributes.source = dbField.attributes.source;
+                syntheticField.attributes.type = dbField.attributes.type;
+                syntheticField.attributes.isCollection = dbField.attributes.isCollection;
+                syntheticField.attributes.childrenType = dbField.attributes.childrenType;
+                diff.addFieldOnlyInCompared(syntheticField);
+            } else if (dbField == null) {
+                if (!isVirtualQueryField(refField)) {
+                    diff.addFieldOnlyInReference(refField);
+                }
+            } else {
+                // Both exist - compare properties
+                FieldPropertyDifference propDiff = compareCrossTypeFieldProperties(refField, dbField);
+                if (propDiff.hasDifferences()) {
+                    diff.addFieldWithDifferences(fieldName, propDiff);
+                }
+            }
+        }
+    }
+
+    private FieldPropertyDifference compareCrossTypeFieldProperties(DOSchemaField refField, DODatabaseField dbField) {
+        FieldPropertyDifference diff = new FieldPropertyDifference();
+
+        String refType = normalizeType(refField.attributes.type);
+        String cmpType = normalizeType(dbField.attributes.type);
+        if (!Objects.equals(refType, cmpType)) {
+            diff.addDifference("type", refField.attributes.type, dbField.attributes.type);
+        }
+
+        boolean referenceMorePreciseCollection = refField.attributes.isCollection && !dbField.attributes.isCollection;
+        if (refField.attributes.isCollection != dbField.attributes.isCollection && !referenceMorePreciseCollection) {
+            diff.addDifference("collection", refField.attributes.isCollection, dbField.attributes.isCollection);
+        }
+
+        String refChildren = normalizeEmptyString(refField.attributes.childrenType);
+        String cmpChildren = normalizeEmptyString(dbField.attributes.childrenType);
+
+        boolean referenceHasSpecificChildrenType = refChildren != null && !"java.lang.Object".equals(normalizeType(refChildren));
+        boolean comparedMissingChildrenType = cmpChildren == null;
+        boolean comparedIsObjectPlaceholder = "java.lang.Object".equals(normalizeType(cmpChildren));
+        boolean referenceMorePreciseChildrenType = referenceHasSpecificChildrenType && (comparedMissingChildrenType || comparedIsObjectPlaceholder);
+
+        if (!Objects.equals(normalizeType(refChildren), normalizeType(cmpChildren)) && !referenceMorePreciseChildrenType) {
+            diff.addDifference("childrenType", refField.attributes.childrenType, dbField.attributes.childrenType);
+        }
+
+        return diff;
+    }
+
+    private Map<String, DODatabaseClass> buildDatabaseClassMap(DODatabase database) {
+        Map<String, DODatabaseClass> map = new HashMap<>();
+        if (database != null && database.getClasses() != null) {
+            for (DODatabaseClass dbClass : database.getClasses()) {
+                String key = dbClass.attributes.source;
+                if (key != null && !key.trim().isEmpty()) {
+                    map.put(key, dbClass);
+                }
+            }
+        }
+        return map;
     }
 
     private void compareFields(ClassDifference diff, DOSchemaClass refClass, DOSchemaClass cmpClass) {
@@ -228,6 +363,10 @@ public class SchemaComparison {
         return comparedSchema;
     }
 
+    public DODatabase getComparedDatabase() {
+        return comparedDatabase;
+    }
+
     public String getReferenceLabel() {
         return referenceLabel;
     }
@@ -238,6 +377,25 @@ public class SchemaComparison {
 
     public boolean isShowAllClasses() {
         return showAllClasses;
+    }
+
+    /**
+     * Creates a fresh comparison using the same schemas/database and labels.
+     * Useful for refreshing after modifying the reference schema.
+     */
+    public SchemaComparison recreateWithReferenceSchema(DOSchema updatedReferenceSchema) {
+        if (comparedDatabase != null) {
+            return new SchemaComparison(updatedReferenceSchema, referenceLabel, comparedDatabase, comparedLabel);
+        } else {
+            return new SchemaComparison(updatedReferenceSchema, referenceLabel, comparedSchema, comparedLabel);
+        }
+    }
+
+    /**
+     * Creates a fresh comparison reusing the same reference schema and labels.
+     */
+    public SchemaComparison recreate() {
+        return recreateWithReferenceSchema(referenceSchema);
     }
 
     public void setShowAllClasses(boolean showAllClasses) {

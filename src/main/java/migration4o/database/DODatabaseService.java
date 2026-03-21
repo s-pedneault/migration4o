@@ -2,8 +2,8 @@ package migration4o.database;
 
 import java.io.IOException;
 
+import migration4o.database.processors.DOObjectDeduplicator;
 import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
 import migration4o.schema.DOSchemaService;
 
 /**
@@ -48,39 +48,18 @@ public class DODatabaseService {
         // Open new database in memory
         context.container = opener.openDatabase(context, true);
 
-        // Infer schema from database
+        // Load DODatabase (new path)
+        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
+        DODatabaseLoader loader = new DODatabaseLoader();
+        context.database = loader.load(context.container, referenceSchema);
+        DOObjectDeduplicator.deduplicateObjectIds(context.database, context.monitor);
+
+        // Also populate old databaseSchema for coexistence during migration
         DODatabaseReader reader = context.monitor != null ? new DODatabaseReader(context.monitor) : new DODatabaseReader();
         context.databaseSchema = reader.readDatabaseAsSchema(context.container);
-        enrichPointsToFromReferenceSchema(context.databaseSchema);
 
         if (context.monitor != null) {
             context.monitor.onServiceDatabaseOpened(context.databaseFilePath);
-        }
-    }
-
-    private void enrichPointsToFromReferenceSchema(DOSchema databaseSchema) {
-        if (databaseSchema == null || databaseSchema.getClasses() == null) {
-            return;
-        }
-
-        DOSchema referenceSchema = DOSchemaService.getInstance().getReferenceSchema();
-        if (referenceSchema == null || referenceSchema.getClasses() == null) {
-            return;
-        }
-
-        for (DOSchemaClass dbClass : databaseSchema.getClasses()) {
-            if (dbClass == null || dbClass.attributes.pointsTo != null) {
-                continue;
-            }
-
-            DOSchemaClass referenceMatch = referenceSchema.findClassByName(dbClass.attributes.source);
-            if (referenceMatch == null && dbClass.attributes.destinationName != null) {
-                referenceMatch = referenceSchema.findClassByName(dbClass.attributes.destinationName);
-            }
-
-            if (referenceMatch != null && referenceMatch.isIDEntite() && referenceMatch.attributes.pointsTo != null && !referenceMatch.attributes.pointsTo.isBlank()) {
-                dbClass.attributes.pointsTo = referenceMatch.attributes.pointsTo;
-            }
         }
     }
 

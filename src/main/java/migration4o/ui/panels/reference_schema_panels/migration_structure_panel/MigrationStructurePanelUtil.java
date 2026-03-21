@@ -1,5 +1,7 @@
 package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.ui.CategorizedClasses;
@@ -59,13 +61,13 @@ public class MigrationStructurePanelUtil {
     }
 
     /**
-     * Recursively updates object counts in tree nodes based on database schema.
+     * Recursively updates object counts in tree nodes based on database.
      * 
      * @param node the tree node to update
      * @param schema the reference schema
-     * @param databaseSchema the database schema with updated counts
+     * @param database the database with object counts (may be null)
      */
-    public static void updateNodeCounts(DefaultMutableTreeNode node, DOSchema schema, DOSchema databaseSchema) {
+    public static void updateNodeCounts(DefaultMutableTreeNode node, DOSchema schema, DODatabase database) {
         Object userObject = node.getUserObject();
         if (userObject instanceof ClassNode) {
             ClassNode classNode = (ClassNode) userObject;
@@ -73,26 +75,19 @@ public class MigrationStructurePanelUtil {
 
             // Get from reference schema first (has destinationName)
             DOSchemaClass referenceClass = schema != null ? schema.findClassByName(className) : null;
-            // Get from database schema (has object counts)
-            DOSchemaClass dbClass = databaseSchema != null ? databaseSchema.findClassByName(className) : null;
+            // Get from database (has object counts)
+            DODatabaseClass dbClass = database != null ? database.findClassByName(className) : null;
 
-            // Merge: use reference class properties, but copy object counts
-            // from database
-            if (referenceClass != null && dbClass != null) {
-                referenceClass.objectIds = dbClass.objectIds;
-                referenceClass.uniqueObjectIds = dbClass.uniqueObjectIds;
-                referenceClass.reachedObjectIds = dbClass.reachedObjectIds;
-
-                // Preserve the export configuration when updating
+            if (referenceClass != null) {
+                // Use reference class with DODatabaseClass for counts
                 ClassExportConfig existingConfig = classNode.getExportConfig();
-                ClassNode newNode = new ClassNode(referenceClass);
+                ClassNode newNode = new ClassNode(referenceClass, dbClass);
                 newNode.setExportConfig(existingConfig);
                 node.setUserObject(newNode);
-            } else if (referenceClass != null || dbClass != null) {
-                // Use whichever one we found
-                DOSchemaClass updatedClass = referenceClass != null ? referenceClass : dbClass;
+            } else if (dbClass != null && dbClass.schemaClass != null) {
+                // No reference class but we have a database class with schema link
                 ClassExportConfig existingConfig = classNode.getExportConfig();
-                ClassNode newNode = new ClassNode(updatedClass);
+                ClassNode newNode = new ClassNode(dbClass.schemaClass, dbClass);
                 newNode.setExportConfig(existingConfig);
                 node.setUserObject(newNode);
             }
@@ -102,7 +97,7 @@ public class MigrationStructurePanelUtil {
         Enumeration<?> children = node.children();
         while (children.hasMoreElements()) {
             DefaultMutableTreeNode child = (DefaultMutableTreeNode) children.nextElement();
-            updateNodeCounts(child, schema, databaseSchema);
+            updateNodeCounts(child, schema, database);
         }
     }
 
@@ -269,25 +264,26 @@ public class MigrationStructurePanelUtil {
      * @param parentNode the parent tree node
      * @param module the migration module to add
      * @param schema the reference schema
-     * @param databaseSchema the database schema (may be null)
+     * @param database the database (may be null)
      * @param exportedClasses set to track exported class names (modified in place)
      */
-    public static void addModuleToTree(DefaultMutableTreeNode parentNode, DOSchemaModule module, DOSchema schema, DOSchema databaseSchema, Set<String> exportedClasses) {
+    public static void addModuleToTree(DefaultMutableTreeNode parentNode, DOSchemaModule module, DOSchema schema, DODatabase database, Set<String> exportedClasses) {
         DefaultMutableTreeNode moduleTreeNode = new DefaultMutableTreeNode(module);
         parentNode.add(moduleTreeNode);
 
         // Add classes to module with their configurations
         for (ClassExportConfig config : module.classConfigs) {
             String className = config.getClassName();
-            // Use reference schema first (has destinationName), fall back to
-            // database
-            // schema
+            // Use reference schema first (has destinationName)
             DOSchemaClass schemaClass = schema != null ? schema.findClassByName(className) : null;
-            if (schemaClass == null && databaseSchema != null) {
-                schemaClass = databaseSchema.findClassByName(className);
+            // Look up database class for object counts
+            DODatabaseClass dbClass = database != null ? database.findClassByName(className) : null;
+
+            if (schemaClass == null && dbClass != null && dbClass.schemaClass != null) {
+                schemaClass = dbClass.schemaClass;
             }
             if (schemaClass != null) {
-                ClassNode classNode = new ClassNode(schemaClass);
+                ClassNode classNode = new ClassNode(schemaClass, dbClass);
                 // Store the configuration in the ClassNode
                 classNode.setExportConfig(config);
                 DefaultMutableTreeNode classTreeNode = new DefaultMutableTreeNode(classNode);
@@ -298,7 +294,7 @@ public class MigrationStructurePanelUtil {
 
         // Add child modules recursively
         for (DOSchemaModule childModule : module.children) {
-            addModuleToTree(moduleTreeNode, childModule, schema, databaseSchema, exportedClasses);
+            addModuleToTree(moduleTreeNode, childModule, schema, database, exportedClasses);
         }
     }
 

@@ -821,7 +821,7 @@ public class FieldExporter {
                 }
             }
 
-            Long resolvedObjectId = ReferenceUtil.resolveIDEntiteForExport(container, fieldValue, className, schemaField, operation.databaseSchema);
+            Long resolvedObjectId = ReferenceUtil.resolveIDEntiteForExport(container, fieldValue, className, schemaField, operation.database);
             if (resolvedObjectId == null) {
                 // Resolution failed — skip this reference (already logged by
                 // ReferenceUtil)

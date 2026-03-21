@@ -8,6 +8,7 @@ import java.util.Map;
 
 import com.db4o.ext.ExtObjectContainer;
 
+import migration4o.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.SeedQuery;
@@ -27,6 +28,9 @@ public class ExportRequest {
     // ──────────────────────────────────────────
 
     public DOSchema referenceSchema;
+    public DODatabase database;
+    /** @deprecated Use {@link #database} instead. Kept temporarily for coexistence. */
+    @Deprecated
     public DOSchema databaseSchema;
     public String databasePath;
     public migration4o.database.DODatabaseContext dbContext;

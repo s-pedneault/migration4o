@@ -11,6 +11,8 @@ import java.util.Set;
 
 import com.db4o.ext.ExtObjectContainer;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -78,16 +80,16 @@ public class ExportSelectionAdvisor {
 
     private final ExtObjectContainer container;
     private final DOSchema referenceSchema;
-    private final DOSchema databaseSchema;
+    private final DODatabase database;
     private final int cap;
     private final List<migration4o.models.ui.SeedQuery> seedQueries;
 
     // ── Constructors ─────────────────────────────────────────────────────────
 
-    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, int cap) {
+    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DODatabase database, int cap) {
         this.container = container;
         this.referenceSchema = referenceSchema;
-        this.databaseSchema = databaseSchema;
+        this.database = database;
         this.cap = cap;
         this.seedQueries = null;
     }
@@ -95,10 +97,10 @@ public class ExportSelectionAdvisor {
     /**
      * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0, seed query results are limited to that many objects per seed class before closure propagation.
      */
-    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DOSchema databaseSchema, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
+    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DODatabase database, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
         this.container = container;
         this.referenceSchema = referenceSchema;
-        this.databaseSchema = databaseSchema;
+        this.database = database;
         this.cap = (seedCap != null && seedCap > 0) ? seedCap : 0;
         this.seedQueries = seedQueries;
     }
@@ -137,7 +139,7 @@ public class ExportSelectionAdvisor {
         // Step 4 \u2013 closure propagation: guarantee every referenced object
         // is included
         status(monitor, "Smart selection: propagating referential closure\u2026");
-        SelectionResult result = buildRankedOrder(classObjectIds, edges, edgeData);
+        SelectionResult result = buildRankedOrder(classObjectIds, edges, edgeData, modules);
         return result;
     }
 
@@ -178,15 +180,23 @@ public class ExportSelectionAdvisor {
         status(monitor, "Seed selection: executing seed queries\u2026");
         Map<String, Set<Long>> seedObjects = executeSeedQueries(classObjectIds, monitor);
 
-        // Apply per-class cap to seed matches before reference scan
+        // Apply per-class cap to seed matches before reference scan.
+        // When a class appears in multiple module configs with different criteria
+        // (e.g. DossPrev exported as DossierAdresse, DossierAdresse-mobile,
+        // DossierAdresse-autres), multiply the effective cap so each criteria
+        // partition can have up to 'cap' objects after filtering.
         if (cap > 0) {
+            Map<String, Integer> criteriaConfigCounts = countCriteriaConfigs(modules);
             for (Map.Entry<String, Set<Long>> entry : seedObjects.entrySet()) {
+                String className = entry.getKey();
                 Set<Long> matches = entry.getValue();
-                if (matches.size() > cap) {
+                int criteriaCount = criteriaConfigCounts.getOrDefault(className, 1);
+                int effectiveCap = cap * criteriaCount;
+                if (matches.size() > effectiveCap) {
                     Set<Long> capped = new LinkedHashSet<>();
                     int count = 0;
                     for (Long id : matches) {
-                        if (count++ >= cap)
+                        if (count++ >= effectiveCap)
                             break;
                         capped.add(id);
                     }
@@ -471,18 +481,38 @@ public class ExportSelectionAdvisor {
 
     // ── Step 1: collect exported classes ────────────────────────────────────
 
+    /**
+     * Counts how many times each class appears in criteria-bearing configs across all modules.
+     * Returns a map of className → count (only classes with criteria are included; minimum 1).
+     * For a class that appears 3 times with criteria (e.g. DossPrev with 3 different filter sets),
+     * the count is 3 — meaning the effective preselection cap should be 3× the base cap.
+     */
+    private static Map<String, Integer> countCriteriaConfigs(List<DOSchemaModule> modules) {
+        Map<String, Integer> counts = new HashMap<>();
+        for (DOSchemaModule m : modules) {
+            countCriteriaConfigsRecursive(m, counts);
+        }
+        return counts;
+    }
+
+    private static void countCriteriaConfigsRecursive(DOSchemaModule module, Map<String, Integer> counts) {
+        for (ClassExportConfig cfg : module.classConfigs) {
+            if (cfg.hasCriteria()) {
+                counts.merge(cfg.getClassName(), 1, Integer::sum);
+            }
+        }
+        for (DOSchemaModule child : module.children) {
+            countCriteriaConfigsRecursive(child, counts);
+        }
+    }
+
     private void collectClasses(DOSchemaModule module, Map<String, long[]> out) {
         for (ClassExportConfig cfg : module.classConfigs) {
             String name = cfg.getClassName();
             if (!out.containsKey(name)) {
-                // IMPORTANT: objectIds are populated only on the *database*
-                // schema
-                // (from storedClass.getIDs()). The reference schema never has
-                // them.
-                DOSchemaClass dbClass = databaseSchema.findClassByName(name);
-                if (dbClass != null && dbClass.objectIds != null && dbClass.objectIds.length > 0) {
-                    out.put(name, dbClass.objectIds);
-
+                DODatabaseClass dbClass = database.findClassByName(name);
+                if (dbClass != null && dbClass.objects.objectIds != null && dbClass.objects.objectIds.length > 0) {
+                    out.put(name, dbClass.objects.objectIds);
                 }
             }
         }
@@ -594,12 +624,12 @@ public class ExportSelectionAdvisor {
         Map<String, Map<Long, Long>> index = new HashMap<>();
         for (String targetClass : idEntiteTargets) {
             Map<Long, Long> midMap = new HashMap<>();
-            DOSchemaClass dbClass = databaseSchema.findClassByName(targetClass);
-            if (dbClass == null || dbClass.objectIds == null) {
+            DODatabaseClass dbClass = database.findClassByName(targetClass);
+            if (dbClass == null || dbClass.objects.objectIds == null) {
                 index.put(targetClass, midMap);
                 continue;
             }
-            for (long objId : dbClass.objectIds) {
+            for (long objId : dbClass.objects.objectIds) {
                 try {
                     ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objId);
                     if (activation == null)
@@ -718,17 +748,22 @@ public class ExportSelectionAdvisor {
      * </ol>
      * The required count is recorded so {@link ObjectExportLoop} can skip the cap check for the leading required IDs.
      */
-    private SelectionResult buildRankedOrder(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData) {
+    private SelectionResult buildRankedOrder(Map<String, long[]> classObjectIds, List<ReferenceEdge> edges, Map<ReferenceEdge, Map<Long, Long>> edgeData, List<DOSchemaModule> modules) {
 
-        // ── Phase 1: seed with first min(cap, total) IDs in DB order
-        // ──────────
+        // ── Phase 1: seed with first min(effectiveCap, total) IDs in DB order
+
+        // When a class appears in multiple module configs with different criteria,
+        // multiply the effective cap so each criteria partition can reach 'cap'.
+        Map<String, Integer> criteriaConfigCounts = countCriteriaConfigs(modules);
 
         // seed: objects selected purely because they're first in DB order
         Map<String, Set<Long>> seed = new LinkedHashMap<>();
         for (Map.Entry<String, long[]> e : classObjectIds.entrySet()) {
             long[] ids = e.getValue();
+            int criteriaCount = criteriaConfigCounts.getOrDefault(e.getKey(), 1);
+            int effectiveCap = cap * criteriaCount;
             Set<Long> s = new LinkedHashSet<>();
-            for (int i = 0; i < Math.min(cap, ids.length); i++)
+            for (int i = 0; i < Math.min(effectiveCap, ids.length); i++)
                 s.add(ids[i]);
             seed.put(e.getKey(), s);
         }
@@ -802,9 +837,11 @@ public class ExportSelectionAdvisor {
             Set<Long> req = required.get(cls);
 
             // Emit a reordered entry when the class has more total objects than
-            // the seed, OR closure pushed required beyond the initial seed.
+            // the effective seed, OR closure pushed required beyond the initial seed.
             boolean hasRequired = req != null && !req.isEmpty();
-            boolean needsReorder = allIds.length > cap || hasRequired;
+            int criteriaCount = criteriaConfigCounts.getOrDefault(cls, 1);
+            int effectiveCapForClass = cap * criteriaCount;
+            boolean needsReorder = allIds.length > effectiveCapForClass || hasRequired;
             if (!needsReorder || sel == null || sel.isEmpty())
                 continue;
 
@@ -822,7 +859,7 @@ public class ExportSelectionAdvisor {
             }
             int actualRequiredCount = idx; // required objects occupy
                                            // [0..actualRequiredCount-1]
-            // Pass 2: seed-only (selected but not required)
+                                           // Pass 2: seed-only (selected but not required)
             for (long id : allIds) {
                 if (sel.contains(id) && (req == null || !req.contains(id)))
                     ranked[idx++] = id;

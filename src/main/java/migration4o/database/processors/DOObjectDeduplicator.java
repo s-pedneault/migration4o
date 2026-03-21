@@ -5,13 +5,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseMonitor;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
 
 /**
- * Processor for deduplicating object IDs across inheritance hierarchies in
- * DOSchema.
+ * Processor for deduplicating object IDs across inheritance hierarchies.
  * Provides static methods for object ID deduplication without requiring
  * instantiation.
  * 
@@ -21,46 +20,41 @@ import migration4o.models.schema.DOSchemaClass;
  */
 public class DOObjectDeduplicator {
 
+    // ===== DODatabase methods (new) =====
+
     /**
-     * Deduplicates object IDs across inheritance hierarchies.
+     * Deduplicates object IDs across inheritance hierarchies in a DODatabase.
      * 
-     * Algorithm:
-     * 1. Find all leaf classes (classes with no subclasses)
-     * 2. For each leaf class, get its object IDs
-     * 3. For each object ID, walk up the parent chain and remove it from ancestors
-     * 
-     * @param schema The schema with potentially duplicate object IDs
-     * @return A new schema with deduplicated object IDs
+     * @param database The database with potentially duplicate object IDs
      */
-    public static DOSchema deduplicateObjectIdsInInheritanceHierarchies(DOSchema schema) {
-        return deduplicateObjectIdsInInheritanceHierarchies(schema, null);
+    public static void deduplicateObjectIds(DODatabase database) {
+        deduplicateObjectIds(database, null);
     }
 
     /**
-     * Deduplicates object IDs across inheritance hierarchies.
+     * Deduplicates object IDs across inheritance hierarchies in a DODatabase.
      * 
      * Algorithm:
      * 1. Find all leaf classes (classes with no subclasses)
      * 2. For each leaf class, get its object IDs
      * 3. For each object ID, walk up the parent chain and remove it from ancestors
      * 
-     * @param schema  The schema with potentially duplicate object IDs
-     * @param monitor Optional monitor for progress feedback
-     * @return A new schema with deduplicated object IDs
+     * @param database The database with potentially duplicate object IDs
+     * @param monitor  Optional monitor for progress feedback
      */
-    public static DOSchema deduplicateObjectIdsInInheritanceHierarchies(DOSchema schema, DODatabaseMonitor monitor) {
-        if (schema == null || schema.getClasses() == null || schema.getClasses().length == 0) {
-            return schema;
+    public static void deduplicateObjectIds(DODatabase database, DODatabaseMonitor monitor) {
+        if (database == null || database.getClasses() == null || database.getClasses().length == 0) {
+            return;
         }
 
         // Create a map for quick class lookup
-        Map<String, DOSchemaClass> classMap = new HashMap<>();
-        for (DOSchemaClass cls : schema.getClasses()) {
+        Map<String, DODatabaseClass> classMap = new HashMap<>();
+        for (DODatabaseClass cls : database.getClasses()) {
             classMap.put(cls.attributes.source, cls);
         }
 
         // Find leaf classes (classes with no subclasses)
-        List<DOSchemaClass> leafClasses = findLeafClasses(schema, classMap);
+        List<DODatabaseClass> leafClasses = findLeafDatabaseClasses(database, classMap);
 
         if (monitor != null) {
             monitor.onStartingDeduplication(leafClasses.size());
@@ -71,32 +65,30 @@ public class DOObjectDeduplicator {
         // Track which IDs should be removed from each class
         Map<String, java.util.Set<Long>> idsToRemove = new HashMap<>();
 
-        // For each leaf class, mark its object IDs for removal from all ancestor
-        // classes
+        // For each leaf class, mark its object IDs for removal from all ancestor classes
         int leafIndex = 0;
-        for (DOSchemaClass leafClass : leafClasses) {
+        for (DODatabaseClass leafClass : leafClasses) {
             leafIndex++;
 
             if (monitor != null) {
                 monitor.onProcessingLeafClass(leafClass.attributes.source, leafIndex, leafClasses.size());
             }
 
-            if (leafClass.objectIds == null || leafClass.objectIds.length == 0) {
+            if (leafClass.objects.objectIds == null || leafClass.objects.objectIds.length == 0) {
                 continue;
             }
 
             // Walk up the inheritance chain
             String parentClassName = leafClass.attributes.parentClassName;
             while (parentClassName != null) {
-                DOSchemaClass parentClass = classMap.get(parentClassName);
+                DODatabaseClass parentClass = classMap.get(parentClassName);
                 if (parentClass == null) {
                     break;
                 }
 
                 // Mark leaf's object IDs for removal from this parent
-                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.attributes.source,
-                        k -> new java.util.HashSet<>());
-                for (long id : leafClass.objectIds) {
+                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.attributes.source, k -> new java.util.HashSet<>());
+                for (long id : leafClass.objects.objectIds) {
                     toRemove.add(id);
                 }
 
@@ -108,56 +100,47 @@ public class DOObjectDeduplicator {
         // Now update uniqueObjectIds for all classes (keep objectIds unchanged)
         int deduplicatedCount = 0;
         int totalRemoved = 0;
-        for (DOSchemaClass cls : schema.getClasses()) {
+        for (DODatabaseClass cls : database.getClasses()) {
             java.util.Set<Long> toRemove = idsToRemove.get(cls.attributes.source);
 
-            if (toRemove != null && !toRemove.isEmpty() && cls.objectIds != null) {
+            if (toRemove != null && !toRemove.isEmpty() && cls.objects.objectIds != null) {
                 // Filter out the IDs that belong to derived classes
-                long[] uniqueIds = removeObjectIds(cls.objectIds, toRemove);
-                cls.uniqueObjectIds = uniqueIds;
+                long[] uniqueIds = removeObjectIds(cls.objects.objectIds, toRemove);
+                cls.objects.uniqueObjectIds = uniqueIds;
 
-                int removedCount = cls.objectIds.length - uniqueIds.length;
+                int removedCount = cls.objects.objectIds.length - uniqueIds.length;
                 if (removedCount > 0) {
                     deduplicatedCount++;
                     totalRemoved += removedCount;
                     if (monitor != null) {
                         monitor.onClassDeduplicated(cls.attributes.source, removedCount, uniqueIds.length);
                     } else {
-                        System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.attributes.source +
-                                " (" + cls.objectIds.length + " -> " + uniqueIds.length + ")");
+                        System.out.println("Deduplicated " + removedCount + " object IDs from " + cls.attributes.source + " (" + cls.objects.objectIds.length + " -> " + uniqueIds.length + ")");
                     }
                 }
-            } else if (cls.objectIds != null) {
+            } else if (cls.objects.objectIds != null) {
                 // No deduplication needed - copy objectIds to uniqueObjectIds
-                cls.uniqueObjectIds = cls.objectIds;
+                cls.objects.uniqueObjectIds = cls.objects.objectIds;
             }
         }
 
         if (monitor != null) {
             monitor.onDeduplicationComplete(leafClasses.size(), totalRemoved);
         } else {
-            System.out.println("Object ID deduplication complete: " + leafClasses.size() + " leaf classes, " +
-                    deduplicatedCount + " classes deduplicated");
+            System.out.println("Object ID deduplication complete: " + leafClasses.size() + " leaf classes, " + deduplicatedCount + " classes deduplicated");
         }
-
-        return schema;
     }
 
     /**
-     * Finds all leaf classes (classes with no subclasses).
-     * 
-     * @param schema   The schema to analyze
-     * @param classMap Map of classes by name for quick lookup
-     * @return List of leaf classes
+     * Finds all leaf classes (classes with no subclasses) in a DODatabase.
      */
-    public static List<DOSchemaClass> findLeafClasses(DOSchema schema, Map<String, DOSchemaClass> classMap) {
-        List<DOSchemaClass> leafClasses = new ArrayList<>();
+    private static List<DODatabaseClass> findLeafDatabaseClasses(DODatabase database, Map<String, DODatabaseClass> classMap) {
+        List<DODatabaseClass> leafClasses = new ArrayList<>();
 
-        for (DOSchemaClass cls : schema.getClasses()) {
+        for (DODatabaseClass cls : database.getClasses()) {
             boolean isLeaf = true;
 
-            // Check if any other class has this as a parent
-            for (DOSchemaClass potentialChild : schema.getClasses()) {
+            for (DODatabaseClass potentialChild : database.getClasses()) {
                 if (cls.attributes.source.equals(potentialChild.attributes.parentClassName)) {
                     isLeaf = false;
                     break;

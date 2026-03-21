@@ -27,10 +27,10 @@ import javax.swing.JTextArea;
 import javax.swing.ListSelectionModel;
 import javax.swing.table.DefaultTableModel;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseContext;
 import migration4o.migration.monitoring.ExportStatistics;
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.ui.main.MainWindow;
 import migration4o.util.SchemaUtil;
@@ -213,8 +213,8 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
         ComparisonMode mode = (ComparisonMode) modeSelector.getSelectedItem();
         if (mode == ComparisonMode.ID_COUNTERS) {
-            Map<String, Integer> leftCounts = mapClassToObjectIdCount(leftContext != null ? leftContext.databaseSchema : null);
-            Map<String, Integer> rightCounts = mapClassToObjectIdCount(rightContext != null ? rightContext.databaseSchema : null);
+            Map<String, Integer> leftCounts = mapClassToObjectIdCount(leftContext != null ? leftContext.database : null);
+            Map<String, Integer> rightCounts = mapClassToObjectIdCount(rightContext != null ? rightContext.database : null);
 
             Set<String> allClasses = new HashSet<>();
             allClasses.addAll(leftCounts.keySet());
@@ -293,18 +293,18 @@ public class MultiDatabaseComparisonPanel extends JPanel {
         return new HashMap<>();
     }
 
-    private Map<String, Integer> mapClassToObjectIdCount(DOSchema schema) {
+    private Map<String, Integer> mapClassToObjectIdCount(DODatabase database) {
         Map<String, Integer> countsByClass = new HashMap<>();
-        if (schema == null || schema.getClasses() == null) {
+        if (database == null || database.getClasses() == null) {
             return countsByClass;
         }
 
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            String classKey = getClassKey(schemaClass);
-            if (classKey == null) {
+        for (DODatabaseClass dbClass : database.getClasses()) {
+            String classKey = dbClass.attributes.source;
+            if (classKey == null || classKey.isBlank()) {
                 continue;
             }
-            int count = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
+            int count = dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds.length : 0;
             countsByClass.put(classKey, count);
         }
         return countsByClass;
@@ -312,22 +312,23 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
     private EntityComparisonData buildEntityComparisonData(DODatabaseContext context) {
         EntityComparisonData data = new EntityComparisonData();
-        if (context == null || context.databaseSchema == null || context.databaseSchema.getClasses() == null || context.container == null) {
+        if (context == null || context.database == null || context.database.getClasses() == null || context.container == null) {
             return data;
         }
 
-        DOSchema schema = context.databaseSchema;
-        for (DOSchemaClass schemaClass : schema.getClasses()) {
-            if (!schemaClass.isDescendantOf("gest.gen.EntiteContientID")) {
+        DODatabase database = context.database;
+        for (DODatabaseClass dbClass : database.getClasses()) {
+            // Delegate isDescendantOf to schemaClass
+            if (dbClass.schemaClass == null || !dbClass.schemaClass.isDescendantOf("gest.gen.EntiteContientID")) {
                 continue;
             }
 
-            String classKey = getClassKey(schemaClass);
-            if (classKey == null) {
+            String classKey = dbClass.attributes.source;
+            if (classKey == null || classKey.isBlank()) {
                 continue;
             }
 
-            long[] objectIds = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds : new long[0];
+            long[] objectIds = dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds : new long[0];
             Set<Long> mids = new LinkedHashSet<>();
             for (long objectId : objectIds) {
                 try {
@@ -350,24 +351,16 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
     private Map<Long, Set<Long>> buildObjectIdsByMidForClass(DODatabaseContext context, String className) {
         Map<Long, Set<Long>> objectIdsByMid = new HashMap<>();
-        if (context == null || context.databaseSchema == null || context.databaseSchema.getClasses() == null || context.container == null || className == null) {
+        if (context == null || context.database == null || context.database.getClasses() == null || context.container == null || className == null) {
             return objectIdsByMid;
         }
 
-        DOSchemaClass targetClass = null;
-        for (DOSchemaClass schemaClass : context.databaseSchema.getClasses()) {
-            String classKey = getClassKey(schemaClass);
-            if (className.equals(classKey)) {
-                targetClass = schemaClass;
-                break;
-            }
-        }
-
+        DODatabaseClass targetClass = context.database.findClassByName(className);
         if (targetClass == null) {
             return objectIdsByMid;
         }
 
-        long[] objectIds = targetClass.uniqueObjectIds != null ? targetClass.uniqueObjectIds : new long[0];
+        long[] objectIds = targetClass.objects.uniqueObjectIds != null ? targetClass.objects.uniqueObjectIds : new long[0];
         for (long objectId : objectIds) {
             try {
                 Object obj = context.container.ext().getByID(objectId);
@@ -384,22 +377,6 @@ public class MultiDatabaseComparisonPanel extends JPanel {
         }
 
         return objectIdsByMid;
-    }
-
-    private String getClassKey(DOSchemaClass schemaClass) {
-        if (schemaClass == null) {
-            return null;
-        }
-        if (schemaClass.attributes.source != null && !schemaClass.attributes.source.isBlank()) {
-            return schemaClass.attributes.source;
-        }
-        if (schemaClass.attributes.destinationName != null && !schemaClass.attributes.destinationName.isBlank()) {
-            return schemaClass.attributes.destinationName;
-        }
-        if (schemaClass.attributes.title != null && !schemaClass.attributes.title.isBlank()) {
-            return schemaClass.attributes.title;
-        }
-        return null;
     }
 
     private void showSupplementalForSelection() {

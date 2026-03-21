@@ -10,6 +10,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.migration.ExportFormat;
 import migration4o.migration.ObjectExporter;
 import migration4o.migration.xsd.XSDBuilder;
@@ -231,11 +233,11 @@ public class XmlFormatHandler extends FormatHandler {
 
     private Set<Long> collectUnreachedIds(ExportCurrentState ctx, Set<Long> reachedIds) {
         Set<Long> all = new HashSet<>();
-        if (ctx.request.databaseSchema == null)
+        if (ctx.request.database == null)
             return all;
         Integer limit = ctx.request.maxObjectsPerClass;
-        for (DOSchemaClass sc : ctx.request.databaseSchema.getClasses()) {
-            long[] ids = (sc.uniqueObjectIds != null && sc.uniqueObjectIds.length > 0) ? sc.uniqueObjectIds : sc.objectIds;
+        for (DODatabaseClass dbClass : ctx.request.database.getClasses()) {
+            long[] ids = (dbClass.objects.uniqueObjectIds != null && dbClass.objects.uniqueObjectIds.length > 0) ? dbClass.objects.uniqueObjectIds : dbClass.objects.objectIds;
             if (ids == null)
                 continue;
             int classCount = 0;

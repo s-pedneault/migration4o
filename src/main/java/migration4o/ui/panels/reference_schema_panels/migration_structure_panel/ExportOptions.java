@@ -169,6 +169,7 @@ public class ExportOptions {
 
         ExportRequest request = new ExportRequest();
         request.referenceSchema = referenceSchema;
+        request.database = dbContext.database;
         request.databaseSchema = dbContext.databaseSchema;
         request.databasePath = dbContext.databaseFilePath;
         request.dbContext = dbContext;

@@ -159,7 +159,7 @@ public class HtmlFormatHandler extends FormatHandler {
         // IDEntite: attempt to resolve to a human-readable label
         if (ctx.schemaClass.isIDEntite()) {
             Object obj = ctx.currentObject().obj;
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-ref for embedded IDEntite objects
             // (embedContents=true path)
             if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {
@@ -186,7 +186,7 @@ public class HtmlFormatHandler extends FormatHandler {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
-                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.databaseSchema);
+                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
                     if (ctx.isRootObject()) {
@@ -226,7 +226,7 @@ public class HtmlFormatHandler extends FormatHandler {
             if (fieldClass == null || !fieldClass.isIDEntite())
                 return false;
 
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.databaseSchema, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-reference whenever target is resolved (even if label
             // is absent)
             if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {

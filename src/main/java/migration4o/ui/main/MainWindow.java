@@ -31,6 +31,7 @@ import javax.swing.SwingWorker;
 import javax.swing.UIManager;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
+import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseContext;
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
@@ -84,6 +85,7 @@ public class MainWindow extends JFrame {
     private Component costTab = null;
     private JTabbedPane exportTabPane = null;
     private migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel migrationReportPanel = null;
+    private DODatabase currentDatabase = null;
     private DOSchema currentDatabaseSchema = null;
     private DODatabaseContext currentContext = null;
     private final Map<String, DatabaseSession> databaseSessions = new LinkedHashMap<>();
@@ -95,6 +97,7 @@ public class MainWindow extends JFrame {
         String databasePath;
         String tabTitle;
         DODatabaseContext context;
+        DODatabase database;
         DOSchema databaseSchema;
         JTabbedPane tabPane;
         Component tabContainer;
@@ -413,7 +416,7 @@ public class MainWindow extends JFrame {
                 try {
                     DODatabaseContext resultContext = get();
 
-                    if (resultContext == null || resultContext.databaseSchema == null || errorMessage != null) {
+                    if (resultContext == null || (resultContext.database == null && resultContext.databaseSchema == null) || errorMessage != null) {
                         // Create detailed error message
                         String detailedError = errorMessage != null ? errorMessage : "Unknown error";
 
@@ -463,6 +466,7 @@ public class MainWindow extends JFrame {
         DatabaseSession session = new DatabaseSession();
         session.databasePath = selectedFile.getAbsolutePath();
         session.context = context;
+        session.database = context.database;
         session.databaseSchema = inferredSchema;
 
         session.tabPane = new JTabbedPane();
@@ -485,7 +489,12 @@ public class MainWindow extends JFrame {
         SchemaEditorPanel schemaEditor = new SchemaEditorPanel(inferredSchema, selectedFile.getName(), session.context);
         schemaEditor.setOnCompareRequested(() -> openDatabaseFile());
         session.databaseSchemaTab = schemaEditor;
-        addSchemaTabToDatabaseSection(session.tabPane, "Database structure", schemaEditor, inferredSchema, false);
+        addSchemaTabToDatabaseSection(session.tabPane, "Database schema", schemaEditor, inferredSchema, false);
+
+        if (session.database != null) {
+            migration4o.ui.panels.database_panels.database_structure_panel.DatabaseStructurePanel dbStructurePanel = new migration4o.ui.panels.database_panels.database_structure_panel.DatabaseStructurePanel(session.database);
+            session.tabPane.addTab("Database structure", dbStructurePanel);
+        }
 
         createComparisonWithReference(session);
         createCostTab(session);
@@ -547,6 +556,7 @@ public class MainWindow extends JFrame {
         databaseTabPane = session.tabPane;
         databaseTabContainer = session.tabContainer;
         currentContext = session.context;
+        currentDatabase = session.database;
         currentDatabaseSchema = session.databaseSchema;
         databaseSchemaTab = session.databaseSchemaTab;
         conformityAnalysisTab = session.conformityAnalysisTab;
@@ -601,7 +611,12 @@ public class MainWindow extends JFrame {
 
         // Create comparison - use live schema from editor in case it was
         // reloaded
-        SchemaComparison comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, session.databaseSchema, "Database");
+        SchemaComparison comparison;
+        if (session.database != null) {
+            comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, session.database, "Database");
+        } else {
+            comparison = new SchemaComparison(referenceTab.editorPanel.getSchema(), referenceTab.label, session.databaseSchema, "Database");
+        }
 
         // Create comparison panel with callbacks to add missing elements
         SchemaComparisonPanel comparisonPanel = new SchemaComparisonPanel(comparison, (className, sourceClass) -> addClassToReference(finalReferenceTab.editorPanel, className, sourceClass), (parentClass, field) -> addFieldToReference(finalReferenceTab.editorPanel, parentClass, field));
@@ -622,7 +637,7 @@ public class MainWindow extends JFrame {
      */
     private void createCostTab(DatabaseSession session) {
         // Create cost panel
-        CostPanel costPanel = new CostPanel(session.databaseSchema, session.context.container);
+        CostPanel costPanel = new CostPanel(session.database, session.context.container);
 
         // Store and add processing costs tab to Database section
         session.costTab = costPanel;
@@ -671,6 +686,7 @@ public class MainWindow extends JFrame {
             exportTabPane = null;
             migrationReportPanel = null;
             currentContext = null;
+            currentDatabase = null;
             currentDatabaseSchema = null;
             tabbedPane.setSelectedIndex(0);
             return;
@@ -695,6 +711,10 @@ public class MainWindow extends JFrame {
      */
     public DODatabaseContext getCurrentContext() {
         return currentContext;
+    }
+
+    public DODatabase getCurrentDatabase() {
+        return currentDatabase;
     }
 
     public DOSchema getCurrentDatabaseSchema() {

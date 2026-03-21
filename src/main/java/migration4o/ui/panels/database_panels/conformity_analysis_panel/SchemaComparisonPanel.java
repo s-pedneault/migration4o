@@ -39,6 +39,7 @@ import javax.swing.event.DocumentListener;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.TreePath;
 
+import migration4o.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -509,18 +510,18 @@ public class SchemaComparisonPanel extends JPanel {
         if (isLeftTree) {
             // Ghost in reference (left), exists in compared (right)
             info.append("Status: Only exists in ").append(comparison.getComparedLabel()).append("\n");
+            DODatabaseClass dbClass = diff.getDatabaseClass();
             DOSchemaClass comparedClass = diff.getComparedClass();
-            if (comparedClass != null) {
-                info.append("Fields: ").append(comparedClass.fields != null ? comparedClass.fields.length : 0).append("\n");
-                int objectCount = (comparedClass.objectIds != null ? comparedClass.objectIds.length : 0);
-                int uniqueObjectCount = (comparedClass.uniqueObjectIds != null ? comparedClass.uniqueObjectIds.length : 0);
-                if (objectCount > 0) {
-                    info.append("Objects: ").append(objectCount);
-                    if (uniqueObjectCount != objectCount) {
-                        info.append(" (Unique: ").append(uniqueObjectCount).append(")");
-                    }
-                    info.append("\n");
+            int fieldCount = dbClass != null && dbClass.fields != null ? dbClass.fields.length : (comparedClass != null && comparedClass.fields != null ? comparedClass.fields.length : 0);
+            info.append("Fields: ").append(fieldCount).append("\n");
+            int objectCount = dbClass != null && dbClass.objects.objectIds != null ? dbClass.objects.objectIds.length : 0;
+            int uniqueObjectCount = dbClass != null && dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds.length : 0;
+            if (objectCount > 0) {
+                info.append("Objects: ").append(objectCount);
+                if (uniqueObjectCount != objectCount) {
+                    info.append(" (Unique: ").append(uniqueObjectCount).append(")");
                 }
+                info.append("\n");
             }
         } else {
             // Ghost in compared (right), exists in reference (left)
@@ -528,15 +529,7 @@ public class SchemaComparisonPanel extends JPanel {
             DOSchemaClass refClass = diff.getReferenceClass();
             if (refClass != null) {
                 info.append("Fields: ").append(refClass.fields != null ? refClass.fields.length : 0).append("\n");
-                int objectCount = (refClass.objectIds != null ? refClass.objectIds.length : 0);
-                int uniqueObjectCount = (refClass.uniqueObjectIds != null ? refClass.uniqueObjectIds.length : 0);
-                if (objectCount > 0) {
-                    info.append("Objects: ").append(objectCount);
-                    if (uniqueObjectCount != objectCount) {
-                        info.append(" (Unique: ").append(uniqueObjectCount).append(")");
-                    }
-                    info.append("\n");
-                }
+                // Reference-only class has no database object counts
             }
         }
 
@@ -682,8 +675,9 @@ public class SchemaComparisonPanel extends JPanel {
         DOSchemaClass classToShow = isLeftTree ? diff.getReferenceClass() : diff.getComparedClass();
         if (classToShow != null) {
             info.append("Fields: ").append(classToShow.fields != null ? classToShow.fields.length : 0);
-            int objectCount = classToShow.objectIds != null ? classToShow.objectIds.length : 0;
-            int uniqueObjectCount = classToShow.uniqueObjectIds != null ? classToShow.uniqueObjectIds.length : 0;
+            DODatabaseClass dbClass = diff.getDatabaseClass();
+            int objectCount = dbClass != null && dbClass.objects.objectIds != null ? dbClass.objects.objectIds.length : 0;
+            int uniqueObjectCount = dbClass != null && dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds.length : 0;
             if (objectCount > 0) {
                 info.append("  |  Objects: ").append(objectCount);
                 if (uniqueObjectCount != objectCount) {
@@ -778,7 +772,7 @@ public class SchemaComparisonPanel extends JPanel {
                 setStatus(missingFieldNames.size() + " fields added - remember to save schema");
 
                 // Refresh comparison
-                SchemaComparison newComparison = new SchemaComparison(comparison.getReferenceSchema(), comparison.getReferenceLabel(), comparison.getComparedSchema(), comparison.getComparedLabel());
+                SchemaComparison newComparison = comparison.recreate();
                 updateComparison(newComparison);
             });
             buttonsPanel.add(addAllButton);
@@ -799,7 +793,7 @@ public class SchemaComparisonPanel extends JPanel {
                         setStatus("Field '" + field.attributes.source + "' added - remember to save schema");
 
                         // Refresh comparison
-                        SchemaComparison newComparison = new SchemaComparison(comparison.getReferenceSchema(), comparison.getReferenceLabel(), comparison.getComparedSchema(), comparison.getComparedLabel());
+                        SchemaComparison newComparison = comparison.recreate();
                         updateComparison(newComparison);
                     });
                     buttonsPanel.add(addButton);
@@ -1038,7 +1032,7 @@ public class SchemaComparisonPanel extends JPanel {
             }
 
             // Refresh comparison to show updates
-            SchemaComparison newComparison = new SchemaComparison(referenceSchema, comparison.getReferenceLabel(), comparison.getComparedSchema(), comparison.getComparedLabel());
+            SchemaComparison newComparison = comparison.recreateWithReferenceSchema(referenceSchema);
             updateComparison(newComparison);
 
             // Show non-intrusive status message

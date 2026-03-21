@@ -5,8 +5,8 @@ import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.models.schema.DOSchemaField;
 
 /**
@@ -21,10 +21,10 @@ public class ReferenceUtil {
      * @param idEntiteObj The IDEntite object
      * @param idClassName Class name of the IDEntite object
      * @param schemaField Schema field definition (may be null)
-     * @param databaseSchema The database schema containing all classes
+     * @param databaseSchema The database (DODatabase) containing all classes
      * @return The object ID to export, or null if embedContents resolution failed
      */
-    public static Long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DOSchema databaseSchema) {
+    public static Long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DODatabase database) {
         long idEntiteId = container.ext().getID(idEntiteObj);
 
         // Check if we should embed the target object's contents
@@ -40,7 +40,7 @@ public class ReferenceUtil {
         String expectedType = extractExpectedTypeFromFieldName(fieldName, idClassName);
 
         // Resolve the reference to find the target object
-        Long targetObjectId = resolveIDEntiteReference(container, idEntiteObj, expectedType, databaseSchema);
+        Long targetObjectId = resolveIDEntiteReference(container, idEntiteObj, expectedType, database);
 
         if (targetObjectId == null) {
             System.err.println("[WARN] IDEntite resolution failed for field '" + fieldName + "' (" + idClassName + ", objectId=" + idEntiteId + ") - skipping unresolvable reference");
@@ -56,10 +56,10 @@ public class ReferenceUtil {
      * @param container Database container
      * @param idEntiteObj The IDEntite object to resolve
      * @param expectedType Expected type name (simple or absolute class name) - can be null
-     * @param databaseSchema The database schema containing all classes
+     * @param databaseSchema The database (DODatabase) containing all classes
      * @return The object ID of the target object, or null if not found
      */
-    public static Long resolveIDEntiteReference(ExtObjectContainer container, Object idEntiteObj, String expectedType, DOSchema databaseSchema) {
+    public static Long resolveIDEntiteReference(ExtObjectContainer container, Object idEntiteObj, String expectedType, DODatabase database) {
         try {
             long idEntiteId = container.ext().getID(idEntiteObj);
 
@@ -72,7 +72,7 @@ public class ReferenceUtil {
             }
 
             // Search for the target object with matching mID
-            return findObjectByMID(container, mID, expectedType, databaseSchema);
+            return findObjectByMID(container, mID, expectedType, database);
         } catch (Exception e) {
             return null;
         }
@@ -84,20 +84,21 @@ public class ReferenceUtil {
      * @param container Database container
      * @param mID The mID value to search for
      * @param expectedType Expected type name (simple or absolute class name) - can be null
-     * @param databaseSchema The database schema containing all classes
+     * @param databaseSchema The database (DODatabase) containing all classes
      * @return The object ID of the matching object, or null if not found
      */
-    public static Long findObjectByMID(ExtObjectContainer container, Long mID, String expectedType, DOSchema databaseSchema) {
-        if (mID == null || databaseSchema == null) {
+    public static Long findObjectByMID(ExtObjectContainer container, Long mID, String expectedType, DODatabase database) {
+        if (mID == null || database == null) {
             return null;
         }
 
-        for (DOSchemaClass schemaClass : databaseSchema.getClasses()) {
-            if (!schemaClass.isEntite()) {
+        for (DODatabaseClass dbClass : database.getClasses()) {
+            // Only search entity classes via their schemaClass link
+            if (dbClass.schemaClass == null || !dbClass.schemaClass.isEntite()) {
                 continue;
             }
 
-            String fullClassName = schemaClass.attributes.source;
+            String fullClassName = dbClass.attributes.source;
 
             // Only search in classes that match the expected type (if
             // specified)
@@ -109,7 +110,7 @@ public class ReferenceUtil {
                 }
             }
 
-            long[] objectIds = schemaClass.objectIds;
+            long[] objectIds = dbClass.objects.objectIds;
             if (objectIds != null) {
                 for (long objectId : objectIds) {
                     try {

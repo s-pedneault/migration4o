@@ -12,7 +12,9 @@ import migration4o.models.schema.DOSchemaClass;
 
 /**
  * Converter for transforming DB4O StoredClass arrays to DOSchemaClass arrays. Provides static methods for batch class conversion without requiring instantiation.
+ * @deprecated Part of the old DODatabaseReader pipeline. Use {@link migration4o.database.DODatabaseLoader} instead.
  */
+@Deprecated
 public class DOClassesConverter {
 
     /**

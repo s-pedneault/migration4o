@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
 
 import com.db4o.ext.ExtObjectContainer;
 
+import migration4o.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -89,10 +90,10 @@ public class SummaryGenerator {
      * @param obj the root object to read field values from
      * @param schemaClass the schema class whose {@code summary} template is used
      * @param referenceSchema full reference schema for embedded-class lookups
-     * @param databaseSchema database schema for IDEntite resolution (may be {@code null} to disable IDEntite traversal)
+     * @param database database (DODatabase) for IDEntite resolution (may be {@code null} to disable IDEntite traversal)
      * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
-    public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DOSchema databaseSchema) {
+    public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DODatabase database) {
         if (schemaClass == null || schemaClass.attributes.summary == null || schemaClass.attributes.summary.isEmpty()) {
             return null;
         }
@@ -109,7 +110,7 @@ public class SummaryGenerator {
             result.append(schemaClass.attributes.summary, last, matcher.start());
             // Resolve and append the field reference
             String token = matcher.group(1); // e.g. "adresse.rue"
-            result.append(resolveToken(container, obj, token, schemaClass, referenceSchema, databaseSchema));
+            result.append(resolveToken(container, obj, token, schemaClass, referenceSchema, database));
             last = matcher.end();
         }
 
@@ -135,7 +136,7 @@ public class SummaryGenerator {
      */
     private static final String SUMMARY_TOKEN = "sommaire";
 
-    private static String resolveToken(ExtObjectContainer container, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema, DOSchema databaseSchema) {
+    private static String resolveToken(ExtObjectContainer container, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema, DODatabase database) {
         String[] parts = token.split("\\.", -1);
         Object currentObj = rootObj;
         DOSchemaClass currentClass = rootClass;
@@ -148,7 +149,7 @@ public class SummaryGenerator {
             // Virtual "sommaire" token: recursively generate this entity's
             // summary
             if (SUMMARY_TOKEN.equals(parts[i])) {
-                String sub = generate(container, currentObj, currentClass, schema, databaseSchema);
+                String sub = generate(container, currentObj, currentClass, schema, database);
                 return sub != null ? sub : "";
             }
 
@@ -171,12 +172,12 @@ public class SummaryGenerator {
                 DOSchemaClass nextClass = schema.findClassByName(type);
 
                 // IDEntite traversal: follow the reference to the target entity
-                if (nextClass != null && nextClass.isIDEntite() && databaseSchema != null && currentObj != null) {
+                if (nextClass != null && nextClass.isIDEntite() && database != null && currentObj != null) {
                     String expectedType = nextClass.attributes.pointsTo;
                     if (expectedType == null || expectedType.isEmpty()) {
                         expectedType = (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) ? field.attributes.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.attributes.source);
                     }
-                    Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, currentObj, expectedType, databaseSchema);
+                    Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, currentObj, expectedType, database);
                     if (targetObjectId == null) {
                         return "";
                     }
@@ -244,7 +245,7 @@ public class SummaryGenerator {
      *
      * @return an {@link IDEntiteResult} with the resolved label (possibly null) and the target's DB4O object ID (possibly null if unresolvable)
      */
-    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DOSchema databaseSchema, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
+    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DODatabase database, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
         if (container == null || idEntiteObj == null || idEntiteClass == null) {
             return new IDEntiteResult(null, null, null);
         }
@@ -266,7 +267,7 @@ public class SummaryGenerator {
             if (targetCache != null && targetCache.containsKey(cacheKey)) {
                 targetObjectId = targetCache.get(cacheKey);
             } else {
-                targetObjectId = ReferenceUtil.findObjectByMID(container, mID, expectedType, databaseSchema);
+                targetObjectId = ReferenceUtil.findObjectByMID(container, mID, expectedType, database);
                 if (targetCache != null) {
                     targetCache.put(cacheKey, targetObjectId);
                 }
@@ -289,7 +290,7 @@ public class SummaryGenerator {
             DOSchemaClass targetSchemaClass = referenceSchema.findClassByName(targetClassName);
             String label = null;
             if (targetSchemaClass != null && targetSchemaClass.attributes.summary != null && !targetSchemaClass.attributes.summary.isEmpty()) {
-                label = generate(container, targetObj, targetSchemaClass, referenceSchema, databaseSchema);
+                label = generate(container, targetObj, targetSchemaClass, referenceSchema, database);
             }
             if ((label == null || label.isBlank()) && targetObj != null) {
                 label = generateFallbackLabel(container, targetObj);
@@ -308,8 +309,8 @@ public class SummaryGenerator {
 
     /** Common DB4O field names tried in order for fallback label generation. */
     private static final String[][] FALLBACK_FIELD_GROUPS = { { "mNom", "mPrenom" }, // person-like:
-                                                                                     // "Dupont
-                                                                                     // Jean"
+            // "Dupont
+            // Jean"
             { "mTitre" }, // titled entities
             { "mLibelle" }, // lookup/param tables
             { "mCode" }, // code-based entities

@@ -5,14 +5,15 @@ import com.db4o.ext.StoredClass;
 
 import migration4o.database.processors.DOClassConverter;
 import migration4o.database.processors.DOClassesConverter;
-import migration4o.database.processors.DOObjectDeduplicator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.DatabaseUtil;
 
 /**
  * Database reader that directly creates DOSchema* classes instead of creating intermediary DODatabase* classes.
+ * @deprecated Use {@link DODatabaseLoader} instead. This class will be removed after migration stabilization.
  */
+@Deprecated
 public class DODatabaseReader {
 
     private DODatabaseMonitor monitor;
@@ -71,8 +72,7 @@ public class DODatabaseReader {
             // Assign classes to schema
             schema.classes = schemaClasses;
 
-            // Deduplicate object IDs across inheritance hierarchies
-            schema = DOObjectDeduplicator.deduplicateObjectIdsInInheritanceHierarchies(schema, monitor);
+            // Note: Object ID deduplication removed — use DODatabaseLoader + DOObjectDeduplicator.deduplicateObjectIds(DODatabase) instead.
 
             if (monitor != null) {
                 monitor.onSchemaReadComplete(schemaClasses.length);

@@ -2,6 +2,7 @@ package migration4o.models.ui;
 
 import com.db4o.ext.ExtObjectContainer;
 
+import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseService;
 import migration4o.models.schema.DOSchemaClass;
 
@@ -11,6 +12,7 @@ import migration4o.models.schema.DOSchemaClass;
  */
 public class ClassNode {
     private DOSchemaClass schemaClass;
+    private DODatabaseClass dbClass; // Optional database class for object counts
     private ClassExportConfig exportConfig; // Optional export configuration
     private Integer filteredObjectCount; // Cached filtered count
 
@@ -18,8 +20,22 @@ public class ClassNode {
         this.schemaClass = schemaClass;
     }
 
+    public ClassNode(DOSchemaClass schemaClass, DODatabaseClass dbClass) {
+        this.schemaClass = schemaClass;
+        this.dbClass = dbClass;
+    }
+
     public DOSchemaClass getSchemaClass() {
         return schemaClass;
+    }
+
+    public DODatabaseClass getDbClass() {
+        return dbClass;
+    }
+
+    public void setDbClass(DODatabaseClass dbClass) {
+        this.dbClass = dbClass;
+        this.filteredObjectCount = null;
     }
 
     public ClassExportConfig getExportConfig() {
@@ -42,7 +58,14 @@ public class ClassNode {
      *         if no criteria
      */
     public int getObjectCount() {
-        int totalCount = schemaClass.uniqueObjectIds != null ? schemaClass.uniqueObjectIds.length : 0;
+        // Prefer DODatabaseClass for object counts
+        long[] uniqueIds = null;
+        if (dbClass != null && dbClass.objects.uniqueObjectIds != null) {
+            uniqueIds = dbClass.objects.uniqueObjectIds;
+        } else if (schemaClass.uniqueObjectIds != null) {
+            uniqueIds = schemaClass.uniqueObjectIds;
+        }
+        int totalCount = uniqueIds != null ? uniqueIds.length : 0;
 
         // If no criteria or no objects, return total count
         if (exportConfig == null || !exportConfig.hasCriteria() || totalCount == 0) {
@@ -57,8 +80,8 @@ public class ClassNode {
         // Calculate filtered count
         migration4o.database.DODatabaseContext dbContext = migration4o.ui.main.MainWindow.getInstance().getCurrentContext();
         ExtObjectContainer container = dbContext != null ? dbContext.container : null;
-        if (container != null && schemaClass.uniqueObjectIds != null) {
-            filteredObjectCount = exportConfig.countMatchingObjects(container, schemaClass.uniqueObjectIds);
+        if (container != null && uniqueIds != null) {
+            filteredObjectCount = exportConfig.countMatchingObjects(container, uniqueIds);
             return filteredObjectCount;
         }
 

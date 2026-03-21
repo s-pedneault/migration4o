@@ -3,6 +3,8 @@ package migration4o.migration.tasks;
 import java.nio.file.Path;
 import java.util.List;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
 import migration4o.models.schema.DOSchemaClass;
@@ -54,15 +56,22 @@ public class ExportModuleLoop {
                     fireClassComplete(className);
                     continue;
                 }
-                DOSchemaClass dbSchemaClass = ctx.request.databaseSchema.findClassByName(className);
-                if (dbSchemaClass == null) {
+
+                DODatabaseClass dbClass = null;
+                if (ctx.request.database != null) {
+                    dbClass = ctx.request.database.findClassByName(className);
+                }
+                if (dbClass == null) {
                     fireClassComplete(className);
                     continue;
+                }
+                if (dbClass.schemaClass == null) {
+                    System.err.println("[WARNING] Database class '" + className + "' has no reference schema link — data may be lost during export.");
                 }
 
                 ctx.setClass(schemaClass, config);
                 try {
-                    runClass(dbSchemaClass);
+                    runClass(dbClass);
                 } catch (Throwable t) {
                     recordClassError(className, t);
                 } finally {
@@ -84,8 +93,8 @@ public class ExportModuleLoop {
         }
     }
 
-    private void runClass(DOSchemaClass dbSchemaClass) throws Exception {
-        String className = dbSchemaClass.attributes.source;
+    private void runClass(DODatabaseClass dbClass) throws Exception {
+        String className = dbClass.attributes.source;
         // Snapshot class/config: ObjectExportLoop nulls ctx.schemaClass in its
         // finally block, so each handler iteration must restore these.
         DOSchemaClass refClass = ctx.schemaClass;
@@ -109,7 +118,7 @@ public class ExportModuleLoop {
             }
             try {
                 handler.open(ctx);
-                new ObjectExportLoop(ctx, handler).run(dbSchemaClass);
+                new ObjectExportLoop(ctx, handler).run(dbClass);
             } finally {
                 try {
                     if (ctx.request.monitor != null) {

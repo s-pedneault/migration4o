@@ -18,6 +18,9 @@ public class DODatabaseContext {
     public DODatabaseEncoding encoding;
     public String databaseFilePath;
     public Map<String, StoredClass> storedClassMap;
+    public DODatabase database;
+    /** @deprecated Use {@link #database} instead. Kept temporarily for coexistence. */
+    @Deprecated
     public DOSchema databaseSchema;
     public DODatabaseMonitor monitor;
 
@@ -45,6 +48,7 @@ public class DODatabaseContext {
         }
         container = null;
         databaseFilePath = null;
+        database = null;
         databaseSchema = null;
     }
 }

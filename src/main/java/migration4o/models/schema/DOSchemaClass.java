@@ -14,9 +14,12 @@ public class DOSchemaClass {
     public DOSchemaField[] fields;
     public DOSchemaReference[] schemaReferences;
 
-    public long[] objectIds; // Object IDs from database
-    public long[] uniqueObjectIds; // Unique object IDs after deduplication
-    public long[] reachedObjectIds; // Object IDs reached during reach analysis
+    /** @deprecated Use {@link migration4o.database.DODatabaseClassObjects#objectIds} instead. */
+    @Deprecated
+    public long[] objectIds;
+    /** @deprecated Use {@link migration4o.database.DODatabaseClassObjects#uniqueObjectIds} instead. */
+    @Deprecated
+    public long[] uniqueObjectIds;
 
     public DOSchemaClass(DOSchema schema) {
         this.schema = schema;

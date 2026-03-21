@@ -15,7 +15,9 @@ import migration4o.util.DatabaseUtil;
 
 /**
  * Converter for transforming DB4O StoredField objects to DOSchemaField objects. Provides static methods for field conversion without requiring instantiation.
+ * @deprecated Part of the old DODatabaseReader pipeline. Use {@link migration4o.database.DODatabaseLoader} instead.
  */
+@Deprecated
 public class DOFieldConverter {
 
     /**

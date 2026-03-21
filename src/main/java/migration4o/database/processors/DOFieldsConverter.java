@@ -15,7 +15,9 @@ import migration4o.models.schema.DOSchemaField;
 
 /**
  * Converter for transforming DB4O StoredField arrays to DOSchemaField arrays. Provides static methods for batch field conversion without requiring instantiation.
+ * @deprecated Part of the old DODatabaseReader pipeline. Use {@link migration4o.database.DODatabaseLoader} instead.
  */
+@Deprecated
 public class DOFieldsConverter {
 
     /**

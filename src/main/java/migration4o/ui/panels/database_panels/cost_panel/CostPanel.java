@@ -2,6 +2,8 @@ package migration4o.ui.panels.database_panels.cost_panel;
 
 import com.db4o.ext.ExtObjectContainer;
 
+import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseClass;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -27,7 +29,7 @@ import java.util.List;
  */
 public class CostPanel extends JPanel {
 
-    private final DOSchema databaseSchema;
+    private final DODatabase database;
     private final ExtObjectContainer container; // needed for criteria
                                                 // evaluation
 
@@ -43,8 +45,8 @@ public class CostPanel extends JPanel {
     // Construction
     // -------------------------------------------------------------------------
 
-    public CostPanel(DOSchema databaseSchema, ExtObjectContainer container) {
-        this.databaseSchema = databaseSchema;
+    public CostPanel(DODatabase database, ExtObjectContainer container) {
+        this.database = database;
         this.container = container;
         initializeUI();
         refresh();
@@ -243,21 +245,21 @@ public class CostPanel extends JPanel {
      * class appears multiple times with different criteria.
      */
     private int getObjectCount(ClassExportConfig config) {
-        if (databaseSchema == null) {
+        if (database == null) {
             return 0;
         }
-        DOSchemaClass cls = databaseSchema.findClassByName(config.getClassName());
-        if (cls == null || cls.objectIds == null || cls.objectIds.length == 0) {
+        DODatabaseClass dbClass = database.findClassByName(config.getClassName());
+        if (dbClass == null || dbClass.objects.objectIds == null || dbClass.objects.objectIds.length == 0) {
             return 0;
         }
 
         // When the config has criteria and we have a database container,
         // count only the objects that match all criteria
         if (config.hasCriteria() && container != null && !container.ext().isClosed()) {
-            return config.countMatchingObjects(container, cls.objectIds);
+            return config.countMatchingObjects(container, dbClass.objects.objectIds);
         }
 
-        return cls.objectIds.length;
+        return dbClass.objects.objectIds.length;
     }
 
     // -------------------------------------------------------------------------

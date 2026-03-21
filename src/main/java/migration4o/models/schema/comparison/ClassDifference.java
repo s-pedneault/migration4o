@@ -1,5 +1,6 @@
 package migration4o.models.schema.comparison;
 
+import migration4o.database.DODatabaseClass;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
@@ -17,6 +18,7 @@ public class ClassDifference {
     private final String className;
     private final DOSchemaClass referenceClass;
     private final DOSchemaClass comparedClass;
+    private DODatabaseClass databaseClass;
     private final List<DOSchemaField> fieldsOnlyInReference = new ArrayList<>();
     private final List<DOSchemaField> fieldsOnlyInCompared = new ArrayList<>();
     private final Map<String, FieldPropertyDifference> fieldsWithDifferences = new HashMap<>();
@@ -25,6 +27,13 @@ public class ClassDifference {
         this.className = className;
         this.referenceClass = referenceClass;
         this.comparedClass = comparedClass;
+    }
+
+    public ClassDifference(String className, DOSchemaClass referenceClass, DOSchemaClass comparedClass, DODatabaseClass databaseClass) {
+        this.className = className;
+        this.referenceClass = referenceClass;
+        this.comparedClass = comparedClass;
+        this.databaseClass = databaseClass;
     }
 
     public void addFieldOnlyInReference(DOSchemaField field) {
@@ -40,10 +49,7 @@ public class ClassDifference {
     }
 
     public boolean hasDifferences() {
-        return referenceClass == null || comparedClass == null ||
-                !fieldsOnlyInReference.isEmpty() ||
-                !fieldsOnlyInCompared.isEmpty() ||
-                !fieldsWithDifferences.isEmpty();
+        return referenceClass == null || comparedClass == null || !fieldsOnlyInReference.isEmpty() || !fieldsOnlyInCompared.isEmpty() || !fieldsWithDifferences.isEmpty();
     }
 
     public boolean isOnlyInReference() {
@@ -64,6 +70,14 @@ public class ClassDifference {
 
     public DOSchemaClass getComparedClass() {
         return comparedClass;
+    }
+
+    public DODatabaseClass getDatabaseClass() {
+        return databaseClass;
+    }
+
+    public void setDatabaseClass(DODatabaseClass databaseClass) {
+        this.databaseClass = databaseClass;
     }
 
     public List<DOSchemaField> getFieldsOnlyInReference() {
