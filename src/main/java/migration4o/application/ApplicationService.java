@@ -1,5 +1,6 @@
 package migration4o.application;
 
+import migration4o.models.schema.DOSchema;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
 
@@ -70,6 +71,8 @@ public class ApplicationService {
             // String schemaPath = DOReferenceSchemaConstants.DEFAULT_SCHEMA_PATH;
             // System.out.println("Loading reference schema from: " + schemaPath);
             schemaService.loadReferenceSchema();
+            DOSchema schema = schemaService.getReferenceSchema();
+            System.out.println("  Schema classes: " + (schema != null && schema.getClasses() != null ? schema.getClasses().length : 0));
         } else {
             System.out.println("Reference schema already loaded");
         }

@@ -1,6 +1,5 @@
 package migration4o.database;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 
 import migration4o.database.processors.DOClassConverter;
@@ -35,16 +34,16 @@ public class DODatabaseReader {
     /**
      * Reads a database and directly creates a DOSchema representation.
      * 
-     * @param container The database container
+     * @param delegate The database delegate
      * @return A DOSchema representing the database structure
      */
-    public DOSchema readDatabaseAsSchema(ExtObjectContainer container) {
-        if (container == null) {
+    public DOSchema readDatabaseAsSchema(DODatabaseDelegate delegate) {
+        if (delegate == null) {
             return createEmptySchema();
         }
 
         try {
-            StoredClass[] storedClasses = DatabaseUtil.getStoredClassesSafely(container);
+            StoredClass[] storedClasses = DatabaseUtil.getStoredClassesSafely(delegate);
 
             if (monitor != null) {
                 monitor.onStartingSchemaRead(storedClasses.length);
@@ -55,8 +54,7 @@ public class DODatabaseReader {
                 monitor.onCreatingDatabaseContext();
             }
 
-            DODatabaseContext context = new DODatabaseContext(container.identity().toString(), monitor);
-            context.container = container;
+            DODatabaseContext context = new DODatabaseContext(delegate.getFilePath(), monitor);
             context.storedClassMap = DOClassConverter.createStoredClassMap(storedClasses);
 
             // Create schema object first so it can be referenced during class/field construction

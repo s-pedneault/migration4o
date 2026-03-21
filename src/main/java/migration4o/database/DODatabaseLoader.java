@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
-import com.db4o.ext.SystemInfo;
 
 import migration4o.database.processors.DOClassConverter;
 import migration4o.database.processors.DOFieldConverter;
@@ -15,7 +13,6 @@ import migration4o.database.processors.DOStoredFieldDeduplicationProcessor;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.CollectionTypeUtil;
-import migration4o.util.DatabaseUtil;
 
 /**
  * Loads a DODatabase from a DB4O container, populating classes, fields, and linking to corresponding schema objects when available.
@@ -23,52 +20,58 @@ import migration4o.util.DatabaseUtil;
 public class DODatabaseLoader {
 
     /**
-     * Loads a DODatabase from the given container, linking to the provided schema.
+     * Populates a delegate's classes and attributes from its DB4O container,
+     * linking to the provided schema.
      *
-     * @param container the DB4O container to read from
-     * @param schema the reference schema to link corresponding objects (may be null)
-     * @return a fully populated DODatabase
+     * @param delegate the delegate wrapping the DB4O container
+     * @param database the parent DODatabase (shared across delegates)
+     * @param schema   the reference schema to link corresponding objects (may be null)
      */
-    public DODatabase load(ExtObjectContainer container, DOSchema schema) {
-        DODatabase database = new DODatabase();
-        database.schema = schema;
-
-        if (container == null) {
-            return database;
+    public void load(DODatabaseDelegate delegate, DODatabase database, DOSchema schema) {
+        if (delegate == null) {
+            return;
         }
 
-        loadAttributes(database, container);
-        loadClasses(database, container, schema);
-
-        return database;
+        loadAttributes(delegate);
+        loadClasses(delegate, database, schema);
     }
 
-    private void loadAttributes(DODatabase database, ExtObjectContainer container) {
-        database.attributes.version = container.version();
-        database.attributes.classCount = container.storedClasses().length;
+    private void loadAttributes(DODatabaseDelegate delegate) {
+        delegate.attributes.version = delegate.version();
+        delegate.attributes.classCount = delegate.storedClasses().length;
 
-        SystemInfo systemInfo = container.ext().systemInfo();
-        database.attributes.totalSize = systemInfo.totalSize();
-        database.attributes.freespaceSize = systemInfo.freespaceSize();
-        database.attributes.freespaceEntryCount = systemInfo.freespaceEntryCount();
+        var systemInfo = delegate.systemInfo();
+        delegate.attributes.totalSize = systemInfo.totalSize();
+        delegate.attributes.freespaceSize = systemInfo.freespaceSize();
+        delegate.attributes.freespaceEntryCount = systemInfo.freespaceEntryCount();
 
-        database.attributes.creationTime = container.identity().getCreationTime();
-        database.attributes.signature = container.identity().getSignature();
+        delegate.attributes.creationTime = delegate.creationTime();
+        delegate.attributes.signature = delegate.signature();
     }
 
-    private void loadClasses(DODatabase database, ExtObjectContainer container, DOSchema schema) {
-        StoredClass[] storedClasses = DatabaseUtil.getStoredClassesSafely(container);
+    private void loadClasses(DODatabaseDelegate delegate, DODatabase database, DOSchema schema) {
+        StoredClass[] storedClasses = getStoredClassesSafely(delegate);
         Map<String, StoredClass> storedClassMap = DOClassConverter.createStoredClassMap(storedClasses);
 
         DODatabaseClass[] dbClasses = new DODatabaseClass[storedClasses.length];
         for (int i = 0; i < storedClasses.length; i++) {
-            dbClasses[i] = loadClass(database, storedClasses[i], storedClassMap, schema);
+            dbClasses[i] = loadClass(delegate, database, storedClasses[i], storedClassMap, schema);
         }
-        database.classes = dbClasses;
+        delegate.classes = dbClasses;
     }
 
-    private DODatabaseClass loadClass(DODatabase database, StoredClass storedClass, Map<String, StoredClass> storedClassMap, DOSchema schema) {
+    private static StoredClass[] getStoredClassesSafely(DODatabaseDelegate delegate) {
+        try {
+            return delegate.storedClasses();
+        } catch (Exception e) {
+            System.out.println("Warning: Could not enumerate stored classes: " + e.getMessage());
+            return new StoredClass[0];
+        }
+    }
+
+    private DODatabaseClass loadClass(DODatabaseDelegate delegate, DODatabase database, StoredClass storedClass, Map<String, StoredClass> storedClassMap, DOSchema schema) {
         DODatabaseClass dbClass = new DODatabaseClass(database);
+        dbClass.delegate = delegate;
 
         // Attributes from StoredClass
         dbClass.attributes.source = storedClass.getName();
@@ -83,14 +86,14 @@ public class DODatabaseLoader {
         long[] objectIds = storedClass.getIDs();
         dbClass.objects.objectIds = objectIds != null ? objectIds : new long[0];
 
-        // Fields
-        DODatabaseField[] dbFields = loadFields(database, dbClass, storedClass, storedClassMap);
-        dbClass.setFields(dbFields);
-
-        // Link to schema
+        // Link to schema first (must happen before field loading so fields can match)
         if (schema != null) {
             dbClass.schemaClass = schema.findClassByName(storedClass.getName());
         }
+
+        // Fields
+        DODatabaseField[] dbFields = loadFields(database, dbClass, storedClass, storedClassMap);
+        dbClass.setFields(dbFields);
 
         return dbClass;
     }

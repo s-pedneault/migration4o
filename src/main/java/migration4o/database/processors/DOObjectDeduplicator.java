@@ -7,6 +7,7 @@ import java.util.Map;
 
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.database.DODatabaseMonitor;
 
 /**
@@ -19,6 +20,91 @@ import migration4o.database.DODatabaseMonitor;
  * removes duplicate IDs by keeping them only in the most derived (leaf) class.
  */
 public class DOObjectDeduplicator {
+
+    // ===== DODatabaseDelegate methods =====
+
+    /**
+     * Deduplicates object IDs across inheritance hierarchies within a single delegate's classes.
+     */
+    public static void deduplicateObjectIds(DODatabaseDelegate delegate, DODatabaseMonitor monitor) {
+        if (delegate == null || delegate.classes == null || delegate.classes.length == 0) {
+            return;
+        }
+
+        Map<String, DODatabaseClass> classMap = new HashMap<>();
+        for (DODatabaseClass cls : delegate.classes) {
+            classMap.put(cls.attributes.source, cls);
+        }
+
+        List<DODatabaseClass> leafClasses = findLeafClasses(delegate.classes, classMap);
+
+        if (monitor != null) {
+            monitor.onStartingDeduplication(leafClasses.size());
+        }
+
+        Map<String, java.util.Set<Long>> idsToRemove = new HashMap<>();
+
+        int leafIndex = 0;
+        for (DODatabaseClass leafClass : leafClasses) {
+            leafIndex++;
+            if (monitor != null) {
+                monitor.onProcessingLeafClass(leafClass.attributes.source, leafIndex, leafClasses.size());
+            }
+            if (leafClass.objects.objectIds == null || leafClass.objects.objectIds.length == 0) {
+                continue;
+            }
+            String parentClassName = leafClass.attributes.parentClassName;
+            while (parentClassName != null) {
+                DODatabaseClass parentClass = classMap.get(parentClassName);
+                if (parentClass == null)
+                    break;
+                java.util.Set<Long> toRemove = idsToRemove.computeIfAbsent(parentClass.attributes.source, k -> new java.util.HashSet<>());
+                for (long id : leafClass.objects.objectIds) {
+                    toRemove.add(id);
+                }
+                parentClassName = parentClass.attributes.parentClassName;
+            }
+        }
+
+        int totalRemoved = 0;
+        for (DODatabaseClass cls : delegate.classes) {
+            java.util.Set<Long> toRemove = idsToRemove.get(cls.attributes.source);
+            if (toRemove != null && !toRemove.isEmpty() && cls.objects.objectIds != null) {
+                long[] uniqueIds = removeObjectIds(cls.objects.objectIds, toRemove);
+                cls.objects.uniqueObjectIds = uniqueIds;
+                int removedCount = cls.objects.objectIds.length - uniqueIds.length;
+                if (removedCount > 0) {
+                    totalRemoved += removedCount;
+                    if (monitor != null) {
+                        monitor.onClassDeduplicated(cls.attributes.source, removedCount, uniqueIds.length);
+                    }
+                }
+            } else if (cls.objects.objectIds != null) {
+                cls.objects.uniqueObjectIds = cls.objects.objectIds;
+            }
+        }
+
+        if (monitor != null) {
+            monitor.onDeduplicationComplete(leafClasses.size(), totalRemoved);
+        }
+    }
+
+    private static List<DODatabaseClass> findLeafClasses(DODatabaseClass[] classes, Map<String, DODatabaseClass> classMap) {
+        List<DODatabaseClass> leafClasses = new ArrayList<>();
+        for (DODatabaseClass cls : classes) {
+            boolean isLeaf = true;
+            for (DODatabaseClass potentialChild : classes) {
+                if (cls.attributes.source.equals(potentialChild.attributes.parentClassName)) {
+                    isLeaf = false;
+                    break;
+                }
+            }
+            if (isLeaf) {
+                leafClasses.add(cls);
+            }
+        }
+        return leafClasses;
+    }
 
     // ===== DODatabase methods (new) =====
 

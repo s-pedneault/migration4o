@@ -1,10 +1,10 @@
 package migration4o.util;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -174,11 +174,11 @@ public class DatabaseUtil {
     /**
      * Reads a single stored field value from a DB4O {@link GenericObject} by source field name. Returns {@code null} if the field is not found or the object is not a {@link GenericObject}.
      */
-    public static Object getStoredFieldValue(ExtObjectContainer container, Object obj, String fieldName) {
+    public static Object getStoredFieldValue(DODatabaseDelegate delegate, Object obj, String fieldName) {
         if (!(obj instanceof GenericObject)) {
             return null;
         }
-        StoredClass storedClass = container.ext().storedClass(obj);
+        StoredClass storedClass = delegate.storedClass(obj);
         if (storedClass == null) {
             return null;
         }
@@ -203,7 +203,7 @@ public class DatabaseUtil {
      * @param fieldPath dot-separated source field path
      * @return value at the end of the path, or {@code null} on any failure
      */
-    public static Object getFieldValueByPath(ExtObjectContainer container, Object obj, String fieldPath) {
+    public static Object getFieldValueByPath(DODatabaseDelegate delegate, Object obj, String fieldPath) {
         if (obj == null || fieldPath == null || fieldPath.isEmpty()) {
             return null;
         }
@@ -212,7 +212,7 @@ public class DatabaseUtil {
         for (String segment : segments) {
             if (current == null)
                 return null;
-            current = getStoredFieldValue(container, current, segment);
+            current = getStoredFieldValue(delegate, current, segment);
         }
         return current;
     }
@@ -220,9 +220,9 @@ public class DatabaseUtil {
     /**
      * Safely gets stored classes from container with error handling.
      */
-    public static StoredClass[] getStoredClassesSafely(com.db4o.ext.ExtObjectContainer container) {
+    public static StoredClass[] getStoredClassesSafely(DODatabaseDelegate delegate) {
         try {
-            return container.storedClasses();
+            return delegate.storedClasses();
         } catch (Exception e) {
             System.out.println("Warning: Could not enumerate stored classes: " + e.getMessage());
             return new StoredClass[0];

@@ -42,11 +42,6 @@ public class DOSchemaService {
 
         DOReferenceSchemaReader reader = new DOReferenceSchemaReader();
         referenceSchema = reader.readSchema();
-        // currentSchemaPath = schemaPath;
-
-        // System.out.println("Reference schema loaded: " + schemaPath);
-        System.out.println(
-                "  Classes: " + (referenceSchema.getClasses() != null ? referenceSchema.getClasses().length : 0));
 
         return referenceSchema;
     }

@@ -30,6 +30,7 @@ import javax.swing.table.DefaultTableModel;
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseContext;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.ui.main.MainWindow;
@@ -312,7 +313,7 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
     private EntityComparisonData buildEntityComparisonData(DODatabaseContext context) {
         EntityComparisonData data = new EntityComparisonData();
-        if (context == null || context.database == null || context.database.getClasses() == null || context.container == null) {
+        if (context == null || context.database == null || context.database.getClasses() == null) {
             return data;
         }
 
@@ -328,15 +329,16 @@ public class MultiDatabaseComparisonPanel extends JPanel {
                 continue;
             }
 
+            DODatabaseDelegate delegate = dbClass.delegate;
             long[] objectIds = dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds : new long[0];
             Set<Long> mids = new LinkedHashSet<>();
             for (long objectId : objectIds) {
                 try {
-                    Object obj = context.container.ext().getByID(objectId);
+                    Object obj = delegate.getByID(objectId);
                     if (obj == null) {
                         continue;
                     }
-                    Long mid = IDEntityHandler.extractMID(context.container, obj);
+                    Long mid = IDEntityHandler.extractMID(delegate, obj);
                     if (IDEntityHandler.isValidMID(mid)) {
                         mids.add(mid);
                     }
@@ -351,7 +353,7 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
     private Map<Long, Set<Long>> buildObjectIdsByMidForClass(DODatabaseContext context, String className) {
         Map<Long, Set<Long>> objectIdsByMid = new HashMap<>();
-        if (context == null || context.database == null || context.database.getClasses() == null || context.container == null || className == null) {
+        if (context == null || context.database == null || context.database.getClasses() == null || className == null) {
             return objectIdsByMid;
         }
 
@@ -360,14 +362,15 @@ public class MultiDatabaseComparisonPanel extends JPanel {
             return objectIdsByMid;
         }
 
+        DODatabaseDelegate delegate = targetClass.delegate;
         long[] objectIds = targetClass.objects.uniqueObjectIds != null ? targetClass.objects.uniqueObjectIds : new long[0];
         for (long objectId : objectIds) {
             try {
-                Object obj = context.container.ext().getByID(objectId);
+                Object obj = delegate.getByID(objectId);
                 if (obj == null) {
                     continue;
                 }
-                Long mid = IDEntityHandler.extractMID(context.container, obj);
+                Long mid = IDEntityHandler.extractMID(delegate, obj);
                 if (IDEntityHandler.isValidMID(mid)) {
                     objectIdsByMid.computeIfAbsent(mid, key -> new LinkedHashSet<>()).add(objectId);
                 }
@@ -440,16 +443,18 @@ public class MultiDatabaseComparisonPanel extends JPanel {
 
         List<Long> exportedObjectIds = statistics.exportedObjectIds.getOrDefault(className, new ArrayList<>());
         Set<Long> exportedMids = new LinkedHashSet<>();
+        DODatabaseClass dbClass = context.database != null ? context.database.findClassByName(className) : null;
+        DODatabaseDelegate delegate = dbClass != null ? dbClass.delegate : null;
         for (Long objectId : exportedObjectIds) {
-            if (objectId == null) {
+            if (objectId == null || delegate == null) {
                 continue;
             }
             try {
-                Object obj = context.container.ext().getByID(objectId);
+                Object obj = delegate.getByID(objectId);
                 if (obj == null) {
                     continue;
                 }
-                Long mid = IDEntityHandler.extractMID(context.container, obj);
+                Long mid = IDEntityHandler.extractMID(delegate, obj);
                 if (IDEntityHandler.isValidMID(mid)) {
                     exportedMids.add(mid);
                 }

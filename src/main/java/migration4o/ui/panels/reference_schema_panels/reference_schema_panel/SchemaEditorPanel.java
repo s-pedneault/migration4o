@@ -568,10 +568,6 @@ public class SchemaEditorPanel extends JPanel {
             // centralized)
             schema = DOSchemaService.getInstance().loadReferenceSchema();
 
-            // Debug: print loaded classes count and check for ParamConfig
-            int classCount = schema.getClasses() != null ? schema.getClasses().length : 0;
-            System.out.println("DEBUG: Loaded " + classCount + " classes");
-
             // Build tree
             buildTree();
 

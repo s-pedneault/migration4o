@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;

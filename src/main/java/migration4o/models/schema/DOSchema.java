@@ -36,12 +36,16 @@ public class DOSchema implements DOReferenceSchema {
                 return schemaClass;
             }
         }
-        String searchSimpleName = ClassUtil.getSimpleName(className);
-        for (DOSchemaClass schemaClass : classes) {
-            String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
-            if (schemaSimpleName.equals(searchSimpleName)) {
-                System.err.println("Warning: Used simple-class-name fallback, but we should not have done that.");
-                return schemaClass;
+        // Only fall back to simple-name matching when a fully-qualified name was passed
+        // (contains a package separator). Bare type names like "date", "string", "int"
+        // have no dot and will never be found this way — skip the fallback entirely.
+        if (className.contains(".")) {
+            String searchSimpleName = ClassUtil.getSimpleName(className);
+            for (DOSchemaClass schemaClass : classes) {
+                String schemaSimpleName = ClassUtil.getSimpleName(schemaClass.attributes.source);
+                if (schemaSimpleName.equals(searchSimpleName)) {
+                    return schemaClass;
+                }
             }
         }
 

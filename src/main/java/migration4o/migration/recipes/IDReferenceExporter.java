@@ -2,8 +2,7 @@ package migration4o.migration.recipes;
 
 import java.io.IOException;
 
-import com.db4o.ext.ExtObjectContainer;
-
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -28,10 +27,10 @@ public class IDReferenceExporter {
      * @param ctx Export state (contains objectExporter)
      * @throws IOException if write fails
      */
-    public static void exportAsIDReference(ExtObjectContainer container, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, int indentLevel, ExportCurrentState ctx) throws IOException {
+    public static void exportAsIDReference(DODatabaseDelegate delegate, Object entity, DOSchemaClass idClass, StructuredWriter xmlWriter, int indentLevel, ExportCurrentState ctx) throws IOException {
 
         // Get the DB object ID of the entity
-        long entityObjectId = container.ext().getID(entity);
+        long entityObjectId = delegate.getID(entity);
 
         if (entityObjectId <= 0) {
             return;

@@ -1,9 +1,7 @@
 package migration4o.models.ui;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabaseClass;
-import migration4o.database.DODatabaseService;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchemaClass;
 
 /**
@@ -78,10 +76,9 @@ public class ClassNode {
         }
 
         // Calculate filtered count
-        migration4o.database.DODatabaseContext dbContext = migration4o.ui.main.MainWindow.getInstance().getCurrentContext();
-        ExtObjectContainer container = dbContext != null ? dbContext.container : null;
-        if (container != null && uniqueIds != null) {
-            filteredObjectCount = exportConfig.countMatchingObjects(container, uniqueIds);
+        DODatabaseDelegate delegate = dbClass != null ? dbClass.delegate : null;
+        if (delegate != null && uniqueIds != null) {
+            filteredObjectCount = exportConfig.countMatchingObjects(delegate, uniqueIds);
             return filteredObjectCount;
         }
 

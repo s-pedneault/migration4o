@@ -4,11 +4,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.util.ObjectResolverUtil;
 import migration4o.util.ValueUtil;
 
@@ -30,14 +30,14 @@ public class RecipeCollectionItems {
      * @param collectionObj The collection object to extract from
      * @return Collection of items, or null if extraction fails
      */
-    public static Collection<?> getItems(ExtObjectContainer container, Object collectionObj) {
+    public static Collection<?> getItems(DODatabaseDelegate delegate, Object collectionObj) {
         // Activate the collection object to access its fields
-        long collectionId = container.ext().getID(collectionObj);
+        long collectionId = delegate.getID(collectionObj);
         if (collectionId > 0) {
-            ObjectResolverUtil.activateObjectShallow(container, collectionObj, collectionId);
+            ObjectResolverUtil.activateObjectShallow(delegate, collectionObj, collectionId);
         }
 
-        return extractCollectionItems(container, collectionObj);
+        return extractCollectionItems(delegate, collectionObj);
     }
 
     /**
@@ -55,7 +55,7 @@ public class RecipeCollectionItems {
      * @param collectionObj The collection object to extract from
      * @return Collection of items, or null if extraction fails
      */
-    private static Collection<?> extractCollectionItems(ExtObjectContainer container, Object collectionObj) {
+    private static Collection<?> extractCollectionItems(DODatabaseDelegate delegate, Object collectionObj) {
         if (collectionObj == null) {
             return null;
         }
@@ -80,7 +80,7 @@ public class RecipeCollectionItems {
         // APPROACH 2: If it's a GenericObject proxy, extract from DB4O translator
         // fields
         if (collectionObj instanceof GenericObject) {
-            return extractFromGenericObject(container, (GenericObject) collectionObj);
+            return extractFromGenericObject(delegate, (GenericObject) collectionObj);
         }
 
         // Unknown type - cannot extract
@@ -98,8 +98,8 @@ public class RecipeCollectionItems {
      * @param genericObj The GenericObject representing a collection
      * @return Collection of items, or null if extraction fails
      */
-    private static Collection<?> extractFromGenericObject(ExtObjectContainer container, GenericObject genericObj) {
-        StoredClass storedClass = container.ext().storedClass(genericObj);
+    private static Collection<?> extractFromGenericObject(DODatabaseDelegate delegate, GenericObject genericObj) {
+        StoredClass storedClass = delegate.storedClass(genericObj);
         if (storedClass == null) {
             return null;
         }

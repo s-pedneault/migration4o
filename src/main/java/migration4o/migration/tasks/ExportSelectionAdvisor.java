@@ -9,10 +9,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -78,7 +77,6 @@ public class ExportSelectionAdvisor {
 
     // ── Fields ───────────────────────────────────────────────────────────────
 
-    private final ExtObjectContainer container;
     private final DOSchema referenceSchema;
     private final DODatabase database;
     private final int cap;
@@ -86,8 +84,7 @@ public class ExportSelectionAdvisor {
 
     // ── Constructors ─────────────────────────────────────────────────────────
 
-    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DODatabase database, int cap) {
-        this.container = container;
+    public ExportSelectionAdvisor(DOSchema referenceSchema, DODatabase database, int cap) {
         this.referenceSchema = referenceSchema;
         this.database = database;
         this.cap = cap;
@@ -97,8 +94,7 @@ public class ExportSelectionAdvisor {
     /**
      * Creates a seed-based advisor. When {@code seedCap} is non-null and > 0, seed query results are limited to that many objects per seed class before closure propagation.
      */
-    public ExportSelectionAdvisor(ExtObjectContainer container, DOSchema referenceSchema, DODatabase database, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
-        this.container = container;
+    public ExportSelectionAdvisor(DOSchema referenceSchema, DODatabase database, List<migration4o.models.ui.SeedQuery> seedQueries, Integer seedCap) {
         this.referenceSchema = referenceSchema;
         this.database = database;
         this.cap = (seedCap != null && seedCap > 0) ? seedCap : 0;
@@ -243,6 +239,12 @@ public class ExportSelectionAdvisor {
 
             status(monitor, "Seed selection: querying " + simpleClassName(className) + " (" + objectIds.length + " objects)\u2026");
 
+            DODatabaseClass dbClassForQuery = database.findClassByName(className);
+            DODatabaseDelegate queryDelegate = dbClassForQuery != null ? dbClassForQuery.delegate : null;
+            if (queryDelegate == null) {
+                continue;
+            }
+
             Set<Long> matches = result.computeIfAbsent(className, k -> new LinkedHashSet<>());
             List<migration4o.models.ui.SeedCondition> conditions = query.getConditions();
 
@@ -269,7 +271,7 @@ public class ExportSelectionAdvisor {
 
             for (long objId : objectIds) {
                 try {
-                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objId);
+                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(queryDelegate, objId);
                     if (activation == null)
                         continue;
 
@@ -281,7 +283,7 @@ public class ExportSelectionAdvisor {
                                 allMatch = false;
                                 break;
                             }
-                            Object fieldValue = DatabaseUtil.getFieldValueByPath(container, activation.object, sourcePath);
+                            Object fieldValue = DatabaseUtil.getFieldValueByPath(queryDelegate, activation.object, sourcePath);
                             if (isDossPrev && samplesPrinted < MAX_SAMPLES) {
                                 System.out.println("[DEBUG-DossPrev] Object " + objId + ": field '" + sourcePath + "' = '" + fieldValue + "'" + " (type=" + (fieldValue != null ? fieldValue.getClass().getSimpleName() : "null") + ")" + ", matches=" + conditions.get(i).matches(fieldValue));
                                 samplesPrinted++;
@@ -631,12 +633,12 @@ public class ExportSelectionAdvisor {
             }
             for (long objId : dbClass.objects.objectIds) {
                 try {
-                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objId);
+                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(dbClass.delegate, objId);
                     if (activation == null)
                         continue;
                     // Read mID using the proven ancestor-walking pattern
                     // (mID is often declared on a parent class like Entite)
-                    Object midVal = DatabaseUtil.getStoredFieldValue(container, activation.object, "mID");
+                    Object midVal = DatabaseUtil.getStoredFieldValue(dbClass.delegate, activation.object, "mID");
                     if (midVal instanceof Number) {
                         long mid = ((Number) midVal).longValue();
                         if (mid > 0)
@@ -679,13 +681,18 @@ public class ExportSelectionAdvisor {
             if (objectIds == null)
                 continue;
 
+            DODatabaseClass srcDbClass = database.findClassByName(srcClass);
+            DODatabaseDelegate srcDelegate = srcDbClass != null ? srcDbClass.delegate : null;
+            if (srcDelegate == null)
+                continue;
+
             status(monitor, "Smart selection: scanning " + simpleClassName(srcClass) + " (" + objectIds.length + " objects)\u2026");
 
             for (long objectId : objectIds) {
                 try {
                     // Use ObjectActivator — the proven recipe for object
                     // retrieval
-                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(container, objectId);
+                    ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(srcDelegate, objectId);
                     if (activation == null)
                         continue;
                     Object obj = activation.object;
@@ -695,7 +702,7 @@ public class ExportSelectionAdvisor {
                         // pattern:
                         // DatabaseUtil.getAllFieldsIncludingAncestors + name
                         // match
-                        Object fv = DatabaseUtil.getStoredFieldValue(container, obj, edge.fieldName);
+                        Object fv = DatabaseUtil.getStoredFieldValue(srcDelegate, obj, edge.fieldName);
                         if (fv == null)
                             continue;
 
@@ -703,8 +710,8 @@ public class ExportSelectionAdvisor {
                         if (edge.isIDEntite) {
                             // Activate the IDEntite wrapper, then read its mID
                             // using the same ancestor-walking pattern
-                            ObjectResolverUtil.activateObjectShallow(container, fv, null);
-                            Object midVal = DatabaseUtil.getStoredFieldValue(container, fv, "mID");
+                            ObjectResolverUtil.activateObjectShallow(srcDelegate, fv, null);
+                            Object midVal = DatabaseUtil.getStoredFieldValue(srcDelegate, fv, "mID");
                             if (!(midVal instanceof Number))
                                 continue;
                             long mid = ((Number) midVal).longValue();
@@ -716,7 +723,7 @@ public class ExportSelectionAdvisor {
                             targetId = idx != null ? idx.get(mid) : null;
                         } else {
                             // Direct persistent reference
-                            targetId = ObjectResolverUtil.getObjectId(container, fv);
+                            targetId = ObjectResolverUtil.getObjectId(srcDelegate, fv);
                         }
 
                         if (targetId != null) {

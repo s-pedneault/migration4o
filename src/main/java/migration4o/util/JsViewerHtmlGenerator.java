@@ -21,7 +21,7 @@ import migration4o.models.schema.DOSchemaField;
  */
 public final class JsViewerHtmlGenerator {
 
-    private static final String TEMPLATE_RESOURCE = "/templates/js-viewer-template.html";
+    private static final String TEMPLATE_RESOURCE = "/templates/class-viewer-template.html";
     private static final String WELCOME_TEMPLATE_RESOURCE = "/templates/welcome-template.html";
     private static final String SIDEBAR_CSS_RESOURCE = "/templates/sidebar.css";
     private static final String SIDEBAR_NAV_JS_RESOURCE = "/templates/sidebar-nav.js";

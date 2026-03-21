@@ -229,7 +229,7 @@ public class SchemaStructurePanel extends JPanel {
                 collectAllClassNames(module, classNames);
                 classesInModules.addAll(classNames);
             }
-            System.out.println("Loaded " + classesInModules.size() + " classes from modules for highlighting");
+
         } catch (Exception e) {
             System.err.println("Error loading classes from modules: " + e.getMessage());
         }

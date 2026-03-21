@@ -46,12 +46,12 @@ public class MigrationExportService {
      * moving to the next class, so statistics and reference tracking are shared
      * across formats.
      *
-     * @param request Fully-configured export request (must have container set)
+     * @param request Fully-configured export request (must have database set)
      * @param modules Modules to export (in order)
      * @return shared export statistics
      */
     public ExportStatistics exportModules(ExportRequest request, List<DOSchemaModule> modules) throws Exception {
-        if (request.container == null) {
+        if (request.database == null) {
             throw new IllegalStateException("No database is open.");
         }
 

@@ -1,7 +1,6 @@
 package migration4o.migration.recipes;
 
-import com.db4o.ext.ExtObjectContainer;
-
+import migration4o.database.DODatabaseDelegate;
 import migration4o.util.ClassUtil;
 import migration4o.util.ObjectResolverUtil;
 
@@ -27,20 +26,20 @@ public class ObjectActivator {
     /**
      * Gets and activates an object from the database.
      * 
-     * @param container DB4O container
-     * @param objectId  Object ID to retrieve
+     * @param delegate DB4O delegate
+     * @param objectId Object ID to retrieve
      * @return ActivationResult with object and class name, or null if object not
      *         found
      */
-    public static ActivationResult getAndActivate(ExtObjectContainer container, long objectId) {
+    public static ActivationResult getAndActivate(DODatabaseDelegate delegate, long objectId) {
         try {
-            Object obj = container.ext().getByID(objectId);
+            Object obj = delegate.getByID(objectId);
             if (obj == null) {
                 return null;
             }
 
             String className = ClassUtil.getClassName(obj);
-            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
+            ObjectResolverUtil.activateObjectShallow(delegate, obj, objectId);
 
             return new ActivationResult(obj, className);
         } catch (Exception e) {

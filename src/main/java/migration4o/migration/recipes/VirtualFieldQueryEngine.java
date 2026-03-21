@@ -6,11 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOFieldCriteria;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.DatabaseUtil;
@@ -41,7 +41,7 @@ public class VirtualFieldQueryEngine {
      * @param schemaField Virtual field definition with criterias
      * @return matching objects (never null, may be empty)
      */
-    public Collection<?> execute(ExtObjectContainer container, GenericObject obj, DOSchemaField schemaField) {
+    public Collection<?> execute(DODatabaseDelegate delegate, GenericObject obj, DOSchemaField schemaField) {
         List<Object> results = new ArrayList<>();
 
         String targetClassName = schemaField.attributes.type;
@@ -51,7 +51,7 @@ public class VirtualFieldQueryEngine {
 
         // Preload all objects of this class if not already cached
         if (!preloadedObjectsByClass.containsKey(targetClassName)) {
-            preloadedObjectsByClass.put(targetClassName, preloadAll(container, targetClassName));
+            preloadedObjectsByClass.put(targetClassName, preloadAll(delegate, targetClassName));
         }
 
         List<GenericObject> targetObjects = preloadedObjectsByClass.get(targetClassName);
@@ -60,7 +60,7 @@ public class VirtualFieldQueryEngine {
         boolean useAndLogic = !"OR".equalsIgnoreCase(schemaField.attributes.criteriasOperator);
 
         // Extract match values from current object for all criteria
-        List<CriterionMatch> criteriaData = extractCriteriaValues(container, obj, schemaField, useAndLogic);
+        List<CriterionMatch> criteriaData = extractCriteriaValues(delegate, obj, schemaField, useAndLogic);
         if (criteriaData == null) {
             return results; // null means AND-logic short-circuit (null match
                             // value)
@@ -72,7 +72,7 @@ public class VirtualFieldQueryEngine {
         // Search through preloaded objects in memory
         for (GenericObject targetObj : targetObjects) {
             try {
-                if (matches(container, targetObj, criteriaData, useAndLogic)) {
+                if (matches(delegate, targetObj, criteriaData, useAndLogic)) {
                     results.add(targetObj);
                 }
             } catch (Exception e) {
@@ -85,20 +85,20 @@ public class VirtualFieldQueryEngine {
 
     // ── Private helpers ─────────────────────────────────────────────────
 
-    private List<GenericObject> preloadAll(ExtObjectContainer container, String className) {
+    private List<GenericObject> preloadAll(DODatabaseDelegate delegate, String className) {
         List<GenericObject> allObjects = new ArrayList<>();
-        StoredClass storedClass = container.ext().storedClass(className);
+        StoredClass storedClass = delegate.storedClass(className);
         if (storedClass == null) {
             return allObjects;
         }
         long[] objectIds = storedClass.getIDs();
         for (long objectId : objectIds) {
             try {
-                Object loadedObj = container.ext().getByID(objectId);
+                Object loadedObj = delegate.getByID(objectId);
                 if (loadedObj instanceof GenericObject) {
                     // Activate to depth 2 so nested fields (e.g.
                     // mIDIntervention.mID) are accessible
-                    container.activate(loadedObj, 2);
+                    delegate.activate(loadedObj, 2);
                     allObjects.add((GenericObject) loadedObj);
                 }
             } catch (Exception e) {
@@ -114,9 +114,9 @@ public class VirtualFieldQueryEngine {
      * @return list of criterion matches, or {@code null} if AND-logic
      * encountered a null match value
      */
-    private List<CriterionMatch> extractCriteriaValues(ExtObjectContainer container, GenericObject obj, DOSchemaField schemaField, boolean useAndLogic) {
+    private List<CriterionMatch> extractCriteriaValues(DODatabaseDelegate delegate, GenericObject obj, DOSchemaField schemaField, boolean useAndLogic) {
         List<CriterionMatch> data = new ArrayList<>();
-        StoredClass storedClass = container.ext().storedClass(obj);
+        StoredClass storedClass = delegate.storedClass(obj);
         if (storedClass == null) {
             return data;
         }
@@ -150,12 +150,12 @@ public class VirtualFieldQueryEngine {
         return data;
     }
 
-    private boolean matches(ExtObjectContainer container, GenericObject targetObj, List<CriterionMatch> criteriaData, boolean useAndLogic) {
+    private boolean matches(DODatabaseDelegate delegate, GenericObject targetObj, List<CriterionMatch> criteriaData, boolean useAndLogic) {
         boolean matchesAll = true;
         boolean matchesAny = false;
 
         for (CriterionMatch data : criteriaData) {
-            Object withValue = DatabaseUtil.getFieldValueByPath(container, targetObj, data.criterion.with);
+            Object withValue = DatabaseUtil.getFieldValueByPath(delegate, targetObj, data.criterion.with);
             if (withValue == null) {
                 matchesAll = false;
                 if (useAndLogic)

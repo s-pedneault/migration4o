@@ -1,8 +1,8 @@
 package migration4o.migration.recipes;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.ui.ClassExportConfig;
@@ -26,7 +26,7 @@ public class ExportCriteriaFilter {
      *                     objects)
      * @return true if object should be exported, false if filtered out
      */
-    public static boolean shouldExport(ExtObjectContainer container, Object obj, String className, boolean isEmbedded, boolean isRootObject, ClassExportConfig exportConfig, ExportStatistics statistics, DOSchema hierarchySchema) {
+    public static boolean shouldExport(DODatabaseDelegate delegate, Object obj, String className, boolean isEmbedded, boolean isRootObject, ClassExportConfig exportConfig, ExportStatistics statistics, DOSchema hierarchySchema) {
 
         // Only apply criteria filtering to root objects of the exported class
         // References discovered during traversal should not be filtered by the
@@ -47,12 +47,12 @@ public class ExportCriteriaFilter {
         }
 
         // Check if object matches all criteria
-        if (!exportConfig.matchesAllCriteria(container, (GenericObject) obj)) {
+        if (!exportConfig.matchesAllCriteria(delegate, (GenericObject) obj)) {
             // Object doesn't match criteria, skip export
             if (statistics != null) {
                 statistics.incrementFiltered(); // Track filtered objects
                 try {
-                    long objectId = container.ext().getID(obj);
+                    long objectId = delegate.getID(obj);
                     statistics.recordReachedOnly(className, objectId, hierarchySchema);
                     statistics.recordObjectDecision(objectId, className, "filtered out by export criteria: " + exportConfig);
                 } catch (Exception ignored) {

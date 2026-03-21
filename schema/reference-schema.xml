@@ -3194,7 +3194,7 @@
         <field source="mIDTypeChauffage" destinationName="idTypeChauffage" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeChauffage.IDTypeChauffage" title="ID de type chauffage" />
         <field source="mIDTypeCheminee" destinationName="idTypeCheminee" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.typeCheminee.IDTypeCheminee" title="ID de type cheminée" />
     </class>
-    <class source="gest.dossPrev.DossPrev" destinationName="DossierAdresse" isExported="true" title="Dossier adresse" description="Dossier lié à une adresse" summary="[adresse.numeroCivique] [adresse.extension] [adresse.rue], [adresse.ville]" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.dossPrev.DossPrev" destinationName="DossierAdresse" isExported="true" title="Dossier adresse" description="Dossier lié à une adresse" summary="[adresse.numeroCivique] [adresse.extension] [adresse.suite] [adresse.rue], [adresse.ville]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.gen.VoieCircul" field="mVectTempIDDossPrevAssoc" />
         <reference class="gest.borne.Borne" field="mIDDossPrev" />
         <reference class="gest.dossPrev.DossPrev" field="mIDDossPrevAssoc" />

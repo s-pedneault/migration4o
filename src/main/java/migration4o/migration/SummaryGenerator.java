@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabase;
+import migration4o.database.DODatabaseDelegate;
+import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -17,6 +17,7 @@ import migration4o.util.ClassUtil;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.ObjectResolverUtil;
 import migration4o.util.ReferenceUtil;
+import migration4o.util.ResolvedReference;
 import migration4o.util.TypeUtil;
 
 /**
@@ -68,16 +69,16 @@ public class SummaryGenerator {
      * Generates a summary string for {@code obj} using the summary template on its schema class.
      *
      * <p>
-     * This overload does not support traversing IDEntite references in field paths. Use {@link #generate(ExtObjectContainer, Object, DOSchemaClass, DOSchema, DOSchema)} when IDEntite traversal is needed.
+     * This overload does not support traversing IDEntite references in field paths. Use {@link #generate(DODatabaseDelegate, Object, DOSchemaClass, DOSchema, DOSchema)} when IDEntite traversal is needed.
      *
-     * @param container open DB4O container
+     * @param delegate open database delegate
      * @param obj the root object to read field values from
      * @param schemaClass the schema class whose {@code summary} template is used
      * @param referenceSchema full reference schema for embedded-class lookups
      * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
-    public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema) {
-        return generate(container, obj, schemaClass, referenceSchema, null);
+    public static String generate(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema) {
+        return generate(delegate, obj, schemaClass, referenceSchema, null);
     }
 
     /**
@@ -93,7 +94,7 @@ public class SummaryGenerator {
      * @param database database (DODatabase) for IDEntite resolution (may be {@code null} to disable IDEntite traversal)
      * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
-    public static String generate(ExtObjectContainer container, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DODatabase database) {
+    public static String generate(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DODatabase database) {
         if (schemaClass == null || schemaClass.attributes.summary == null || schemaClass.attributes.summary.isEmpty()) {
             return null;
         }
@@ -110,7 +111,7 @@ public class SummaryGenerator {
             result.append(schemaClass.attributes.summary, last, matcher.start());
             // Resolve and append the field reference
             String token = matcher.group(1); // e.g. "adresse.rue"
-            result.append(resolveToken(container, obj, token, schemaClass, referenceSchema, database));
+            result.append(resolveToken(delegate, obj, token, schemaClass, referenceSchema, database));
             last = matcher.end();
         }
 
@@ -136,7 +137,7 @@ public class SummaryGenerator {
      */
     private static final String SUMMARY_TOKEN = "sommaire";
 
-    private static String resolveToken(ExtObjectContainer container, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema, DODatabase database) {
+    private static String resolveToken(DODatabaseDelegate delegate, Object rootObj, String token, DOSchemaClass rootClass, DOSchema schema, DODatabase database) {
         String[] parts = token.split("\\.", -1);
         Object currentObj = rootObj;
         DOSchemaClass currentClass = rootClass;
@@ -149,7 +150,7 @@ public class SummaryGenerator {
             // Virtual "sommaire" token: recursively generate this entity's
             // summary
             if (SUMMARY_TOKEN.equals(parts[i])) {
-                String sub = generate(container, currentObj, currentClass, schema, database);
+                String sub = generate(delegate, currentObj, currentClass, schema, database);
                 return sub != null ? sub : "";
             }
 
@@ -161,7 +162,7 @@ public class SummaryGenerator {
 
             // Fetch the value via the shared DB4O utility (source = real field
             // name)
-            currentObj = DatabaseUtil.getStoredFieldValue(container, currentObj, field.attributes.source);
+            currentObj = DatabaseUtil.getStoredFieldValue(delegate, currentObj, field.attributes.source);
 
             // If there are more path segments, advance the schema class
             if (i < parts.length - 1) {
@@ -177,15 +178,15 @@ public class SummaryGenerator {
                     if (expectedType == null || expectedType.isEmpty()) {
                         expectedType = (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) ? field.attributes.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.attributes.source);
                     }
-                    Long targetObjectId = ReferenceUtil.resolveIDEntiteReference(container, currentObj, expectedType, database);
-                    if (targetObjectId == null) {
+                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteReference(delegate, currentObj, expectedType, database);
+                    if (resolved == null) {
                         return "";
                     }
-                    Object targetObj = container.ext().getByID(targetObjectId);
+                    Object targetObj = resolved.delegate.getByID(resolved.objectId);
                     if (targetObj == null) {
                         return "";
                     }
-                    ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
+                    ObjectResolverUtil.activateObjectShallow(resolved.delegate, targetObj, resolved.objectId);
                     String targetClassName = ClassUtil.getClassName(targetObj);
                     nextClass = schema.findClassByName(targetClassName);
                     currentObj = targetObj;
@@ -245,8 +246,8 @@ public class SummaryGenerator {
      *
      * @return an {@link IDEntiteResult} with the resolved label (possibly null) and the target's DB4O object ID (possibly null if unresolvable)
      */
-    public static IDEntiteResult resolveIDEntiteResult(ExtObjectContainer container, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DODatabase database, Map<String, Long> targetCache, Map<Long, String> summaryCache) {
-        if (container == null || idEntiteObj == null || idEntiteClass == null) {
+    public static IDEntiteResult resolveIDEntiteResult(DODatabaseDelegate delegate, Object idEntiteObj, DOSchemaClass idEntiteClass, DOSchema referenceSchema, DODatabase database, Map<String, ResolvedReference> targetCache, Map<Long, String> summaryCache) {
+        if (delegate == null || idEntiteObj == null || idEntiteClass == null) {
             return new IDEntiteResult(null, null, null);
         }
         try {
@@ -255,50 +256,50 @@ public class SummaryGenerator {
                 expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.attributes.source);
             }
 
-            long idEntiteObjId = container.ext().getID(idEntiteObj);
-            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteObjId);
-            Long mID = ReferenceUtil.extractMIDField(container, idEntiteObj);
+            long idEntiteObjId = delegate.getID(idEntiteObj);
+            ObjectResolverUtil.activateObjectShallow(delegate, idEntiteObj, idEntiteObjId);
+            Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
             if (mID == null) {
                 return new IDEntiteResult(null, null, null);
             }
             String cacheKey = mID + ":" + (expectedType != null ? expectedType : "");
 
-            Long targetObjectId;
+            ResolvedReference resolved;
             if (targetCache != null && targetCache.containsKey(cacheKey)) {
-                targetObjectId = targetCache.get(cacheKey);
+                resolved = targetCache.get(cacheKey);
             } else {
-                targetObjectId = ReferenceUtil.findObjectByMID(container, mID, expectedType, database);
+                resolved = database.findObjectByMID(mID, expectedType);
                 if (targetCache != null) {
-                    targetCache.put(cacheKey, targetObjectId);
+                    targetCache.put(cacheKey, resolved);
                 }
             }
-            if (targetObjectId == null) {
+            if (resolved == null) {
                 return new IDEntiteResult(null, null, mID);
             }
 
-            if (summaryCache != null && summaryCache.containsKey(targetObjectId)) {
-                return new IDEntiteResult(summaryCache.get(targetObjectId), targetObjectId, mID);
+            if (summaryCache != null && summaryCache.containsKey(resolved.objectId)) {
+                return new IDEntiteResult(summaryCache.get(resolved.objectId), resolved.objectId, mID);
             }
 
-            Object targetObj = container.ext().getByID(targetObjectId);
+            Object targetObj = resolved.delegate.getByID(resolved.objectId);
             if (targetObj == null) {
-                return new IDEntiteResult(null, targetObjectId, mID);
+                return new IDEntiteResult(null, resolved.objectId, mID);
             }
-            ObjectResolverUtil.activateObjectShallow(container, targetObj, targetObjectId);
+            ObjectResolverUtil.activateObjectShallow(resolved.delegate, targetObj, resolved.objectId);
 
             String targetClassName = ClassUtil.getClassName(targetObj);
             DOSchemaClass targetSchemaClass = referenceSchema.findClassByName(targetClassName);
             String label = null;
             if (targetSchemaClass != null && targetSchemaClass.attributes.summary != null && !targetSchemaClass.attributes.summary.isEmpty()) {
-                label = generate(container, targetObj, targetSchemaClass, referenceSchema, database);
+                label = generate(resolved.delegate, targetObj, targetSchemaClass, referenceSchema, database);
             }
             if ((label == null || label.isBlank()) && targetObj != null) {
-                label = generateFallbackLabel(container, targetObj);
+                label = generateFallbackLabel(resolved.delegate, targetObj);
             }
             if (summaryCache != null) {
-                summaryCache.put(targetObjectId, label);
+                summaryCache.put(resolved.objectId, label);
             }
-            return new IDEntiteResult(label, targetObjectId, mID);
+            return new IDEntiteResult(label, resolved.objectId, mID);
         } catch (Exception e) {
             return new IDEntiteResult(null, null, null);
         }
@@ -322,7 +323,7 @@ public class SummaryGenerator {
     /**
      * Builds a human-readable label by reading common naming fields directly from the DB4O object. Returns {@code null} if no usable value is found.
      */
-    private static String generateFallbackLabel(ExtObjectContainer container, Object obj) {
+    private static String generateFallbackLabel(DODatabaseDelegate delegate, Object obj) {
         if (obj == null) {
             return null;
         }
@@ -330,7 +331,7 @@ public class SummaryGenerator {
         for (String[] group : FALLBACK_FIELD_GROUPS) {
             StringBuilder sb = new StringBuilder();
             for (String fieldName : group) {
-                Object val = DatabaseUtil.getStoredFieldValue(container, obj, fieldName);
+                Object val = DatabaseUtil.getStoredFieldValue(delegate, obj, fieldName);
                 if (val != null) {
                     String s = val.toString().trim();
                     if (!s.isEmpty()) {

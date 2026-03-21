@@ -60,7 +60,7 @@ public class ObjectExporter {
             return;
 
         try {
-            ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(ctx.request.container, objectId);
+            ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(ctx.delegate, objectId);
             if (activation == null)
                 return;
 
@@ -80,7 +80,7 @@ public class ObjectExporter {
             // If filtered, return without adding to exportedIds so the next
             // criteria-based config pass can still pick up this object.
             if (!isEmbedded && ctx.request.applyExportCriteriaFilters && ctx.exportConfig != null) {
-                if (!ExportCriteriaFilter.shouldExport(ctx.request.container, obj, className, false, true, ctx.exportConfig, ctx.statistics, ctx.request.referenceSchema)) {
+                if (!ExportCriteriaFilter.shouldExport(ctx.delegate, obj, className, false, true, ctx.exportConfig, ctx.statistics, ctx.request.referenceSchema)) {
                     return;
                 }
             }
@@ -99,9 +99,9 @@ public class ObjectExporter {
                 if (!handled) {
                     try {
                         if (obj instanceof GenericObject && schemaClass != null) {
-                            int fieldsToExport = GenericObjectExporter.countFieldsToExport(ctx.request.container, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.request.referenceSchema);
+                            int fieldsToExport = GenericObjectExporter.countFieldsToExport(ctx.delegate, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.request.referenceSchema);
                             if (fieldsToExport > 0) {
-                                GenericObjectExporter.exportIfGenericObject(ctx.request.container, obj, schemaClass, objectId, fieldExporter, 0);
+                                GenericObjectExporter.exportIfGenericObject(ctx.delegate, obj, schemaClass, objectId, fieldExporter, 0);
                             }
                         }
                     } finally {

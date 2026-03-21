@@ -1,9 +1,11 @@
 package migration4o.migration.recipes;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
+
+import migration4o.database.DODatabaseDelegate;
+import migration4o.util.DatabaseUtil;
 
 /**
  * Handles IDEntite-specific operations.
@@ -19,7 +21,7 @@ public class IDEntityHandler {
      * @param idEntiteObject The IDEntite object
      * @return The mID value, or null if not found or not accessible
      */
-    public static Long extractMID(ExtObjectContainer container, Object idEntiteObject) {
+    public static Long extractMID(DODatabaseDelegate delegate, Object idEntiteObject) {
         if (idEntiteObject == null) {
             return null;
         }
@@ -35,11 +37,11 @@ public class IDEntityHandler {
         // CRITICAL: Use max depth to handle deep inheritance hierarchies (e.g.,
         // IDEntite -> subclass -> subclass)
         try {
-            container.activate(idEntiteObject, Integer.MAX_VALUE);
+            delegate.activate(idEntiteObject, Integer.MAX_VALUE);
         } catch (StackOverflowError e) {
             // Stack overflow - try shallow activation as fallback
             try {
-                container.activate(idEntiteObject, 10);
+                delegate.activate(idEntiteObject, 10);
             } catch (Exception e2) {
                 // Shallow activation also failed - try to proceed anyway
             }
@@ -47,13 +49,16 @@ public class IDEntityHandler {
             // Activation failed, try to proceed anyway
         }
 
-        StoredClass storedClass = container.ext().storedClass(genericObj);
+        StoredClass storedClass = delegate.storedClass(genericObj);
         if (storedClass == null) {
             return null;
         }
 
-        // Find the mID field
-        StoredField[] fields = storedClass.getStoredFields();
+        // Find the mID field — must walk up the inheritance hierarchy because
+        // DB4O's getStoredFields() only returns fields declared at that class level.
+        // The mID field is typically declared on a base class (e.g., EntiteContientID),
+        // not on concrete subclasses like IDCategRisque or IDUsagePrincipal.
+        StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
         for (StoredField field : fields) {
             if ("mID".equals(field.getName())) {
                 try {
@@ -79,8 +84,8 @@ public class IDEntityHandler {
      * @param idEntiteObject The IDEntite object
      * @return true if mID is -1, false otherwise
      */
-    public static boolean shouldSkipMinusOne(ExtObjectContainer container, Object idEntiteObject) {
-        Long mID = extractMID(container, idEntiteObject);
+    public static boolean shouldSkipMinusOne(DODatabaseDelegate delegate, Object idEntiteObject) {
+        Long mID = extractMID(delegate, idEntiteObject);
         return mID != null && mID == -1;
     }
 

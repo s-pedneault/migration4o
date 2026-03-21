@@ -1,9 +1,8 @@
 package migration4o.ui.panels.database_panels.cost_panel;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaModule;
@@ -30,8 +29,6 @@ import java.util.List;
 public class CostPanel extends JPanel {
 
     private final DODatabase database;
-    private final ExtObjectContainer container; // needed for criteria
-                                                // evaluation
 
     private JComboBox<String> priceListCombo;
     private JTable costTable;
@@ -45,9 +42,8 @@ public class CostPanel extends JPanel {
     // Construction
     // -------------------------------------------------------------------------
 
-    public CostPanel(DODatabase database, ExtObjectContainer container) {
+    public CostPanel(DODatabase database) {
         this.database = database;
-        this.container = container;
         initializeUI();
         refresh();
     }
@@ -253,10 +249,10 @@ public class CostPanel extends JPanel {
             return 0;
         }
 
-        // When the config has criteria and we have a database container,
+        // When the config has criteria and we have a database delegate,
         // count only the objects that match all criteria
-        if (config.hasCriteria() && container != null && !container.ext().isClosed()) {
-            return config.countMatchingObjects(container, dbClass.objects.objectIds);
+        if (config.hasCriteria() && dbClass.delegate != null && !dbClass.delegate.isClosed()) {
+            return config.countMatchingObjects(dbClass.delegate, dbClass.objects.objectIds);
         }
 
         return dbClass.objects.objectIds.length;

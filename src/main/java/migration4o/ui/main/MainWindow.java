@@ -33,6 +33,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseContext;
+import migration4o.database.DODatabaseDelegate;
 import migration4o.database.DODatabaseService;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.schema.DOSchemaService;
@@ -637,7 +638,7 @@ public class MainWindow extends JFrame {
      */
     private void createCostTab(DatabaseSession session) {
         // Create cost panel
-        CostPanel costPanel = new CostPanel(session.database, session.context.container);
+        CostPanel costPanel = new CostPanel(session.database);
 
         // Store and add processing costs tab to Database section
         session.costTab = costPanel;
@@ -696,12 +697,15 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Gets the current in-memory database container from the context. This allows reusing the same in-memory instance across all operations.
-     * 
-     * @return The database container, or null if no database is open
+     * @deprecated No longer needed — delegates are accessed per class via {@code DODatabaseClass.delegate}.
      */
-    public com.db4o.ext.ExtObjectContainer getDatabaseContainer() {
-        return currentContext != null ? currentContext.container : null;
+    @Deprecated
+    public DODatabaseDelegate getDatabaseDelegate() {
+        if (currentContext == null || currentContext.database == null) {
+            return null;
+        }
+        java.util.List<DODatabaseDelegate> delegates = currentContext.database.getDelegates();
+        return delegates.isEmpty() ? null : delegates.get(0);
     }
 
     /**

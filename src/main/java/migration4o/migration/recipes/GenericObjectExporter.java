@@ -2,10 +2,10 @@ package migration4o.migration.recipes;
 
 import java.io.IOException;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.FieldExporter;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -30,23 +30,17 @@ public class GenericObjectExporter {
      * @param schema        The reference schema for skip condition checks
      * @return number of fields that will be exported
      */
-    public static int countFieldsToExport(
-            ExtObjectContainer container,
-            Object obj,
-            DOSchemaClass schemaClass,
-            long objectId,
-            FieldExporter fieldExporter,
-            DOSchema schema) {
+    public static int countFieldsToExport(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, long objectId, FieldExporter fieldExporter, DOSchema schema) {
 
         if (!(obj instanceof GenericObject)) {
             return 0;
         }
 
         GenericObject genericObj = (GenericObject) obj;
-        StoredClass storedClass = container.ext().storedClass(genericObj);
+        StoredClass storedClass = delegate.storedClass(genericObj);
 
         if (storedClass != null) {
-            return fieldExporter.countFieldsToExport(container, genericObj, schemaClass, schema);
+            return fieldExporter.countFieldsToExport(delegate, genericObj, schemaClass, schema);
         }
 
         return 0;
@@ -66,26 +60,19 @@ public class GenericObjectExporter {
      *         GenericObject
      * @throws IOException if export fails
      */
-    public static int exportIfGenericObject(
-            ExtObjectContainer container,
-            Object obj,
-            DOSchemaClass schemaClass,
-            long objectId,
-            FieldExporter fieldExporter,
-            int indentLevel) throws IOException {
+    public static int exportIfGenericObject(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, long objectId, FieldExporter fieldExporter, int indentLevel) throws IOException {
 
         if (!(obj instanceof GenericObject)) {
             return -1;
         }
 
         GenericObject genericObj = (GenericObject) obj;
-        StoredClass storedClass = container.ext().storedClass(genericObj);
+        StoredClass storedClass = delegate.storedClass(genericObj);
 
         if (storedClass != null) {
             String currentClassName = schemaClass.attributes.destinationName;
             String currentSourceClassName = schemaClass.attributes.source; // Full source class name
-            return fieldExporter.exportAllFields(container, genericObj, schemaClass, indentLevel + 1,
-                    currentClassName, currentSourceClassName, objectId);
+            return fieldExporter.exportAllFields(delegate, genericObj, schemaClass, indentLevel + 1, currentClassName, currentSourceClassName, objectId);
         }
 
         return 0;

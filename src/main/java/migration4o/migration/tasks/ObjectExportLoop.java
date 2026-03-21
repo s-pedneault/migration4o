@@ -86,6 +86,9 @@ public class ObjectExportLoop {
                 ctx.statistics.setCurrentClass(loopClass.attributes.source, actualCount);
                 ctx.statistics.setCurrentFormatName(handler != null ? handler.displayName() : "");
             }
+            // Set the active delegate so all export code routes through this
+            // class's database container (user DB or static DB).
+            ctx.delegate = dbClass.delegate;
             ObjectExporter objectExporter = new ObjectExporter(ctx, handler);
             int exportedCount = 0;
             int idIndex = 0;

@@ -6,10 +6,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
+
+import migration4o.database.DODatabaseDelegate;
 
 import migration4o.models.ui.layout.DetailLayout;
 import migration4o.util.ClassUtil;
@@ -184,11 +185,11 @@ public class ClassExportConfig {
      * Evaluates if an object matches all criteria.
      * Returns true if there are no criteria, or if all criteria match.
      * 
-     * @param container     The database container for accessing stored class info
+     * @param delegate      The database delegate for accessing stored class info
      * @param genericObject The GenericObject from db4o to check against criteria
      * @return true if all criteria match or no criteria exist
      */
-    public boolean matchesAllCriteria(ExtObjectContainer container, GenericObject genericObject) {
+    public boolean matchesAllCriteria(DODatabaseDelegate delegate, GenericObject genericObject) {
         if (criteria.isEmpty()) {
             // System.out.println("DEBUG no criteria applied to " + getClassName());
             return true; // No criteria means accept all
@@ -198,7 +199,7 @@ public class ClassExportConfig {
         // + criteria.size() + " criteria");
 
         // Get stored class info to access fields
-        StoredClass storedClass = container.ext().storedClass(genericObject);
+        StoredClass storedClass = delegate.storedClass(genericObject);
         if (storedClass == null) {
             // System.out.println("DEBUG matchesAllCriteria: No StoredClass found");
             return false;
@@ -251,11 +252,11 @@ public class ClassExportConfig {
     /**
      * Counts how many objects in the given array match all criteria.
      * 
-     * @param container Database container for accessing object data
+     * @param delegate Database delegate for accessing object data
      * @param objectIds Array of object IDs to check
      * @return Count of objects that match all criteria
      */
-    public int countMatchingObjects(ExtObjectContainer container, long[] objectIds) {
+    public int countMatchingObjects(DODatabaseDelegate delegate, long[] objectIds) {
         if (objectIds == null || objectIds.length == 0) {
             return 0;
         }
@@ -268,9 +269,9 @@ public class ClassExportConfig {
         int matchCount = 0;
         for (long objectId : objectIds) {
             try {
-                Object obj = container.ext().getByID(objectId);
+                Object obj = delegate.getByID(objectId);
                 if (obj instanceof GenericObject) {
-                    if (matchesAllCriteria(container, (GenericObject) obj)) {
+                    if (matchesAllCriteria(delegate, (GenericObject) obj)) {
                         matchCount++;
                     }
                 }

@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.ExportRequest;
 import migration4o.migration.NavNode;
 import migration4o.migration.ObjectExporter;
@@ -38,6 +39,9 @@ public class ExportCurrentState {
     public final ExportRequest request;
 
     // ── Set once before export starts ────────────────────────────────────────
+
+    /** Active delegate for the class currently being exported. Set by {@code ObjectExportLoop}. */
+    public DODatabaseDelegate delegate;
 
     /** Root output directory for this database's export. */
     public Path basePath;

@@ -17,6 +17,7 @@ import migration4o.migration.tasks.NavTreeBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ClassUtil;
 import migration4o.util.JsViewerHtmlGenerator;
+import migration4o.util.ResolvedReference;
 import migration4o.util.SchemaUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
@@ -31,7 +32,7 @@ import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
 public class HtmlFormatHandler extends FormatHandler {
 
     private String cachedNavJson = "[]";
-    private final Map<String, Long> idEntiteTargetCache = new HashMap<>();
+    private final Map<String, ResolvedReference> idEntiteTargetCache = new HashMap<>();
     private final Map<Long, String> idEntiteSummaryCache = new HashMap<>();
     /**
      * Captured in {@link #open} so {@link #close} has the class even after exportObject nulls ctx.schemaClass.
@@ -159,7 +160,7 @@ public class HtmlFormatHandler extends FormatHandler {
         // IDEntite: attempt to resolve to a human-readable label
         if (ctx.schemaClass.isIDEntite()) {
             Object obj = ctx.currentObject().obj;
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.delegate, obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-ref for embedded IDEntite objects
             // (embedContents=true path)
             if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {
@@ -186,7 +187,7 @@ public class HtmlFormatHandler extends FormatHandler {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummary(ctx.schemaClass)) {
-                String summary = SummaryGenerator.generate(ctx.request.container, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database);
+                String summary = SummaryGenerator.generate(ctx.delegate, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
                     if (ctx.isRootObject()) {
@@ -226,7 +227,7 @@ public class HtmlFormatHandler extends FormatHandler {
             if (fieldClass == null || !fieldClass.isIDEntite())
                 return false;
 
-            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.request.container, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
+            IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.delegate, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);
             // Collect back-reference whenever target is resolved (even if label
             // is absent)
             if (result.targetObjectId != null && currentSchemaClass != null && !currentSchemaClass.isIDEntite()) {

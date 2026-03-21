@@ -1,172 +1,107 @@
 package migration4o.util;
 
-import com.db4o.ext.ExtObjectContainer;
-import com.db4o.ext.StoredClass;
-import com.db4o.ext.StoredField;
-import com.db4o.reflect.generic.GenericObject;
-
 import migration4o.database.DODatabase;
-import migration4o.database.DODatabaseClass;
+import migration4o.database.DODatabaseDelegate;
+import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.models.schema.DOSchemaField;
 
 /**
  * Utility class for resolving object references, particularly IDEntite patterns.
+ * All multi-delegate lookups are delegated to {@link DODatabase}.
  */
 public class ReferenceUtil {
 
     /**
-     * Determines which object ID should be exported for an IDEntite reference. If embedContents is false, returns the IDEntite object ID itself. If embedContents is true, attempts to resolve to the target object. Returns null if resolution fails (caller must skip the export).
+     * Determines which object should be exported for an IDEntite reference. If embedContents is false, returns the IDEntite object itself (with its delegate). If embedContents is true, attempts to resolve to the target object across all delegates via {@link DODatabase}. Returns null if resolution fails (caller must skip the export).
      * 
-     * @param container Database container
+     * @param delegate Database delegate that owns the IDEntite wrapper object
      * @param idEntiteObj The IDEntite object
      * @param idClassName Class name of the IDEntite object
      * @param schemaField Schema field definition (may be null)
-     * @param databaseSchema The database (DODatabase) containing all classes
-     * @return The object ID to export, or null if embedContents resolution failed
+     * @param database The database (DODatabase) containing all classes across all delegates
+     * @return The resolved reference (objectId + owning delegate), or null if embedContents resolution failed
      */
-    public static Long resolveIDEntiteForExport(ExtObjectContainer container, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DODatabase database) {
-        long idEntiteId = container.ext().getID(idEntiteObj);
+    public static ResolvedReference resolveIDEntiteForExport(DODatabaseDelegate delegate, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DODatabase database) {
+        long idEntiteId = delegate.getID(idEntiteObj);
 
         // Check if we should embed the target object's contents
         boolean embedContents = schemaField != null && schemaField.attributes.embedContents;
 
         if (!embedContents) {
-            // Export the IDEntite object itself
-            return idEntiteId;
+            // Export the IDEntite object itself — it belongs to the current delegate
+            return new ResolvedReference(idEntiteId, delegate);
         }
 
-        // embedContents=true: try to resolve to the target object
-        String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
-        String expectedType = extractExpectedTypeFromFieldName(fieldName, idClassName);
+        // embedContents=true: try to resolve to the target object across all delegates.
+        // Walk the reference schema hierarchy for pointsTo (uses schema, not DB classes,
+        // so abstract classes like gest.gen.IDEntite don't break the chain).
+        String expectedType = database.resolveExpectedTypeFromSchema(idClassName);
+        String expectedTypeSource = (expectedType != null) ? "schema" : null;
+        if (expectedType == null) {
+            String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
+            expectedType = extractExpectedTypeFromFieldName(fieldName, idClassName);
+            expectedTypeSource = "heuristic";
+        }
 
-        // Resolve the reference to find the target object
-        Long targetObjectId = resolveIDEntiteReference(container, idEntiteObj, expectedType, database);
+        // Extract mID for diagnostics before attempting resolution
+        Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
 
-        if (targetObjectId == null) {
-            System.err.println("[WARN] IDEntite resolution failed for field '" + fieldName + "' (" + idClassName + ", objectId=" + idEntiteId + ") - skipping unresolvable reference");
+        // Resolve the reference to find the target object (searches all delegates)
+        ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, expectedType, database);
+
+        if (resolved == null) {
+            String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
+            System.err.println("[WARN] IDEntite resolution failed for field '" + fieldName + "' (" + idClassName + ", objectId=" + idEntiteId + ", mID=" + mID + ", expectedType=" + expectedType + " [" + expectedTypeSource + "]) - skipping unresolvable reference");
             return null;
         }
 
-        return targetObjectId;
+        return resolved;
     }
 
     /**
-     * Resolves an IDEntite reference to find the target object ID.
+     * Resolves an IDEntite reference to find the target object across all delegates.
+     * Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID}
+     * to search all delegates.
      * 
-     * @param container Database container
+     * @param delegate Database delegate that owns the IDEntite wrapper object
      * @param idEntiteObj The IDEntite object to resolve
      * @param expectedType Expected type name (simple or absolute class name) - can be null
-     * @param databaseSchema The database (DODatabase) containing all classes
-     * @return The object ID of the target object, or null if not found
+     * @param database The database (DODatabase) containing all classes across all delegates
+     * @return The resolved reference (objectId + owning delegate), or null if not found
      */
-    public static Long resolveIDEntiteReference(ExtObjectContainer container, Object idEntiteObj, String expectedType, DODatabase database) {
+    public static ResolvedReference resolveIDEntiteReference(DODatabaseDelegate delegate, Object idEntiteObj, String expectedType, DODatabase database) {
         try {
-            long idEntiteId = container.ext().getID(idEntiteObj);
-
-            // Activate the IDEntite object to read its mID
-            ObjectResolverUtil.activateObjectShallow(container, idEntiteObj, idEntiteId);
-            Long mID = extractMIDField(container, idEntiteObj);
+            // Activate the IDEntite object to read its mID (uses the wrapper's own delegate)
+            Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
 
             if (mID == null) {
                 return null;
             }
 
-            // Search for the target object with matching mID
-            return findObjectByMID(container, mID, expectedType, database);
+            // Search for the target object with matching mID across all delegates
+            return database.findObjectByMID(mID, expectedType);
         } catch (Exception e) {
             return null;
         }
     }
 
     /**
-     * Finds an object by its mID field value.
-     * 
-     * @param container Database container
-     * @param mID The mID value to search for
-     * @param expectedType Expected type name (simple or absolute class name) - can be null
-     * @param databaseSchema The database (DODatabase) containing all classes
-     * @return The object ID of the matching object, or null if not found
+     * @deprecated Use {@link DODatabase#findObjectByMID} directly.
      */
-    public static Long findObjectByMID(ExtObjectContainer container, Long mID, String expectedType, DODatabase database) {
-        if (mID == null || database == null) {
+    @Deprecated
+    public static ResolvedReference findObjectByMID(Long mID, String expectedType, DODatabase database) {
+        if (database == null) {
             return null;
         }
-
-        for (DODatabaseClass dbClass : database.getClasses()) {
-            // Only search entity classes via their schemaClass link
-            if (dbClass.schemaClass == null || !dbClass.schemaClass.isEntite()) {
-                continue;
-            }
-
-            String fullClassName = dbClass.attributes.source;
-
-            // Only search in classes that match the expected type (if
-            // specified)
-            if (expectedType != null && !fullClassName.equals(expectedType)) {
-                // Also try matching by simple name
-                String simpleClassName = ClassUtil.getSimpleName(fullClassName);
-                if (!simpleClassName.equals(expectedType)) {
-                    continue;
-                }
-            }
-
-            long[] objectIds = dbClass.objects.objectIds;
-            if (objectIds != null) {
-                for (long objectId : objectIds) {
-                    try {
-                        Object obj = container.ext().getByID(objectId);
-                        if (obj != null) {
-                            ObjectResolverUtil.activateObjectShallow(container, obj, objectId);
-                            Long objMID = extractMIDField(container, obj);
-
-                            if (mID.equals(objMID)) {
-                                return objectId;
-                            }
-                        }
-                    } catch (Exception e) {
-                        // Skip objects that can't be processed
-                    }
-                }
-            }
-        }
-
-        return null;
+        return database.findObjectByMID(mID, expectedType);
     }
 
     /**
-     * Extracts the mID field value from a GenericObject.
-     * 
-     * @param container Database container
-     * @param obj The object (must be a GenericObject)
-     * @return The mID value as Long, or null if not found
+     * @deprecated Use {@link IDEntityHandler#extractMID} instead.
      */
-    public static Long extractMIDField(ExtObjectContainer container, Object obj) {
-        if (!(obj instanceof GenericObject)) {
-            return null;
-        }
-
-        GenericObject genericObj = (GenericObject) obj;
-        StoredClass storedClass = container.ext().storedClass(genericObj);
-        if (storedClass == null) {
-            return null;
-        }
-
-        StoredField[] fields = storedClass.getStoredFields();
-        for (StoredField field : fields) {
-            if ("mID".equals(field.getName())) {
-                try {
-                    Object value = field.get(genericObj);
-                    if (value instanceof Long) {
-                        return (Long) value;
-                    } else if (value instanceof Integer) {
-                        return ((Integer) value).longValue();
-                    }
-                } catch (Exception e) {
-                    // Field access failed
-                }
-            }
-        }
-        return null;
+    @Deprecated
+    public static Long extractMIDField(DODatabaseDelegate delegate, Object obj) {
+        return IDEntityHandler.extractMID(delegate, obj);
     }
 
     /**

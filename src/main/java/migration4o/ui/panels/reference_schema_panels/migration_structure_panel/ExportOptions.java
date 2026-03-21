@@ -173,7 +173,6 @@ public class ExportOptions {
         request.databaseSchema = dbContext.databaseSchema;
         request.databasePath = dbContext.databaseFilePath;
         request.dbContext = dbContext;
-        request.container = dbContext.container;
         request.availableSkipUserOptions = SchemaUtil.collectSkipUserOptions(referenceSchema);
         request.maxObjectsPerClass = maxObjectsPerClass;
         request.exportNativeIds = exportNativeIds;

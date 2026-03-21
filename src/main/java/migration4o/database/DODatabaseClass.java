@@ -6,6 +6,7 @@ import migration4o.util.ClassUtil;
 public class DODatabaseClass {
 
     public DODatabase database;
+    public DODatabaseDelegate delegate;
     public DOSchemaClass schemaClass;
     public DODatabaseClassAttributes attributes = new DODatabaseClassAttributes();
     public DODatabaseField[] fields;

@@ -1,8 +1,7 @@
 package migration4o.api.database;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.api.database.meta.M4oDatabaseEncoding;
+import migration4o.database.DODatabaseDelegate;
 
 public interface M4oDatabase {
 
@@ -10,7 +9,7 @@ public interface M4oDatabase {
 
     public String getPath();
 
-    public ExtObjectContainer getContainer();
+    public DODatabaseDelegate getDelegate();
 
     public M4oDatabaseEncoding getEncoding();
 

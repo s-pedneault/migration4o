@@ -2,7 +2,6 @@ package migration4o.database;
 
 import java.util.Map;
 
-import com.db4o.ext.ExtObjectContainer;
 import com.db4o.ext.StoredClass;
 
 import migration4o.models.schema.DOSchema;
@@ -14,7 +13,6 @@ import migration4o.models.schema.DOSchema;
  */
 public class DODatabaseContext {
 
-    public ExtObjectContainer container;
     public DODatabaseEncoding encoding;
     public String databaseFilePath;
     public Map<String, StoredClass> storedClassMap;
@@ -30,23 +28,34 @@ public class DODatabaseContext {
     }
 
     public synchronized boolean isDatabaseOpen() {
-        return container != null && !container.ext().isClosed();
+        if (database == null) {
+            return false;
+        }
+        for (DODatabaseDelegate delegate : database.getDelegates()) {
+            if (!delegate.isClosed()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public synchronized void closeDatabase() {
-        if (container != null && !container.ext().isClosed()) {
-            try {
-                container.close();
-                if (monitor != null) {
-                    monitor.onServiceDatabaseClosed(databaseFilePath);
-                }
-            } catch (Exception e) {
-                if (monitor != null) {
-                    monitor.onServiceDatabaseCloseFailed(databaseFilePath, e.getMessage());
+        if (database != null) {
+            for (DODatabaseDelegate delegate : database.getDelegates()) {
+                try {
+                    if (!delegate.isClosed()) {
+                        delegate.close();
+                    }
+                } catch (Exception e) {
+                    if (monitor != null) {
+                        monitor.onServiceDatabaseCloseFailed(delegate.getFilePath(), e.getMessage());
+                    }
                 }
             }
+            if (monitor != null) {
+                monitor.onServiceDatabaseClosed(databaseFilePath);
+            }
         }
-        container = null;
         databaseFilePath = null;
         database = null;
         databaseSchema = null;

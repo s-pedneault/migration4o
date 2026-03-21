@@ -45,7 +45,7 @@ public class ExportPreSelection {
         }
         notify("Seed-based selection: finding matching objects and related closure…");
 
-        ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.container, operation.referenceSchema, operation.database, operation.seedQueries, operation.maxObjectsPerClass);
+        ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.referenceSchema, operation.database, operation.seedQueries, operation.maxObjectsPerClass);
         applyResult(advisor.computeSeedSelection(modules, operation.monitor));
 
         int affected = operation.preselectedObjectIds != null ? operation.preselectedObjectIds.size() : 0;
@@ -56,7 +56,7 @@ public class ExportPreSelection {
         System.out.println("[DEBUG-DossPrev] ExportPreSelection: CAP branch entered (no seeds) — maxObjectsPerClass=" + operation.maxObjectsPerClass);
         notify("Smart selection: analysing cross-class relationships…");
 
-        ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.container, operation.referenceSchema, operation.database, operation.maxObjectsPerClass);
+        ExportSelectionAdvisor advisor = new ExportSelectionAdvisor(operation.referenceSchema, operation.database, operation.maxObjectsPerClass);
         applyResult(advisor.computeSelection(modules, operation.monitor));
 
         int affected = operation.preselectedObjectIds != null ? operation.preselectedObjectIds.size() : 0;

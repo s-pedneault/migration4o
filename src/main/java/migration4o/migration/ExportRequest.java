@@ -6,8 +6,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import com.db4o.ext.ExtObjectContainer;
-
 import migration4o.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
@@ -34,7 +32,6 @@ public class ExportRequest {
     public DOSchema databaseSchema;
     public String databasePath;
     public migration4o.database.DODatabaseContext dbContext;
-    public ExtObjectContainer container;
 
     // ── Output configuration
     // ──────────────────────────────────────────────────

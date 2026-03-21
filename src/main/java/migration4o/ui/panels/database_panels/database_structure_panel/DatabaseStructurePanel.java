@@ -171,6 +171,14 @@ public class DatabaseStructurePanel extends JPanel {
         detailArea.setCaretPosition(0);
     }
 
+    private static boolean hasUnlinkedFields(DODatabaseClass dbClass) {
+        if (dbClass.fields == null) return false;
+        for (DODatabaseField field : dbClass.fields) {
+            if (field.schemaField == null) return true;
+        }
+        return false;
+    }
+
     private static String nvl(String value) {
         return value != null ? value : "(none)";
     }
@@ -220,7 +228,8 @@ public class DatabaseStructurePanel extends JPanel {
                 Object userObj = ((DefaultMutableTreeNode) value).getUserObject();
                 boolean linked = false;
                 if (userObj instanceof ClassNodeData) {
-                    linked = ((ClassNodeData) userObj).dbClass.schemaClass != null;
+                    DODatabaseClass dbClass = ((ClassNodeData) userObj).dbClass;
+                    linked = dbClass.schemaClass != null && !hasUnlinkedFields(dbClass);
                 } else if (userObj instanceof FieldNodeData) {
                     linked = ((FieldNodeData) userObj).field.schemaField != null;
                 }
