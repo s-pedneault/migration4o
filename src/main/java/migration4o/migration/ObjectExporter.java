@@ -15,17 +15,14 @@ import migration4o.migration.recipes.SchemaElementMapper;
 import migration4o.models.schema.DOSchemaClass;
 
 /**
- * Orchestrates recursive object traversal and export to XML. Now delegates to
- * specialized components for schema lookups, field exports, and reference
- * resolution.
+ * Orchestrates recursive object traversal and export to XML. Now delegates to specialized components for schema lookups, field exports, and reference resolution.
  */
 public class ObjectExporter {
     private final FieldExporter fieldExporter;
     private final ExportCurrentState ctx;
     private final FormatHandler handler;
     /**
-     * Tracks objects currently on the export call stack to detect circular
-     * references.
+     * Tracks objects currently on the export call stack to detect circular references.
      */
     private final Set<Long> inProgressIds = new HashSet<>();
 
@@ -40,9 +37,7 @@ public class ObjectExporter {
     }
 
     /**
-     * New-path export: uses FormatHandler hooks for dedup, schema observation,
-     * and content writing. Called from ObjectExportLoop (new path) and from
-     * XmlFormatHandler.done() for the unreached-objects pass.
+     * New-path export: uses FormatHandler hooks for dedup, schema observation, and content writing. Called from ObjectExportLoop (new path) and from XmlFormatHandler.done() for the unreached-objects pass.
      */
     public void exportObject(long objectId, boolean isEmbedded) throws IOException {
         // For root objects: check without marking yet, so criteria-filtered
@@ -103,6 +98,9 @@ public class ObjectExporter {
                             if (fieldsToExport > 0) {
                                 GenericObjectExporter.exportIfGenericObject(ctx.delegate, obj, schemaClass, objectId, fieldExporter, 0);
                             }
+                        } else if (!(obj instanceof GenericObject) && schemaClass != null) {
+                            // Native Java object — export method-call fields via reflection
+                            fieldExporter.exportMethodCallFields(obj, schemaClass, 0, schemaClass.attributes.destinationName, schemaClass.attributes.source, objectId);
                         }
                     } finally {
                         handler.writer.closeStructure(elementName);

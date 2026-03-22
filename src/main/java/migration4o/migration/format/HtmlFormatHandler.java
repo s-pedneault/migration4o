@@ -155,7 +155,7 @@ public class HtmlFormatHandler extends FormatHandler {
     @Override
     public boolean onObject(ExportCurrentState ctx) throws Exception {
         if (ctx.schemaClass == null)
-            return false;
+            return true; // no schema match — skip object safely
 
         // IDEntite: attempt to resolve to a human-readable label
         if (ctx.schemaClass.isIDEntite()) {

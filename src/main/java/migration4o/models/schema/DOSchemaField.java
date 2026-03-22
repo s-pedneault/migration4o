@@ -40,6 +40,23 @@ public class DOSchemaField {
     }
 
     /**
+     * Returns true if this is a method-call field (source ends with "()"). Method-call fields invoke a no-arg method on the object via reflection.
+     */
+    public boolean isMethodCallField() {
+        return attributes.source != null && attributes.source.endsWith(DOSchemaConstants.METHOD_CALL_SUFFIX);
+    }
+
+    /**
+     * Gets the method name for a method-call field (removes the "()" suffix).
+     */
+    public String getMethodCallName() {
+        if (isMethodCallField()) {
+            return attributes.source.substring(0, attributes.source.length() - DOSchemaConstants.METHOD_CALL_SUFFIX.length());
+        }
+        return null;
+    }
+
+    /**
      * Creates a deep copy of this field (used when instantiating shared fields).
      */
     public DOSchemaField copy() {

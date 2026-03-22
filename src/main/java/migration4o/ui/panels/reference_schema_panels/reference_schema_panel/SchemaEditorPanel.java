@@ -16,8 +16,10 @@ import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTable;
@@ -52,6 +54,7 @@ import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.ui.common.PropertyPanel;
 import migration4o.ui.common.renderers.SchemaTypeRenderer;
+import migration4o.ui.panels.database_panels.dialogs.ClassObjectsDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.ClassFinderDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.FieldEditorDialog;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.dialogs.SummaryEditorDialog;
@@ -405,6 +408,21 @@ public class SchemaEditorPanel extends JPanel {
 
         // Add selection listener
         schemaTree.addTreeSelectionListener(e -> onTreeSelectionChanged());
+
+        // Add right-click context menu for database schema mode
+        schemaTree.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showTreeContextMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showTreeContextMenu(e);
+            }
+        });
 
         JScrollPane scrollPane = new JScrollPane(schemaTree);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -960,6 +978,36 @@ public class SchemaEditorPanel extends JPanel {
         SchemaTreeNode node = (SchemaTreeNode) path.getLastPathComponent();
         currentSelectedNode = node;
         displayProperties(node);
+    }
+
+    private void showTreeContextMenu(MouseEvent e) {
+        if (dbContext == null || dbContext.database == null)
+            return;
+
+        TreePath path = schemaTree.getPathForLocation(e.getX(), e.getY());
+        if (path == null)
+            return;
+
+        SchemaTreeNode node = (SchemaTreeNode) path.getLastPathComponent();
+        if (node.getNodeType() != NodeType.CLASS)
+            return;
+
+        schemaTree.setSelectionPath(path);
+
+        DOSchemaClass schemaClass = (DOSchemaClass) node.getSchemaElement();
+        migration4o.database.DODatabaseClass dbClass = dbContext.database.findClassByName(schemaClass.attributes.source);
+        if (dbClass == null)
+            return;
+
+        JPopupMenu popup = new JPopupMenu();
+        JMenuItem viewObjects = new JMenuItem("View Objects...");
+        viewObjects.addActionListener(ev -> {
+            Frame parentFrame = (Frame) SwingUtilities.getWindowAncestor(this);
+            ClassObjectsDialog dialog = new ClassObjectsDialog(parentFrame, dbClass, schema);
+            dialog.setVisible(true);
+        });
+        popup.add(viewObjects);
+        popup.show(schemaTree, e.getX(), e.getY());
     }
 
     private void clearFieldsTable() {

@@ -8,6 +8,7 @@ public class DOSchemaConstants {
     public static final String ANCESTOR_ENTITE = "gest.gen.Entite";
 
     public static final String VIRTUAL_FIELD_PREFIX = "@";
+    public static final String METHOD_CALL_SUFFIX = "()";
 
     public static final String METADATA_GENERATOR = "Migration4o";
     public static final String METADATA_PROVIDER = "Gestion Technologies";

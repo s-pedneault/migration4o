@@ -385,7 +385,7 @@ public class DatabaseExportPanel extends JPanel {
         applyUserSelectedFieldExclusionsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(applyUserSelectedFieldExclusionsCheckbox);
 
-        applySkipWhenConditionsCheckbox = new JCheckBox("Apply schema skipWhen conditions (NULL, ZERO, MINUS_ONE, EMPTY_*, FALSE, DEFAULT)");
+        applySkipWhenConditionsCheckbox = new JCheckBox("Apply schema skipWhen conditions (NULL, ZERO, MINUS_ONE, EMPTY_*, FALSE)");
         applySkipWhenConditionsCheckbox.setSelected(true);
         applySkipWhenConditionsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
         content.add(applySkipWhenConditionsCheckbox);

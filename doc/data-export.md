@@ -75,7 +75,6 @@ For each field returned by `DatabaseUtil.getAllFieldsIncludingAncestors()`:
     - `EMPTY_STRING` — string is null or empty after trim
     - `EMPTY_COLLECTION` — collection/array is null or empty
     - `FALSE` — boolean is false
-    - `DEFAULT` — uses `ValueUtil.isEmpty()` legacy logic
   - Any matching condition → **skip**
 
 ### 3d. Null Values

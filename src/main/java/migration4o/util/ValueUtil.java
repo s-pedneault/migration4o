@@ -8,35 +8,23 @@ import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
 
 /**
- * Utility class for value-related operations, particularly for determining if
- * values are considered "empty" for export purposes.
+ * Utility class for value-related operations, particularly for determining if values are considered "empty" for export purposes.
  */
 public class ValueUtil {
 
     /**
      * Determines if a value is considered empty for export purposes.
      * 
-     * A value is considered empty if: - It is null - It is a String that is
-     * empty or contains only whitespace - It is a Collection that is empty - It
-     * is an array that has zero length - It is an IDEntite field with value -1
-     * (indicating an empty/null reference)
+     * A value is considered empty if: - It is null - It is a String that is empty or contains only whitespace - It is a Collection that is empty - It is an array that has zero length - It is an IDEntite field with value -1 (indicating an empty/null reference)
      * 
      * @param value The value to check
      * @param field The schema field (can be null for generic checks)
-     * @param schema The schema to use for type checking (can be null if field
-     * is null or not checking IDEntite)
+     * @param schema The schema to use for type checking (can be null if field is null or not checking IDEntite)
      * @return true if the value is considered empty, false otherwise
      */
     public static boolean isEmpty(Object value, DOSchemaField field, DOSchema schema) {
         if (value == null) {
             return true;
-        }
-
-        // Check for -1 ID in IDEntite fields (empty reference)
-        if (field != null && schema != null && TypeUtil.isIDEntiteField(field, schema)) {
-            if (value instanceof Number) {
-                return ((Number) value).longValue() == -1;
-            }
         }
 
         // Check for empty strings (including whitespace-only strings)
@@ -64,14 +52,11 @@ public class ValueUtil {
     }
 
     /**
-     * Determines if a value is considered empty or is a boolean with value
-     * false. This is useful for fields where both empty values and false
-     * booleans should be skipped.
+     * Determines if a value is considered empty or is a boolean with value false. This is useful for fields where both empty values and false booleans should be skipped.
      * 
      * @param value The value to check
      * @param field The schema field (can be null for generic checks)
-     * @param schema The schema to use for type checking (can be null if field
-     * is null or not checking IDEntite)
+     * @param schema The schema to use for type checking (can be null if field is null or not checking IDEntite)
      * @return true if the value is empty or false, false otherwise
      */
     public static boolean isEmptyOrFalse(Object value, DOSchemaField field, DOSchema schema) {
@@ -90,14 +75,10 @@ public class ValueUtil {
     /**
      * Evaluates whether a value matches skip conditions specified in skipWhen.
      * 
-     * Supported keywords: - NULL: value is null - ZERO: numeric value equals 0
-     * - MINUS_ONE: numeric value equals -1 - EMPTY_STRING: string is null or
-     * empty (after trim) - EMPTY_COLLECTION: collection/array is null or empty
-     * - FALSE: boolean is false - DEFAULT: uses legacy isEmpty() logic
+     * Supported keywords: - NULL: value is null - ZERO: numeric value equals 0 - MINUS_ONE: numeric value equals -1 - EMPTY_STRING: string is null or empty (after trim) - EMPTY_COLLECTION: collection/array is null or empty - FALSE: boolean is false
      * 
      * @param value The value to check
-     * @param skipWhen Comma-separated skip conditions (e.g.,
-     * "NULL,ZERO,MINUS_ONE")
+     * @param skipWhen Comma-separated skip conditions (e.g., "NULL,ZERO,MINUS_ONE")
      * @param field The schema field (can be null)
      * @param schema The schema to use for type checking (can be null)
      * @return true if value matches any skip condition, false otherwise
@@ -157,12 +138,6 @@ public class ValueUtil {
                     return true;
                 }
                 break;
-
-            case "DEFAULT":
-                if (isEmpty(value, field, schema)) {
-                    return true;
-                }
-                break;
             }
         }
 
@@ -182,14 +157,12 @@ public class ValueUtil {
     }
 
     /**
-     * Determines if a field should be skipped based on its skipWhen settings
-     * and user-selected skip options.
+     * Determines if a field should be skipped based on its skipWhen settings and user-selected skip options.
      * 
      * @param value The field value
      * @param field The schema field
      * @param schema The schema for type checking
-     * @param userSelectedSkipOptions List of fields that user has chosen to
-     * skip (can be null)
+     * @param userSelectedSkipOptions List of fields that user has chosen to skip (can be null)
      * @return true if the field should be skipped, false otherwise
      */
     public static boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema, List<DOSchemaField> userSelectedSkipOptions) {
@@ -262,8 +235,7 @@ public class ValueUtil {
     }
 
     /**
-     * Formats any object value according to DOSchemaField.format by converting
-     * it to string first.
+     * Formats any object value according to DOSchemaField.format by converting it to string first.
      */
     public static String formatFieldValue(Object value, DOSchemaField field) {
         if (value == null) {

@@ -446,6 +446,7 @@ public class MainWindow extends JFrame {
 
                     DOSchema inferredSchema = resultContext.databaseSchema;
                     createDatabaseSession(selectedFile, resultContext, inferredSchema);
+                    createStaticDelegateSessions(resultContext);
 
                     // Trigger pending repeat export if requested
                     if (pendingRepeatExport) {
@@ -505,6 +506,63 @@ public class MainWindow extends JFrame {
         notifyTabsDatabaseOpened(session.context.databaseFilePath, inferredSchema);
         welcomePanel.addOpenDatabase(session.databasePath);
         tabbedPane.setSelectedComponent(session.tabContainer);
+    }
+
+    /**
+     * For each non-primary delegate (e.g. Static.dat), create a lightweight read-only database tab with schema and structure views.
+     */
+    private void createStaticDelegateSessions(DODatabaseContext context) {
+        if (context.database == null)
+            return;
+        List<DODatabaseDelegate> delegates = context.database.getDelegates();
+        if (delegates.size() <= 1)
+            return; // Only the primary delegate — nothing extra to show
+
+        for (int i = 1; i < delegates.size(); i++) {
+            DODatabaseDelegate delegate = delegates.get(i);
+            String delegatePath = delegate.getFilePath();
+            if (databaseSessions.containsKey(delegatePath))
+                continue;
+
+            // Build a per-delegate schema for the schema editor tab
+            DOSchema delegateSchema = new migration4o.database.DODatabaseReader().readDatabaseAsSchema(delegate);
+
+            // Build a per-delegate DODatabase view (single delegate) for the structure tab
+            DODatabase delegateDatabase = new DODatabase();
+            delegateDatabase.schema = context.database.schema;
+            delegateDatabase.addDelegate(delegate);
+
+            // Build a context for the schema editor (enables View Objects)
+            DODatabaseContext delegateContext = new DODatabaseContext(delegatePath, null);
+            delegateContext.database = delegateDatabase;
+            delegateContext.databaseSchema = delegateSchema;
+
+            DatabaseSession session = new DatabaseSession();
+            session.databasePath = delegatePath;
+            session.context = delegateContext;
+            session.database = delegateDatabase;
+            session.databaseSchema = delegateSchema;
+
+            session.tabPane = new JTabbedPane();
+            session.tabPane.setFont(new Font("Arial", Font.PLAIN, 12));
+            session.tabContainer = session.tabPane;
+            session.tabTitle = buildDatabaseTabTitle(delegatePath);
+
+            tabbedPane.addTab(session.tabTitle, session.tabContainer);
+            databaseTabPathByContainer.put(session.tabContainer, delegatePath);
+
+            // Database schema tab
+            File delegateFile = new File(delegatePath);
+            SchemaEditorPanel schemaEditor = new SchemaEditorPanel(delegateSchema, delegateFile.getName(), delegateContext);
+            session.databaseSchemaTab = schemaEditor;
+            addSchemaTabToDatabaseSection(session.tabPane, "Database schema", schemaEditor, delegateSchema, false);
+
+            // Database structure tab
+            migration4o.ui.panels.database_panels.database_structure_panel.DatabaseStructurePanel structurePanel = new migration4o.ui.panels.database_panels.database_structure_panel.DatabaseStructurePanel(delegateDatabase);
+            session.tabPane.addTab("Database structure", structurePanel);
+
+            databaseSessions.put(delegatePath, session);
+        }
     }
 
     private String buildDatabaseTabTitle(String databasePath) {

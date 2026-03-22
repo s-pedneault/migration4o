@@ -5,16 +5,21 @@ import java.awt.Color;
 import java.awt.Component;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.io.File;
 import java.text.NumberFormat;
 import java.util.Locale;
 
 import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSplitPane;
 import javax.swing.JTextArea;
 import javax.swing.JTree;
+import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.tree.DefaultMutableTreeNode;
 import javax.swing.tree.DefaultTreeCellRenderer;
 import javax.swing.tree.DefaultTreeModel;
@@ -23,10 +28,10 @@ import javax.swing.tree.TreeSelectionModel;
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseField;
+import migration4o.database.DODatabaseSchemaExporter;
 
 /**
- * Read-only tree view of the DODatabase structure discovered from the DB4O container.
- * Shows each database class and its fields, with schema link status indicators.
+ * Read-only tree view of the DODatabase structure discovered from the DB4O container. Shows each database class and its fields, with schema link status indicators.
  */
 public class DatabaseStructurePanel extends JPanel {
 
@@ -60,6 +65,12 @@ public class DatabaseStructurePanel extends JPanel {
         summaryPanel.add(new JLabel("Classes: " + classCount));
         summaryPanel.add(new JLabel("Linked to schema: " + linkedCount));
         summaryPanel.add(new JLabel("Unlinked: " + (classCount - linkedCount)));
+
+        JButton exportSchemaButton = new JButton("Export Schema");
+        exportSchemaButton.setToolTipText("Export database structure to a schema XML file");
+        exportSchemaButton.addActionListener(e -> exportSchema());
+        summaryPanel.add(exportSchemaButton);
+
         add(summaryPanel, BorderLayout.NORTH);
 
         // Tree + detail split
@@ -84,6 +95,30 @@ public class DatabaseStructurePanel extends JPanel {
         split.setDividerLocation(400);
         split.setResizeWeight(0.5);
         add(split, BorderLayout.CENTER);
+    }
+
+    private void exportSchema() {
+        JFileChooser chooser = new JFileChooser(new File("local"));
+        chooser.setDialogTitle("Export Database Schema");
+        chooser.setFileFilter(new FileNameExtensionFilter("XML files", "xml"));
+        chooser.setSelectedFile(new File("local/database-schema.xml"));
+
+        if (chooser.showSaveDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File file = chooser.getSelectedFile();
+        if (!file.getName().endsWith(".xml")) {
+            file = new File(file.getAbsolutePath() + ".xml");
+        }
+
+        try {
+            DODatabaseSchemaExporter exporter = new DODatabaseSchemaExporter();
+            int count = exporter.export(database, file.getAbsolutePath());
+            JOptionPane.showMessageDialog(this, "Exported " + count + " classes to:\n" + file.getAbsolutePath(), "Schema Exported", JOptionPane.INFORMATION_MESSAGE);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Export failed: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     private DefaultMutableTreeNode buildTree() {

@@ -148,6 +148,15 @@ public class FieldExporter {
                     // Skip fields that cause errors
                 }
             }
+
+            // Count method-call fields
+            if (parentClass != null && parentClass.fields != null) {
+                for (DOSchemaField schemaField : parentClass.fields) {
+                    if (schemaField != null && schemaField.attributes.isExported && schemaField.isMethodCallField()) {
+                        count++;
+                    }
+                }
+            }
         } catch (Exception e) {
             // Error accessing fields
         }
@@ -321,6 +330,10 @@ public class FieldExporter {
             // find related
             // objects
             fieldsWritten += exportVirtualFields(delegate, obj, parentClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
+
+            // METHOD-CALL FIELDS: Export fields whose source ends with "()"
+            // by reconstructing the native object and invoking the method
+            fieldsWritten += exportMethodCallFieldsFromGenericObject(delegate, obj, parentClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
 
         } catch (Exception e) {
             // Error accessing fields
@@ -598,26 +611,10 @@ public class FieldExporter {
                 return;
             }
 
-            // Additional check for IDEntite objects - check if they'll be
-            // filtered by
-            // resolveAndExport
+            // Now handled by shouldSkipField above (which extracts mID for
+            // IDEntite wrappers and checks all skipWhen conditions)
             DOSchemaClass fieldClass = operation.referenceSchema.findClassByName(className);
             if (fieldClass != null && fieldClass.isIDEntite()) {
-                // Check if this IDEntite will be skipped due to mID == -1
-                if (schemaField != null && schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.isEmpty()) {
-                    if (operation.applySkipWhenConditions && IDEntityHandler.shouldSkipMinusOne(delegate, fieldValue) && schemaField.attributes.skipWhen.contains("MINUS_ONE")) {
-                        if (ctxRef.statistics != null && refId > 0) {
-                            ctxRef.statistics.recordReachedOnly(fieldClass, refId, operation.referenceSchema);
-                        }
-                        // This field will produce empty content, skip it
-                        // entirely
-                        if (ctxRef.statistics != null) {
-                            ctxRef.statistics.recordRelationshipSkipped(parentObjectId, refId, parentSourceClassName, sourceFieldName, "reference skipped because mID=-1 and skipWhen includes MINUS_ONE");
-                        }
-                        return;
-                    }
-                }
-
                 // For non-embedded IDEntite references, export as simple ID
                 // value
                 // instead of nested structure
@@ -762,6 +759,144 @@ public class FieldExporter {
     }
 
     /**
+     * Exports method-call fields for a native Java object (not GenericObject). Method-call fields have source ending with "()" and invoke the named no-arg method via reflection on the object.
+     *
+     * @return number of method-call fields written
+     */
+    public int exportMethodCallFields(Object nativeObj, DOSchemaClass schemaClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
+        int fieldsWritten = 0;
+
+        if (schemaClass == null || schemaClass.fields == null) {
+            return 0;
+        }
+
+        for (DOSchemaField schemaField : schemaClass.fields) {
+            if (schemaField == null || !schemaField.attributes.isExported) {
+                continue;
+            }
+
+            if (!schemaField.isMethodCallField()) {
+                continue;
+            }
+
+            try {
+                String methodName = schemaField.getMethodCallName();
+                java.lang.reflect.Method method = nativeObj.getClass().getMethod(methodName);
+                Object result = method.invoke(nativeObj);
+
+                if (result == null) {
+                    if (shouldSkipField(null, schemaField, operation.referenceSchema)) {
+                        continue;
+                    }
+                    xmlWriter.elementWithoutContent(schemaField.attributes.destinationName, skippedBecauseAttributes(null, schemaField, operation.referenceSchema));
+                } else {
+                    String stringValue = result.toString();
+                    if (shouldSkipField(stringValue, schemaField, operation.referenceSchema)) {
+                        continue;
+                    }
+                    stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
+                    stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
+                    xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(result, schemaField, operation.referenceSchema), stringValue, true);
+                }
+                fieldsWritten++;
+            } catch (Exception e) {
+                System.err.println("[WARN] Method-call field '" + schemaField.attributes.source + "' failed on " + nativeObj.getClass().getName() + ": " + e.getMessage());
+            }
+        }
+
+        return fieldsWritten;
+    }
+
+    /**
+     * Exports method-call fields for a GenericObject by reconstructing the native Java object from stored field values and invoking the method.
+     *
+     * @return number of method-call fields written
+     */
+    private int exportMethodCallFieldsFromGenericObject(DODatabaseDelegate delegate, GenericObject obj, DOSchemaClass schemaClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
+        if (schemaClass == null || schemaClass.fields == null) {
+            return 0;
+        }
+
+        // Check if there are any method-call fields before doing reconstruction
+        boolean hasMethodCallFields = false;
+        for (DOSchemaField schemaField : schemaClass.fields) {
+            if (schemaField != null && schemaField.attributes.isExported && schemaField.isMethodCallField()) {
+                hasMethodCallFields = true;
+                break;
+            }
+        }
+        if (!hasMethodCallFields) {
+            return 0;
+        }
+
+        // Reconstruct the native object from stored fields
+        Object nativeObj = reconstructNativeObject(delegate, obj);
+        if (nativeObj == null) {
+            System.err.println("[WARN] Could not reconstruct native object for " + sourceClassName + " — method-call fields skipped.");
+            return 0;
+        }
+
+        return exportMethodCallFields(nativeObj, schemaClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
+    }
+
+    /**
+     * Reconstructs a native Java object from a GenericObject by reading stored field values and setting them via reflection. Requires the class to be on the classpath and field access via --add-opens flags.
+     */
+    private Object reconstructNativeObject(DODatabaseDelegate delegate, GenericObject obj) {
+        try {
+            StoredClass storedClass = delegate.storedClass(obj);
+            if (storedClass == null) {
+                return null;
+            }
+
+            String className = storedClass.getName();
+            Class<?> clazz = Class.forName(className);
+
+            // Use Unsafe.allocateInstance to create without calling any constructor
+            java.lang.reflect.Field unsafeField = sun.misc.Unsafe.class.getDeclaredField("theUnsafe");
+            unsafeField.setAccessible(true);
+            sun.misc.Unsafe unsafe = (sun.misc.Unsafe) unsafeField.get(null);
+            Object nativeObj = unsafe.allocateInstance(clazz);
+
+            // Copy stored field values via reflection
+            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            for (StoredField sf : fields) {
+                Object value = sf.get(obj);
+                if (value != null) {
+                    try {
+                        java.lang.reflect.Field jf = findDeclaredField(clazz, sf.getName());
+                        if (jf != null) {
+                            jf.setAccessible(true);
+                            jf.set(nativeObj, value);
+                        }
+                    } catch (Exception e) {
+                        // Skip fields that can't be set
+                    }
+                }
+            }
+
+            return nativeObj;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * Finds a declared field by name, searching up the class hierarchy.
+     */
+    private java.lang.reflect.Field findDeclaredField(Class<?> clazz, String fieldName) {
+        Class<?> current = clazz;
+        while (current != null) {
+            try {
+                return current.getDeclaredField(fieldName);
+            } catch (NoSuchFieldException e) {
+                current = current.getSuperclass();
+            }
+        }
+        return null;
+    }
+
+    /**
      * Exports a field value (handles both primitives and object references).
      */
     private void exportFieldValue(DODatabaseDelegate delegate, Object fieldValue, DOSchemaField schemaField, int indentLevel, String parentClassName, String parentSourceClassName, long parentObjectId) throws IOException {
@@ -815,13 +950,11 @@ public class FieldExporter {
                 }
             }
 
-            // Resolve and export the IDEntite reference
-            // Skip empty references (mID == -1) when MINUS_ONE is in skipWhen
-            if (schemaField != null && schemaField.attributes.skipWhen != null && !schemaField.attributes.skipWhen.isEmpty()) {
-                Long mID = IDEntityHandler.extractMID(delegate, fieldValue);
-                if (mID != null && mID == -1 && schemaField.attributes.skipWhen.contains("MINUS_ONE")) {
-                    return;
-                }
+            // Skip IDEntite references based on skipWhen conditions (MINUS_ONE, NULL, etc.)
+            // using the extracted mID rather than the GenericObject wrapper
+            Long mID = IDEntityHandler.extractMID(delegate, fieldValue);
+            if (mID != null && shouldSkipField(mID, schemaField, operation.referenceSchema)) {
+                return;
             }
 
             ResolvedReference resolved = ReferenceUtil.resolveIDEntiteForExport(delegate, fieldValue, className, schemaField, operation.database);
@@ -906,7 +1039,18 @@ public class FieldExporter {
     }
 
     private boolean shouldSkipField(Object value, DOSchemaField field, DOSchema schema) {
-        return ValueUtil.shouldSkipField(value, field, schema, operation.selectedSkipUserOptions, operation.applyUserSelectedFieldExclusions, operation.applySkipWhenConditions);
+        // For IDEntite wrapper objects, extract the numeric mID before checking
+        // skip conditions. The raw GenericObject wrapper fails Number-based checks
+        // like MINUS_ONE and DEFAULT (which tests mID == -1 for IDEntite fields).
+        Object checkValue = value;
+        if (value instanceof GenericObject && field != null && schema != null) {
+            DOSchemaClass fieldClass = schema.findClassByName(ClassUtil.getClassName(value));
+            if (fieldClass != null && fieldClass.isIDEntite()) {
+                Long mID = IDEntityHandler.extractMID(ctxRef.delegate, value);
+                checkValue = (mID != null) ? mID : null;
+            }
+        }
+        return ValueUtil.shouldSkipField(checkValue, field, schema, operation.selectedSkipUserOptions, operation.applyUserSelectedFieldExclusions, operation.applySkipWhenConditions);
     }
 
     private Map<String, String> skippedBecauseAttributes(Object value, DOSchemaField field, DOSchema schema) {

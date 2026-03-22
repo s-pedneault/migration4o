@@ -15,9 +15,7 @@ import migration4o.util.CollectionTypeUtil;
 /**
  * Writes individual field XSD element definitions inside a class complexType.
  * <p>
- * Handles the complex branching logic for collections, arrays, primitive types,
- * IDEntite references, and embedded complex fields. Uses {@code xs:choice} with
- * explicit descendant listing instead of {@code xs:any} for polymorphic fields.
+ * Handles the complex branching logic for collections, arrays, primitive types, IDEntite references, and embedded complex fields. Uses {@code xs:choice} with explicit descendant listing instead of {@code xs:any} for polymorphic fields.
  */
 class XSDFieldWriter {
 
@@ -152,10 +150,7 @@ class XSDFieldWriter {
     // ── Map fields ─────────────────────────────────────────────────────────
 
     /**
-     * Writes a map field (Hashtable, HashMap, etc.) as a wrapper element with
-     * entry children. Each entry has a key and a value, both as xs:anyType
-     * since the concrete types are not known at schema time. Matches export
-     * structure: {@code <field size=
+     * Writes a map field (Hashtable, HashMap, etc.) as a wrapper element with entry children. Each entry has a key and a value, both as xs:anyType since the concrete types are not known at schema time. Matches export structure: {@code <field size=
      * "N"><entry><key>...</key><value>...</value></entry>...</field>}
      */
     private void writeMapField(FileWriter writer, DOSchemaField field, String fieldName, String indent) throws IOException {
@@ -267,8 +262,7 @@ class XSDFieldWriter {
     // ── Wrapper element helpers ────────────────────────────────────────────
 
     /**
-     * Writes a wrapper element containing a specific named child element.
-     * Matches: {@code <fieldName><childName>...</childName></fieldName>}
+     * Writes a wrapper element containing a specific named child element. Matches: {@code <fieldName><childName>...</childName></fieldName>}
      */
     private void writeWrappedTypedElement(FileWriter writer, String fieldName, String childTypeName, String indent) throws IOException {
         writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
@@ -281,8 +275,7 @@ class XSDFieldWriter {
     }
 
     /**
-     * Writes a wrapper element with an xs:choice listing the base class and all
-     * its exported descendants. If no descendants, uses a single element ref.
+     * Writes a wrapper element with an xs:choice listing the base class and all its exported descendants. If no descendants, uses a single element ref.
      */
     private void writeWrappedChoiceElement(FileWriter writer, String fieldName, DOSchemaClass baseClass, String indent) throws IOException {
         writer.write(indent + "<xs:element name=\"" + fieldName + "\" minOccurs=\"0\" maxOccurs=\"1\">\n");
@@ -293,11 +286,9 @@ class XSDFieldWriter {
     }
 
     /**
-     * Writes an xs:choice (or xs:sequence for single element) listing the base
-     * class and all its exported descendants.
+     * Writes an xs:choice (or xs:sequence for single element) listing the base class and all its exported descendants.
      *
-     * @param unbounded true for collection contexts (maxOccurs="unbounded"),
-     * false for single fields
+     * @param unbounded true for collection contexts (maxOccurs="unbounded"), false for single fields
      */
     private void writePolymorphicChoice(FileWriter writer, DOSchemaClass baseClass, String indent, boolean unbounded) throws IOException {
         List<DOSchemaClass> descendants = context.getAllExportedDescendants(baseClass);
@@ -331,10 +322,7 @@ class XSDFieldWriter {
     }
 
     /**
-     * Writes a wrapper element for an embedded IDEntite field. The runtime can
-     * produce either the IDEntite class itself (when resolution fails) or the
-     * pointsTo target class (when resolution succeeds). Generates an xs:choice
-     * that accepts both, plus all their exported descendants.
+     * Writes a wrapper element for an embedded IDEntite field. The runtime can produce either the IDEntite class itself (when resolution fails) or the pointsTo target class (when resolution succeeds). Generates an xs:choice that accepts both, plus all their exported descendants.
      */
     private void writeWrappedIDEntiteChoice(FileWriter writer, String fieldName, DOSchemaClass idEntiteClass, DOSchemaClass pointsToClass, String indent) throws IOException {
         // Collect all valid element names
@@ -381,8 +369,7 @@ class XSDFieldWriter {
     }
 
     /**
-     * Writes a text-content element. Used for fields like java.lang.Class where
-     * the export writes a plain string.
+     * Writes a text-content element. Used for fields like java.lang.Class where the export writes a plain string.
      */
     private void writeWrappedTextElement(FileWriter writer, String fieldName, String indent) throws IOException {
         writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");

@@ -38,7 +38,6 @@ public class FieldEditorDialog extends JDialog {
     private final JCheckBox skipWhenEmptyString;
     private final JCheckBox skipWhenEmptyCollection;
     private final JCheckBox skipWhenFalse;
-    private final JCheckBox skipWhenDefault;
     private final JTextField skipUserOptionField;
     private final JCheckBox embedContentsCheckBox;
     private final JCheckBox collectionCheckBox;
@@ -167,7 +166,6 @@ public class FieldEditorDialog extends JDialog {
         skipWhenEmptyString = new JCheckBox("EMPTY_STRING");
         skipWhenEmptyCollection = new JCheckBox("EMPTY_COLLECTION");
         skipWhenFalse = new JCheckBox("FALSE");
-        skipWhenDefault = new JCheckBox("DEFAULT");
 
         // Parse existing skipWhen value and check appropriate boxes
         if (field.attributes.skipWhen != null && !field.attributes.skipWhen.trim().isEmpty()) {
@@ -193,9 +191,6 @@ public class FieldEditorDialog extends JDialog {
                 case "FALSE":
                     skipWhenFalse.setSelected(true);
                     break;
-                case "DEFAULT":
-                    skipWhenDefault.setSelected(true);
-                    break;
                 }
             }
         }
@@ -208,7 +203,6 @@ public class FieldEditorDialog extends JDialog {
         skipWhenPanel.add(skipWhenEmptyString);
         skipWhenPanel.add(skipWhenEmptyCollection);
         skipWhenPanel.add(skipWhenFalse);
-        skipWhenPanel.add(skipWhenDefault);
         skipWhenPanel.setBorder(BorderFactory.createCompoundBorder(BorderFactory.createLineBorder(Color.GRAY), BorderFactory.createEmptyBorder(5, 5, 5, 5)));
 
         skipUserOptionField = new JTextField(field.attributes.skipUserOption != null ? field.attributes.skipUserOption : "", 30);
@@ -636,7 +630,6 @@ public class FieldEditorDialog extends JDialog {
         skipWhenEmptyString.setSelected(false);
         skipWhenEmptyCollection.setSelected(false);
         skipWhenFalse.setSelected(false);
-        skipWhenDefault.setSelected(false);
 
         if (commonField.attributes.skipWhen != null && !commonField.attributes.skipWhen.trim().isEmpty()) {
             String[] keywords = commonField.attributes.skipWhen.split(",");
@@ -660,9 +653,6 @@ public class FieldEditorDialog extends JDialog {
                     break;
                 case "FALSE":
                     skipWhenFalse.setSelected(true);
-                    break;
-                case "DEFAULT":
-                    skipWhenDefault.setSelected(true);
                     break;
                 }
             }
@@ -749,8 +739,6 @@ public class FieldEditorDialog extends JDialog {
             keywords.add("EMPTY_COLLECTION");
         if (skipWhenFalse.isSelected())
             keywords.add("FALSE");
-        if (skipWhenDefault.isSelected())
-            keywords.add("DEFAULT");
         return keywords.isEmpty() ? null : String.join(",", keywords);
     }
 

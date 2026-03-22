@@ -15,6 +15,7 @@ import migration4o.util.DatabaseUtil;
 
 /**
  * Converter for transforming DB4O StoredField objects to DOSchemaField objects. Provides static methods for field conversion without requiring instantiation.
+ * 
  * @deprecated Part of the old DODatabaseReader pipeline. Use {@link migration4o.database.DODatabaseLoader} instead.
  */
 @Deprecated
@@ -70,7 +71,7 @@ public class DOFieldConverter {
         field.attributes.destinationName = destination;
         field.attributes.type = type;
         field.attributes.isExported = true; // Assume all database fields are exported
-        field.attributes.skipWhen = "DEFAULT"; // Default behavior
+        field.attributes.skipWhen = "NULL"; // Skip null values by default
         field.attributes.isCollection = isCollection;
         field.attributes.embedContents = false; // Default - don't embed
         field.attributes.childrenType = childrenType;

@@ -3,65 +3,49 @@ package migration4o.util;
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.recipes.IDEntityHandler;
+import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
 /**
- * Utility class for resolving object references, particularly IDEntite patterns.
- * All multi-delegate lookups are delegated to {@link DODatabase}.
+ * Utility class for resolving object references, particularly IDEntite patterns. All multi-delegate lookups are delegated to {@link DODatabase}.
  */
 public class ReferenceUtil {
 
     /**
-     * Determines which object should be exported for an IDEntite reference. If embedContents is false, returns the IDEntite object itself (with its delegate). If embedContents is true, attempts to resolve to the target object across all delegates via {@link DODatabase}. Returns null if resolution fails (caller must skip the export).
+     * Resolves an IDEntite reference for export. When the target entity class is exportable (migrate=true), resolves to the target entity so the full entity structure is exported. When the target is not exportable (e.g. DSI2003 code tables with migrate=false), returns the IDEntite object itself so its own fields and valueMaps are exported.
      * 
      * @param delegate Database delegate that owns the IDEntite wrapper object
      * @param idEntiteObj The IDEntite object
      * @param idClassName Class name of the IDEntite object
      * @param schemaField Schema field definition (may be null)
      * @param database The database (DODatabase) containing all classes across all delegates
-     * @return The resolved reference (objectId + owning delegate), or null if embedContents resolution failed
+     * @return The resolved reference (objectId + owning delegate)
      */
     public static ResolvedReference resolveIDEntiteForExport(DODatabaseDelegate delegate, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DODatabase database) {
         long idEntiteId = delegate.getID(idEntiteObj);
 
-        // Check if we should embed the target object's contents
-        boolean embedContents = schemaField != null && schemaField.attributes.embedContents;
-
-        if (!embedContents) {
-            // Export the IDEntite object itself — it belongs to the current delegate
-            return new ResolvedReference(idEntiteId, delegate);
+        // Look up the IDEntite schema class to check if the target entity is exportable
+        if (schemaField != null && schemaField.schema != null) {
+            DOSchemaClass idEntiteClass = schemaField.schema.findClassByName(idClassName);
+            if (idEntiteClass != null && idEntiteClass.attributes.pointsTo != null) {
+                DOSchemaClass targetClass = schemaField.schema.findClassByName(idEntiteClass.attributes.pointsTo);
+                if (targetClass != null && targetClass.attributes.migrate) {
+                    // Target entity is exportable — resolve to it
+                    ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, idEntiteClass.attributes.pointsTo, database);
+                    if (resolved != null) {
+                        return resolved;
+                    }
+                    // Resolution failed — fall back to IDEntite itself
+                }
+            }
         }
 
-        // embedContents=true: try to resolve to the target object across all delegates.
-        // Walk the reference schema hierarchy for pointsTo (uses schema, not DB classes,
-        // so abstract classes like gest.gen.IDEntite don't break the chain).
-        String expectedType = database.resolveExpectedTypeFromSchema(idClassName);
-        String expectedTypeSource = (expectedType != null) ? "schema" : null;
-        if (expectedType == null) {
-            String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
-            expectedType = extractExpectedTypeFromFieldName(fieldName, idClassName);
-            expectedTypeSource = "heuristic";
-        }
-
-        // Extract mID for diagnostics before attempting resolution
-        Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
-
-        // Resolve the reference to find the target object (searches all delegates)
-        ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, expectedType, database);
-
-        if (resolved == null) {
-            String fieldName = schemaField != null ? schemaField.attributes.destinationName : null;
-            System.err.println("[WARN] IDEntite resolution failed for field '" + fieldName + "' (" + idClassName + ", objectId=" + idEntiteId + ", mID=" + mID + ", expectedType=" + expectedType + " [" + expectedTypeSource + "]) - skipping unresolvable reference");
-            return null;
-        }
-
-        return resolved;
+        // Target entity not exportable or not resolvable — return IDEntite itself
+        return new ResolvedReference(idEntiteId, delegate);
     }
 
     /**
-     * Resolves an IDEntite reference to find the target object across all delegates.
-     * Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID}
-     * to search all delegates.
+     * Resolves an IDEntite reference to find the target object across all delegates. Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID} to search all delegates.
      * 
      * @param delegate Database delegate that owns the IDEntite wrapper object
      * @param idEntiteObj The IDEntite object to resolve

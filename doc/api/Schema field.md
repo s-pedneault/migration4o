@@ -33,7 +33,7 @@ A `DOSchemaField` is the export configuration for one field. It describes how a 
 
 | Action | Description |
 |---|---|
-| **shouldSkip** | Evaluate `skipWhen` conditions against a runtime value and return whether the field should be omitted from output. Supported conditions: `NULL`, `ZERO`, `MINUS_ONE`, `EMPTY_STRING`, `EMPTY_COLLECTION`, `FALSE`, `DEFAULT` (legacy isEmpty logic). |
+| **shouldSkip** | Evaluate `skipWhen` conditions against a runtime value and return whether the field should be omitted from output. Supported conditions: `NULL`, `ZERO`, `MINUS_ONE`, `EMPTY_STRING`, `EMPTY_COLLECTION`, `FALSE`. |
 | **shouldSkipByUserOption** | Return whether the field should be skipped because the user has selected it in the runtime skip-options list (`skipUserOption`). |
 | **matchesSkipCondition** | Test whether a given value matches a specific named condition keyword. Lower-level building block for `shouldSkip`. |
 

@@ -133,10 +133,9 @@ Controlled by `DOSchemaField.embedContents`:
 
 ## Value Emptiness Rules
 
-`ValueUtil.isEmpty()` defines what "empty" means:
+`ValueUtil.isEmpty()` defines what "empty" means (used for collection/array emptiness checks):
 
 - `null` → empty
 - `String` → empty if `trim()` yields `""`
 - `Collection` → empty if `.isEmpty()`
 - Array → empty if length is 0
-- IDEntite field with numeric value `-1` → empty (via `TypeUtil.isIDEntiteField()` check)

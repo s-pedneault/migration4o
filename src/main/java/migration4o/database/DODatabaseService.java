@@ -32,9 +32,7 @@ public class DODatabaseService {
     }
 
     /**
-     * Open a database and load it into memory with progress monitoring.
-     * Also opens the static database (local/Static.dat) as a second
-     * delegate if available.
+     * Open a database and load it into memory with progress monitoring. Also opens the static database (local/Static.dat) as a second delegate if available.
      * 
      * @param context Database open context (file path + monitor + runtime state)
      * @throws IOException If the database cannot be opened
