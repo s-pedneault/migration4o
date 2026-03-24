@@ -6,8 +6,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.CollectionTypeUtil;
 
 /**
  * Writes a single class complexType and global element definition into the XSD
@@ -73,6 +75,20 @@ class XSDClassWriter {
             writeFieldsSequence(writer, fields, "        ");
             writer.write("      </xs:extension>\n");
             writer.write("    </xs:complexContent>\n");
+        } else if (isCollectionOrMapClass(schemaClass)) {
+            // Collection/map root types: define <items> wrapper element
+            // for dynamic content. Subclasses inherit it via xs:extension
+            // and append their own fields after it.
+            writer.write("    <xs:sequence>\n");
+            writeItemsElement(writer, "      ");
+            if (!fields.isEmpty()) {
+                List<DOSchemaField> sortedFields = new ArrayList<>(fields.values());
+                sortedFields.sort((a, b) -> a.attributes.destinationName.compareTo(b.attributes.destinationName));
+                for (DOSchemaField field : sortedFields) {
+                    fieldWriter.writeFieldElement(writer, field, "      ");
+                }
+            }
+            writer.write("    </xs:sequence>\n");
         } else {
             writeFieldsSequence(writer, fields, "    ");
         }
@@ -98,5 +114,38 @@ class XSDClassWriter {
             }
         }
         writer.write(indent + "</xs:sequence>\n");
+    }
+
+    /**
+     * Writes the {@code <items>} element definition used inside collection/map
+     * root types. Contains a choice of collection items (primitives + exported
+     * classes) and map entry elements.
+     */
+    private void writeItemsElement(FileWriter writer, String indent) throws IOException {
+        writer.write(indent + "<xs:element name=\"items\" minOccurs=\"0\">\n");
+        writer.write(indent + "  <xs:complexType>\n");
+        writer.write(indent + "    <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
+        writer.write(indent + "      <xs:group ref=\"collectionItems\"/>\n");
+        writer.write(indent + "      <xs:element name=\"entry\">\n");
+        writer.write(indent + "        <xs:complexType>\n");
+        writer.write(indent + "          <xs:sequence>\n");
+        writer.write(indent + "            <xs:group ref=\"collectionItems\" minOccurs=\"0\" maxOccurs=\"2\"/>\n");
+        writer.write(indent + "          </xs:sequence>\n");
+        writer.write(indent + "        </xs:complexType>\n");
+        writer.write(indent + "      </xs:element>\n");
+        writer.write(indent + "    </xs:choice>\n");
+        writer.write(indent + "  </xs:complexType>\n");
+        writer.write(indent + "</xs:element>\n");
+    }
+
+    /**
+     * Returns true if the class is a collection or map type by ancestry,
+     * meaning its runtime content is dynamic child elements rather than
+     * schema-defined fields.
+     */
+    private boolean isCollectionOrMapClass(DOSchemaClass schemaClass) {
+        DOSchema[] schemas = new DOSchema[] { context.getReferenceSchema() };
+        String source = schemaClass.attributes.source;
+        return CollectionTypeUtil.isCollectionByAncestry(source, schemas) || CollectionTypeUtil.isMapByAncestry(source, schemas);
     }
 }

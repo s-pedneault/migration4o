@@ -189,6 +189,11 @@ public class SummaryGenerator {
                     ObjectResolverUtil.activateObjectShallow(resolved.delegate, targetObj, resolved.objectId);
                     String targetClassName = ClassUtil.getClassName(targetObj);
                     nextClass = schema.findClassByName(targetClassName);
+                    // Deactivate the IDEntite wrapper — no longer needed after
+                    // resolving to the target entity
+                    if (currentObj != targetObj) {
+                        delegate.deactivate(currentObj, 1);
+                    }
                     currentObj = targetObj;
                 }
 
@@ -296,6 +301,8 @@ public class SummaryGenerator {
             if ((label == null || label.isBlank()) && targetObj != null) {
                 label = generateFallbackLabel(resolved.delegate, targetObj);
             }
+            // Release the target object — we only needed it for summary generation
+            resolved.delegate.deactivate(targetObj, 1);
             if (summaryCache != null) {
                 summaryCache.put(resolved.objectId, label);
             }

@@ -92,14 +92,47 @@ public class StructuredWriter {
     }
 
     public StructuredWriter closeStructure(String name) throws IOException {
-        // Validate we are indeed closing the expected structure
         StructuredWriterElement element = element();
-        if (element == null || !(element instanceof StructuredWriterElementWithStructure) || !element.name.equals(name)) {
-            throw new IOException("Mismatched closing tag: expected </" + element.name + "> but got </" + name + ">");
+        if (element == null) {
+            System.err.println("[WARN] closeStructure(\"" + name + "\"): branch stack is empty — ignored");
+            return this;
         }
-        api.closeStructure((StructuredWriterElementWithStructure) element);
-        writer.write(element.suffix.toString());
-        popElement(element);
+
+        if (element instanceof StructuredWriterElementWithStructure && element.name.equals(name)) {
+            // Normal case: top matches the expected name
+            api.closeStructure((StructuredWriterElementWithStructure) element);
+            writer.write(element.suffix.toString());
+            popElement(element);
+        } else {
+            // Mismatch: search the stack for the target name and close all
+            // intervening elements to recover a consistent state.
+            System.err.println("[WARN] Mismatched closing tag: expected </" + element.name + "> but got </" + name + "> — recovering");
+            boolean found = false;
+            for (int i = branch.size() - 1; i >= 0; i--) {
+                if (branch.get(i).name.equals(name)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (found) {
+                // Pop and close elements until we reach (and include) the target
+                while (!branch.isEmpty()) {
+                    StructuredWriterElement top = branch.lastElement();
+                    if (top instanceof StructuredWriterElementWithStructure) {
+                        api.closeStructure((StructuredWriterElementWithStructure) top);
+                        writer.write(top.suffix.toString());
+                    }
+                    popElement(top);
+                    if (top.name.equals(name)) {
+                        break;
+                    }
+                }
+            } else {
+                // Target not found in stack — ignore the close to avoid further corruption
+                System.err.println("[WARN] closeStructure(\"" + name + "\"): not found in branch stack — ignored");
+            }
+        }
+
         if (branch.isEmpty()) {
             api.onDocumentComplete(this);
         }

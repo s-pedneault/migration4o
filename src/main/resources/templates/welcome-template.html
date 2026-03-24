@@ -10,6 +10,242 @@
         __SIDEBAR_CSS__
     </style>
     <style>
+        /* ─── Welcome page overrides ──────────────────────────────────────── */
+        .welcome-page .app-main {
+            background: var(--c-bg, #f4f6f9);
+        }
+
+        /* Scrollable content layer */
+        .welcome-canvas {
+            overflow-y: auto;
+            height: 100%;
+            padding: 36px 40px 48px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* ─── Page title ──────────────────────────────────────────────── */
+        .welcome-title {
+            font-size: clamp(20px, 3vw, 30px);
+            font-weight: 800;
+            letter-spacing: -.5px;
+            color: var(--c-text, #1b2532);
+            margin: 0;
+        }
+
+        /* ─── Info tiles ───────────────────────────────────────────────── */
+        .glass-card {
+            background: #1f4e95;
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(31, 78, 149, .30);
+            color: rgba(255, 255, 255, .92);
+            padding: 20px 24px;
+        }
+
+        .glass-card-title {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: rgba(255, 255, 255, .55);
+            margin: 0 0 14px;
+        }
+
+        /* ─── Stats card ──────────────────────────────────────────────── */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+        }
+
+        .stat-item {
+            padding: 4px 16px 4px 0;
+            border-right: 1px solid rgba(255, 255, 255, .12);
+        }
+
+        .stat-item:first-child {
+            padding-left: 0;
+        }
+
+        .stat-item:last-child {
+            border-right: none;
+            padding-right: 0;
+        }
+
+        .stat-item+.stat-item {
+            padding-left: 16px;
+        }
+
+        .stat-value {
+            font-size: clamp(22px, 3vw, 32px);
+            font-weight: 800;
+            letter-spacing: -.5px;
+            color: #fff;
+            line-height: 1.1;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: rgba(255, 255, 255, .55);
+            margin-top: 2px;
+        }
+
+        /* ─── Client card ─────────────────────────────────────────────── */
+        .client-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 28px;
+        }
+
+        .client-field {
+            min-width: 0;
+        }
+
+        .client-field-label {
+            font-size: 10.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .8px;
+            color: rgba(255, 255, 255, .45);
+            margin-bottom: 1px;
+        }
+
+        .client-field-value {
+            font-size: 13.5px;
+            color: rgba(255, 255, 255, .9);
+            overflow-wrap: break-word;
+        }
+
+        .client-field-value a {
+            color: rgba(160, 210, 255, .9);
+            text-decoration: none;
+        }
+
+        .client-field-value a:hover {
+            text-decoration: underline;
+        }
+
+        .client-name {
+            grid-column: 1 / -1;
+            font-size: clamp(26px, 4vw, 42px);
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 12px;
+        }
+
+        /* Hide client card entirely when no data is available */
+        .client-card-empty {
+            display: none;
+        }
+
+        /* ─── User-guide footer button ──────────────────────────────── */
+        .guide-foot-btn {
+            cursor: pointer;
+        }
+
+        .guide-foot-btn:hover {
+            background: var(--c-primary-glow, rgba(79, 110, 247, .12));
+        }
+
+        .guide-foot-btn:hover .sidebar-foot-icon svg {
+            stroke: var(--c-primary);
+        }
+
+        .guide-foot-btn:hover .sidebar-badge-text {
+            color: var(--c-primary);
+        }
+
+        /* ─── User-guide popup ──────────────────────────────────────── */
+        .guide-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .52);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity .2s ease;
+        }
+
+        .guide-overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .guide-popup {
+            background: var(--c-surface, #fff);
+            border-radius: var(--radius-lg, 12px);
+            width: min(820px, calc(100vw - 40px));
+            max-height: calc(100vh - 60px);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 8px 40px rgba(0, 0, 0, .20);
+            transform: scale(.96) translateY(8px);
+            transition: transform .22s var(--ease-out-expo, cubic-bezier(.16, 1, .3, 1));
+        }
+
+        .guide-overlay.open .guide-popup {
+            transform: scale(1) translateY(0);
+        }
+
+        .guide-popup-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--c-border);
+            flex-shrink: 0;
+        }
+
+        .guide-popup-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--c-text);
+            margin: 0;
+        }
+
+        .guide-popup-close {
+            width: 28px;
+            height: 28px;
+            border: none;
+            background: transparent;
+            color: var(--c-text-muted);
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            flex-shrink: 0;
+            transition: background .15s, color .15s;
+        }
+
+        .guide-popup-close:hover {
+            background: var(--c-bg);
+            color: var(--c-text);
+        }
+
+        .guide-popup-close svg {
+            width: 16px;
+            height: 16px;
+            stroke: currentColor;
+            fill: none;
+            stroke-width: 2.2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        .guide-popup-body {
+            overflow-y: auto;
+            padding: 20px 28px 28px;
+            flex: 1;
+        }
+
+        /* ─── Guide content (inside popup) ──────────────────────────── */
         .welcome-section h3 {
             font-size: 13px;
             font-weight: 700;
@@ -146,6 +382,13 @@
             </div>
             <div class="sidebar-nav" id="navSidebarScroll"></div>
             <div class="sidebar-foot">
+                <div class="sidebar-foot-row guide-foot-btn" id="userGuideBtn" role="button" tabindex="0" title="Guide de l'utilisateur">
+                    <span class="sidebar-foot-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+                        </svg></span>
+                    <span class="sidebar-badge-text">Guide de l'utilisateur</span>
+                </div>
                 <div class="sidebar-foot-row">
                     <span class="sidebar-foot-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
                             <circle cx="12" cy="12" r="10" />
@@ -161,151 +404,211 @@
         </nav>
 
         <div class="app-main">
-            <div class="welcome-header">
-                <h1>__DB_NAME__</h1>
-            </div>
+            <div class="welcome-canvas">
 
-            <div class="info-grid">
-                <div class="info-card">
-                    <div class="card-label">Modules</div>
-                    <div class="card-value">__MODULE_COUNT__</div>
-                    <div class="card-detail">modules exportés</div>
-                </div>
-                <div class="info-card">
-                    <div class="card-label">Classes</div>
-                    <div class="card-value">__CLASS_COUNT__</div>
-                    <div class="card-detail">types de données</div>
-                </div>
-                <div class="info-card">
-                    <div class="card-label">Date d'export</div>
-                    <div class="card-value" style="font-size:15px;letter-spacing:0">__EXPORT_DATE__</div>
-                    <div class="card-detail">dernière génération</div>
-                </div>
-                <div class="info-card">
-                    <div class="card-label">Objets exportés</div>
-                    <div class="card-value">__OBJECT_COUNT__</div>
-                    <div class="card-detail">enregistrements au total</div>
-                </div>
-            </div>
-
-            <div class="welcome-section">
-                <h2>Utilisation</h2>
-                <p>
-                    Utilisez le menu de gauche pour naviguer entre les modules et les classes exportées.
-                    Cliquez sur une classe pour ouvrir son tableau de données interactif.
-                    La barre de recherche du menu filtre les classes par nom.
-                </p>
-
-                <h3>Recherche avancée par critères</h3>
-                <p>
-                    Chaque tableau dispose d'un panneau de recherche structuré. Cliquez sur
-                    <strong>+ Critère</strong> pour ajouter une condition, puis choisissez&nbsp;:
-                </p>
-                <ul style="font-size:13.5px;line-height:1.9;color:var(--c-text-secondary);margin:8px 0 16px 18px;">
-                    <li><strong>Le champ</strong> — utilisez le filtre texte intégré pour restreindre la liste, ou laissez sur <em>Tous les champs</em> pour chercher partout.</li>
-                    <li><strong>L'opérateur</strong> — six options disponibles selon le type de champ&nbsp;:
-                        <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;">
-                            <span class="op-badge">Contient</span>
-                            <span class="op-badge">Ne contient pas</span>
-                            <span class="op-badge">Égale</span>
-                            <span class="op-badge">Différent de</span>
-                            <span class="op-badge op-no-val">Est vide</span>
-                            <span class="op-badge op-no-val">N'est pas vide</span>
+                <!-- Client information (glass card) -->
+                <div class="glass-card" id="clientCard">
+                    <div class="client-grid">
+                        <div class="client-name" id="clientName">__CLIENT_NAME__</div>
+                        <div class="client-field" id="cfRegion">
+                            <div class="client-field-label">Région administrative</div>
+                            <div class="client-field-value">__CLIENT_REGION__</div>
                         </div>
-                        <span style="font-size:12px;color:var(--c-text-muted);">Les deux derniers n'ont pas besoin de valeur.</span>
-                    </li>
-                    <li><strong>La valeur</strong> — saisir du texte, puis appuyer sur <kbd>Entrée</kbd> ou cliquer <strong>Appliquer</strong>.</li>
-                </ul>
-
-                <div class="guide-demo" aria-hidden="true">
-                    <div class="guide-demo-bar" style="justify-content:space-between;align-items:center;">
-                        <div style="display:flex;gap:6px;align-items:center;flex:1;">
-                            <span class="logic-chip first">ET</span>
-                            <input type="text" value="" placeholder="Champ..." readonly style="width:80px;">
-                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
-                                <option>Nom de famille</option>
-                            </select>
-                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
-                                <option>Contient</option>
-                            </select>
-                            <input type="text" value="Dup" readonly style="width:56px;">
+                        <div class="client-field" id="cfMrc">
+                            <div class="client-field-label">MRC</div>
+                            <div class="client-field-value">__CLIENT_MRC__</div>
                         </div>
-                        <div style="display:flex;gap:6px;align-items:center;margin-left:8px;">
-                            <span class="logic-chip">ET</span>
-                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
-                                <option>Tous les champs</option>
-                            </select>
-                            <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
-                                <option>N'est pas vide</option>
-                            </select>
+                        <div class="client-field" id="cfAddr">
+                            <div class="client-field-label">Adresse</div>
+                            <div class="client-field-value">__CLIENT_ADDR__</div>
+                        </div>
+                        <div class="client-field" id="cfPop">
+                            <div class="client-field-label">Population</div>
+                            <div class="client-field-value">__CLIENT_POP__</div>
+                        </div>
+                        <div class="client-field" id="cfEmail">
+                            <div class="client-field-label">Courriel</div>
+                            <div class="client-field-value"><a href="mailto:__CLIENT_EMAIL__">__CLIENT_EMAIL__</a></div>
+                        </div>
+                        <div class="client-field" id="cfWeb">
+                            <div class="client-field-label">Site web</div>
+                            <div class="client-field-value"><a href="http://__CLIENT_WEB__" target="_blank" rel="noopener">__CLIENT_WEB__</a></div>
                         </div>
                     </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Résumé</th>
-                                <th>Nom de famille</th>
-                                <th>Prénom</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr>
-                                <td>1</td>
-                                <td>Dupont Jean</td>
-                                <td class="match-cell">Dupont</td>
-                                <td>Jean</td>
-                            </tr>
-                            <tr class="row-dimmed">
-                                <td>2</td>
-                                <td>Martin Marie</td>
-                                <td>Martin</td>
-                                <td>Marie</td>
-                            </tr>
-                            <tr>
-                                <td>3</td>
-                                <td>Dupuis Pierre</td>
-                                <td class="match-cell">Dupuis</td>
-                                <td>Pierre</td>
-                            </tr>
-                            <tr class="row-dimmed">
-                                <td>4</td>
-                                <td>Leclerc Sophie</td>
-                                <td>Leclerc</td>
-                                <td>Sophie</td>
-                            </tr>
-                        </tbody>
-                    </table>
                 </div>
 
-                <h3>Logique ET / OU</h3>
-                <p>
-                    Dès qu'il y a deux critères ou plus, un badge grisé affiche la logique active
-                    (<strong>ET</strong> ou <strong>OU</strong>). Cliquer dessus bascule entre les deux modes
-                    pour l'ensemble des critères simultanément.
-                </p>
+                <!-- Export statistics (glass card) -->
+                <div class="glass-card">
+                    <p class="glass-card-title">Statistiques d'export pour __DB_NAME__</p>
+                    <div class="stats-grid">
+                        <div class="stat-item">
+                            <div class="stat-value">__MODULE_COUNT__</div>
+                            <div class="stat-label">modules</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">__CLASS_COUNT__</div>
+                            <div class="stat-label">types de données</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value">__OBJECT_COUNT__</div>
+                            <div class="stat-label">enregistrements</div>
+                        </div>
+                        <div class="stat-item">
+                            <div class="stat-value" style="font-size:clamp(14px,1.8vw,18px);letter-spacing:0;font-weight:700;">__EXPORT_DATE__</div>
+                            <div class="stat-label">dernière génération</div>
+                        </div>
+                    </div>
+                </div>
 
-                <h3>Colonnes visibles</h3>
-                <p>
-                    Le bouton <strong>Colonnes</strong> (en haut du tableau) ouvre un sélecteur permettant
-                    d'afficher ou de masquer les colonnes de votre choix. Lorsqu'un critère de
-                    recherche porte sur un champ masqué, ce champ est automatiquement rendu visible.
-                </p>
+            </div>
+        </div>
+    </div>
 
-                <h3>Pagination</h3>
-                <p>
-                    Le sélecteur <strong>Rangées</strong> ajuste le nombre d'enregistrements affichés par page.
-                    Les boutons de navigation permettent de parcourir les pages de résultats.
-                </p>
+    <!-- ─── Hide empty client fields ────────────────────────────────────── -->
+    <script>
+        (function () {
+            var fields = ['cfRegion', 'cfMrc', 'cfAddr', 'cfPop', 'cfEmail', 'cfWeb'];
+            fields.forEach(function (id) {
+                var el = document.getElementById(id);
+                if (!el) return;
+                var v = el.querySelector('.client-field-value');
+                if (!v || !v.textContent.trim()) el.style.display = 'none';
+            });
+            var nameEl = document.getElementById('clientName');
+            var card = document.getElementById('clientCard');
+            if (card && nameEl && !nameEl.textContent.trim()) card.style.display = 'none';
+        })();
+    </script>
 
-                <h3>Fiche détail &amp; bouton XML</h3>
-                <p>
-                    Cliquer sur une ligne ouvre la fiche complète de l'enregistrement dans un panneau
-                    latéral. En haut de la fiche, le bouton <span class="xml-badge">XML</span> ouvre
-                    le fichier XML source de la classe dans un nouvel onglet — utile pour inspecter
-                    la structure complète ou copier les données brutes. Les flèches ◂ ▸ permettent
-                    de naviguer d'une fiche à l'autre sans fermer le panneau.
-                </p>
+    <!-- ─── User guide popup ─────────────────────────────────────────────── -->
+    <div id="userGuideOverlay" class="guide-overlay" aria-hidden="true">
+        <div class="guide-popup" role="dialog" aria-modal="true" aria-labelledby="guidePopupTitle">
+            <div class="guide-popup-head">
+                <h2 class="guide-popup-title" id="guidePopupTitle">Guide de l'utilisateur</h2>
+                <button class="guide-popup-close" id="guideCloseBtn" type="button" aria-label="Fermer"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M18 6 6 18" />
+                        <path d="M6 6l12 12" />
+                    </svg></button>
+            </div>
+            <div class="guide-popup-body">
+                <div class="welcome-section">
+                    <p>
+                        Utilisez le menu de gauche pour naviguer entre les modules et les classes exportées.
+                        Cliquez sur une classe pour ouvrir son tableau de données interactif.
+                        La barre de recherche du menu filtre les classes par nom.
+                    </p>
+
+                    <h3>Recherche avancée par critères</h3>
+                    <p>
+                        Chaque tableau dispose d'un panneau de recherche structuré. Cliquez sur
+                        <strong>+ Critère</strong> pour ajouter une condition, puis choisissez&nbsp;:
+                    </p>
+                    <ul style="font-size:13.5px;line-height:1.9;color:var(--c-text-secondary);margin:8px 0 16px 18px;">
+                        <li><strong>Le champ</strong> — utilisez le filtre texte intégré pour restreindre la liste, ou laissez sur <em>Tous les champs</em> pour chercher partout.</li>
+                        <li><strong>L'opérateur</strong> — six options disponibles selon le type de champ&nbsp;:
+                            <div style="display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 4px;">
+                                <span class="op-badge">Contient</span>
+                                <span class="op-badge">Ne contient pas</span>
+                                <span class="op-badge">Égale</span>
+                                <span class="op-badge">Différent de</span>
+                                <span class="op-badge op-no-val">Est vide</span>
+                                <span class="op-badge op-no-val">N'est pas vide</span>
+                            </div>
+                            <span style="font-size:12px;color:var(--c-text-muted);">Les deux derniers n'ont pas besoin de valeur.</span>
+                        </li>
+                        <li><strong>La valeur</strong> — saisir du texte, puis appuyer sur <kbd>Entrée</kbd> ou cliquer <strong>Appliquer</strong>.</li>
+                    </ul>
+
+                    <div class="guide-demo" aria-hidden="true">
+                        <div class="guide-demo-bar" style="justify-content:space-between;align-items:center;">
+                            <div style="display:flex;gap:6px;align-items:center;flex:1;">
+                                <span class="logic-chip first">ET</span>
+                                <input type="text" value="" placeholder="Champ..." readonly style="width:80px;">
+                                <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                    <option>Nom de famille</option>
+                                </select>
+                                <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                    <option>Contient</option>
+                                </select>
+                                <input type="text" value="Dup" readonly style="width:56px;">
+                            </div>
+                            <div style="display:flex;gap:6px;align-items:center;margin-left:8px;">
+                                <span class="logic-chip">ET</span>
+                                <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                    <option>Tous les champs</option>
+                                </select>
+                                <select disabled style="font-size:12px;padding:3px 6px;border:1px solid var(--c-border);border-radius:4px;background:var(--c-bg,#fff);color:var(--c-text);">
+                                    <option>N'est pas vide</option>
+                                </select>
+                            </div>
+                        </div>
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Résumé</th>
+                                    <th>Nom de famille</th>
+                                    <th>Prénom</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>1</td>
+                                    <td>Dupont Jean</td>
+                                    <td class="match-cell">Dupont</td>
+                                    <td>Jean</td>
+                                </tr>
+                                <tr class="row-dimmed">
+                                    <td>2</td>
+                                    <td>Martin Marie</td>
+                                    <td>Martin</td>
+                                    <td>Marie</td>
+                                </tr>
+                                <tr>
+                                    <td>3</td>
+                                    <td>Dupuis Pierre</td>
+                                    <td class="match-cell">Dupuis</td>
+                                    <td>Pierre</td>
+                                </tr>
+                                <tr class="row-dimmed">
+                                    <td>4</td>
+                                    <td>Leclerc Sophie</td>
+                                    <td>Leclerc</td>
+                                    <td>Sophie</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3>Logique ET / OU</h3>
+                    <p>
+                        Dès qu'il y a deux critères ou plus, un badge grisé affiche la logique active
+                        (<strong>ET</strong> ou <strong>OU</strong>). Cliquer dessus bascule entre les deux modes
+                        pour l'ensemble des critères simultanément.
+                    </p>
+
+                    <h3>Colonnes visibles</h3>
+                    <p>
+                        Le bouton <strong>Colonnes</strong> (en haut du tableau) ouvre un sélecteur permettant
+                        d'afficher ou de masquer les colonnes de votre choix. Lorsqu'un critère de
+                        recherche porte sur un champ masqué, ce champ est automatiquement rendu visible.
+                    </p>
+
+                    <h3>Pagination</h3>
+                    <p>
+                        Le sélecteur <strong>Rangées</strong> ajuste le nombre d'enregistrements affichés par page.
+                        Les boutons de navigation permettent de parcourir les pages de résultats.
+                    </p>
+
+                    <h3>Fiche détail &amp; bouton XML</h3>
+                    <p>
+                        Cliquer sur une ligne ouvre la fiche complète de l'enregistrement dans un panneau
+                        latéral. En haut de la fiche, le bouton <span class="xml-badge">XML</span> ouvre
+                        le fichier XML source de la classe dans un nouvel onglet — utile pour inspecter
+                        la structure complète ou copier les données brutes. Les flèches ◂ ▸ permettent
+                        de naviguer d'une fiche à l'autre sans fermer le panneau.
+                    </p>
+                </div>
             </div>
         </div>
     </div>
@@ -315,6 +618,32 @@
     </script>
     <script>
         __SIDEBAR_NAV_JS__
+    </script>
+    <script>
+            (function () {
+                var overlay = document.getElementById('userGuideOverlay');
+                var guideBtn = document.getElementById('userGuideBtn');
+                var closeBtn = document.getElementById('guideCloseBtn');
+                function openGuide() {
+                    overlay.classList.add('open');
+                    overlay.setAttribute('aria-hidden', 'false');
+                }
+                function closeGuide() {
+                    overlay.classList.remove('open');
+                    overlay.setAttribute('aria-hidden', 'true');
+                }
+                if (guideBtn) {
+                    guideBtn.addEventListener('click', openGuide);
+                    guideBtn.addEventListener('keydown', function (e) {
+                        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openGuide(); }
+                    });
+                }
+                if (closeBtn) closeBtn.addEventListener('click', closeGuide);
+                if (overlay) overlay.addEventListener('click', function (e) { if (e.target === overlay) closeGuide(); });
+                document.addEventListener('keydown', function (e) {
+                    if (e.key === 'Escape' && overlay.classList.contains('open')) closeGuide();
+                });
+            })();
     </script>
 </body>
 

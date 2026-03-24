@@ -237,6 +237,13 @@ public class XmlFormatHandler extends FormatHandler {
             return all;
         Integer limit = ctx.request.maxObjectsPerClass;
         for (DODatabaseClass dbClass : ctx.request.database.getClasses()) {
+            // Skip classes marked isExported="false" in the reference schema
+            if (ctx.request.referenceSchema != null) {
+                DOSchemaClass schemaClass = ctx.request.referenceSchema.findClassByName(dbClass.attributes.source);
+                if (schemaClass != null && !schemaClass.attributes.migrate) {
+                    continue;
+                }
+            }
             long[] ids = (dbClass.objects.uniqueObjectIds != null && dbClass.objects.uniqueObjectIds.length > 0) ? dbClass.objects.uniqueObjectIds : dbClass.objects.objectIds;
             if (ids == null)
                 continue;

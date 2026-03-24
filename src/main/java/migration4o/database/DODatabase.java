@@ -1,8 +1,10 @@
 package migration4o.database;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import migration4o.migration.recipes.IDEntityHandler;
@@ -18,6 +20,15 @@ public class DODatabase {
     public DODatabaseClass[] classes;
 
     private final List<DODatabaseDelegate> delegates = new ArrayList<>();
+
+    /**
+     * Lazily-built mID index: maps (simpleName, mID) → ResolvedReference.
+     * Built per entity class on first lookup to avoid O(n) scans that
+     * activate thousands of objects.
+     */
+    private final Map<String, Map<Long, ResolvedReference>> mIdIndex = new HashMap<>();
+    /** Tracks which entity class names have already been indexed. */
+    private final Set<String> mIdIndexedClasses = new java.util.HashSet<>();
 
     public DODatabase() {
         this.classes = new DODatabaseClass[0];
@@ -94,9 +105,8 @@ public class DODatabase {
      * searching across all delegates and all entity classes that match
      * {@code expectedType}.
      * <p>
-     * Each {@link DODatabaseClass} routes lookups through its own delegate so
-     * that objects in the static database are found when they are absent from
-     * the user database.
+     * Uses a lazily-built per-class mID index to avoid O(n) scans and
+     * excessive object activation on every lookup.
      *
      * @param mID          the application-level mID to search for
      * @param expectedType fully-qualified or simple target class name (may be
@@ -122,26 +132,57 @@ public class DODatabase {
                 }
             }
 
-            DODatabaseDelegate classDelegate = dbClass.delegate;
-            long[] objectIds = dbClass.objects.objectIds;
-            if (objectIds != null && classDelegate != null) {
-                for (long objectId : objectIds) {
-                    try {
-                        Object obj = classDelegate.getByID(objectId);
-                        if (obj != null) {
-                            Long objMID = IDEntityHandler.extractMID(classDelegate, obj);
-                            if (mID.equals(objMID)) {
-                                return new ResolvedReference(objectId, classDelegate);
-                            }
-                        }
-                    } catch (Exception e) {
-                        // skip objects that can't be processed
-                    }
+            // Build the mID index for this class on first access
+            ensureMIdIndexBuilt(dbClass);
+
+            Map<Long, ResolvedReference> classIndex = mIdIndex.get(fullClassName);
+            if (classIndex != null) {
+                ResolvedReference ref = classIndex.get(mID);
+                if (ref != null) {
+                    return ref;
                 }
             }
         }
 
         return null;
+    }
+
+    /**
+     * Builds the mID → ResolvedReference index for a single entity class.
+     * Scans all object IDs once, extracting mID values with shallow
+     * activation (depth 2) instead of the previous per-lookup full scan.
+     */
+    private void ensureMIdIndexBuilt(DODatabaseClass dbClass) {
+        String fullClassName = dbClass.attributes.source;
+        if (mIdIndexedClasses.contains(fullClassName)) {
+            return;
+        }
+        mIdIndexedClasses.add(fullClassName);
+
+        DODatabaseDelegate classDelegate = dbClass.delegate;
+        long[] objectIds = dbClass.objects.objectIds;
+        if (objectIds == null || classDelegate == null) {
+            return;
+        }
+
+        Map<Long, ResolvedReference> classIndex = new HashMap<>();
+        for (long objectId : objectIds) {
+            try {
+                Object obj = classDelegate.getByID(objectId);
+                if (obj != null) {
+                    Long objMID = IDEntityHandler.extractMID(classDelegate, obj);
+                    if (objMID != null) {
+                        classIndex.put(objMID, new ResolvedReference(objectId, classDelegate));
+                    }
+                    // Release the object after extracting its mID — we only
+                    // need the index entry, not the activated object in memory.
+                    classDelegate.deactivate(obj, 1);
+                }
+            } catch (Exception e) {
+                // skip objects that can't be processed
+            }
+        }
+        mIdIndex.put(fullClassName, classIndex);
     }
 
     /**

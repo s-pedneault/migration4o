@@ -12,7 +12,9 @@ import migration4o.migration.recipes.ExportCriteriaFilter;
 import migration4o.migration.recipes.GenericObjectExporter;
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.migration.recipes.SchemaElementMapper;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.util.CollectionTypeUtil;
 
 /**
  * Orchestrates recursive object traversal and export to XML. Now delegates to specialized components for schema lookups, field exports, and reference resolution.
@@ -76,6 +78,8 @@ public class ObjectExporter {
             // criteria-based config pass can still pick up this object.
             if (!isEmbedded && ctx.request.applyExportCriteriaFilters && ctx.exportConfig != null) {
                 if (!ExportCriteriaFilter.shouldExport(ctx.delegate, obj, className, false, true, ctx.exportConfig, ctx.statistics, ctx.request.referenceSchema)) {
+                    // Deactivate filtered-out objects immediately
+                    ctx.delegate.deactivate(obj, 1);
                     return;
                 }
             }
@@ -93,6 +97,17 @@ public class ObjectExporter {
                 boolean handled = handler.onObject(ctx);
                 if (!handled) {
                     try {
+                        // Collection/map items come first (wrapped in <items>)
+                        // so the XSD extension chain works: the root collection
+                        // type defines <items> in its base sequence, and
+                        // subclass extensions append their own fields after.
+                        if (schemaClass != null) {
+                            DOSchema[] schemas = new DOSchema[] { ctx.request.referenceSchema, ctx.request.databaseSchema };
+                            if (CollectionTypeUtil.isCollectionByAncestry(schemaClass.attributes.source, schemas) || CollectionTypeUtil.isMapByAncestry(schemaClass.attributes.source, schemas)) {
+                                fieldExporter.exportStandaloneCollectionItems(ctx.delegate, obj, schemaClass, objectId);
+                            }
+                        }
+                        // Schema-defined fields
                         if (obj instanceof GenericObject && schemaClass != null) {
                             int fieldsToExport = GenericObjectExporter.countFieldsToExport(ctx.delegate, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.request.referenceSchema);
                             if (fieldsToExport > 0) {
@@ -125,6 +140,10 @@ public class ObjectExporter {
             } finally {
                 ctx.popObject();
                 ctx.schemaClass = null;
+                // Release the object's cached field values from DB4O's
+                // reference cache. Without this, every exported object
+                // stays fully activated in memory for the entire session.
+                ctx.delegate.deactivate(obj, 1);
             }
         } finally {
             if (isEmbedded)

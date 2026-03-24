@@ -117,7 +117,7 @@
         <reference class="gest.intervention.Intervention" field="mVectTabsStates" />
         <field source="com.db4o.config.TCollection" destinationName="TCollection" isExported="false" type="db4o.TCollection" title="TCollection" />
     </class>
-    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="false" title="DSI2003" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="true" title="DSI2003" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
@@ -2270,19 +2270,19 @@
         <reference class="gest.canutec.PageJaune" field="mIDPageOrange" />
         <field source="mNumGuide" destinationName="mNumGuide" isExported="true" type="int" title="Page guide" />
         <field source="mNom" definition="mNom" />
-        <field source="mVectNCateg" destinationName="listeCategoriePageOrange" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NCateg" title="Catégories" />
+        <field source="mVectNCateg" destinationName="listeCategoriePageOrange" isExported="true" embedContents="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NCateg" title="Catégories" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.canutec.PageOrange$NCateg" destinationName="CategoriePageOrange" isExported="true" title="Catégorie" parentClass="gest.gen.Entite">
         <reference class="gest.canutec.PageOrange" field="mVectNCateg" />
         <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
-        <field source="iVectNSousCateg" destinationName="listeSousCategories" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NSousCateg" title="Sous-catégories" />
+        <field source="iVectNSousCateg" destinationName="listeSousCategories" isExported="true" embedContents="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NSousCateg" title="Sous-catégories" />
     </class>
     <class source="gest.canutec.PageOrange$NSousCateg" destinationName="SousCategoriePageOrange" isExported="true" title="Sous-catégorie" parentClass="gest.gen.Entite">
         <reference class="gest.canutec.PageOrange$NCateg" field="iVectNSousCateg" />
         <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
-        <field source="iDetail" destinationName="detail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détail" />
-        <field source="iVectDetail" destinationName="listeDetail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détails" />
+        <field source="iDetail" destinationName="detail" isExported="true" type="java.util.Vector" embedContents="true" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détail" />
+        <field source="iVectDetail" destinationName="listeDetail" isExported="true" type="java.util.Vector" embedContents="true"  collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détails" />
     </class>
     <class source="gest.canutec.PageOrange$NDetail" destinationName="DetailPageOrange" isExported="true" title="Détail" parentClass="gest.gen.Entite">
         <reference class="gest.canutec.PageOrange$NSousCateg" field="iDetail" />
@@ -2324,7 +2324,7 @@
     <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" title="Traduction de donnée" parentClass="gest.gen.EntiteContientID">
         <field source="mDonnee" destinationName="donnee" isExported="true" type="string" title="Donnée" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
-        <field source="mIDTraductionProp" destinationName="mIDTraductionProp" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.langue.TraductionProp" title="Traduction de propriété" />
+        <field source="mIDTraductionProp" destinationName="mIDTraductionProp" isExported="true" embedContents="true" type="java.util.Vector" collection="true" childrenType="gest.langue.TraductionProp" title="Traduction de propriété" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -4418,7 +4418,7 @@
     <class source="gest.gen.ParamStatPresActivite" destinationName="ParamStatPresenceActivite" isExported="true" title="Paramètre de statistiques de présence d'activité" parentClass="gest.gen.EntiteParam">
         <field source="mIgnorerFeuilleTemps" destinationName="ignorerFeuilleTemps" isExported="true" skipWhen="NULL" type="boolean" title="Ignorer feuille temps" />
     </class>
-    <class source="gest.gen.ParamVersion" destinationName="ParamVersion" isExported="false" title="Paramètre de version" parentClass="gest.gen.EntiteParam">
+    <class source="gest.gen.ParamVersion" destinationName="ParamVersion" isExported="true" title="Paramètre de version" parentClass="gest.gen.EntiteParam">
         <field source="mVersionDB" destinationName="versionDB" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Version DB" />
         <field source="mNumBuildDB" destinationName="numeroBuildDB" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Numéro build DB" />
         <field source="mFirstSessionAfterUpdateBuild" destinationName="premiereSessionApresMiseAJour" isExported="true" skipWhen="NULL" type="boolean" title="Première session après mise À jour" />

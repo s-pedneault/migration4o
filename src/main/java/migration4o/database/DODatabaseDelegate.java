@@ -48,6 +48,25 @@ public class DODatabaseDelegate {
         container.activate(obj, depth);
     }
 
+    /**
+     * Releases the cached field values for {@code obj} up to {@code depth}
+     * levels deep, freeing memory in DB4O's reference cache.
+     * <p>
+     * Must be called after an object has been fully exported/read to prevent
+     * unbounded memory growth during large exports.
+     * <p>
+     * Silently catches exceptions because DB4O 7.4 throws
+     * {@code ReflectException} / {@code ClassCastException} when deactivating
+     * objects whose fields use translated aspects (e.g. Date, Hashtable).
+     */
+    public void deactivate(Object obj, int depth) {
+        try {
+            container.deactivate(obj, depth);
+        } catch (Exception e) {
+            // DB4O can't deactivate all object types — silently skip
+        }
+    }
+
     // ── Metadata ────────────────────────────────────────────────────────
 
     public StoredClass storedClass(Object obj) {

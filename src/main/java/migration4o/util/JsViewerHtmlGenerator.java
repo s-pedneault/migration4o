@@ -7,6 +7,7 @@ import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
@@ -25,6 +26,13 @@ public final class JsViewerHtmlGenerator {
     private static final String WELCOME_TEMPLATE_RESOURCE = "/templates/welcome-template.html";
     private static final String SIDEBAR_CSS_RESOURCE = "/templates/sidebar.css";
     private static final String SIDEBAR_NAV_JS_RESOURCE = "/templates/sidebar-nav.js";
+
+    /**
+     * Assets (classpath resources under {@code /assets/}) that are copied to the
+     * {@code _App/} sub-folder of every HTML export root.  Add entries here to
+     * include new static files automatically on every export.
+     */
+    private static final String[] HTML_EXPORT_ASSETS = { "/assets/splash.jpg" };
     private static volatile String cachedTemplate;
     private static volatile String cachedWelcomeTemplate;
     private static volatile String cachedSidebarCss;
@@ -129,14 +137,15 @@ public final class JsViewerHtmlGenerator {
     /**
      * Writes an index.html welcome page at the given database output root.
      *
-     * @param dbRoot The database root folder (e.g. output/54060/)
-     * @param dbName Human-readable database name shown in the page header
-     * @param navItemsJson Serialised NAV_ITEMS JSON array
-     * @param moduleCount Total number of exported modules (including sub-modules)
-     * @param classCount Number of exported class data files
-     * @param objectCount Total number of exported objects; 0 hides the bubble
+     * @param dbRoot         The database root folder (e.g. output/54060/)
+     * @param dbName         Human-readable database name shown in the page header
+     * @param navItemsJson   Serialised NAV_ITEMS JSON array
+     * @param moduleCount    Total number of exported modules (including sub-modules)
+     * @param classCount     Number of exported class data files
+     * @param objectCount    Total number of exported objects; 0 hides the bubble
+     * @param municipality   Optional client municipality info; may be {@code null}
      */
-    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount) throws IOException {
+    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount, MunicipalityInfo municipality) throws IOException {
         if (dbRoot == null) {
             throw new IllegalArgumentException("dbRoot must not be null");
         }
@@ -144,14 +153,31 @@ public final class JsViewerHtmlGenerator {
         String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
         String name = (dbName != null && !dbName.isBlank()) ? dbName : "Export";
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        String objects = objectCount > 0 ? String.format("%,d", objectCount).replace(',', '\u00a0') : "—";
+        String objects = objectCount > 0 ? String.format("%,d", objectCount).replace(',', '\u00a0') : "\u2014";
 
-        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects);
+        // Client municipality placeholders
+        String clientName = municipality != null && municipality.name != null ? escapeHtml(municipality.name) : "";
+        String clientMrc = municipality != null && municipality.mrc != null ? escapeHtml(municipality.mrc) : "";
+        String clientRegion = municipality != null && municipality.region != null ? escapeHtml(municipality.region) : "";
+        String clientAddr = municipality != null && municipality.address != null ? escapeHtml(municipality.address) : "";
+        String clientEmail = municipality != null && municipality.email != null ? escapeHtml(municipality.email) : "";
+        String clientWeb = municipality != null && municipality.website != null ? escapeHtml(municipality.website) : "";
+        String clientPop = municipality != null && municipality.population != null ? escapeHtml(municipality.population) : "";
+
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects).replace("__CLIENT_NAME__", clientName).replace("__CLIENT_MRC__", clientMrc).replace("__CLIENT_REGION__", clientRegion).replace("__CLIENT_ADDR__", clientAddr).replace("__CLIENT_EMAIL__", clientEmail).replace("__CLIENT_WEB__", clientWeb).replace("__CLIENT_POP__", clientPop);
 
         Files.createDirectories(dbRoot);
         Path welcomePath = dbRoot.resolve("index.html");
         Files.write(welcomePath, html.getBytes(StandardCharsets.UTF_8));
+        copyHtmlAssets(dbRoot);
         return welcomePath;
+    }
+
+    /**
+     * Backwards-compatible overload — no municipality info.
+     */
+    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount) throws IOException {
+        return writeWelcomePage(dbRoot, dbName, navItemsJson, moduleCount, classCount, objectCount, null);
     }
 
     /**
@@ -230,6 +256,24 @@ public final class JsViewerHtmlGenerator {
             out.write(footer);
         }
         return outputPath;
+    }
+
+    /**
+     * Copies static HTML export assets (e.g. {@code splash.jpg}) from classpath
+     * resources into the {@code _App/} sub-folder of the given HTML export root.
+     * Safe to call multiple times — existing files are overwritten.
+     */
+    public static void copyHtmlAssets(Path htmlBase) throws IOException {
+        Path appDir = htmlBase.resolve("_App");
+        Files.createDirectories(appDir);
+        for (String resource : HTML_EXPORT_ASSETS) {
+            String filename = resource.substring(resource.lastIndexOf('/') + 1);
+            try (InputStream in = JsViewerHtmlGenerator.class.getResourceAsStream(resource)) {
+                if (in != null) {
+                    Files.copy(in, appDir.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
     }
 
     /**

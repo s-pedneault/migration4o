@@ -17,6 +17,8 @@ import migration4o.migration.tasks.NavTreeBuilder;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.util.ClassUtil;
 import migration4o.util.JsViewerHtmlGenerator;
+import migration4o.util.MunicipalityCsvReader;
+import migration4o.util.MunicipalityInfo;
 import migration4o.util.ResolvedReference;
 import migration4o.util.SchemaUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -379,7 +381,8 @@ public class HtmlFormatHandler extends FormatHandler {
             java.nio.file.Path base = ctx.request.getBaseOutputPath(ctx.request.baseOutputPath).resolve(folderName());
             String dbName = ctx.request.getDatabaseFolderName();
             int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
-            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount);
+            MunicipalityInfo municipality = MunicipalityCsvReader.lookup(dbName);
+            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount, municipality);
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }

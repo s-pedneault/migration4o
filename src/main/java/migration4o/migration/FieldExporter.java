@@ -381,33 +381,36 @@ public class FieldExporter {
             // Check if we should export ID references instead of entities
             IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField, operation.referenceSchema);
 
-            for (Object item : items) {
-                if (item != null) {
-                    try {
-                        if (detection.shouldExportAsIDReferences) {
-                            // Export as ID reference
-                            IDReferenceExporter.exportAsIDReference(delegate, item, detection.idClass, xmlWriter, indentLevel + 1, ctxRef);
-                        } else {
-                            // Export normally
-                            exportFieldValue(delegate, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
-                        }
-                    } catch (Exception e) {
-                        // Item export failed — still mark as reached if
-                        // persistent
-                        if (ctxRef.statistics != null) {
-                            try {
-                                long itemId = delegate.getID(item);
-                                if (itemId > 0) {
-                                    ctxRef.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId, operation.referenceSchema);
+            try {
+                for (Object item : items) {
+                    if (item != null) {
+                        try {
+                            if (detection.shouldExportAsIDReferences) {
+                                // Export as ID reference
+                                IDReferenceExporter.exportAsIDReference(delegate, item, detection.idClass, xmlWriter, indentLevel + 1, ctxRef);
+                            } else {
+                                // Export normally
+                                exportFieldValue(delegate, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
+                            }
+                        } catch (Exception e) {
+                            // Item export failed — still mark as reached if
+                            // persistent
+                            if (ctxRef.statistics != null) {
+                                try {
+                                    long itemId = delegate.getID(item);
+                                    if (itemId > 0) {
+                                        ctxRef.statistics.recordReachedOnly(ClassUtil.getClassName(item), itemId, operation.referenceSchema);
+                                    }
+                                } catch (Exception ignored) {
+                                    // Best-effort reach recording
                                 }
-                            } catch (Exception ignored) {
-                                // Best-effort reach recording
                             }
                         }
                     }
                 }
+            } finally {
+                xmlWriter.closeStructure(fieldName);
             }
-            xmlWriter.closeStructure(fieldName);
             return true;
         }
     }
@@ -483,20 +486,25 @@ public class FieldExporter {
             xmlWriter.openStructure(fieldName, skippedBecauseAttributes(map, schemaField, operation.referenceSchema));
         }
 
-        for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
-            xmlWriter.openStructure("entry", null);
-            Object key = entry.getKey();
-            Object value = entry.getValue();
-            if (key != null) {
-                exportFieldValue(delegate, key, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
+        try {
+            for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+                xmlWriter.openStructure("entry", null);
+                try {
+                    Object key = entry.getKey();
+                    Object value = entry.getValue();
+                    if (key != null) {
+                        exportFieldValue(delegate, key, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
+                    }
+                    if (value != null) {
+                        exportFieldValue(delegate, value, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
+                    }
+                } finally {
+                    xmlWriter.closeStructure("entry");
+                }
             }
-            if (value != null) {
-                exportFieldValue(delegate, value, schemaField, indentLevel + 2, parentClassName, parentSourceClassName, parentObjectId);
-            }
-            xmlWriter.closeStructure("entry");
+        } finally {
+            xmlWriter.closeStructure(fieldName);
         }
-
-        xmlWriter.closeStructure(fieldName);
         return true;
     }
 
@@ -681,8 +689,11 @@ public class FieldExporter {
             boolean bypassedNoExportableFieldsSkip = !operation.skipObjectsWithoutExportableFields && referencedFieldsToExport != null && referencedFieldsToExport == 0;
             String extraReason = bypassedNoExportableFieldsSkip ? "no exportable fields" : null;
             xmlWriter.openStructure(fieldName, mergeSkippedBecauseAttributes(skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), extraReason));
-            exportFieldValue(delegate, fieldValue, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
-            xmlWriter.closeStructure(fieldName);
+            try {
+                exportFieldValue(delegate, fieldValue, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
+            } finally {
+                xmlWriter.closeStructure(fieldName);
+            }
         } else {
             // Primitive or non-persistent value - write inline
             String stringValue;
@@ -894,6 +905,115 @@ public class FieldExporter {
             }
         }
         return null;
+    }
+
+    /**
+     * Exports items from a standalone collection or map object being exported as a
+     * root-level element (e.g., in Extra.xml). Normal field export finds no
+     * meaningful schema fields for these types — their items are stored via DB4O
+     * translator fields, not as schema-defined fields.
+     *
+     * @return number of items exported
+     */
+    int exportStandaloneCollectionItems(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, long objectId) throws IOException {
+        // Activated maps (Hashtable, HashMap, etc.) become real Java Maps
+        if (obj instanceof java.util.Map) {
+            java.util.Map<?, ?> map = (java.util.Map<?, ?>) obj;
+            if (map.isEmpty())
+                return 0;
+            xmlWriter.openStructure("items", null);
+            try {
+                int count = 0;
+                for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
+                    xmlWriter.openStructure("entry", null);
+                    try {
+                        exportCollectionItem(delegate, entry.getKey(), objectId);
+                        exportCollectionItem(delegate, entry.getValue(), objectId);
+                    } finally {
+                        xmlWriter.closeStructure("entry");
+                    }
+                    count++;
+                }
+                return count;
+            } finally {
+                xmlWriter.closeStructure("items");
+            }
+        }
+
+        // Collections (Vector, ArrayList, HashSet, etc.) and GenericObjects wrapping them
+        Collection<?> items = RecipeCollectionItems.getItems(delegate, obj);
+        if (items != null && !items.isEmpty()) {
+            xmlWriter.openStructure("items", null);
+            try {
+                int count = 0;
+                for (Object item : items) {
+                    if (item != null) {
+                        exportCollectionItem(delegate, item, objectId);
+                        count++;
+                    }
+                }
+                return count;
+            } finally {
+                xmlWriter.closeStructure("items");
+            }
+        }
+
+        return 0;
+    }
+
+    /**
+     * Exports a single item from a standalone collection/map.
+     * Persistent DB4O objects are exported recursively; primitives are written as
+     * text elements.
+     */
+    private void exportCollectionItem(DODatabaseDelegate delegate, Object item, long parentObjectId) throws IOException {
+        if (item == null)
+            return;
+
+        long itemId = delegate.getID(item);
+        if (itemId > 0) {
+            // Persistent DB4O object — export recursively as embedded
+            ctxRef.objectExporter.exportObject(itemId, true);
+        } else {
+            // Primitive value — use XSD-friendly primitive type as element name
+            String elementName = primitiveElementName(item);
+            String value;
+            if (item instanceof Date) {
+                value = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss").format((Date) item);
+            } else if (item instanceof byte[]) {
+                value = Base64.getEncoder().encodeToString((byte[]) item);
+            } else {
+                value = item.toString();
+            }
+            xmlWriter.elementWithContent(elementName, value, true);
+        }
+    }
+
+    /**
+     * Maps a Java primitive/wrapper object to an XSD-friendly element name.
+     */
+    private static String primitiveElementName(Object value) {
+        if (value instanceof Integer)
+            return "int";
+        if (value instanceof Long)
+            return "long";
+        if (value instanceof Double)
+            return "double";
+        if (value instanceof Float)
+            return "float";
+        if (value instanceof Boolean)
+            return "boolean";
+        if (value instanceof Short)
+            return "short";
+        if (value instanceof Byte)
+            return "byte";
+        if (value instanceof String)
+            return "string";
+        if (value instanceof Date)
+            return "dateTime";
+        if (value instanceof byte[])
+            return "base64Binary";
+        return "string";
     }
 
     /**

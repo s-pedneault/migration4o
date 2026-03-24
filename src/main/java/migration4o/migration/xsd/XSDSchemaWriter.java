@@ -33,7 +33,9 @@ class XSDSchemaWriter {
             writeHeader(writer);
             writeRootElement(writer);
             writeMetadataType(writer);
+            writePrimitiveElements(writer);
             writeAllExportedClasses(writer);
+            writeCollectionItemsGroup(writer);
             writeFooter(writer);
         }
     }
@@ -94,6 +96,53 @@ class XSDSchemaWriter {
         writer.write("      <xs:element name=\"date\" type=\"xs:string\" minOccurs=\"0\"/>\n");
         writer.write("    </xs:sequence>\n");
         writer.write("  </xs:complexType>\n\n");
+    }
+
+    /**
+     * Writes global element declarations for XSD primitive types used as
+     * collection item elements (e.g. {@code <int>8</int>}).
+     */
+    private void writePrimitiveElements(FileWriter writer) throws IOException {
+        writer.write("  <!-- Primitive type elements for collection items -->\n");
+        writer.write("  <xs:element name=\"int\" type=\"xs:int\"/>\n");
+        writer.write("  <xs:element name=\"long\" type=\"xs:long\"/>\n");
+        writer.write("  <xs:element name=\"double\" type=\"xs:double\"/>\n");
+        writer.write("  <xs:element name=\"float\" type=\"xs:float\"/>\n");
+        writer.write("  <xs:element name=\"boolean\" type=\"xs:boolean\"/>\n");
+        writer.write("  <xs:element name=\"short\" type=\"xs:short\"/>\n");
+        writer.write("  <xs:element name=\"byte\" type=\"xs:byte\"/>\n");
+        writer.write("  <xs:element name=\"string\" type=\"xs:string\"/>\n");
+        writer.write("  <xs:element name=\"dateTime\" type=\"xs:dateTime\"/>\n");
+        writer.write("  <xs:element name=\"base64Binary\" type=\"xs:base64Binary\"/>\n\n");
+    }
+
+    /**
+     * Writes an {@code xs:group} named "collectionItems" that enumerates every
+     * valid element that can appear inside a collection or map type: the
+     * primitive-type elements plus every exported class element.
+     */
+    private void writeCollectionItemsGroup(FileWriter writer) throws IOException {
+        DOSchema referenceSchema = context.getReferenceSchema();
+        List<String> classNames = new ArrayList<>();
+        for (DOSchemaClass sc : referenceSchema.getClasses()) {
+            if (sc.attributes.migrate) {
+                classNames.add(sc.attributes.destinationName);
+            }
+        }
+        classNames.sort(String::compareTo);
+
+        writer.write("  <xs:group name=\"collectionItems\">\n");
+        writer.write("    <xs:choice>\n");
+        // Primitive types
+        for (String p : new String[] { "int", "long", "double", "float", "boolean", "short", "byte", "string", "dateTime", "base64Binary" }) {
+            writer.write("      <xs:element ref=\"" + p + "\"/>\n");
+        }
+        // All exported classes
+        for (String name : classNames) {
+            writer.write("      <xs:element ref=\"" + name + "\"/>\n");
+        }
+        writer.write("    </xs:choice>\n");
+        writer.write("  </xs:group>\n\n");
     }
 
     private void writeFooter(FileWriter writer) throws IOException {
