@@ -119,6 +119,47 @@
     </class>
     <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="false" title="DSI2003" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
+        <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
+        <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
+        <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
+        <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
+        <reference class="gest.dossPrev.Protection" field="mIDAvertisseur" />
+        <reference class="gest.dossPrev.Protection" field="mIDExtinction" />
+        <reference class="gest.dossPrev.Protection" field="mIDSystAlarme" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mAmpleurIncendie" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mCauseProbable" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mCombustible" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mDommage" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mLieuOrigine" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mPremMatEnflamme" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mPropagation" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mSourceChaleur" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
+        <reference class="gest.intervention.IntervCauseIncendie" field="mIDModeInflammation" />
+        <reference class="gest.intervention.IntervChronologie" field="mMoyenTrans" />
+        <reference class="gest.intervention.IntervChronologie" field="mRaisonDelai" />
+        <reference class="gest.intervention.IntervFeuExterieur" field="mIDAssurance" />
+        <reference class="gest.intervention.IntervPerte" field="mIDAssurance" />
+        <reference class="gest.intervention.IntervProtection" field="mIDAvertFonctionne" />
+        <reference class="gest.intervention.IntervProtection" field="mIDExtinctionFonctionne" />
+        <reference class="gest.intervention.IntervProtection" field="mIDSystAlarmeFonctionne" />
+        <reference class="gest.intervention.IntervSauvetage" field="mIDEvacuation" />
+        <reference class="gest.intervention.IntervSauvetage" field="mIDSauvetage" />
+        <reference class="gest.intervention.IntervVehFeu" field="mIDEvacuation" />
+        <reference class="gest.intervention.IntervVehFeu" field="mIDSauvetage" />
+        <reference class="gest.intervention.IntervVehicule" field="mIDAssurance" />
+        <reference class="gest.intervention.Intervention" field="mTypeEvenement" />
+        <reference class="gest.intervention.ParamIntervDSI2003" field="mMoyenTrans" />
+        <reference class="gest.intervention.ParamIntervention" field="mMoyenTrans" />
+        <reference class="gest.planInterv.ConfigSectionEtatInitialPourPlan" field="mIDCategRisque" />
+        <reference class="gest.rci.Combustible" field="mCombus" />
+        <reference class="gest.rci.RciLieu" field="mIDCauseProbable" />
+        <reference class="gest.rci.RciLieu" field="mIDEnergie" />
+        <reference class="gest.rci.RciLieu" field="mIDLieuOrigine" />
+        <reference class="gest.rci.RciLieu" field="mIDModeInflammation" />
+        <reference class="gest.rci.RciLieu" field="mIDPremMatEnflamme" />
+        <reference class="gest.rci.RciLieu" field="mIDPropagation" />
+        <reference class="gest.rci.SourceChaleur" field="mSource" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mCode" destinationName="code" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code" />
@@ -228,10 +269,10 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" title="IDDsi2003 E6">
+    <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" title="IDDsi2003 E6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" title="IDDsi2003 H3">
+    <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" title="IDDsi2003 H3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
     <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
@@ -2209,36 +2250,43 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" parentClass="gest.DSI2003.DSI2003" title="DSI2003 E3">
+    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" title="DSI2003 E3" parentClass="gest.DSI2003.DSI2003">
         <field source="mIDDSI2003E3" destinationName="idDSI2003E3" isExported="true" type="int" />
         <field source="mIsInactif" destinationName="isInactif" isExported="true" type="boolean" />
     </class>
-    <class source="gest.canutec.IDPageOrange" destinationName="IDPageOrange" isExported="true" parentClass="gest.gen.IDEntite" title="Page orange">
+    <class source="gest.canutec.IDPageOrange" destinationName="IDPageOrange" isExported="true" title="Page orange" parentClass="gest.gen.IDEntite" pointsTo="gest.canutec.PageOrange">
+        <reference class="gest.canutec.PageJaune" field="mIDPageOrange" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.canutec.PageJaune" destinationName="PageJaune" isExported="true" parentClass="gest.gen.EntiteContientID" title="Page jaune">
+    <class source="gest.canutec.PageJaune" destinationName="PageJaune" isExported="true" title="Page jaune" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.dossPrev.ProdDang" field="mIDPageJaune" />
         <field source="mID" definition="mID" />
         <field source="mNIP" destinationName="mNIP" isExported="true" type="int" title="NIP" />
         <field source="mCodeNom" destinationName="mCodeNom" isExported="true" type="string" title="Code de nom" />
         <field source="mNom" definition="mNom" />
         <field source="mIDPageOrange" destinationName="mIDPageOrange" isExported="true" type="gest.canutec.IDPageOrange" title="Page orange" />
     </class>
-    <class source="gest.canutec.PageOrange" destinationName="PageOrange" isExported="true" parentClass="gest.gen.EntiteContientID" title="Page orange">
+    <class source="gest.canutec.PageOrange" destinationName="PageOrange" isExported="true" title="Page orange" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.canutec.PageJaune" field="mIDPageOrange" />
         <field source="mNumGuide" destinationName="mNumGuide" isExported="true" type="int" title="Page guide" />
         <field source="mNom" definition="mNom" />
         <field source="mVectNCateg" destinationName="listeCategoriePageOrange" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NCateg" title="Catégories" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.canutec.PageOrange$NCateg" destinationName="CategoriePageOrange" isExported="true" parentClass="gest.gen.Entite" title="Catégorie">
+    <class source="gest.canutec.PageOrange$NCateg" destinationName="CategoriePageOrange" isExported="true" title="Catégorie" parentClass="gest.gen.Entite">
+        <reference class="gest.canutec.PageOrange" field="mVectNCateg" />
         <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
         <field source="iVectNSousCateg" destinationName="listeSousCategories" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NSousCateg" title="Sous-catégories" />
     </class>
-    <class source="gest.canutec.PageOrange$NSousCateg" destinationName="SousCategoriePageOrange" isExported="true" parentClass="gest.gen.Entite" title="Sous-catégorie">
+    <class source="gest.canutec.PageOrange$NSousCateg" destinationName="SousCategoriePageOrange" isExported="true" title="Sous-catégorie" parentClass="gest.gen.Entite">
+        <reference class="gest.canutec.PageOrange$NCateg" field="iVectNSousCateg" />
         <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
         <field source="iDetail" destinationName="detail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détail" />
         <field source="iVectDetail" destinationName="listeDetail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détails" />
     </class>
-    <class source="gest.canutec.PageOrange$NDetail" destinationName="DetailPageOrange" isExported="true" parentClass="gest.gen.Entite" title="Détail">
+    <class source="gest.canutec.PageOrange$NDetail" destinationName="DetailPageOrange" isExported="true" title="Détail" parentClass="gest.gen.Entite">
+        <reference class="gest.canutec.PageOrange$NSousCateg" field="iDetail" />
+        <reference class="gest.canutec.PageOrange$NSousCateg" field="iVectDetail" />
         <field source="iGroupe" destinationName="groupe" isExported="true" type="string" title="Groupe" />
         <field source="iTexte" destinationName="texte" isExported="true" type="string" title="Texte" />
         <field source="iBold" destinationName="gras" isExported="true" type="boolean" title="Gras" />
@@ -2248,8 +2296,7 @@
     </class>
     <class source="gest.coursMin.IDProgramme" destinationName="IDProgrammeMininimum" isExported="true" title="Programme minimum" parentClass="gest.gen.IDEntite" pointsTo="gest.coursMin.Programme">
     </class>
-
-    <class source="gest.coursMin.CoursMin" destinationName="CoursMinimum" isExported="true" parentClass="gest.gen.EntiteContientID" title="Cours minimum">
+    <class source="gest.coursMin.CoursMin" destinationName="CoursMinimum" isExported="true" title="Cours minimum" parentClass="gest.gen.EntiteContientID">
         <field source="mDesc" definition="mDescription" />
         <field source="mNbrHre" destinationName="nombreHeures" isExported="true" type="double" title="Nombre d'heures" />
         <field source="mNom" definition="mNom" />
@@ -2257,13 +2304,16 @@
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.Langue" destinationName="Langue" isExported="true" parentClass="gest.gen.EntiteContientID" title="Langue">
+    <class source="gest.langue.Langue" destinationName="Langue" isExported="true" title="Langue" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.dossPrev.PersonneRess" field="mIDLangue" />
+        <reference class="gest.employe.Employe" field="mIDLangue" />
+        <reference class="gest.utilGroupe.Utilisateur" field="mIDLangue" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mNom" definition="mNom" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.Traduction" destinationName="Traduction" isExported="true" parentClass="gest.gen.EntiteContientID" title="Traduction">
+    <class source="gest.langue.Traduction" destinationName="Traduction" isExported="true" title="Traduction" parentClass="gest.gen.EntiteContientID">
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mIDLangue" destinationName="idLangue" isExported="true" type="int" title="Langue" />
         <field source="mIDTraductionDonnee" destinationName="idTraductionDonnee" isExported="true" type="int" title="Traduction donnée" />
@@ -2271,14 +2321,15 @@
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" parentClass="gest.gen.EntiteContientID" title="Traduction de donnée">
+    <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" title="Traduction de donnée" parentClass="gest.gen.EntiteContientID">
         <field source="mDonnee" destinationName="donnee" isExported="true" type="string" title="Donnée" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mIDTraductionProp" destinationName="mIDTraductionProp" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.langue.TraductionProp" title="Traduction de propriété" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.TraductionProp" destinationName="TraductionProp" isExported="true" parentClass="gest.gen.EntiteContientID" title="Propriété traduite">
+    <class source="gest.langue.TraductionProp" destinationName="TraductionProp" isExported="true" title="Propriété traduite" parentClass="gest.gen.EntiteContientID">
+        <reference class="gest.langue.TraductionDonnee" field="mIDTraductionProp" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mNom" definition="mNom" />
         <field source="mID" definition="mID" />
@@ -3224,6 +3275,7 @@
         <reference class="gest.cours.CoursInterne" field="mVectIDProgramme" />
         <reference class="gest.grade.Grade" field="mVectIDProgramme" />
         <reference class="gest.horaire.Horaire" field="mIDProgramme" />
+        <reference class="gest.coursMin.CoursMin" field="mVectIDProgramme" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.cours.Programme" destinationName="Programme" isExported="true" title="Programme" parentClass="gest.gen.EntiteContientID">
@@ -3233,6 +3285,7 @@
         <reference class="gest.formation.Formation" field="mIDProgramme" />
         <reference class="gest.horaire.ModeleHoraire" field="mIDProgramme" />
         <reference class="gest.horaire.Horaire" field="mIDProgramme" />
+        <reference class="gest.coursMin.CoursMin" field="mVectIDProgramme" />
         <field source="mID" definition="mID" />
         <field source="mInactif" definition="mInactif" />
         <field source="mNom" definition="mNom" />
