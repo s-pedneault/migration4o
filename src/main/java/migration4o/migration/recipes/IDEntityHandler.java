@@ -5,7 +5,6 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.database.DODatabaseDelegate;
-import migration4o.util.DatabaseUtil;
 
 /**
  * Handles IDEntite-specific operations.
@@ -58,7 +57,7 @@ public class IDEntityHandler {
         // DB4O's getStoredFields() only returns fields declared at that class level.
         // The mID field is typically declared on a base class (e.g., EntiteContientID),
         // not on concrete subclasses like IDCategRisque or IDUsagePrincipal.
-        StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+        StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
         for (StoredField field : fields) {
             if ("mID".equals(field.getName())) {
                 try {

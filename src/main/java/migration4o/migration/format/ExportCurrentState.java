@@ -8,6 +8,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Vector;
 
 import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.ExportRequest;
@@ -137,6 +138,8 @@ public class ExportCurrentState {
      * call back into it for embedded references.
      */
     public ObjectExporter objectExporter;
+
+    public Vector<String> previousWarnings = new Vector<>();
 
     // ── Constructor ──────────────────────────────────────────────────────────
 

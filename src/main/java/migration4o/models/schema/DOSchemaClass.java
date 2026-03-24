@@ -4,6 +4,7 @@ package migration4o.models.schema;
 import java.util.ArrayList;
 
 import migration4o.util.ClassUtil;
+import migration4o.util.CollectionTypeUtil;
 import migration4o.util.TypeUtil;
 import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 
@@ -47,6 +48,34 @@ public class DOSchemaClass {
 
     public boolean isPrimitive() {
         return TypeUtil.isPrimitiveType(attributes.source);
+    }
+
+    public boolean isCollection() {
+        if (CollectionTypeUtil.isCollectionType(attributes.source)) {
+            return true;
+        }
+        for (String base : DOSchemaConstants.COLLECTION_BASE_CLASSES) {
+            if (isDescendantOf(base)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isMap() {
+        if (CollectionTypeUtil.isMapType(attributes.source)) {
+            return true;
+        }
+        for (String base : DOSchemaConstants.MAP_BASE_CLASSES) {
+            if (isDescendantOf(base)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public boolean isCollectionOrMap() {
+        return isCollection() || isMap();
     }
 
     public DOSchemaField findFieldBySourceName(String fieldName) {

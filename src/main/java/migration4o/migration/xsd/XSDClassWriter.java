@@ -6,10 +6,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
-import migration4o.util.CollectionTypeUtil;
 
 /**
  * Writes a single class complexType and global element definition into the XSD
@@ -144,8 +142,6 @@ class XSDClassWriter {
      * schema-defined fields.
      */
     private boolean isCollectionOrMapClass(DOSchemaClass schemaClass) {
-        DOSchema[] schemas = new DOSchema[] { context.getReferenceSchema() };
-        String source = schemaClass.attributes.source;
-        return CollectionTypeUtil.isCollectionByAncestry(source, schemas) || CollectionTypeUtil.isMapByAncestry(source, schemas);
+        return schemaClass.isCollectionOrMap();
     }
 }

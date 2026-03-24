@@ -4,13 +4,15 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
-import migration4o.models.schema.DOSchema;
-import migration4o.models.schema.DOSchemaClass;
-
 /**
  * Utility class for detecting and working with collection types. Provides
  * centralized logic for identifying collections, arrays, and their content
  * types.
+ *
+ * <p>For ancestry-based detection (walking the parentClassName chain),
+ * use {@link migration4o.models.schema.DOSchemaClass#isCollection()},
+ * {@link migration4o.models.schema.DOSchemaClass#isMap()}, or
+ * {@link migration4o.models.schema.DOSchemaClass#isCollectionOrMap()}.
  */
 public class CollectionTypeUtil {
 
@@ -26,26 +28,6 @@ public class CollectionTypeUtil {
      * Set of type name substrings that indicate a map type.
      */
     private static final Set<String> MAP_TYPE_NAMES = new HashSet<>(Arrays.asList("HashMap", "TreeMap", "Hashtable", "LinkedHashMap", "ConcurrentHashMap", "Map"));
-
-    /**
-     * Well-known map base classes for ancestry-based detection.
-     */
-    private static final Set<String> MAP_BASE_CLASSES = new HashSet<>(Arrays.asList("java.util.Hashtable", "java.util.HashMap", "java.util.TreeMap", "java.util.LinkedHashMap", "java.util.AbstractMap", "java.util.Dictionary"));
-
-    // /**
-    // * Determines if a field represents a collection (array, list, set, map,
-    // etc.).
-    // *
-    // * @param field The field to check
-    // * @return true if the field is a collection type
-    // */
-    // public static boolean isCollection(DOSDatabaseField field) {
-    // if (field == null) {
-    // return false;
-    // }
-
-    // return field.isArray() || isCollectionType(field.getTypeName());
-    // }
 
     /**
      * Determines if a type name represents a collection type.
@@ -90,102 +72,6 @@ public class CollectionTypeUtil {
             }
         }
         return false;
-    }
-
-    /**
-     * Determines if a type name represents a map type by walking the class
-     * hierarchy in the reference schema.
-     *
-     * @param typeName The type name to check
-     * @param schemas The schemas to search for class hierarchy
-     * @return true if the type inherits from a known map base class
-     */
-    public static boolean isMapByAncestry(String typeName, DOSchema[] schemas) {
-        if (typeName == null || schemas == null) {
-            return false;
-        }
-        if (isMapType(typeName)) {
-            return true;
-        }
-        String currentClassName = typeName;
-        Set<String> visited = new HashSet<>();
-        while (currentClassName != null && !visited.contains(currentClassName)) {
-            visited.add(currentClassName);
-            if (MAP_BASE_CLASSES.contains(currentClassName)) {
-                return true;
-            }
-            DOSchemaClass schemaClass = findClassInSchemas(currentClassName, schemas);
-            if (schemaClass == null) {
-                break;
-            }
-            currentClassName = schemaClass.attributes.parentClassName;
-        }
-        return false;
-    }
-
-    /**
-     * Well-known collection base classes. If a class in the schema has one of
-     * these as an ancestor (via parentClassName chain), it is a collection type
-     * regardless of its own name.
-     */
-    private static final Set<String> COLLECTION_BASE_CLASSES = new HashSet<>(Arrays.asList("java.util.Vector", "java.util.ArrayList", "java.util.LinkedList", "java.util.HashSet", "java.util.TreeSet", "java.util.LinkedHashSet", "java.util.AbstractList", "java.util.AbstractCollection", "java.util.AbstractSet", "java.util.Hashtable", "java.util.HashMap", "java.util.TreeMap", "java.util.AbstractMap", "java.util.Dictionary"));
-
-    /**
-     * Determines if a type name represents a collection type by walking the
-     * class hierarchy in the reference schema. This catches custom classes that
-     * extend Vector/List/etc. but whose names don't contain recognizable
-     * collection keywords.
-     *
-     * @param typeName The type name to check
-     * @param schemas The reference and/or database schemas to search for class
-     * hierarchy
-     * @return true if the type inherits from a known collection base class
-     */
-    public static boolean isCollectionByAncestry(String typeName, DOSchema[] schemas) {
-        if (typeName == null || schemas == null) {
-            return false;
-        }
-
-        // Fast path: already recognized by name
-        if (isCollectionType(typeName)) {
-            return true;
-        }
-
-        // Walk the parentClassName chain in the schema
-        String currentClassName = typeName;
-        Set<String> visited = new HashSet<>();
-        while (currentClassName != null && !visited.contains(currentClassName)) {
-            visited.add(currentClassName);
-
-            if (COLLECTION_BASE_CLASSES.contains(currentClassName)) {
-                return true;
-            }
-
-            // Look up class in schemas to find its parent
-            DOSchemaClass schemaClass = findClassInSchemas(currentClassName, schemas);
-            if (schemaClass == null) {
-                break;
-            }
-            currentClassName = schemaClass.attributes.parentClassName;
-        }
-
-        return false;
-    }
-
-    /**
-     * Finds a class definition across multiple schemas.
-     */
-    private static DOSchemaClass findClassInSchemas(String className, DOSchema[] schemas) {
-        for (DOSchema schema : schemas) {
-            if (schema == null || schema.classes == null)
-                continue;
-            for (DOSchemaClass cls : schema.classes) {
-                if (cls != null && className.equals(cls.attributes.source)) {
-                    return cls;
-                }
-            }
-        }
-        return null;
     }
 
     // /**

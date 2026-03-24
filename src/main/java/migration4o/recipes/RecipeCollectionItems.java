@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
-import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
@@ -99,47 +98,34 @@ public class RecipeCollectionItems {
      * @return Collection of items, or null if extraction fails
      */
     private static Collection<?> extractFromGenericObject(DODatabaseDelegate delegate, GenericObject genericObj) {
-        StoredClass storedClass = delegate.storedClass(genericObj);
-        if (storedClass == null) {
-            return null;
-        }
+        StoredField[] allFields = delegate.getAllFieldsIncludingAncestors(genericObj);
 
-        // CRITICAL: Traverse the ENTIRE class hierarchy (including ancestors)
-        // DB4O translator fields may be defined in parent classes
-        StoredClass currentClass = storedClass;
-        while (currentClass != null) {
-            StoredField[] fields = currentClass.getStoredFields();
+        for (StoredField field : allFields) {
+            String fieldName = field.getName();
 
-            for (StoredField field : fields) {
-                String fieldName = field.getName();
+            // DB4O translators start with "com.db4o.config.T"
+            // TCollection is used for Vector and other collection types
+            if (fieldName.startsWith("com.db4o.config.T")) {
+                try {
+                    Object value = field.get(genericObj);
+                    if (value != null && value.getClass().isArray()) {
+                        // This is the collection data array - extract all non-null items
+                        List<Object> list = new ArrayList<>();
+                        int length = java.lang.reflect.Array.getLength(value);
 
-                // DB4O translators start with "com.db4o.config.T"
-                // TCollection is used for Vector and other collection types
-                if (fieldName.startsWith("com.db4o.config.T")) {
-                    try {
-                        Object value = field.get(genericObj);
-                        if (value != null && value.getClass().isArray()) {
-                            // This is the collection data array - extract all non-null items
-                            List<Object> list = new ArrayList<>();
-                            int length = java.lang.reflect.Array.getLength(value);
-
-                            for (int i = 0; i < length; i++) {
-                                Object item = java.lang.reflect.Array.get(value, i);
-                                if (item != null) {
-                                    list.add(item);
-                                }
+                        for (int i = 0; i < length; i++) {
+                            Object item = java.lang.reflect.Array.get(value, i);
+                            if (item != null) {
+                                list.add(item);
                             }
-
-                            return list;
                         }
-                    } catch (Exception e) {
-                        // Failed to extract from this translator field, try next one
+
+                        return list;
                     }
+                } catch (Exception e) {
+                    // Failed to extract from this translator field, try next one
                 }
             }
-
-            // Move to parent class to check for inherited translator fields
-            currentClass = currentClass.getParentStoredClass();
         }
 
         return null;

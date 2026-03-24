@@ -12,9 +12,7 @@ import migration4o.migration.recipes.ExportCriteriaFilter;
 import migration4o.migration.recipes.GenericObjectExporter;
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.migration.recipes.SchemaElementMapper;
-import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
-import migration4o.util.CollectionTypeUtil;
 
 /**
  * Orchestrates recursive object traversal and export to XML. Now delegates to specialized components for schema lookups, field exports, and reference resolution.
@@ -102,9 +100,13 @@ public class ObjectExporter {
                         // type defines <items> in its base sequence, and
                         // subclass extensions append their own fields after.
                         if (schemaClass != null) {
-                            DOSchema[] schemas = new DOSchema[] { ctx.request.referenceSchema, ctx.request.databaseSchema };
-                            if (CollectionTypeUtil.isCollectionByAncestry(schemaClass.attributes.source, schemas) || CollectionTypeUtil.isMapByAncestry(schemaClass.attributes.source, schemas)) {
-                                fieldExporter.exportStandaloneCollectionItems(ctx.delegate, obj, schemaClass, objectId);
+                            if (schemaClass.isCollectionOrMap()) {
+                                try {
+                                    fieldExporter.exportStandaloneCollectionItems(ctx.delegate, obj, schemaClass, objectId);
+                                } catch (Exception e) {
+                                    System.err.println("[Export warning] object " + objectId + " (" + className + ") standalone collection export failed: " + e.getClass().getSimpleName() + " - " + e.getMessage());
+                                    e.printStackTrace(System.err);
+                                }
                             }
                         }
                         // Schema-defined fields
@@ -133,6 +135,7 @@ public class ObjectExporter {
             } catch (Throwable t) {
                 String errorMsg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
                 System.err.println("[Export error] object " + objectId + " (" + className + "): " + errorMsg);
+                t.printStackTrace(System.err);
                 if (ctx.statistics != null) {
                     Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(errorMsg, t);
                     ctx.statistics.addError(objectId, className, errorMsg, wrapped);

@@ -75,7 +75,7 @@ public class FieldExporter {
             // CRITICAL FIX: Get fields from ALL ancestor classes, not just the
             // immediate
             // class
-            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
             // Sort fields by schema destination name for deterministic output
             fields = sortFieldsByDestinationName(fields, parentClass, schema);
             for (StoredField field : fields) {
@@ -187,7 +187,7 @@ public class FieldExporter {
             // CRITICAL FIX: Get fields from ALL ancestor classes, not just the
             // immediate
             // class
-            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
             // Sort fields by schema destination name for deterministic,
             // alphabetical output (enables xs:sequence)
             fields = sortFieldsByDestinationName(fields, parentClass, operation.referenceSchema);
@@ -229,7 +229,11 @@ public class FieldExporter {
                     if (schemaField != null && schemaField.attributes.type != null && !schemaField.attributes.type.isEmpty()) {
                         DOSchemaClass fieldTypeClass = operation.referenceSchema.findClassByName(schemaField.attributes.type);
                         if (fieldTypeClass != null && !fieldTypeClass.attributes.migrate) {
-                            System.err.println("[WARN] Export skipping field '" + schemaField.attributes.destinationName + "' — type '" + schemaField.attributes.type + "' is not exported (migrate=false).");
+                            String warningKey = schemaField.attributes.destinationName + ":" + schemaField.attributes.type;
+                            if (!ctxRef.previousWarnings.contains(warningKey)) {
+                                System.err.println("[WARN] Export skipping field '" + schemaField.attributes.destinationName + "' — field type '" + schemaField.attributes.type + "' is not exported (migrate=false).");
+                                ctxRef.previousWarnings.add(warningKey);
+                            }
                             continue;
                         }
                     }
@@ -287,13 +291,13 @@ public class FieldExporter {
                         if (exportMapField(delegate, (java.util.Map<?, ?>) fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
-                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isMapByAncestry(schemaField.attributes.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
+                    } else if (fieldValue instanceof GenericObject && schemaField != null && isFieldTypeMap(schemaField)) {
                         // Map type wrapped in GenericObject (DB4O stored
                         // Hashtable)
                         if (exportGenericMapField(delegate, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
                             fieldsWritten++;
                         }
-                    } else if (fieldValue instanceof GenericObject && schemaField != null && CollectionTypeUtil.isCollectionByAncestry(schemaField.attributes.type, new DOSchema[] { operation.referenceSchema, operation.databaseSchema })) {
+                    } else if (fieldValue instanceof GenericObject && schemaField != null && isFieldTypeCollection(schemaField)) {
                         // Safety net: field type extends a collection base
                         // class (e.g. VectChampPerso extends VectRechID extends
                         // HVector extends Vector)
@@ -870,7 +874,7 @@ public class FieldExporter {
             Object nativeObj = unsafe.allocateInstance(clazz);
 
             // Copy stored field values via reflection
-            StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+            StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
             for (StoredField sf : fields) {
                 Object value = sf.get(obj);
                 if (value != null) {
@@ -1349,7 +1353,7 @@ public class FieldExporter {
                     return;
                 }
 
-                StoredField[] fields = DatabaseUtil.getAllFieldsIncludingAncestors(storedClass);
+                StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
                 for (StoredField field : fields) {
                     try {
                         Object childValue = field.get(obj);
@@ -1456,5 +1460,15 @@ public class FieldExporter {
             return false;
         DOSchemaClass parent = schema.findClassByName(schemaClass.attributes.parentClassName);
         return parent != null && parent.attributes.migrate;
+    }
+
+    private boolean isFieldTypeCollection(DOSchemaField schemaField) {
+        DOSchemaClass typeClass = operation.referenceSchema.findClassByName(schemaField.attributes.type);
+        return typeClass != null ? typeClass.isCollection() : CollectionTypeUtil.isCollectionType(schemaField.attributes.type);
+    }
+
+    private boolean isFieldTypeMap(DOSchemaField schemaField) {
+        DOSchemaClass typeClass = operation.referenceSchema.findClassByName(schemaField.attributes.type);
+        return typeClass != null ? typeClass.isMap() : CollectionTypeUtil.isMapType(schemaField.attributes.type);
     }
 }

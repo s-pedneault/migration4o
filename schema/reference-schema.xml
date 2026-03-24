@@ -7285,7 +7285,7 @@
         <reference class="gest.utilGroupe.Utilisateur" field="mPreferences" />
         <field source="com.db4o.config.THashtable" destinationName="THashtable" isExported="true" skipWhen="NULL" title="T hashtable" />
     </class>
-    <class source="java.util.UUID" destinationName="UUID" isExported="true" title="UUID">
+    <class source="java.util.UUID" destinationName="UUID" isExported="false" title="UUID">
         <reference class="gest.prevention.Prevention" field="mFormWebOwnerUUID" />
         <reference class="gest.prevention.Prevention" field="mFormWebEnqueteUUID" />
         <reference class="gest.typePrev.TypePrev" field="mFormWebUUID" />

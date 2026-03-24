@@ -2,7 +2,6 @@ package migration4o.util;
 
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
-import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchema;
@@ -172,49 +171,19 @@ public class DatabaseUtil {
     }
 
     /**
-     * Reads a single stored field value from a DB4O {@link GenericObject} by source field name. Returns {@code null} if the field is not found or the object is not a {@link GenericObject}.
+     * Reads a single stored field value from a DB4O object by source field
+     * name. Delegates to {@link DODatabaseDelegate#getStoredFieldValue}.
      */
     public static Object getStoredFieldValue(DODatabaseDelegate delegate, Object obj, String fieldName) {
-        if (!(obj instanceof GenericObject)) {
-            return null;
-        }
-        StoredClass storedClass = delegate.storedClass(obj);
-        if (storedClass == null) {
-            return null;
-        }
-        // Walk up the stored class hierarchy so fields declared on a parent class
-        // (e.g. mIDDossPrev on EntiteContientID) are found even when obj is a subclass.
-        StoredClass current = storedClass;
-        while (current != null) {
-            StoredField field = current.storedField(fieldName, null);
-            if (field != null) {
-                return field.get(obj);
-            }
-            current = current.getParentStoredClass();
-        }
-        return null;
+        return delegate.getStoredFieldValue(obj, fieldName);
     }
 
     /**
-     * Traverses a dotted <em>source</em> field path (e.g. {@code "mAdresse.mRue"}) through a chain of DB4O {@link GenericObject}s and returns the leaf value, or {@code null} if any step fails. Each path segment must be the raw DB4O field name (i.e. the {@code source} attribute in the schema, not the {@code destinationName}).
-     *
-     * @param container DB4O container
-     * @param obj starting object
-     * @param fieldPath dot-separated source field path
-     * @return value at the end of the path, or {@code null} on any failure
+     * Traverses a dotted source field path through a chain of DB4O objects.
+     * Delegates to {@link DODatabaseDelegate#getFieldValueByPath}.
      */
     public static Object getFieldValueByPath(DODatabaseDelegate delegate, Object obj, String fieldPath) {
-        if (obj == null || fieldPath == null || fieldPath.isEmpty()) {
-            return null;
-        }
-        String[] segments = fieldPath.split("\\.");
-        Object current = obj;
-        for (String segment : segments) {
-            if (current == null)
-                return null;
-            current = getStoredFieldValue(delegate, current, segment);
-        }
-        return current;
+        return delegate.getFieldValueByPath(obj, fieldPath);
     }
 
     /**
@@ -230,26 +199,32 @@ public class DatabaseUtil {
     }
 
     /**
-     * Gets all fields from a StoredClass including fields from all ancestor classes. This is CRITICAL for proper object export - DB4O's getStoredFields() only returns fields declared in that specific class, missing inherited fields.
-     * 
-     * @param storedClass the stored class to get fields from
-     * @return array of all fields including those from ancestors
+     * Gets all fields from a StoredClass including ancestor fields.
+     * Delegates to {@link DODatabaseDelegate#getAllFieldsIncludingAncestors(StoredClass)}.
      */
-    public static com.db4o.ext.StoredField[] getAllFieldsIncludingAncestors(StoredClass storedClass) {
-        java.util.List<com.db4o.ext.StoredField> allFields = new java.util.ArrayList<>();
+    public static StoredField[] getAllFieldsIncludingAncestors(DODatabaseDelegate delegate, StoredClass storedClass) {
+        return delegate.getAllFieldsIncludingAncestors(storedClass);
+    }
 
-        // Traverse up the inheritance hierarchy
+    /**
+     * @deprecated Use {@link #getAllFieldsIncludingAncestors(DODatabaseDelegate, StoredClass)} instead.
+     */
+    @Deprecated
+    public static StoredField[] getAllFieldsIncludingAncestors(StoredClass storedClass) {
+        java.util.List<StoredField> allFields = new java.util.ArrayList<>();
+        java.util.Set<String> seenNames = new java.util.HashSet<>();
         StoredClass currentClass = storedClass;
         while (currentClass != null) {
-            com.db4o.ext.StoredField[] classFields = currentClass.getStoredFields();
+            StoredField[] classFields = currentClass.getStoredFields();
             if (classFields != null) {
-                for (com.db4o.ext.StoredField field : classFields) {
-                    allFields.add(field);
+                for (StoredField field : classFields) {
+                    if (seenNames.add(field.getName())) {
+                        allFields.add(field);
+                    }
                 }
             }
             currentClass = currentClass.getParentStoredClass();
         }
-
-        return allFields.toArray(new com.db4o.ext.StoredField[0]);
+        return allFields.toArray(new StoredField[0]);
     }
 }
