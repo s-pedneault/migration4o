@@ -957,23 +957,30 @@ public class FieldExporter {
                 return;
             }
 
-            ResolvedReference resolved = ReferenceUtil.resolveIDEntiteForExport(delegate, fieldValue, className, schemaField, operation.database);
-            if (resolved == null) {
-                // Resolution failed — skip this reference (already logged by
-                // ReferenceUtil)
-                return;
-            }
-            if (ctxRef.statistics != null) {
-                ctxRef.statistics.recordRelationshipExported(parentObjectId, resolved.objectId, parentSourceClassName, sourceFieldName, isEmbedded ? "resolved IDEntite and traversed as embedded relationship" : "resolved IDEntite and traversed as object reference");
-            }
-            // Use the resolved delegate — the target object may live in a
-            // different container (e.g. static DB) than the current export delegate
-            DODatabaseDelegate savedDelegate = ctxRef.delegate;
-            try {
-                ctxRef.delegate = resolved.delegate;
-                ctxRef.objectExporter.exportObject(resolved.objectId, isEmbedded);
-            } finally {
-                ctxRef.delegate = savedDelegate;
+            if (isEmbedded) {
+                // Embedded IDEntite: resolve to target entity and export inline
+                ResolvedReference resolved = ReferenceUtil.resolveIDEntiteForExport(delegate, fieldValue, className, schemaField, operation.database);
+                if (resolved == null) {
+                    return;
+                }
+                if (ctxRef.statistics != null) {
+                    ctxRef.statistics.recordRelationshipExported(parentObjectId, resolved.objectId, parentSourceClassName, sourceFieldName, "resolved IDEntite and traversed as embedded relationship");
+                }
+                DODatabaseDelegate savedDelegate = ctxRef.delegate;
+                try {
+                    ctxRef.delegate = resolved.delegate;
+                    ctxRef.objectExporter.exportObject(resolved.objectId, true);
+                } finally {
+                    ctxRef.delegate = savedDelegate;
+                }
+            } else {
+                // Non-embedded IDEntite: export IDEntite object as-is (writes
+                // its own element with mID field value, e.g. <IDProgramme><valeur>123</valeur></IDProgramme>)
+                long objectId = delegate.getID(fieldValue);
+                if (ctxRef.statistics != null) {
+                    ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, "IDEntite exported as object reference (embedContents=false)");
+                }
+                ctxRef.objectExporter.exportObject(objectId, false);
             }
             return;
         }
@@ -1258,37 +1265,37 @@ public class FieldExporter {
     }
 
     /**
-     * Sorts StoredField[] in inheritance-aware order to match the XSD {@code xs:extension} content model. Fields declared by ancestor classes come first (sorted alphabetically within each level), followed by the current class's own fields (also alphabetical). Fields without a schema mapping are placed at the end.
-     *
+     * Sorts StoredField[] to match the XSD content model.
      * <p>
-     * This ensures the XML output satisfies the XSD content model where base type fields precede extension fields.
-     * </p>
+     * When the class has an exported direct parent (xs:extension in XSD), fields are sorted in inheritance-aware order: ancestor fields first (alphabetical within each level), then own fields.
+     * <p>
+     * When the direct parent is NOT exported (flat xs:sequence in XSD), all fields are sorted in flat alphabetical order by destination name, regardless of which ancestor declares them.
      */
     private StoredField[] sortFieldsByDestinationName(StoredField[] fields, DOSchemaClass parentClass, DOSchema schema) {
-        // Build ancestry chain from root down to the current class
-        List<DOSchemaClass> chain = new ArrayList<>();
-        DOSchemaClass current = parentClass;
-        while (current != null) {
-            chain.add(0, current); // prepend so root is first
-            String ancestorName = current.attributes.parentClassName;
-            if (ancestorName == null || ancestorName.isEmpty())
-                break;
-            DOSchemaClass ancestor = schema.findClassByName(ancestorName);
-            if (ancestor == null)
-                break;
-            current = ancestor;
-        }
+        boolean useDepthSort = hasExportedDirectParent(parentClass, schema);
 
-        // Build a map: source field name → hierarchy depth (0 = topmost
-        // ancestor)
+        // Build depth map only when using inheritance-aware sort
         Map<String, Integer> fieldDepth = new HashMap<>();
-        for (int depth = 0; depth < chain.size(); depth++) {
-            DOSchemaClass cls = chain.get(depth);
-            if (cls.fields != null) {
-                for (DOSchemaField f : cls.fields) {
-                    // First declaration wins (don't let overrides change depth)
-                    if (!fieldDepth.containsKey(f.attributes.source)) {
-                        fieldDepth.put(f.attributes.source, depth);
+        if (useDepthSort) {
+            List<DOSchemaClass> chain = new ArrayList<>();
+            DOSchemaClass current = parentClass;
+            while (current != null) {
+                chain.add(0, current);
+                String ancestorName = current.attributes.parentClassName;
+                if (ancestorName == null || ancestorName.isEmpty())
+                    break;
+                DOSchemaClass ancestor = schema.findClassByName(ancestorName);
+                if (ancestor == null)
+                    break;
+                current = ancestor;
+            }
+            for (int depth = 0; depth < chain.size(); depth++) {
+                DOSchemaClass cls = chain.get(depth);
+                if (cls.fields != null) {
+                    for (DOSchemaField f : cls.fields) {
+                        if (!fieldDepth.containsKey(f.attributes.source)) {
+                            fieldDepth.put(f.attributes.source, depth);
+                        }
                     }
                 }
             }
@@ -1307,15 +1314,27 @@ public class FieldExporter {
             if (sfB == null)
                 return -1;
 
-            // Sort first by hierarchy depth (ancestor fields before own fields)
-            int depthA = fieldDepth.getOrDefault(a.getName(), Integer.MAX_VALUE);
-            int depthB = fieldDepth.getOrDefault(b.getName(), Integer.MAX_VALUE);
-            if (depthA != depthB)
-                return Integer.compare(depthA, depthB);
+            if (useDepthSort) {
+                // Sort by hierarchy depth first (ancestor fields before own)
+                int depthA = fieldDepth.getOrDefault(a.getName(), Integer.MAX_VALUE);
+                int depthB = fieldDepth.getOrDefault(b.getName(), Integer.MAX_VALUE);
+                if (depthA != depthB)
+                    return Integer.compare(depthA, depthB);
+            }
 
-            // Within same depth, sort alphabetically by destination name
+            // Alphabetical by destination name
             return sfA.attributes.destinationName.compareTo(sfB.attributes.destinationName);
         });
         return sorted;
+    }
+
+    /**
+     * Checks if the class has an exported direct parent, matching the XSD logic in {@code XSDContext.getExportedParent()}.
+     */
+    private boolean hasExportedDirectParent(DOSchemaClass schemaClass, DOSchema schema) {
+        if (schemaClass.attributes.parentClassName == null || schemaClass.attributes.parentClassName.isEmpty())
+            return false;
+        DOSchemaClass parent = schema.findClassByName(schemaClass.attributes.parentClassName);
+        return parent != null && parent.attributes.migrate;
     }
 }

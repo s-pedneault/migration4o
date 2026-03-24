@@ -133,7 +133,7 @@
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" title="IDDsi2003 C1" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" title="IDDsi2003 C1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.Intervention" field="mTypeEvenement" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -147,7 +147,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" title="IDDsi2003 D6" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" title="IDDsi2003 D6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.ParamIntervDSI2003" field="mMoyenTrans" />
         <reference class="gest.intervention.ParamIntervention" field="mMoyenTrans" />
         <reference class="gest.intervention.IntervChronologie" field="mMoyenTrans" />
@@ -163,7 +163,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" title="IDDsi2003 D8" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" title="IDDsi2003 D8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervChronologie" field="mRaisonDelai" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -178,7 +178,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" title="IDDsi2003 E12" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" title="IDDsi2003 E12" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervPerte" field="mIDAssurance" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -188,7 +188,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" title="IDDsi2003 E13" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" title="IDDsi2003 E13" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervVehFeu" field="mIDEvacuation" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDEvacuation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -202,7 +202,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" title="IDDsi2003 E14" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" title="IDDsi2003 E14" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervVehFeu" field="mIDSauvetage" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDSauvetage" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -215,7 +215,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" title="IDDsi2003 E2" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" title="IDDsi2003 E2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.planInterv.ConfigSectionEtatInitialPourPlan" field="mIDCategRisque" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -228,7 +228,13 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" title="IDDsi2003 E6">
+        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
+    </class>
+    <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" title="IDDsi2003 H3">
+        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
+    </class>
+    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
         <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1455,22 +1461,22 @@
                 <mapping from="8146" to="Ferme (les raisins sont la récolte prédominante)" />
                 <mapping from="8147" to="Ferme (les fruits à coque sont la récolte prédominante)" />
                 <mapping from="8149" to="Ferme (les autres fruits et légumes sont la récolte prédominante)" />
-                <mapping from="8150" to="Ferme (produits laitiers prédominants à plus de 50 %)" />
-                <mapping from="8161" to="Ferme et ranch (animaux de boucherie à plus de 50 %)" />
-                <mapping from="8162" to="Ferme et ranch (porcs à plus de 50 %)" />
-                <mapping from="8163" to="Ferme et ranch (moutons à plus de 50 %)" />
-                <mapping from="8164" to="Ferme et ranch (chèvres à plus de 50 %)" />
-                <mapping from="8165" to="Ferme et ranch (chevaux à plus de 50 %)" />
-                <mapping from="8169" to="Ferme et ranch (autres animaux à plus de 50 %)" />
-                <mapping from="8170" to="Ferme (la volaille prédominante à plus de 50 %)" />
+                <mapping from="8150" to="Ferme (produits laitiers prédominants à plus de 50%)" />
+                <mapping from="8161" to="Ferme et ranch (animaux de boucherie à plus de 50%)" />
+                <mapping from="8162" to="Ferme et ranch (porcs à plus de 50%)" />
+                <mapping from="8163" to="Ferme et ranch (moutons à plus de 50%)" />
+                <mapping from="8164" to="Ferme et ranch (chèvres à plus de 50%)" />
+                <mapping from="8165" to="Ferme et ranch (chevaux à plus de 50%)" />
+                <mapping from="8169" to="Ferme et ranch (autres animaux à plus de 50%)" />
+                <mapping from="8170" to="Ferme (la volaille prédominante à plus de 50%)" />
                 <mapping from="8180" to="Ferme en général (aucune prédominance)" />
                 <mapping from="8191" to="Terrain de pâture et de pacage (non intégré à une ferme ou à un ranch appartenant en général au domaine public)" />
                 <mapping from="8192" to="Ferme expérimentale" />
                 <mapping from="8193" to="Rucher" />
-                <mapping from="8194" to="Ferme (produits de l'érable à plus de 50 %)" />
-                <mapping from="8195" to="Ferme (élevage de visons à plus de 50 %)" />
-                <mapping from="8196" to="Ferme (élevage d'animaux à fourrure à plus de 50 %, sauf le vison)" />
-                <mapping from="8197" to="Ferme (élevage de chiens à plus de 50 %)" />
+                <mapping from="8194" to="Ferme (produits de l'érable à plus de 50%)" />
+                <mapping from="8195" to="Ferme (élevage de visons à plus de 50%)" />
+                <mapping from="8196" to="Ferme (élevage d'animaux à fourrure à plus de 50%, sauf le vison)" />
+                <mapping from="8197" to="Ferme (élevage de chiens à plus de 50%)" />
                 <mapping from="8198" to="Ferme expérimentale" />
                 <mapping from="8199" to="Autres activités agricoles" />
                 <mapping from="8211" to="Service de battage, de mise en balles et de décorticage, moissonnage, labourage" />
@@ -1579,7 +1585,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" title="IDDsi2003 E8" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" title="IDDsi2003 E8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1597,7 +1603,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" title="IDDsi2003 F1" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" title="IDDsi2003 F1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.Protection" field="mIDAvertisseur" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1608,7 +1614,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" title="IDDsi2003 F2" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" title="IDDsi2003 F2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervProtection" field="mIDAvertFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1626,7 +1632,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" title="IDDsi2003 F3" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" title="IDDsi2003 F3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.Protection" field="mIDSystAlarme" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1638,7 +1644,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" title="IDDsi2003 F4" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" title="IDDsi2003 F4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervProtection" field="mIDSystAlarmeFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1654,7 +1660,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" title="IDDsi2003 F5" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" title="IDDsi2003 F5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.dossPrev.Protection" field="mIDExtinction" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1667,7 +1673,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" title="IDDsi2003 F6" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" title="IDDsi2003 F6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervProtection" field="mIDExtinctionFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1687,7 +1693,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" title="IDDsi2003 G1" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" title="IDDsi2003 G1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mLieuOrigine" />
         <reference class="gest.rci.RciLieu" field="mIDLieuOrigine" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1797,7 +1803,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" title="IDDsi2003 G2" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" title="IDDsi2003 G2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mSourceChaleur" />
         <reference class="gest.rci.SourceChaleur" field="mSource" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1918,7 +1924,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" title="IDDsi2003 G3" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" title="IDDsi2003 G3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.rci.Combustible" field="mCombus" />
         <reference class="gest.intervention.IntervCauseIncendie" field="mCombustible" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1939,7 +1945,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" title="IDDsi2003 G4" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" title="IDDsi2003 G4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mCauseProbable" />
         <reference class="gest.rci.RciLieu" field="mIDCauseProbable" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1994,7 +2000,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" title="IDDsi2003 G5" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" title="IDDsi2003 G5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPremMatEnflamme" />
         <reference class="gest.rci.RciLieu" field="mIDPremMatEnflamme" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2104,7 +2110,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" title="IDDsi2003 G6" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" title="IDDsi2003 G6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mAmpleurIncendie" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -2124,7 +2130,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" title="IDDsi2003 G7" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" title="IDDsi2003 G7" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPropagation" />
         <reference class="gest.rci.RciLieu" field="mIDPropagation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2140,7 +2146,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" title="IDDsi2003 G8" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" title="IDDsi2003 G8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mDommage" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -2155,7 +2161,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" title="IDDsi2003 H5" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" title="IDDsi2003 H5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervFeuExterieur" field="mIDAssurance" />
         <reference class="gest.intervention.IntervVehicule" field="mIDAssurance" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2166,7 +2172,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" title="IDDsi2003 M4" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" title="IDDsi2003 M4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDModeInflammation" />
         <reference class="gest.rci.RciLieu" field="mIDModeInflammation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2187,7 +2193,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" title="IDDsi2003 M5" parentClass="gest.DSI2003.IDDSI2003">
+    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" title="IDDsi2003 M5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
         <reference class="gest.rci.RciLieu" field="mIDEnergie" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2202,6 +2208,81 @@
                 <mapping from="99" to="Indéterminé" />
             </valueMap>
         </field>
+    </class>
+    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" parentClass="gest.DSI2003.DSI2003" title="DSI2003 E3">
+        <field source="mIDDSI2003E3" destinationName="idDSI2003E3" isExported="true" type="int" />
+        <field source="mIsInactif" destinationName="isInactif" isExported="true" type="boolean" />
+    </class>
+    <class source="gest.canutec.IDPageOrange" destinationName="IDPageOrange" isExported="true" parentClass="gest.gen.IDEntite" title="Page orange">
+        <field source="mID" definition="mID" />
+    </class>
+    <class source="gest.canutec.PageJaune" destinationName="PageJaune" isExported="true" parentClass="gest.gen.EntiteContientID" title="Page jaune">
+        <field source="mID" definition="mID" />
+        <field source="mNIP" destinationName="mNIP" isExported="true" type="int" title="NIP" />
+        <field source="mCodeNom" destinationName="mCodeNom" isExported="true" type="string" title="Code de nom" />
+        <field source="mNom" definition="mNom" />
+        <field source="mIDPageOrange" destinationName="mIDPageOrange" isExported="true" type="gest.canutec.IDPageOrange" title="Page orange" />
+    </class>
+    <class source="gest.canutec.PageOrange" destinationName="PageOrange" isExported="true" parentClass="gest.gen.EntiteContientID" title="Page orange">
+        <field source="mNumGuide" destinationName="mNumGuide" isExported="true" type="int" title="Page guide" />
+        <field source="mNom" definition="mNom" />
+        <field source="mVectNCateg" destinationName="listeCategoriePageOrange" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NCateg" title="Catégories" />
+        <field source="mID" definition="mID" />
+    </class>
+    <class source="gest.canutec.PageOrange$NCateg" destinationName="CategoriePageOrange" isExported="true" parentClass="gest.gen.Entite" title="Catégorie">
+        <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
+        <field source="iVectNSousCateg" destinationName="listeSousCategories" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NSousCateg" title="Sous-catégories" />
+    </class>
+    <class source="gest.canutec.PageOrange$NSousCateg" destinationName="SousCategoriePageOrange" isExported="true" parentClass="gest.gen.Entite" title="Sous-catégorie">
+        <field source="iNom" destinationName="nom" isExported="true" type="string" title="Nom" />
+        <field source="iDetail" destinationName="detail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détail" />
+        <field source="iVectDetail" destinationName="listeDetail" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.canutec.PageOrange$NDetail" title="Détails" />
+    </class>
+    <class source="gest.canutec.PageOrange$NDetail" destinationName="DetailPageOrange" isExported="true" parentClass="gest.gen.Entite" title="Détail">
+        <field source="iGroupe" destinationName="groupe" isExported="true" type="string" title="Groupe" />
+        <field source="iTexte" destinationName="texte" isExported="true" type="string" title="Texte" />
+        <field source="iBold" destinationName="gras" isExported="true" type="boolean" title="Gras" />
+        <field source="iPuce" destinationName="puce" isExported="true" type="boolean" title="Puce" />
+    </class>
+    <class source="gest.coursMin.IDCoursMin" destinationName="IDCoursMininimum" isExported="true" title="Cours minimum" parentClass="gest.gen.IDEntite" pointsTo="gest.coursMin.CoursMin">
+    </class>
+    <class source="gest.coursMin.IDProgramme" destinationName="IDProgrammeMininimum" isExported="true" title="Programme minimum" parentClass="gest.gen.IDEntite" pointsTo="gest.coursMin.Programme">
+    </class>
+
+    <class source="gest.coursMin.CoursMin" destinationName="CoursMinimum" isExported="true" parentClass="gest.gen.EntiteContientID" title="Cours minimum">
+        <field source="mDesc" definition="mDescription" />
+        <field source="mNbrHre" destinationName="nombreHeures" isExported="true" type="double" title="Nombre d'heures" />
+        <field source="mNom" definition="mNom" />
+        <field source="mVectIDProgramme" destinationName="listeIDProgramme" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.cours.IDProgramme" title="Programmes" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+    </class>
+    <class source="gest.langue.Langue" destinationName="Langue" isExported="true" parentClass="gest.gen.EntiteContientID" title="Langue">
+        <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
+        <field source="mNom" definition="mNom" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+    </class>
+    <class source="gest.langue.Traduction" destinationName="Traduction" isExported="true" parentClass="gest.gen.EntiteContientID" title="Traduction">
+        <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
+        <field source="mIDLangue" destinationName="idLangue" isExported="true" type="int" title="Langue" />
+        <field source="mIDTraductionDonnee" destinationName="idTraductionDonnee" isExported="true" type="int" title="Traduction donnée" />
+        <field source="mValeur" destinationName="valeur" isExported="true" type="string" title="Valeur" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+    </class>
+    <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" parentClass="gest.gen.EntiteContientID" title="Traduction de donnée">
+        <field source="mDonnee" destinationName="donnee" isExported="true" type="string" title="Donnée" />
+        <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
+        <field source="mIDTraductionProp" destinationName="mIDTraductionProp" isExported="true" type="java.util.Vector" collection="true" childrenType="gest.langue.TraductionProp" title="Traduction de propriété" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
+    </class>
+    <class source="gest.langue.TraductionProp" destinationName="TraductionProp" isExported="true" parentClass="gest.gen.EntiteContientID" title="Propriété traduite">
+        <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
+        <field source="mNom" definition="mNom" />
+        <field source="mID" definition="mID" />
+        <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.actionCondition.GroupeActionCondition" destinationName="GroupeActionCondition" isExported="true" title="Groupe d'actions-conditions" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.activite.ActionCondition" field="mIDGroupeAction" />
@@ -3152,6 +3233,12 @@
         <reference class="gest.formation.Formation" field="mIDProgramme" />
         <reference class="gest.horaire.ModeleHoraire" field="mIDProgramme" />
         <reference class="gest.horaire.Horaire" field="mIDProgramme" />
+        <field source="mID" definition="mID" />
+        <field source="mInactif" definition="mInactif" />
+        <field source="mNom" definition="mNom" />
+        <field source="mIDSSI" definition="mIDSSI" />
+    </class>
+    <class source="gest.coursMin.Programme" destinationName="ProgrammeMinimum" isExported="true" title="Programme minimum" parentClass="gest.gen.EntiteContientID">
         <field source="mID" definition="mID" />
         <field source="mInactif" definition="mInactif" />
         <field source="mNom" definition="mNom" />

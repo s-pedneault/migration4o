@@ -37,6 +37,10 @@ public class DODatabaseSchemaExporter {
                 if (source == null || !source.startsWith("gest.")) {
                     continue;
                 }
+                // Skip classes already defined in the reference schema
+                if (dbClass.schemaClass != null) {
+                    continue;
+                }
                 writeClass(writer, dbClass);
                 count++;
             }

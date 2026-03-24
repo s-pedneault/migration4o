@@ -83,6 +83,11 @@ class XSDFieldWriter {
 
         String itemType;
         String itemElemName;
+        // Track embedded IDEntite case: resolution can succeed (writes target)
+        // or fail (writes IDEntite), so XSD must allow both element names.
+        boolean isEmbeddedIDEntite = false;
+        String idEntiteDestName = null;
+        DOSchemaClass pointsToClassForChoice = null;
 
         if (XSDTypeMapper.isPrimitiveType(childrenType) || isArrayType) {
             itemType = XSDTypeMapper.getXSDType(isArrayType ? fieldType.substring(0, fieldType.length() - 2) : childrenType);
@@ -98,14 +103,18 @@ class XSDFieldWriter {
                 return;
             }
             if (field.attributes.embedContents && childClass.attributes.pointsTo != null) {
-                // IDEntite with embedContents=true: XML writes the pointed-to
-                // entity class
+                // IDEntite with embedContents=true: XML may write either the
+                // IDEntite class (resolution fails) or the pointed-to entity
+                // class (resolution succeeds). Flag for xs:choice generation.
                 DOSchemaClass pointsToClass = referenceSchema.findClassByName(childClass.attributes.pointsTo);
                 if (pointsToClass != null && !pointsToClass.attributes.migrate) {
                     System.err.println("WARNING: XSD skipping collection field '" + fieldName + "' — target type '" + childClass.attributes.pointsTo + "' is not exported (migrate=false).");
                     return;
                 }
                 if (pointsToClass != null) {
+                    isEmbeddedIDEntite = true;
+                    idEntiteDestName = childClass.attributes.destinationName;
+                    pointsToClassForChoice = pointsToClass;
                     itemElemName = pointsToClass.attributes.destinationName;
                     itemType = pointsToClass.attributes.destinationName;
                 } else {
@@ -127,6 +136,20 @@ class XSDFieldWriter {
             writer.write(indent + "    <xs:sequence>\n");
             writer.write(indent + "      <xs:element name=\"" + itemElemName + "\" type=\"" + itemType + "\" minOccurs=\"0\" maxOccurs=\"unbounded\"/>\n");
             writer.write(indent + "    </xs:sequence>\n");
+        } else if (isEmbeddedIDEntite) {
+            // Embedded IDEntite collection: resolution may succeed (target
+            // entity element) or fail (IDEntite element). Allow both via xs:choice.
+            java.util.TreeSet<String> allNames = new java.util.TreeSet<>();
+            allNames.add(idEntiteDestName);
+            allNames.add(pointsToClassForChoice.attributes.destinationName);
+            for (DOSchemaClass desc : context.getAllExportedDescendants(pointsToClassForChoice)) {
+                allNames.add(desc.attributes.destinationName);
+            }
+            writer.write(indent + "    <xs:choice minOccurs=\"0\" maxOccurs=\"unbounded\">\n");
+            for (String name : allNames) {
+                writer.write(indent + "      <xs:element name=\"" + name + "\" type=\"" + name + "\"/>\n");
+            }
+            writer.write(indent + "    </xs:choice>\n");
         } else {
             // Complex items: check if the children type has subclasses
             DOSchema refSchema = context.getReferenceSchema();
