@@ -4,7 +4,7 @@
         <module name="Organisation" id="1-Organisation" icon="brick-wall-fire" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Configuration" id="Configuration">
                 <module name="Paramètres" id="Parametres">
-                    <classRef sourceName="gest.consolide.ParamSSI">
+                    <classRef sourceName="gest.consolide.ParamSSI" defaultColumns="sommaire">
                         <unitCost priceList="" cost="1.0"/>
                         <unitCost priceList="Mid" cost="1.0"/>
                     </classRef>
@@ -123,7 +123,7 @@
                         <unitCost priceList="" cost="0.0"/>
                         <unitCost priceList="Mid" cost="0.0"/>
                     </classRef>
-                    <classRef sourceName="gest.dossPrev.HistoImportDossPrev" title="Historique d&apos;import de dossier adresse"/>
+                    <classRef sourceName="gest.dossPrev.HistoImportDossPrev" title="Historique d'import de dossier adresse"/>
                 </module>
                 <module name="Caractéristiques" id="Caracteristiques">
                     <classRef sourceName="gest.typeBatiment.TypeBatiment"/>
@@ -135,13 +135,12 @@
                     <classRef sourceName="gest.parement.Parement"/>
                 </module>
             </module>
-            <module name="Plan d&apos;intervention" id="PlanIntervention">
+            <module name="Plan d'intervention" id="PlanIntervention">
                 <classRef sourceName="gest.planInterv.PlanInterv">
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="Mid" cost="1.0"/>
                 </classRef>
                 <classRef sourceName="gest.planInterv.ConfigSectionEtatInitialPourPlan"/>
-                <classRef sourceName="gest.planInterv.BatDebitNecessaire"/>
             </module>
             <module name="Sécurité civile" id="SecuriteCivile">
                 <classRef sourceName="gest.docum.Docum">
@@ -185,9 +184,8 @@
                 <classRef sourceName="gest.maintenance.TypeMaint"/>
                 <classRef sourceName="gest.maintEquip.TypeActivMaintEquip"/>
                 <classRef sourceName="gest.equipement.QteRequise"/>
-                <classRef sourceName="gest.equipement.SituationEquipement"/>
             </module>
-            <module name="Bornes et points d&apos;eau" id="Bornes">
+            <module name="Bornes et points d'eau" id="Bornes">
                 <classRef sourceName="gest.borne.MaintBorne">
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="Mid" cost="0.5"/>
@@ -231,7 +229,7 @@
                 <unitCost priceList="" cost="1.0"/>
                 <unitCost priceList="Mid" cost="1.0"/>
             </classRef>
-            <classRef sourceName="gest.histo.Histo" destinationFile="Actions" description="Traces d&apos;actions par des utilisateurs"/>
+            <classRef sourceName="gest.histo.Histo" destinationFile="Actions" description="Traces d'actions par des utilisateurs"/>
             <classRef sourceName="gest.feuilleTemps.TempsPaye" description="Modifications de temps payé"/>
             <module name="Formation" id="Formation">
                 <classRef sourceName="gest.formation.Formation">
@@ -261,7 +259,7 @@
         </module>
         <module name="Activités" id="5-Activites" icon="flame" tile-bg="#1f4e95" tile-text="#ffffff" tile-icon="#99ccff" tile-font-size="16">
             <module name="Prévention" id="Prevention">
-                <classRef sourceName="gest.prevention.Prevention">
+                <classRef sourceName="gest.prevention.Prevention" defaultColumns="idDossierAdresse.sommaire,dateActivite,idTypePrevention.nom">
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="Mid" cost="0.5"/>
                 </classRef>
@@ -277,7 +275,7 @@
                 <classRef sourceName="gest.prevention.TypeActivPrevention"/>
             </module>
             <module name="Intervention" id="Intervention">
-                <classRef sourceName="gest.intervention.Intervention">
+                <classRef sourceName="gest.intervention.Intervention" defaultColumns="idCodeAppel.nom,idDossierAdresse.sommaire,dateActivite">
                     <unitCost priceList="" cost="1.0"/>
                     <unitCost priceList="Mid" cost="1.0"/>
                 </classRef>

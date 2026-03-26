@@ -458,7 +458,7 @@
     let currentLanguage = '__EXPORT_LANGUAGE__';
     let selectedColumns = (typeof DEFAULT_COLUMNS !== 'undefined' && Array.isArray(DEFAULT_COLUMNS) && DEFAULT_COLUMNS.length > 0)
         ? DEFAULT_COLUMNS.slice()
-        : ['__id', '__summary'];
+        : ['__summary'];
     let collectionViewState = {};
     let collectionIdCounter = 1;
     const schemaFields = (typeof SCHEMA_FIELDS !== 'undefined' && Array.isArray(SCHEMA_FIELDS)) ? SCHEMA_FIELDS : [];
@@ -746,7 +746,7 @@
             id: String(id || ''),
             fields,
             raw,
-            summary: serverSummary || summarize(fields)
+            summary: serverSummary || ''
         };
     }
 
@@ -1224,6 +1224,7 @@
     function getColumnLabel(col) {
         if (col === '__id') return t('colId');
         if (col === '__summary') return t('colSummary');
+        if (col === 'sommaire') return t('colSummary');
         const f = discoveredFields.find((d) => d.path === col);
         return f ? (f.label || f.path) : col;
     }
@@ -1231,7 +1232,27 @@
     function getColumnValue(rec, col) {
         if (col === '__id') return rec.id || '\u2014';
         if (col === '__summary') return rec.summary || '\u2014';
-        return rec.fields[col] || '\u2014';
+        if (col === 'sommaire') return rec.summary || '\u2014';
+        // For .sommaire suffix on a related object: the IDEntite resolved
+        // label is stored at the parent path itself (no sub-fields are kept
+        // for IDEntite references in the JS payload).
+        if (col.endsWith('.sommaire')) {
+            const parentPath = col.slice(0, -'.sommaire'.length);
+            return rec.fields[parentPath] || '\u2014';
+        }
+        // Direct lookup (works for scalars and embedded-struct sub-fields).
+        if (rec.fields[col]) return rec.fields[col];
+        // Fallback for IDEntite fields: paths like "idDossierAdresse.nom" have
+        // no sub-field entry because the IDEntite export only stores a flat
+        // resolved label at the parent key. Walk up the path segments.
+        if (col.includes('.')) {
+            const parts = col.split('.');
+            for (let i = parts.length - 1; i >= 1; i--) {
+                const prefix = parts.slice(0, i).join('.');
+                if (rec.fields[prefix]) return rec.fields[prefix];
+            }
+        }
+        return '\u2014';
     }
 
     function getVisibleColumns() {
@@ -1274,7 +1295,7 @@
      * a smaller text style so the leaf name stands out.
      */
     function renderColumnHeader(col) {
-        if (col === '__id' || col === '__summary' || !col.includes('.')) {
+        if (col === '__id' || col === '__summary' || col === 'sommaire' || !col.includes('.')) {
             return esc(getColumnLabel(col));
         }
         const parts = col.split('.');
@@ -1284,7 +1305,8 @@
             html += `<span class="col-hd-prefix">${esc(seg)}</span>`;
         }
         const leafKey = parts[parts.length - 1];
-        const leafLabel = schemaTitleForPath(leafKey) || humanizeFieldName(leafKey);
+        // "sommaire" is a virtual summary segment — label it as the summary column
+        const leafLabel = (leafKey === 'sommaire') ? t('colSummary') : (schemaTitleForPath(leafKey) || humanizeFieldName(leafKey));
         html += `<span class="col-hd-leaf">${esc(leafLabel)}</span>`;
         html += '</span>';
         return html;

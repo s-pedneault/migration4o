@@ -247,6 +247,12 @@ public class FieldSelectorPanel extends JPanel {
 
         List<DOSchemaField> allFields = (refSchema != null) ? DatabaseUtil.getAllSchemaFieldsIncludingAncestors(schemaClass, refSchema) : (schemaClass.fields != null ? Arrays.asList(schemaClass.fields) : new ArrayList<>());
 
+        // Add virtual "Sommaire" leaf at root level when the root class itself
+        // has a summary template (child classes get this via addSummaryNodeIfAvailable).
+        if (schemaClass.attributes.summary != null && !schemaClass.attributes.summary.isEmpty()) {
+            root.add(new DefaultMutableTreeNode(new FieldItem("Sommaire", SUMMARY_FIELD_NAME, "Sommaire")));
+        }
+
         for (DOSchemaField field : allFields) {
             if (!field.attributes.isExported)
                 continue;

@@ -35,6 +35,7 @@ public class ClassExportConfigDialog extends BaseFormDialog {
     // ── Default Columns selector (HTML viewer)
     // ────────────────────────────────
     private FieldSelectorPanel fieldSelectorPanel;
+    private JPanel fieldSelectorContainer;
     private JPanel selectedColumnsContainer;
     private final List<String> selectedColumnPaths = new ArrayList<>();
     private final List<String> selectedColumnLabels = new ArrayList<>();
@@ -54,14 +55,21 @@ public class ClassExportConfigDialog extends BaseFormDialog {
             loadConfiguration(initialConfig);
         }
 
-        // Populate selected columns now that schemaClass is set (was null
-        // during buildFormPanel)
+        // Now that schemaClass is assigned, create the real FieldSelectorPanel
+        // and inject it into the placeholder container built by buildFormPanel().
         List<String> initialColumns = (existingConfig != null) ? new ArrayList<>(existingConfig.getDefaultColumns()) : Collections.emptyList();
-        rebuildSelectedColumnsUI(initialColumns);
-        // Update the field selector to show which fields are already selected
-        if (fieldSelectorPanel != null) {
-            fieldSelectorPanel.setSelectedPaths(selectedColumnPaths);
+        fieldSelectorPanel = new FieldSelectorPanel(schemaClass, initialColumns, (fieldPath, fieldLabel) -> {
+            addSelectedColumn(fieldPath, fieldLabel);
+        });
+        if (fieldSelectorContainer != null) {
+            fieldSelectorContainer.add(fieldSelectorPanel, BorderLayout.CENTER);
+            fieldSelectorContainer.revalidate();
         }
+
+        // Populate selected columns list
+        rebuildSelectedColumnsUI(initialColumns);
+        // Sync visual checkmarks in the field selector
+        fieldSelectorPanel.setSelectedPaths(selectedColumnPaths);
         pack();
     }
 
@@ -136,12 +144,12 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         columnsSplit.setResizeWeight(0.5);
         columnsSplit.setBorder(null);
 
-        // Left: field selector tree (populated after schemaClass is available)
-        fieldSelectorPanel = new FieldSelectorPanel(schemaClass, null, (fieldPath, fieldLabel) -> {
-            addSelectedColumn(fieldPath, fieldLabel);
-        });
-        fieldSelectorPanel.setBorder(BorderFactory.createTitledBorder("Available Fields"));
-        columnsSplit.setLeftComponent(fieldSelectorPanel);
+        // Left: field selector container — populated in the constructor once
+        // schemaClass is assigned (it is null at this point because buildFormPanel
+        // is called from super() before the subclass constructor body runs).
+        fieldSelectorContainer = new JPanel(new BorderLayout());
+        fieldSelectorContainer.setBorder(BorderFactory.createTitledBorder("Available Fields"));
+        columnsSplit.setLeftComponent(fieldSelectorContainer);
 
         // Right: selected columns list with drag-reorder & remove
         JPanel selectedPanel = new JPanel(new BorderLayout(5, 5));
