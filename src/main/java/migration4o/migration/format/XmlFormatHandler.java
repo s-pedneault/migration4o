@@ -195,6 +195,14 @@ public class XmlFormatHandler extends FormatHandler {
                     continue;
                 if (ctx.request.monitor != null && ctx.request.monitor.isCancelled())
                     break;
+                // If a previous activation corrupted DB4O's internal state
+                // (e.g. ArrayIndexOutOfBoundsException in MemoryIoAdapter),
+                // the container reports itself as closed. Stop immediately
+                // rather than flooding errors for every remaining object.
+                if (ctx.delegate.isClosed()) {
+                    System.err.println("[Extra export] DB4O container is no longer usable — stopping unreached-object export after " + extraExported + " of " + extraCount + " objects.");
+                    break;
+                }
                 objectExporter.exportObject(objectId, false);
                 extraExported++;
                 if (ctx.request.monitor != null && extraExported % 100 == 0 && extraCount > 0) {

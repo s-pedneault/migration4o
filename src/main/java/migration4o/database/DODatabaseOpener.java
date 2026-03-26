@@ -9,7 +9,6 @@ import com.db4o.ObjectContainer;
 import com.db4o.config.Configuration;
 import com.db4o.ext.ExtObjectContainer;
 import com.db4o.io.IoAdapter;
-import com.db4o.io.MemoryIoAdapter;
 
 /**
  * DB4O database opener with support for multiple encodings.
@@ -114,7 +113,7 @@ public class DODatabaseOpener {
                 monitor.onTryingEncoding(sizeMsg);
             }
 
-            MemoryIoAdapter memoryAdapter = new MemoryIoAdapter();
+            SafeMemoryIoAdapter memoryAdapter = new SafeMemoryIoAdapter();
             memoryAdapter.put(context.databaseFilePath, fileContent);
             return memoryAdapter;
         } catch (IOException e) {

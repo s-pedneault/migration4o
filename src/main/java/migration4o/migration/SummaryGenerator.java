@@ -174,11 +174,8 @@ public class SummaryGenerator {
 
                 // IDEntite traversal: follow the reference to the target entity
                 if (nextClass != null && nextClass.isIDEntite() && database != null && currentObj != null) {
-                    String expectedType = nextClass.attributes.pointsTo;
-                    if (expectedType == null || expectedType.isEmpty()) {
-                        expectedType = (field.attributes.pointsTo != null && !field.attributes.pointsTo.isEmpty()) ? field.attributes.pointsTo : ReferenceUtil.extractExpectedTypeFromFieldName(null, nextClass.attributes.source);
-                    }
-                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteReference(delegate, currentObj, expectedType, database);
+                    DOSchemaClass targetClass = nextClass.getPointsToClass();
+                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteReference(delegate, currentObj, targetClass, database);
                     if (resolved == null) {
                         return "";
                     }
@@ -256,10 +253,8 @@ public class SummaryGenerator {
             return new IDEntiteResult(null, null, null);
         }
         try {
-            String expectedType = idEntiteClass.attributes.pointsTo;
-            if (expectedType == null || expectedType.isEmpty()) {
-                expectedType = ReferenceUtil.extractExpectedTypeFromFieldName(null, idEntiteClass.attributes.source);
-            }
+            // Resolve the target entity class from the IDEntite's pointsTo
+            DOSchemaClass targetEntityClass = idEntiteClass.getPointsToClass();
 
             long idEntiteObjId = delegate.getID(idEntiteObj);
             ObjectResolverUtil.activateObjectShallow(delegate, idEntiteObj, idEntiteObjId);
@@ -267,13 +262,13 @@ public class SummaryGenerator {
             if (mID == null) {
                 return new IDEntiteResult(null, null, null);
             }
-            String cacheKey = mID + ":" + (expectedType != null ? expectedType : "");
+            String cacheKey = mID + ":" + (targetEntityClass != null ? targetEntityClass.attributes.source : "");
 
             ResolvedReference resolved;
             if (targetCache != null && targetCache.containsKey(cacheKey)) {
                 resolved = targetCache.get(cacheKey);
             } else {
-                resolved = database.findObjectByMID(mID, expectedType);
+                resolved = database.findObjectByMID(mID, targetEntityClass);
                 if (targetCache != null) {
                     targetCache.put(cacheKey, resolved);
                 }

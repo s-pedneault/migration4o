@@ -26,6 +26,13 @@ public class DOSchemaClass {
         this.schema = schema;
     }
 
+    public DOSchemaClass getPointsToClass() {
+        if (attributes.pointsTo != null) {
+            return schema.findClassByName(attributes.pointsTo);
+        }
+        return null;
+    }
+
     public String getSourcePackage() {
         return ClassUtil.getPackageName(attributes.source);
     }

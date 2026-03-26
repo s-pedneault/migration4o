@@ -52,6 +52,12 @@ public class DODatabaseDelegate {
     public Object getByID(long objectId) {
         try {
             return container.ext().getByID(objectId);
+        } catch (com.db4o.ext.InvalidIDException e) {
+            // Corrupt or invalid object slot — return null so callers skip gracefully
+            return null;
+        } catch (NegativeArraySizeException e) {
+            // Corrupt slot or wrong-container ID — return null so callers skip gracefully
+            return null;
         } catch (RuntimeException e) {
             throw logDb4oException("getByID(objectId=" + objectId + ")", e);
         }

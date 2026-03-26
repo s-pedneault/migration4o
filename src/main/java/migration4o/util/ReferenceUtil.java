@@ -27,11 +27,11 @@ public class ReferenceUtil {
         // Look up the IDEntite schema class to check if the target entity is exportable
         if (schemaField != null && schemaField.schema != null) {
             DOSchemaClass idEntiteClass = schemaField.schema.findClassByName(idClassName);
-            if (idEntiteClass != null && idEntiteClass.attributes.pointsTo != null) {
-                DOSchemaClass targetClass = schemaField.schema.findClassByName(idEntiteClass.attributes.pointsTo);
+            if (idEntiteClass != null) {
+                DOSchemaClass targetClass = idEntiteClass.getPointsToClass();
                 if (targetClass != null && targetClass.attributes.migrate) {
                     // Target entity is exportable — resolve to it
-                    ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, idEntiteClass.attributes.pointsTo, database);
+                    ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, targetClass, database);
                     if (resolved != null) {
                         return resolved;
                     }
@@ -45,15 +45,17 @@ public class ReferenceUtil {
     }
 
     /**
-     * Resolves an IDEntite reference to find the target object across all delegates. Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID} to search all delegates.
+     * Resolves an IDEntite reference to find the target object.
+     * Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID}
+     * with the target entity class to route to the correct delegate.
      * 
-     * @param delegate Database delegate that owns the IDEntite wrapper object
-     * @param idEntiteObj The IDEntite object to resolve
-     * @param expectedType Expected type name (simple or absolute class name) - can be null
-     * @param database The database (DODatabase) containing all classes across all delegates
+     * @param delegate          Database delegate that owns the IDEntite wrapper object
+     * @param idEntiteObj       The IDEntite object to resolve
+     * @param targetEntityClass The target Entite schema class (drives type filter and delegate routing)
+     * @param database          The database (DODatabase) containing all classes across all delegates
      * @return The resolved reference (objectId + owning delegate), or null if not found
      */
-    public static ResolvedReference resolveIDEntiteReference(DODatabaseDelegate delegate, Object idEntiteObj, String expectedType, DODatabase database) {
+    public static ResolvedReference resolveIDEntiteReference(DODatabaseDelegate delegate, Object idEntiteObj, DOSchemaClass targetEntityClass, DODatabase database) {
         try {
             // Activate the IDEntite object to read its mID (uses the wrapper's own delegate)
             Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
@@ -62,30 +64,11 @@ public class ReferenceUtil {
                 return null;
             }
 
-            // Search for the target object with matching mID across all delegates
-            return database.findObjectByMID(mID, expectedType);
+            // Search for the target object with matching mID, routed to the correct delegate
+            return database.findObjectByMID(mID, targetEntityClass);
         } catch (Exception e) {
             return null;
         }
-    }
-
-    /**
-     * @deprecated Use {@link DODatabase#findObjectByMID} directly.
-     */
-    @Deprecated
-    public static ResolvedReference findObjectByMID(Long mID, String expectedType, DODatabase database) {
-        if (database == null) {
-            return null;
-        }
-        return database.findObjectByMID(mID, expectedType);
-    }
-
-    /**
-     * @deprecated Use {@link IDEntityHandler#extractMID} instead.
-     */
-    @Deprecated
-    public static Long extractMIDField(DODatabaseDelegate delegate, Object obj) {
-        return IDEntityHandler.extractMID(delegate, obj);
     }
 
     /**

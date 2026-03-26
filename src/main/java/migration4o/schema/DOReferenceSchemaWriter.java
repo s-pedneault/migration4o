@@ -155,6 +155,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "pointsTo", schemaClass.attributes.pointsTo);
         }
 
+        if (schemaClass.attributes.isStatic) {
+            writeAttribute(writer, "isStatic", "true");
+        }
+
         // Check if we have fields, references or nested content
         boolean hasFields = schemaClass.fields != null && schemaClass.fields.length > 0;
         boolean hasReferences = schemaClass.schemaReferences != null && schemaClass.schemaReferences.length > 0;

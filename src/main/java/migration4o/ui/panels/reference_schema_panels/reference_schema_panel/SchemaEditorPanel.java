@@ -69,6 +69,7 @@ public class SchemaEditorPanel extends JPanel {
     private static final String EXPORT_ROW_LABEL = "Export (migrate)";
     private static final String EXPORT_CHECKBOX_COMPONENT_NAME = "exportCheckBox";
     private static final String SCHEMA_NOTES_COMPONENT_NAME = "schemaNotesField";
+    private static final String STATIC_CHECKBOX_COMPONENT_NAME = "staticCheckBox";
 
     private DOSchema schema;
     private boolean modified;
@@ -1088,6 +1089,12 @@ public class SchemaEditorPanel extends JPanel {
             schemaClass.attributes.schemaNotes = notes != null && !notes.trim().isEmpty() ? notes.trim() : null;
         }
 
+        // Apply Static DB checkbox
+        JCheckBox staticCheckBox = getStaticCheckBoxFromPanel();
+        if (staticCheckBox != null) {
+            schemaClass.attributes.isStatic = staticCheckBox.isSelected();
+        }
+
         // Apply Parent Class
         JComponent parentField = propertyPanel.getField("Parent Class");
         if (parentField instanceof JComboBox) {
@@ -1143,6 +1150,18 @@ public class SchemaEditorPanel extends JPanel {
         exportCheckBox.setName(EXPORT_CHECKBOX_COMPONENT_NAME);
         exportCheckBox.setSelected(schemaClass.attributes.migrate);
         exportAndNotesPanel.add(exportCheckBox);
+
+        JLabel staticLabel = new JLabel("Static DB:");
+        exportAndNotesPanel.add(staticLabel);
+
+        JCheckBox staticCheckBox = new JCheckBox();
+        staticCheckBox.setName(STATIC_CHECKBOX_COMPONENT_NAME);
+        staticCheckBox.setSelected(schemaClass.attributes.isStatic);
+        staticCheckBox.addActionListener(e -> {
+            schemaClass.attributes.isStatic = staticCheckBox.isSelected();
+            markModified();
+        });
+        exportAndNotesPanel.add(staticCheckBox);
 
         JLabel schemaNotesLabel = new JLabel("Schema notes:");
         exportAndNotesPanel.add(schemaNotesLabel);
@@ -1807,6 +1826,21 @@ public class SchemaEditorPanel extends JPanel {
         for (Component component : ((JPanel) exportField).getComponents()) {
             if (component instanceof JTextField && SCHEMA_NOTES_COMPONENT_NAME.equals(component.getName())) {
                 return (JTextField) component;
+            }
+        }
+
+        return null;
+    }
+
+    private JCheckBox getStaticCheckBoxFromPanel() {
+        JComponent exportField = propertyPanel.getField(EXPORT_ROW_LABEL);
+        if (!(exportField instanceof JPanel)) {
+            return null;
+        }
+
+        for (Component component : ((JPanel) exportField).getComponents()) {
+            if (component instanceof JCheckBox && STATIC_CHECKBOX_COMPONENT_NAME.equals(component.getName())) {
+                return (JCheckBox) component;
             }
         }
 

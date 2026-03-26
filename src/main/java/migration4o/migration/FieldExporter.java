@@ -243,6 +243,14 @@ public class FieldExporter {
                         if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
                             continue;
                         }
+                        // Null values for strict XSD primitive types (int,
+                        // long, boolean, double, float, etc.) must be omitted
+                        // entirely — an empty element like <field /> is not
+                        // valid content for xs:int and friends.  The XSD
+                        // already declares minOccurs="0" so omission is legal.
+                        if (isStrictXsdPrimitiveType(schemaField.attributes.type)) {
+                            continue;
+                        }
                         xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema));
                         fieldsWritten++;
                         continue;
@@ -385,6 +393,19 @@ public class FieldExporter {
             // Check if we should export ID references instead of entities
             IDReferenceDetector.DetectionResult detection = IDReferenceDetector.detectIDReference(schemaField, operation.referenceSchema);
 
+            // When embedContents=true and childrenType is set, collection
+            // items that are primitive mID values (Long/Integer) must be
+            // resolved to the target entity and exported inline.
+            boolean resolveEmbeddedMIDs = schemaField.attributes.embedContents && schemaField.attributes.childrenType != null && operation.database != null;
+
+            // Pre-resolve the target entity schema class for embedded mID
+            // collections.  findObjectByMID uses its isStatic flag to
+            // route to the correct delegate automatically.
+            DOSchemaClass embeddedMIDTargetClass = null;
+            if (resolveEmbeddedMIDs) {
+                embeddedMIDTargetClass = operation.referenceSchema.findClassByName(schemaField.attributes.childrenType);
+            }
+
             try {
                 for (Object item : items) {
                     if (item != null) {
@@ -392,6 +413,20 @@ public class FieldExporter {
                             if (detection.shouldExportAsIDReferences) {
                                 // Export as ID reference
                                 IDReferenceExporter.exportAsIDReference(delegate, item, detection.idClass, xmlWriter, indentLevel + 1, ctxRef);
+                            } else if (resolveEmbeddedMIDs && (item instanceof Number)) {
+                                // Primitive mID inside an embedContents collection —
+                                // resolve to the target entity and export inline.
+                                Long mID = ((Number) item).longValue();
+                                ResolvedReference resolved = operation.database.findObjectByMID(mID, embeddedMIDTargetClass);
+                                if (resolved != null) {
+                                    DODatabaseDelegate savedDelegate = ctxRef.delegate;
+                                    try {
+                                        ctxRef.delegate = resolved.delegate;
+                                        ctxRef.objectExporter.exportObject(resolved.objectId, true);
+                                    } finally {
+                                        ctxRef.delegate = savedDelegate;
+                                    }
+                                }
                             } else {
                                 // Export normally
                                 exportFieldValue(delegate, item, schemaField, indentLevel + 1, parentClassName, parentSourceClassName, parentObjectId);
@@ -1182,6 +1217,22 @@ public class FieldExporter {
             }
         }
         return ValueUtil.shouldSkipField(checkValue, field, schema, operation.selectedSkipUserOptions, operation.applyUserSelectedFieldExclusions, operation.applySkipWhenConditions);
+    }
+
+    /**
+     * Returns true when the schema type maps to an XSD primitive that does not
+     * accept empty string as valid content (everything except xs:string).
+     * Used to suppress empty self-closing elements for null values — the XSD
+     * already declares minOccurs="0" so omission is schema-valid.
+     */
+    private static boolean isStrictXsdPrimitiveType(String schemaType) {
+        if (schemaType == null || schemaType.isEmpty()) {
+            return false;
+        }
+        return switch (schemaType.toLowerCase()) {
+        case "int", "java.lang.integer", "long", "java.lang.long", "boolean", "java.lang.boolean", "double", "java.lang.double", "float", "java.lang.float", "byte", "java.lang.byte", "short", "java.lang.short", "java.util.date", "date" -> true;
+        default -> false;
+        };
     }
 
     private Map<String, String> skippedBecauseAttributes(Object value, DOSchemaField field, DOSchema schema) {

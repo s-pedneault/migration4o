@@ -11,5 +11,6 @@ public class DOSchemaClassAttributes {
     public String description;
     public String summary;
     public String pointsTo; // For IDEntite classes: the target class name this points to
+    public boolean isStatic;
 
 }

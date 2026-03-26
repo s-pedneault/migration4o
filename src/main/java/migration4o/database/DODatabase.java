@@ -22,13 +22,14 @@ public class DODatabase {
     private final List<DODatabaseDelegate> delegates = new ArrayList<>();
 
     /**
-     * Lazily-built mID index: maps (simpleName, mID) → ResolvedReference.
-     * Built per entity class on first lookup to avoid O(n) scans that
-     * activate thousands of objects.
+     * Lazily-built mID index: maps each DODatabaseClass instance to its
+     * mID → ResolvedReference lookup table.  Keyed by object identity so
+     * that same-named classes from different delegates (user vs static)
+     * get separate indexes — preventing mID collisions across databases.
      */
-    private final Map<String, Map<Long, ResolvedReference>> mIdIndex = new HashMap<>();
-    /** Tracks which entity class names have already been indexed. */
-    private final Set<String> mIdIndexedClasses = new java.util.HashSet<>();
+    private final Map<DODatabaseClass, Map<Long, ResolvedReference>> mIdIndex = new java.util.IdentityHashMap<>();
+    /** Tracks which DODatabaseClass instances have already been indexed. */
+    private final Set<DODatabaseClass> mIdIndexedClasses = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 
     public DODatabase() {
         this.classes = new DODatabaseClass[0];
@@ -51,6 +52,20 @@ public class DODatabase {
 
     public List<DODatabaseDelegate> getDelegates() {
         return delegates;
+    }
+
+    /**
+     * Returns the user-data delegate (first registered), or null if none.
+     */
+    public DODatabaseDelegate getUserDelegate() {
+        return delegates.isEmpty() ? null : delegates.get(0);
+    }
+
+    /**
+     * Returns the static-data delegate (second registered), or null if none.
+     */
+    public DODatabaseDelegate getStaticDelegate() {
+        return delegates.size() > 1 ? delegates.get(1) : null;
     }
 
     public DODatabaseClass[] getClasses() {
@@ -79,22 +94,23 @@ public class DODatabase {
     // ── Multi-delegate lookup methods ────────────────────────────────
 
     /**
-     * Loads an object by its native DB4O ID, searching across all delegates.
-     * Returns the object from the first delegate that recognises the ID.
+     * Loads an object by its native DB4O ID.  When no IDEntite context is
+     * available, defaults to the <strong>user delegate</strong> to avoid
+     * cross-database reads that corrupt the static DB's memory image.
      *
      * @param objectId native DB4O object ID
-     * @return the loaded object and its owning delegate, or null if no delegate
-     *         owns it
+     * @return the loaded object and its owning delegate, or null
      */
     public ResolvedReference getByID(long objectId) {
-        for (DODatabaseDelegate d : delegates) {
+        DODatabaseDelegate userDelegate = getUserDelegate();
+        if (userDelegate != null) {
             try {
-                Object obj = d.getByID(objectId);
+                Object obj = userDelegate.getByID(objectId);
                 if (obj != null) {
-                    return new ResolvedReference(objectId, d);
+                    return new ResolvedReference(objectId, userDelegate);
                 }
             } catch (Exception e) {
-                // try next delegate
+                // user delegate didn't own this ID
             }
         }
         return null;
@@ -102,44 +118,71 @@ public class DODatabase {
 
     /**
      * Finds an entity object by its application-level mID field value,
-     * searching across all delegates and all entity classes that match
-     * {@code expectedType}.
+     * routed to the correct delegate based on the target entity class's
+     * {@code isStatic} flag.
      * <p>
-     * Uses a lazily-built per-class mID index to avoid O(n) scans and
-     * excessive object activation on every lookup.
+     * When {@code targetEntityClass} is provided its {@code isStatic}
+     * attribute determines which delegate is searched (static DB vs user
+     * DB), and its source name narrows the entity-class scan.  When
+     * {@code null}, only the user delegate is searched.
      *
-     * @param mID          the application-level mID to search for
-     * @param expectedType fully-qualified or simple target class name (may be
-     *                     null to search all entity classes)
+     * @param mID               the application-level mID to search for
+     * @param targetEntityClass the target Entite schema class (determines
+     *                          both type filter and delegate routing); may
+     *                          be null to search user delegate only
      * @return the matching object's ID and its owning delegate, or null
      */
-    public ResolvedReference findObjectByMID(Long mID, String expectedType) {
+    public ResolvedReference findObjectByMID(Long mID, DOSchemaClass targetEntityClass) {
         if (mID == null || classes == null) {
             return null;
         }
 
-        for (DODatabaseClass dbClass : classes) {
-            if (dbClass.schemaClass == null || !dbClass.schemaClass.isEntite()) {
+        // Determine delegate scope from the target class's isStatic flag.
+        // When no target class is provided, default to the user delegate.
+        DODatabaseDelegate scopeDelegate;
+        String expectedType;
+        if (targetEntityClass != null) {
+            scopeDelegate = targetEntityClass.attributes.isStatic ? getStaticDelegate() : getUserDelegate();
+            expectedType = targetEntityClass.attributes.source;
+        } else {
+            scopeDelegate = getUserDelegate();
+            expectedType = null;
+        }
+
+        // Iterate raw delegate classes — NOT the deduped merged array —
+        // so that same-named classes from both user and static delegates
+        // are visible for delegate-scoped lookups.
+        for (DODatabaseDelegate delegate : delegates) {
+            if (delegate.classes == null) {
                 continue;
             }
-
-            String fullClassName = dbClass.attributes.source;
-
-            if (expectedType != null && !fullClassName.equals(expectedType)) {
-                String simpleClassName = ClassUtil.getSimpleName(fullClassName);
-                if (!simpleClassName.equals(expectedType)) {
+            for (DODatabaseClass dbClass : delegate.classes) {
+                if (dbClass.schemaClass == null || !dbClass.schemaClass.isEntite()) {
                     continue;
                 }
-            }
 
-            // Build the mID index for this class on first access
-            ensureMIdIndexBuilt(dbClass);
+                if (scopeDelegate != null && dbClass.delegate != scopeDelegate) {
+                    continue;
+                }
 
-            Map<Long, ResolvedReference> classIndex = mIdIndex.get(fullClassName);
-            if (classIndex != null) {
-                ResolvedReference ref = classIndex.get(mID);
-                if (ref != null) {
-                    return ref;
+                String fullClassName = dbClass.attributes.source;
+
+                if (expectedType != null && !fullClassName.equals(expectedType)) {
+                    String simpleClassName = ClassUtil.getSimpleName(fullClassName);
+                    if (!simpleClassName.equals(ClassUtil.getSimpleName(expectedType))) {
+                        continue;
+                    }
+                }
+
+                // Build the mID index for this class on first access
+                ensureMIdIndexBuilt(dbClass);
+
+                Map<Long, ResolvedReference> classIndex = mIdIndex.get(dbClass);
+                if (classIndex != null) {
+                    ResolvedReference ref = classIndex.get(mID);
+                    if (ref != null) {
+                        return ref;
+                    }
                 }
             }
         }
@@ -153,11 +196,10 @@ public class DODatabase {
      * activation (depth 2) instead of the previous per-lookup full scan.
      */
     private void ensureMIdIndexBuilt(DODatabaseClass dbClass) {
-        String fullClassName = dbClass.attributes.source;
-        if (mIdIndexedClasses.contains(fullClassName)) {
+        if (mIdIndexedClasses.contains(dbClass)) {
             return;
         }
-        mIdIndexedClasses.add(fullClassName);
+        mIdIndexedClasses.add(dbClass);
 
         DODatabaseDelegate classDelegate = dbClass.delegate;
         long[] objectIds = dbClass.objects.objectIds;
@@ -182,34 +224,36 @@ public class DODatabase {
                 // skip objects that can't be processed
             }
         }
-        mIdIndex.put(fullClassName, classIndex);
+        mIdIndex.put(dbClass, classIndex);
     }
 
     /**
-     * Resolves the expected target entity type for an IDEntite class by
-     * walking up the <strong>reference schema</strong> hierarchy to find a
-     * {@code pointsTo} attribute.
-     * <p>
-     * Unlike a database-only walk, this uses the schema (which contains
-     * abstract ancestor classes like {@code gest.gen.IDEntite} even when they
-     * have no DB objects), so the chain never breaks for intermediate classes.
+     * Loads an object by its native DB4O ID, routing to the correct
+     * delegate when the caller provides the IDEntite schema class that
+     * triggered the lookup.  Uses {@code idEntiteClass.getPointsToClass()}
+     * to determine if the target entity lives in the static DB.
      *
-     * @param idClassName fully-qualified IDEntite class name
-     * @return the {@code pointsTo} target class name, or null if not found
+     * @param objectId      native DB4O object ID
+     * @param idEntiteClass the IDEntite schema class that owns this
+     *                      reference (may be null)
+     * @return the loaded object and its owning delegate, or null
      */
-    public String resolveExpectedTypeFromSchema(String idClassName) {
-        if (idClassName == null || schema == null) {
-            return null;
-        }
-        DOSchemaClass sc = schema.findClassByName(idClassName);
-        while (sc != null) {
-            if (sc.attributes.pointsTo != null && !sc.attributes.pointsTo.isEmpty()) {
-                return sc.attributes.pointsTo;
+    public ResolvedReference getByID(long objectId, DOSchemaClass idEntiteClass) {
+        DODatabaseDelegate targetDelegate = getUserDelegate();
+        if (idEntiteClass != null) {
+            DOSchemaClass pointsTo = idEntiteClass.getPointsToClass();
+            if (pointsTo != null && pointsTo.attributes.isStatic) {
+                targetDelegate = getStaticDelegate();
             }
-            if (sc.attributes.parentClassName != null && !sc.attributes.parentClassName.isEmpty()) {
-                sc = schema.findClassByName(sc.attributes.parentClassName);
-            } else {
-                sc = null;
+        }
+        if (targetDelegate != null) {
+            try {
+                Object obj = targetDelegate.getByID(objectId);
+                if (obj != null) {
+                    return new ResolvedReference(objectId, targetDelegate);
+                }
+            } catch (Exception e) {
+                // targeted delegate didn't own this ID
             }
         }
         return null;

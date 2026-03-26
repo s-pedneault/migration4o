@@ -96,6 +96,10 @@ public class ObjectExportLoop {
             for (long objectId : objectIds) {
                 if (request.monitor != null && request.monitor.isCancelled())
                     break;
+                if (ctx.delegate.isClosed()) {
+                    System.err.println("[Export] DB4O container is no longer usable — stopping export of " + (loopClass != null ? loopClass.attributes.source : "unknown") + " after " + exportedCount + " objects.");
+                    break;
+                }
                 // Required objects (at the front of the ranked array) are
                 // cap-exempt:
                 // they are always exported to guarantee referential integrity.

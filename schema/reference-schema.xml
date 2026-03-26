@@ -117,7 +117,7 @@
         <reference class="gest.intervention.Intervention" field="mVectTabsStates" />
         <field source="com.db4o.config.TCollection" destinationName="TCollection" isExported="false" type="db4o.TCollection" title="TCollection" />
     </class>
-    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="true" title="DSI2003" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.DSI2003.DSI2003" destinationName="DSI2003" isExported="true" title="DSI2003" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
@@ -2250,7 +2250,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" title="DSI2003 E3" parentClass="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" title="DSI2003 E3" parentClass="gest.DSI2003.DSI2003" isStatic="true">
         <field source="mIDDSI2003E3" destinationName="idDSI2003E3" isExported="true" type="int" />
         <field source="mIsInactif" destinationName="isInactif" isExported="true" type="boolean" />
     </class>
@@ -2258,7 +2258,7 @@
         <reference class="gest.canutec.PageJaune" field="mIDPageOrange" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.canutec.PageJaune" destinationName="PageJaune" isExported="true" title="Page jaune" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.canutec.PageJaune" destinationName="PageJaune" isExported="true" title="Page jaune" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <reference class="gest.dossPrev.ProdDang" field="mIDPageJaune" />
         <field source="mID" definition="mID" />
         <field source="mNIP" destinationName="mNIP" isExported="true" type="int" title="NIP" />
@@ -2266,7 +2266,7 @@
         <field source="mNom" definition="mNom" />
         <field source="mIDPageOrange" destinationName="mIDPageOrange" isExported="true" type="gest.canutec.IDPageOrange" title="Page orange" />
     </class>
-    <class source="gest.canutec.PageOrange" destinationName="PageOrange" isExported="true" title="Page orange" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.canutec.PageOrange" destinationName="PageOrange" isExported="true" title="Page orange" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <reference class="gest.canutec.PageJaune" field="mIDPageOrange" />
         <field source="mNumGuide" destinationName="mNumGuide" isExported="true" type="int" title="Page guide" />
         <field source="mNom" definition="mNom" />
@@ -2304,7 +2304,7 @@
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.Langue" destinationName="Langue" isExported="true" title="Langue" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.langue.Langue" destinationName="Langue" isExported="true" title="Langue" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <reference class="gest.dossPrev.PersonneRess" field="mIDLangue" />
         <reference class="gest.employe.Employe" field="mIDLangue" />
         <reference class="gest.utilGroupe.Utilisateur" field="mIDLangue" />
@@ -2313,7 +2313,7 @@
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.Traduction" destinationName="Traduction" isExported="true" title="Traduction" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.langue.Traduction" destinationName="Traduction" isExported="true" title="Traduction" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mIDLangue" destinationName="idLangue" isExported="true" type="int" title="Langue" />
         <field source="mIDTraductionDonnee" destinationName="idTraductionDonnee" isExported="true" type="int" title="Traduction donnée" />
@@ -2321,14 +2321,14 @@
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" title="Traduction de donnée" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.langue.TraductionDonnee" destinationName="TraductionDonnee" isExported="true" title="Traduction de donnée" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <field source="mDonnee" destinationName="donnee" isExported="true" type="string" title="Donnée" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mIDTraductionProp" destinationName="mIDTraductionProp" isExported="true" embedContents="true" type="java.util.Vector" collection="true" childrenType="gest.langue.TraductionProp" title="Traduction de propriété" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.langue.TraductionProp" destinationName="TraductionProp" isExported="true" title="Propriété traduite" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.langue.TraductionProp" destinationName="TraductionProp" isExported="true" title="Propriété traduite" parentClass="gest.gen.EntiteContientID" isStatic="true">
         <reference class="gest.langue.TraductionDonnee" field="mIDTraductionProp" />
         <field source="mIDOld" destinationName="idAncien" isExported="false" type="int" title="Ancien ID" />
         <field source="mNom" definition="mNom" />
@@ -2338,7 +2338,7 @@
     <class source="gest.actionCondition.GroupeActionCondition" destinationName="GroupeActionCondition" isExported="true" title="Groupe d'actions-conditions" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.activite.ActionCondition" field="mIDGroupeAction" />
         <field source="mNom" definition="mNom" />
-        <field source="mVectActionCondition" destinationName="listeActionCondition" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="java.lang.Object" title="Actions-conditions" />
+        <field source="mVectActionCondition" destinationName="listeActionCondition" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="gest.activite.ActionCondition" title="Actions-conditions" />
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>

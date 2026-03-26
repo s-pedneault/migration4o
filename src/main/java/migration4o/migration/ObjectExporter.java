@@ -6,6 +6,7 @@ import java.util.Set;
 
 import com.db4o.reflect.generic.GenericObject;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
 import migration4o.migration.recipes.ExportCriteriaFilter;
@@ -55,6 +56,15 @@ public class ObjectExporter {
             return;
 
         try {
+            // Use ctx.delegate directly — it is always set to the correct
+            // delegate before each call:
+            //  • Root objects: ObjectExportLoop sets ctx.delegate = dbClass.delegate
+            //  • Embedded IDEntite targets: FieldExporter switches ctx.delegate
+            //    = resolved.delegate before recursing
+            //  • Regular embedded objects: come from the same delegate as parent
+            // Using the multi-delegate DODatabase.getByID(objectId) here would
+            // only search the user delegate (to avoid cross-database reads),
+            // which silently drops static-DB objects.
             ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(ctx.delegate, objectId);
             if (activation == null)
                 return;
@@ -87,11 +97,54 @@ public class ObjectExporter {
                 handler.exportedIds.add(objectId);
 
             DOSchemaClass schemaClass = SchemaElementMapper.getSchemaClass(className, ctx.request.referenceSchema);
+
+            // Skip objects whose schema class is excluded from export
+            if (schemaClass != null && !schemaClass.attributes.migrate) {
+                ctx.delegate.deactivate(obj, 1);
+                return;
+            }
+
             String elementName = schemaClass != null ? schemaClass.attributes.destinationName : SchemaElementMapper.getElementName(className, ctx.request.referenceSchema);
 
             ctx.schemaClass = schemaClass;
             ctx.pushObject(obj, objectId);
             try {
+                // Skip GenericObjects that would produce empty XML elements
+                // (zero exportable fields and not a collection/map with items).
+                // Opening and closing a structure tag with no content produces
+                // whitespace that violates XSD empty-type definitions.
+                if (obj instanceof GenericObject && schemaClass != null && !schemaClass.isCollectionOrMap()) {
+                    int preCount = GenericObjectExporter.countFieldsToExport(ctx.delegate, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.request.referenceSchema);
+                    if (preCount == 0) {
+                        return;
+                    }
+                }
+
+                // Skip native Java objects (non-GenericObject) whose schema
+                // class has zero exported fields and is not a collection/map.
+                // Examples: java.lang.Class → "Classe" has no fields at all.
+                if (!(obj instanceof GenericObject) && schemaClass != null && !schemaClass.isCollectionOrMap()) {
+                    if (countExportedFields(schemaClass) == 0) {
+                        return;
+                    }
+                }
+
+                // Skip native collection/map objects that are empty AND have
+                // no method-call fields — they produce whitespace-only content
+                // that violates XSD empty-type definitions.
+                // Vector → Collection, Hashtable → Map after DB4O activation.
+                if (!(obj instanceof GenericObject) && schemaClass != null && schemaClass.isCollectionOrMap()) {
+                    boolean collectionEmpty = false;
+                    if (obj instanceof java.util.Map) {
+                        collectionEmpty = ((java.util.Map<?, ?>) obj).isEmpty();
+                    } else if (obj instanceof java.util.Collection) {
+                        collectionEmpty = ((java.util.Collection<?>) obj).isEmpty();
+                    }
+                    if (collectionEmpty && !hasMethodCallFields(schemaClass)) {
+                        return;
+                    }
+                }
+
                 boolean handled = handler.onObject(ctx);
                 if (!handled) {
                     try {
@@ -148,9 +201,41 @@ public class ObjectExporter {
                 // stays fully activated in memory for the entire session.
                 ctx.delegate.deactivate(obj, 1);
             }
+
         } finally {
             if (isEmbedded)
                 inProgressIds.remove(objectId);
         }
+    }
+
+    /**
+     * Counts the number of exported fields in a schema class (non-method-call
+     * fields only, since method-call fields are handled separately).
+     */
+    private static int countExportedFields(DOSchemaClass schemaClass) {
+        if (schemaClass.fields == null)
+            return 0;
+        int count = 0;
+        for (var f : schemaClass.fields) {
+            if (f != null && f.attributes.isExported)
+                count++;
+        }
+        return count;
+    }
+
+    /**
+     * Returns true if the schema class has at least one method-call field
+     * (source ending with "()") that is exported. These fields invoke methods
+     * via reflection on native Java objects and may produce output even when
+     * the collection itself is empty.
+     */
+    private static boolean hasMethodCallFields(DOSchemaClass schemaClass) {
+        if (schemaClass.fields == null)
+            return false;
+        for (var f : schemaClass.fields) {
+            if (f != null && f.attributes.isExported && f.isMethodCallField())
+                return true;
+        }
+        return false;
     }
 }
