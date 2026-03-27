@@ -1760,9 +1760,28 @@ body {
 
 /* ── Hero Header ──────────────────────────────────────────────────── */
 .detail-hero {
-    padding: 24px 28px 20px;
-    background: linear-gradient(135deg, #f8faff 0%, #eef2ff 50%, #f0f4ff 100%);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 28px 16px;
+    background: linear-gradient(135deg, #f8faff 0%, #eef2ff 60%, #f0f4ff 100%);
     border-bottom: 2px solid var(--c-border);
+    flex-shrink: 0;
+}
+
+.detail-hero-left {
+    flex: 1;
+    min-width: 0;
+}
+
+.detail-hero-right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    padding-top: 2px;
 }
 
 .detail-hero-entity {
@@ -1775,37 +1794,38 @@ body {
     background: rgba(79, 110, 247, .1);
     padding: 3px 10px;
     border-radius: 20px;
-    margin-bottom: 10px;
+    margin-bottom: 7px;
 }
 
 .detail-hero-title {
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--c-text);
     letter-spacing: -.3px;
     line-height: 1.25;
     margin-bottom: 4px;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .detail-hero-subtitle {
-    font-size: 14px;
+    font-size: 13px;
     color: var(--c-text-secondary);
     line-height: 1.45;
-    margin-bottom: 8px;
 }
 
 .detail-hero-meta {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-top: 10px;
-    font-size: 12px;
+    gap: 5px;
+    font-size: 11px;
     color: var(--c-text-muted);
+    white-space: nowrap;
 }
 
-.detail-hero-meta .badge-id {
-    font-size: 12px;
-    padding: 3px 10px;
+.detail-hero-meta strong {
+    color: var(--c-text-secondary);
+    font-weight: 600;
 }
 
 /* ── Key Info Card ────────────────────────────────────────────────── */
@@ -2642,4 +2662,228 @@ body {
     font-size: 11px;
     font-weight: 400;
     opacity: 0.75;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   Visual components — added for modern detail view redesign
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── C: Boolean field toggle ──────────────────────────────────── */
+.field-bool {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+}
+
+.field-bool .bool-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.field-bool.on .bool-icon {
+    background: var(--c-primary);
+}
+
+.field-bool.off .bool-icon {
+    border: 2px solid #c5cedb;
+    background: transparent;
+}
+
+.field-bool.off {
+    color: var(--c-text-muted);
+}
+
+/* ── D: Status badge color variants ──────────────────────────── */
+.badge-active {
+    background: #dcfce7;
+    color: #14532d;
+}
+
+.badge-inactive {
+    background: #f1f5f9;
+    color: #475569;
+}
+
+.badge-warning {
+    background: #fef9c3;
+    color: #713f12;
+}
+
+.badge-danger-s {
+    background: #fee2e2;
+    color: #7f1d1d;
+}
+
+.badge-info {
+    background: #dbeafe;
+    color: #1e3a8a;
+}
+
+.badge-neutral {
+    background: var(--c-border-light);
+    color: var(--c-text-secondary);
+}
+
+/* ── A: field-box — titled bordered sub-group ────────────────── */
+.field-box {
+    border: 1.5px solid var(--c-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
+    position: relative;
+    background: var(--c-surface);
+    box-shadow: var(--shadow-sm);
+    padding-top: 10px;
+}
+
+.field-box-title {
+    position: absolute;
+    top: -10px;
+    left: 14px;
+    background: var(--c-surface);
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--c-text-secondary);
+    white-space: nowrap;
+    border-radius: 4px;
+}
+
+.field-box-body {
+    overflow: hidden;
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+}
+
+/* ── B: field-memo — large text / memo display ───────────────── */
+.field-memo {
+    padding: 0 0 8px;
+}
+
+.field-memo-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-text-secondary);
+    padding: 10px 16px 6px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.field-memo-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--c-border-light);
+}
+
+.field-memo-body {
+    margin: 0 12px 4px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border: 1px solid var(--c-border-light);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--c-text);
+    line-height: 1.65;
+    min-height: 68px;
+    white-space: pre-wrap;
+}
+
+.field-memo-body.empty {
+    color: var(--c-text-muted);
+    font-style: italic;
+}
+
+/* ── E: info-block — contextual description panel ────────────── */
+.info-block {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #eef4ff;
+    border: 1px solid #c7d7f8;
+    border-left: 4px solid var(--c-primary);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--c-text-secondary);
+}
+
+.info-block-icon {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--c-primary);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 800;
+    margin-top: 1px;
+}
+
+.info-block-body {
+    flex: 1;
+    min-width: 0;
+}
+
+.info-block b {
+    color: var(--c-text);
+}
+
+.info-block a {
+    color: var(--c-primary);
+    text-decoration: none;
+}
+
+.info-block a:hover {
+    text-decoration: underline;
+}
+
+/* ── F: table-stack — stacked labeled collection tables ─────── */
+.table-stack {
+    display: flex;
+    flex-direction: column;
+}
+
+.table-stack-item+.table-stack-item {
+    border-top: 2px solid var(--c-border);
+}
+
+.table-stack-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    color: var(--c-text-secondary);
+    padding: 9px 14px 6px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.table-stack-count {
+    font-size: 10px;
+    font-weight: 600;
+    background: var(--c-bg);
+    color: var(--c-text-muted);
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.table-stack-empty {
+    padding: 10px 16px 14px;
+    font-size: 12px;
+    color: var(--c-text-muted);
+    font-style: italic;
 }

@@ -1385,8 +1385,8 @@
         const val = String(v ?? '');
         if (!val.trim()) return '<span style="color:var(--c-text-muted)">\u2014</span>';
         const lowerKey = String(key || '').toLowerCase();
-        if (val === 'true') return '<span class="badge badge-true">' + esc(t('boolTrue')) + '</span>';
-        if (val === 'false') return '<span class="badge badge-false">' + esc(t('boolFalse')) + '</span>';
+        if (val === 'true') return '<span class="field-bool on"><span class="bool-icon"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg></span>' + esc(t('boolTrue')) + '</span>';
+        if (val === 'false') return '<span class="field-bool off"><span class="bool-icon"></span>' + esc(t('boolFalse')) + '</span>';
         // Date detection (before numeric check so dates aren't caught)
         if (lowerKey.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
             const formatted = fmtDate(val);
@@ -2202,6 +2202,7 @@
             }
 
             html += '<div class="detail-hero">';
+            html += '<div class="detail-hero-left">';
             html += '<div class="detail-hero-entity">' + esc(typeof entityName !== 'undefined' && entityName ? entityName : rec.entity) + '</div>';
             html += '<div class="detail-hero-title">' + esc(rec.summary || rec.entity) + '</div>';
             if (subtitleFields.length > 0) {
@@ -2209,9 +2210,10 @@
                 html += subtitleFields.map((f) => '<strong>' + esc(f.label) + ':</strong> ' + esc(f.value)).join(' &nbsp;\u2022&nbsp; ');
                 html += '</div>';
             }
-            html += '<div class="detail-hero-meta">';
-            if (rec.id) html += '<span class="badge badge-id">ID: ' + esc(rec.id) + '</span>';
-            html += '<span>' + esc(t('record')) + ' #' + rec.pos + '</span>';
+            html += '</div>';
+            html += '<div class="detail-hero-right">';
+            if (rec.id) html += '<div class="detail-hero-meta"><strong>ID</strong>&nbsp;<span class="badge badge-id">' + esc(rec.id) + '</span></div>';
+            html += '<div class="detail-hero-meta">' + esc(t('record')) + ' #' + rec.pos + '</div>';
             html += '</div>';
             html += '</div>';
 
@@ -2463,8 +2465,8 @@
             var parts = fmtSpec.split(',');
             var tv = parts[0] || 'True', fv = parts[1] || 'False';
             var bv = String(value).toLowerCase();
-            if (bv === 'true') return '<span class="badge badge-true">' + esc(tv) + '</span>';
-            if (bv === 'false') return '<span class="badge badge-false">' + esc(fv) + '</span>';
+            if (bv === 'true') return '<span class="field-bool on"><span class="bool-icon"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg></span>' + esc(tv) + '</span>';
+            if (bv === 'false') return '<span class="field-bool off"><span class="bool-icon"></span>' + esc(fv) + '</span>';
             return esc(String(value));
         }
         if (fmtType === 'num') {
