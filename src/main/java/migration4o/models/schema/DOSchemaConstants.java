@@ -17,6 +17,7 @@ public class DOSchemaConstants {
     public static final String METHOD_CALL_SUFFIX = "()";
 
     public static final String METADATA_GENERATOR = "Migration4o";
+    public static final String METADATA_SCHEMA_VERSION = "2.0";
     public static final String METADATA_PROVIDER = "Gestion Technologies";
 
 }

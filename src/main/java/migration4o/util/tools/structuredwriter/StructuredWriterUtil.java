@@ -18,6 +18,8 @@ public class StructuredWriterUtil {
             writer.openStructure("metadata");
             if (metadata.generator != null)
                 writer.elementWithContent("generator", metadata.generator, true);
+            if (metadata.schemaVersion != null)
+                writer.elementWithContent("schemaVersion", metadata.schemaVersion, true);
             if (metadata.provider != null)
                 writer.elementWithContent("provider", metadata.provider, true);
             if (metadata.module != null)

@@ -196,6 +196,7 @@ public class DOSchemaClass {
     public StructuredWriterMetadata getMetadata(String module) {
         StructuredWriterMetadata metadata = new StructuredWriterMetadata();
         metadata.generator = DOSchemaConstants.METADATA_GENERATOR;
+        metadata.schemaVersion = DOSchemaConstants.METADATA_SCHEMA_VERSION;
         metadata.provider = DOSchemaConstants.METADATA_PROVIDER;
         metadata.module = module != null ? module : "";
         metadata.type = attributes.destinationName != null ? attributes.destinationName : getSourceName();

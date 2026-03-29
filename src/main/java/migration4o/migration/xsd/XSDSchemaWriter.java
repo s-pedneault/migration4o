@@ -87,8 +87,9 @@ class XSDSchemaWriter {
         writer.write("  <xs:complexType name=\"Metadata\">\n");
         writer.write("    <xs:sequence>\n");
         // Order and names must match StructuredWriterUtil.metadata() exactly:
-        // generator → provider → module → type → objects → date (optional)
+        // generator → schemaVersion → provider → module → type → objects → date (optional)
         writer.write("      <xs:element name=\"generator\" type=\"xs:string\" minOccurs=\"0\"/>\n");
+        writer.write("      <xs:element name=\"schemaVersion\" type=\"xs:string\" minOccurs=\"0\"/>\n");
         writer.write("      <xs:element name=\"provider\" type=\"xs:string\" minOccurs=\"0\"/>\n");
         writer.write("      <xs:element name=\"module\" type=\"xs:string\" minOccurs=\"0\"/>\n");
         writer.write("      <xs:element name=\"type\" type=\"xs:string\" minOccurs=\"0\"/>\n");
