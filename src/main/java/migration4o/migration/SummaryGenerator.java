@@ -95,20 +95,21 @@ public class SummaryGenerator {
      * @return the generated summary, or {@code null} if the class has no summary template, or {@code ""} if the template is defined but all tokens resolved to empty
      */
     public static String generate(DODatabaseDelegate delegate, Object obj, DOSchemaClass schemaClass, DOSchema referenceSchema, DODatabase database) {
-        if (schemaClass == null || schemaClass.attributes.summary == null || schemaClass.attributes.summary.isEmpty()) {
+        if (schemaClass == null || obj == null) {
             return null;
         }
-        if (obj == null) {
+        String summaryTemplate = resolveSummaryTemplate(schemaClass, referenceSchema);
+        if (summaryTemplate == null) {
             return null;
         }
 
-        Matcher matcher = FIELD_REF_PATTERN.matcher(schemaClass.attributes.summary);
+        Matcher matcher = FIELD_REF_PATTERN.matcher(summaryTemplate);
         StringBuilder result = new StringBuilder();
         int last = 0;
 
         while (matcher.find()) {
             // Append the literal text before this token
-            result.append(schemaClass.attributes.summary, last, matcher.start());
+            result.append(summaryTemplate, last, matcher.start());
             // Resolve and append the field reference
             String token = matcher.group(1); // e.g. "adresse.rue"
             result.append(resolveToken(delegate, obj, token, schemaClass, referenceSchema, database));
@@ -116,8 +117,33 @@ public class SummaryGenerator {
         }
 
         // Append any trailing literal text
-        result.append(schemaClass.attributes.summary, last, schemaClass.attributes.summary.length());
+        result.append(summaryTemplate, last, summaryTemplate.length());
         return result.toString();
+    }
+
+    /**
+     * Resolves the summary template for a schema class by walking up the ancestor chain.
+     * Returns the first non-null, non-empty summary found, or {@code null} if none exists.
+     */
+    public static String resolveSummaryTemplate(DOSchemaClass schemaClass, DOSchema referenceSchema) {
+        DOSchemaClass current = schemaClass;
+        while (current != null) {
+            if (current.attributes.summary != null && !current.attributes.summary.isEmpty()) {
+                return current.attributes.summary;
+            }
+            if (referenceSchema == null || current.attributes.parentClassName == null || current.attributes.parentClassName.isEmpty()) {
+                break;
+            }
+            current = referenceSchema.findClassByName(current.attributes.parentClassName);
+        }
+        return null;
+    }
+
+    /**
+     * Returns {@code true} if the given class (or any ancestor) has a summary template defined.
+     */
+    public static boolean hasSummary(DOSchemaClass schemaClass, DOSchema referenceSchema) {
+        return resolveSummaryTemplate(schemaClass, referenceSchema) != null;
     }
 
     // ── Resolution helpers
@@ -262,6 +288,16 @@ public class SummaryGenerator {
             if (mID == null) {
                 return new IDEntiteResult(null, null, null);
             }
+
+            // ── Prefer the IDEntite class's own valueMap for the label ──
+            // IDEntite subclasses (e.g. IDDsi2003E8) carry a group-specific
+            // valueMap that correctly translates the mID code within their
+            // group context.  Resolving through the target entity's summary
+            // can match the wrong record when mID values overlap across
+            // groups (e.g. multiple DSI2003 entries sharing the same mID
+            // in different groups like D6, E8, E3).
+            String valueMapLabel = resolveValueMapLabel(idEntiteClass, mID);
+
             String cacheKey = mID + ":" + (targetEntityClass != null ? targetEntityClass.attributes.source : "");
 
             ResolvedReference resolved;
@@ -273,6 +309,14 @@ public class SummaryGenerator {
                     targetCache.put(cacheKey, resolved);
                 }
             }
+
+            // When the valueMap provided a label, use it directly — the
+            // target entity cross-link is still provided when available.
+            if (valueMapLabel != null) {
+                Long targetObjectId = resolved != null ? resolved.objectId : null;
+                return new IDEntiteResult(valueMapLabel, targetObjectId, mID);
+            }
+
             if (resolved == null) {
                 return new IDEntiteResult(null, null, mID);
             }
@@ -290,7 +334,7 @@ public class SummaryGenerator {
             String targetClassName = ClassUtil.getClassName(targetObj);
             DOSchemaClass targetSchemaClass = referenceSchema.findClassByName(targetClassName);
             String label = null;
-            if (targetSchemaClass != null && targetSchemaClass.attributes.summary != null && !targetSchemaClass.attributes.summary.isEmpty()) {
+            if (targetSchemaClass != null && hasSummary(targetSchemaClass, referenceSchema)) {
                 label = generate(resolved.delegate, targetObj, targetSchemaClass, referenceSchema, database);
             }
             if ((label == null || label.isBlank()) && targetObj != null) {
@@ -305,6 +349,24 @@ public class SummaryGenerator {
         } catch (Exception e) {
             return new IDEntiteResult(null, null, null);
         }
+    }
+
+    /**
+     * Checks whether the IDEntite class has a valueMap on its mID field and
+     * translates the given mID value.  Returns null when no valueMap exists
+     * or the value has no mapping.
+     */
+    private static String resolveValueMapLabel(DOSchemaClass idEntiteClass, Long mID) {
+        if (idEntiteClass.fields == null)
+            return null;
+        String mIdStr = String.valueOf(mID);
+        for (DOSchemaField field : idEntiteClass.fields) {
+            if ("mID".equals(field.attributes.source) && field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+                String mapped = field.attributes.valueMap.getMappedValue(mIdStr);
+                return mapped.equals(mIdStr) ? null : mapped;
+            }
+        }
+        return null;
     }
 
     // ── Fallback label generation

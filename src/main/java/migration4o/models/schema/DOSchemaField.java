@@ -86,6 +86,7 @@ public class DOSchemaField {
         copy.attributes.description = this.attributes.description;
         copy.attributes.pointsTo = this.attributes.pointsTo;
         copy.attributes.definitionId = this.attributes.definitionId;
+        copy.attributes.group = this.attributes.group;
 
         // Deep copy value map
         if (this.attributes.valueMap != null) {

@@ -106,6 +106,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "description", field.attributes.description);
         }
 
+        if (field.attributes.group != null && !field.attributes.group.isEmpty()) {
+            writeAttribute(writer, "group", field.attributes.group);
+        }
+
         // Check if we have child elements (valueMap, criterias)
         boolean hasChildren = (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) || (field.attributes.criterias != null && !field.attributes.criterias.isEmpty());
 
@@ -257,6 +261,10 @@ public class DOReferenceSchemaWriter {
 
         if (field.attributes.description != null && !field.attributes.description.isEmpty()) {
             writeAttribute(writer, "description", field.attributes.description);
+        }
+
+        if (field.attributes.group != null && !field.attributes.group.isEmpty()) {
+            writeAttribute(writer, "group", field.attributes.group);
         }
 
         // Check if we have child elements (valueMap, criterias)

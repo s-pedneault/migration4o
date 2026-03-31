@@ -698,9 +698,6 @@ public class ClassExportConfigDialog extends BaseFormDialog {
         if (!titleOverride.isEmpty()) {
             result.setTitle(titleOverride);
         }
-        if (initialConfig != null && initialConfig.hasLayout()) {
-            result.setLayout(initialConfig.getLayout());
-        }
 
         // Collect selected default columns (in the order they appear in the UI)
         result.setDefaultColumns(selectedColumnPaths.isEmpty() ? null : new ArrayList<>(selectedColumnPaths));

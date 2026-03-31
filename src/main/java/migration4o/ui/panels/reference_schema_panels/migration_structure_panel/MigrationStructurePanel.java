@@ -869,9 +869,24 @@ public class MigrationStructurePanel extends JPanel {
 
         // Add to Export option for classes
         if (node.getUserObject() instanceof ClassNode) {
+            ClassNode classNode = (ClassNode) node.getUserObject();
+
             JMenuItem addToExportItem = new JMenuItem("Add to Export...");
             addToExportItem.addActionListener(evt -> addSelectedClassToExport());
             contextMenu.add(addToExportItem);
+
+            JMenuItem designLayoutItem = new JMenuItem("Design Detail View...");
+            designLayoutItem.addActionListener(evt -> {
+                DOSchemaClass schemaClass = classNode.getSchemaClass();
+                ClassExportConfig config = classNode.getExportConfig();
+                if (config == null) {
+                    config = new ClassExportConfig(schemaClass.attributes.source);
+                }
+                DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
+                DetailLayoutDesigner designer = new DetailLayoutDesigner(config, schemaClass, refSchema);
+                designer.setVisible(true);
+            });
+            contextMenu.add(designLayoutItem);
 
             // Severed database tie: removed "View Objects" menu item which used
             // DODatabaseService.

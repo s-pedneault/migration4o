@@ -19,6 +19,7 @@ public class DOSchemaFieldAttributes {
     public String pointsTo;
     public DOSchemaValueMap valueMap; // Maps database values to export values
     public String definitionId; // Shared field definition support. If set, this field references a shared definition
+    public String group; // Semantic group for auto-layout (e.g. "identity", "dates", "status", "text")
 
     public List<DOFieldCriteria> criterias; // Virtual field support (source starts with @). Query criterias for virtual fields
     public String criteriasOperator; // Logical operator for multiple criterias: "AND" or "OR" (default: "AND")

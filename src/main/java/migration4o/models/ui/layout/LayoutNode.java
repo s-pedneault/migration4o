@@ -95,7 +95,13 @@ public class LayoutNode {
         String base;
         switch (type) {
         case SECTION:
-            base = "Section: " + prop("title", "(untitled)");
+            String layoutRef = prop("layoutRef");
+            if (layoutRef != null) {
+                String simple = layoutRef.contains(".") ? layoutRef.substring(layoutRef.lastIndexOf('.') + 1) : layoutRef;
+                base = "\uD83D\uDD17 " + prop("title", simple) + " \u2192 " + simple;
+            } else {
+                base = "Section: " + prop("title", "(untitled)");
+            }
             break;
         case COLUMNS:
             base = "Columns (" + prop("count", "2") + ")";

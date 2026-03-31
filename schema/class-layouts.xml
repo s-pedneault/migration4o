@@ -1,0 +1,297 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classLayouts>
+    <classLayout sourceName="gest.fournisseur.Fournisseur">
+        <layout>
+            <field ref="id"/>
+            <field ref="cellulaire"/>
+            <field ref="courriel"/>
+            <field ref="nom"/>
+            <field ref="note"/>
+            <field ref="teleavertisseur"/>
+            <field ref="siteWeb"/>
+            <field ref="telephoneTravail"/>
+            <field ref="telephoneTravailExt"/>
+            <field ref="idSSI"/>
+            <field format="longdate:yyyy-MM-dd HH:mm" ref="derniereModification"/>
+            <section collapsible="true" title="Adresse">
+                <field format="bool:Oui,Non" ref="adresse.afficherSuite"/>
+                <field ref="adresse.appartement"/>
+                <field ref="adresse.arrondissement"/>
+                <field ref="adresse.codeGeo"/>
+                <field ref="adresse.codeLien"/>
+                <field ref="adresse.codePostal"/>
+                <field ref="adresse.extension"/>
+                <field ref="adresse.telecopieur"/>
+                <field ref="adresse.numeroCivique"/>
+                <field ref="adresse.rue"/>
+                <field ref="adresse.secteur"/>
+                <field ref="adresse.suite"/>
+                <field ref="adresse.telephoneAutre"/>
+                <field ref="adresse.telephoneAutreExt"/>
+                <field ref="adresse.telephone"/>
+                <field ref="adresse.telephoneExtension"/>
+                <field ref="adresse.typeRue"/>
+                <field ref="adresse.typeSuite"/>
+                <field ref="adresse.ville"/>
+            </section>
+            <divider/>
+            <table columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph" columns="dateCreation,inclureDansRapportActivite,nom,photoParPage,formatImpression,idFichier,idGraph" ref="listePieceJointe"/>
+        </layout>
+    </classLayout>
+    <classLayout sourceName="gest.dossPrev.DossPrev">
+        <layout>
+            <field ref="mMatricule"/>
+            <field ref="mRaisonSociale"/>
+            <section collapsible="true" layoutRef="gest.DSI2003.IDDsi2003E2" ref="mIDCategRisque" title="Catégorie de risque"/>
+            <tabs>
+                <tab layoutRef="gest.gen.Adresse" ref="mAdresse" title="Adresse"/>
+                <tab layoutRef="gest.dossPrev.Energie" ref="mEnergie" title="Énergie"/>
+                <tab layoutRef="gest.gen.LongLat" ref="mLongLat" title="Longitude-latitude"/>
+                <tab layoutRef="gest.gen.Periodicite" ref="mPeriodicite" title="Périodicité"/>
+                <tab layoutRef="gest.dossPrev.Protection" ref="mProtection" title="Protection"/>
+            </tabs>
+            <columns count="2" sizes="50,50">
+                <column>
+                    <section title="État">
+                        <field format="bool:Oui,Non" ref="mPermetSynchro"/>
+                        <field format="bool:Oui,Non" ref="mPermetTransfertCAUCA"/>
+                        <field format="bool:Oui,Non" ref="mTransfertCAUCAFait"/>
+                    </section>
+                </column>
+                <column>
+                    <section title="Dates">
+                        <field format="date:yyyy-MM-dd" ref="mDateCreation"/>
+                        <field format="date:yyyy-MM-dd" ref="mDateDernResolution"/>
+                        <field format="date:yyyy-MM-dd" ref="mDateDernSync"/>
+                        <field format="date:yyyy-MM-dd" ref="mDateTransfertRAO"/>
+                    </section>
+                </column>
+            </columns>
+            <section title="Bâtiment">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mIDAuteur"/>
+                        <field ref="mIDClassif"/>
+                        <field ref="mIDDossPrevAssoc"/>
+                        <field ref="mIDDossPrevAttach"/>
+                        <field ref="mIDGraph"/>
+                        <field ref="mIDParementExt"/>
+                        <field ref="mAnneeConstruction"/>
+                        <field ref="mAnneeDernRenov"/>
+                        <field ref="mValeur"/>
+                        <field ref="mValeurImmeuble"/>
+                        <field ref="mValeurTerrain"/>
+                    </column>
+                    <column>
+                        <field ref="mIDPlancher"/>
+                        <field ref="mIDTypeBatiment"/>
+                        <field ref="mIDTypeConstruction"/>
+                        <field ref="mIDTypeToit"/>
+                        <field ref="mIDUsageDuLocal"/>
+                        <field ref="mIDUsagePrincipal"/>
+                        <field ref="mNbrLogement"/>
+                        <field ref="NbrEtage"/>
+                        <field ref="mNbrSousSol"/>
+                        <field ref="mNbrAttique"/>
+                        <field ref="mNbrAutresLocaux"/>
+                    </column>
+                </columns>
+            </section>
+            <section collapsible="true" layoutRef="gest.gen.Qte" ref="mQteAireAuSol" title="Aire au sol"/>
+            <section collapsible="true" layoutRef="gest.gen.Qte" ref="mQteAireAuSolTerrain" title="Aire au sol du terrain"/>
+            <divider/>
+            <tabs>
+                <tab title="Alias d'adresse">
+                    <table columnTitles="Afficher suite,Appartement,Arrondissement,Code geo,Code lien,Code postal,Extension,Télécopieur,Numéro civique,Rue,Secteur,Suite,Téléphone autre,Téléphone autre ext,Téléphone,Téléphone extension,Type de rue,Type de suite,Ville" columns="mAfficherSuite,mAppart,mArrondissement,mCodeGeo,mCodeLien,mCodePost,mExt,mFax,mNoCiv,mRue,mSecteur,mSuite,mTelAutre,mTelAutreExt,mTelephone,mTelephoneExt,mTypeRue,mTypeSuite,mVille" ref="mVectAliasAdresse"/>
+                </tab>
+                <tab title="Alias de nom">
+                    <table columnTitles="Nom" columns="iNom" ref="mVectAliasNom"/>
+                </tab>
+                <tab title="Champs personnalisés">
+                    <table columnTitles="Valeur,Type de champ personnalisé" columns="mValeur,mIDTypeChampPerso" ref="mVectChampPerso"/>
+                </tab>
+                <tab title="Codes de référence">
+                    <table columnTitles="ID,Contrainte" columns="mID,mContrainte" ref="mVectIDCodeRef"/>
+                </tab>
+                <tab title="Anciens matricules">
+                    <table ref="mVectOldMatricule"/>
+                </tab>
+            </tabs>
+            <section collapsible="true" title="Personnes ressources">
+                <table columnTitles="ID,Autre adresse que dossier,Cellulaire,Consentement web pour envois,Contact intervention,Courriel,Handicapé,Identification import,Dernière mise À jour via formulaire web,Nom,Note,Téléavertisseur,Téléavertisseur - code,Personne - ressource,Provenance,Raison sociale,Salutation,Site web,Statut,Dossier adresse,Langue,ID SSI,Dernière modification" columns="mID,mAutreAdresseQueDossier,mCell,mConsentementWebPourEnvois,mContactIntervention,mCouriel,mHandicape,mIdentImport,mLastUpdateViaFormWeb,mNom,mNote,mPaget,mPagetCode,mPersonneRessource,mProvenance,mRaisonSociale,mSalutation,mSiteWeb,mStatut,mIDDossPrev,mIDLangue,mIDSSI,mDernModif" ref="mVectPersonneRess"/>
+            </section>
+            <section collapsible="true" title="Périodicités">
+                <table columnTitles="Date de dernière prévention,Type de périodicité,ID de responsable,ID de type prévention,Date de début du périodique,Date du dernier périodique,Inclure la date,Intervalle,Jour,Préciser jour,Semaine,Unité mesure" columns="mDateDernPrev,mTypePeriodicite,mIDResponsable,mIDTypePrevention,mDateDebutPer,mDateDernPer,mInclureDate,mIntervalle,mJour,mPreciserJour,mSemaine,mUniteMes" ref="mVectPeriodicites"/>
+            </section>
+            <section collapsible="true" title="Produits dangereux">
+                <table columnTitles="ID,Cas,Contenant,Entrée de gaz,Équipement raccordé,Emplacement,Nombre de contenants,Note,Périmètre,Secteur,Section,ID SSI,Dernière modification" columns="mID,mCAS,mContenant,mEntreeGaz,mEquipRaccorde,mLocalisation,mNbrContenant,mNotes,mPerimetre,mSecteur,mSection,mIDSSI,mDernModif" ref="mVectProdDang"/>
+            </section>
+            <section collapsible="true" title="Pièces jointes">
+                <table columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph" columns="mDateCreation,mInclureDansRapportAct,mNom,mPhotoParPage,mPrintFormat,mIDFichier,mIDGraph" ref="mVectPhotoFich"/>
+            </section>
+            <section collapsible="true" title="Autres champs">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mEtat"/>
+                        <field ref="mID"/>
+                        <field ref="mSubdivision"/>
+                        <field ref="mNoCivFin"/>
+                        <field ref="mExtFin"/>
+                        <field ref="mAssoc"/>
+                        <field ref="mDatum"/>
+                        <field ref="mDescUtilisation"/>
+                        <field ref="mDossierPapier"/>
+                        <field ref="mEtatCAUCA"/>
+                        <field ref="mGeoPosition"/>
+                        <field ref="mImport"/>
+                    </column>
+                    <column>
+                        <field ref="mTypeConstrAutreDetail"/>
+                        <field ref="mUtilisePeriodicite"/>
+                        <field ref="mIDDossPrevOld"/>
+                        <field ref="mIDExterne"/>
+                        <field ref="mNbPhotosParPagePourGraph"/>
+                        <field ref="mIDSSI"/>
+                        <field ref="mDernModif"/>
+                    </column>
+                </columns>
+            </section>
+            <field ref="mNote"/>
+        </layout>
+    </classLayout>
+    <classLayout sourceName="gest.prevention.Prevention">
+        <layout>
+            <section collapsible="true" title="Dates">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field format="date:yyyy-MM-dd" ref="mDateActivite"/>
+                        <field format="date:yyyy-MM-dd" ref="mDateCompletee"/>
+                    </column>
+                    <column>
+                        <field format="date:yyyy-MM-dd" ref="mDateCreation"/>
+                        <field format="date:yyyy-MM-dd" ref="mDateIdent"/>
+                    </column>
+                </columns>
+            </section>
+            <section collapsible="true" title="Références">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mIDAssigneA"/>
+                        <field ref="mIDAuteur"/>
+                        <field ref="mIDAvis"/>
+                        <field ref="mIDAvisAvecSignature"/>
+                        <field ref="mIDCaserne"/>
+                    </column>
+                    <column>
+                        <field ref="mIDDossPrev"/>
+                        <field ref="mIDPrevSrc"/>
+                        <field ref="mIDResponsable"/>
+                        <field ref="mIDTypePrev"/>
+                    </column>
+                </columns>
+            </section>
+            <tabs>
+                <tab layoutRef="gest.prevention.IDPrevention" ref="mIDPrevAvisAssoc" title="Prévention associée à l'avis"/>
+                <tab layoutRef="java.util.Hashtable" ref="mHshSectCondValeurCPOri" title="Valeurs originales de champs personnalisés conditionnels"/>
+                <tab layoutRef="java.util.Hashtable" ref="mHshSectCondValeurCPOriDossPrev" title="Valeurs originales de champs personnalisés conditionnels du dossier adresse"/>
+                <tab layoutRef="java.util.Hashtable" ref="mHshSectCondValeursOri" title="Valeurs originales de section conditionnelles"/>
+                <tab layoutRef="java.util.Hashtable" ref="mHshSectCondValeursOriDossPrev" title="Valeurs originales de section conditionnelles du dossier adresse"/>
+            </tabs>
+            <divider/>
+            <tabs>
+                <tab title="Champs personnalisés">
+                    <table columnTitles="Valeur,Type de champ personnalisé" columns="mValeur,mIDTypeChampPerso" ref="mVectChampPerso"/>
+                </tab>
+                <tab title="Étapes">
+                    <table columnTitles="Mobile,Opération,Statut,ID d'assigne à" columns="mMobile,mOperation,mStatut,mIDAssigneA" ref="mVectEtape"/>
+                </tab>
+                <tab title="Historiques d'activités">
+                    <table columnTitles="ID,Date de début,Date de fin,Description,ID d'activité,ID d'équipe,ID SSI,Type d'activité,Dernière modification" columns="mID,mDateDebut,mDateFin,mDesc,mIDActivite,mIDEquipe,mIDSSI,mIDTypeActivite,mDernModif" ref="mVectHistoActivite"/>
+                </tab>
+                <tab title="Informations historiques des employés">
+                    <table columnTitles="Histo activité" columns="mIDHistoActivite" ref="mVectInfoHistoEmploye"/>
+                </tab>
+                <tab title="Pièces jointes">
+                    <table columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph" columns="mDateCreation,mInclureDansRapportAct,mNom,mPhotoParPage,mPrintFormat,mIDFichier,mIDGraph" ref="mVectPhotoFich"/>
+                </tab>
+            </tabs>
+            <section collapsible="true" title="Anomalies de prévention">
+                <table columnTitles="Compteur réinspection lors ajout,Corrigé,Date de corrigé,Délai date,Délai nombre jour,Identification paramètre figure saisie,Identification section,Identification section conditionnelle,Lieu,Note,Réinspection,Texte anomalie,Type de délai,ID de type anomalie" columns="mCmptReinspectLorsAjout,mCorrige,mDateCorrige,mDelaiDate,mDelaiNbrJour,mIdentParamFigureSaisie,mIdentSection,mIdentSectionConditionnelle,mLieu,mNote,mReinspection,mTexteAnom,mTypeDelai,mIDTypeAnom" ref="mVectPrevAnom"/>
+            </section>
+            <section collapsible="true" title="Reports">
+                <table columnTitles="Date,ID de raison report,Texte,Note,Date de report" columns="mDate,mIDRaisonReport,mTexte,mNote,mDateReport" ref="mVectReport"/>
+            </section>
+            <section collapsible="true" title="Autres champs">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mID"/>
+                        <field ref="mAvisEmission"/>
+                        <field ref="mCmptInspect"/>
+                        <field ref="mCodeAccesFormWeb"/>
+                        <field ref="mIdentJour"/>
+                        <field ref="mMD5Avis"/>
+                        <field ref="mNarratif"/>
+                        <field ref="mNarratifsPrec"/>
+                    </column>
+                    <column>
+                        <field ref="mNumActivite"/>
+                        <field ref="mStatut"/>
+                        <field ref="mTexteAvis"/>
+                        <field ref="mTexteIntro"/>
+                        <field ref="mIDPreventionSrc"/>
+                        <field ref="mIDSSI"/>
+                        <field ref="mFormWebStatut"/>
+                        <field ref="mDernModif"/>
+                    </column>
+                </columns>
+            </section>
+        </layout>
+    </classLayout>
+    <classLayout sourceName="gest.gen.Adresse">
+        <layout>
+            <section title="Adresse">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mNoCiv"/>
+                        <field ref="mAppart"/>
+                        <field ref="mTypeRue"/>
+                        <field ref="mCodeLien"/>
+                        <field ref="mRue"/>
+                        <field ref="mVille"/>
+                        <field ref="mSecteur"/>
+                        <field ref="mArrondissement"/>
+                        <field ref="mCodeGeo"/>
+                        <field ref="mCodePost"/>
+                    </column>
+                    <column>
+                        <field ref="mTelephone"/>
+                        <field ref="mExt"/>
+                        <field ref="mTelAutre"/>
+                        <field ref="mTelAutreExt"/>
+                        <field ref="mTelephoneExt"/>
+                        <field ref="mFax"/>
+                        <divider/>
+                        <field format="bool:Oui,Non" ref="mAfficherSuite"/>
+                        <field ref="mTypeSuite"/>
+                        <field ref="mSuite"/>
+                    </column>
+                </columns>
+            </section>
+        </layout>
+    </classLayout>
+    <classLayout sourceName="gest.gen.Qte">
+        <layout>
+            <columns count="3" sizes="33,33,34">
+                <column>
+                    <field ref="mTypeQte"/>
+                </column>
+                <column>
+                    <field ref="mValeur"/>
+                </column>
+                <column>
+                    <field ref="mMes"/>
+                </column>
+            </columns>
+        </layout>
+    </classLayout>
+</classLayouts>

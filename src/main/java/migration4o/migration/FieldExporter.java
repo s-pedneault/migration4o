@@ -662,44 +662,86 @@ public class FieldExporter {
             // IDEntite wrappers and checks all skipWhen conditions)
             DOSchemaClass fieldClass = operation.referenceSchema.findClassByName(className);
             if (fieldClass != null && fieldClass.isIDEntite()) {
-                // For non-embedded IDEntite references, export as simple ID
-                // value
-                // instead of nested structure
-                if (schemaField != null && !schemaField.attributes.embedContents) {
-                    if (ctxRef.statistics != null) {
-                        long idEntiteObjectId = delegate.getID(fieldValue);
-                        if (idEntiteObjectId > 0) {
-                            ctxRef.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
-                            ctxRef.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
-                        }
-                    }
+                // ── Unified IDEntite handler (embedded + non-embedded) ──
+                // All field-level IDEntite processing happens here so that
+                // the format handler hook is invoked regardless of the
+                // embedContents flag.  Embedded IDEntite no longer falls
+                // through to the generic-object path / exportFieldValue.
 
-                    Long mID = IDEntityHandler.extractMID(delegate, fieldValue);
-                    if (mID != null) {
-                        Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
-                        // Format-specific field hook / JS label resolution
-                        if (handlerRef != null) {
-                            ctxRef.setField(schemaField, fieldValue);
-                            boolean handled;
-                            try {
-                                handled = handlerRef.onField(ctxRef);
-                            } catch (Exception e) {
-                                handled = false;
-                            }
-                            ctxRef.clearField();
-                            if (handled)
-                                return;
-                        }
-                        String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
-                        xmlWriter.elementWithContent(fieldName, attrs, formattedId, false);
-                        return;
-                    } else {
-                        // IDEntite wrapper exists in DB4O but mID could not be read — data integrity issue
-                        long idEntiteObjectId = delegate.getID(fieldValue);
-                        System.err.println("[WARN] IDEntite mID unreadable for field '" + sourceFieldName + "' on " + parentSourceClassName + " (objectId=" + parentObjectId + ", IDEntite objectId=" + idEntiteObjectId + ") — field skipped.");
-                        return;
+                if (ctxRef.statistics != null) {
+                    long idEntiteObjectId = delegate.getID(fieldValue);
+                    if (idEntiteObjectId > 0) {
+                        ctxRef.statistics.recordReachedOnly(fieldClass, idEntiteObjectId, operation.referenceSchema);
                     }
                 }
+
+                Long mID = IDEntityHandler.extractMID(delegate, fieldValue);
+
+                // Skip based on mID value (MINUS_ONE, NULL, etc.)
+                if (mID != null && shouldSkipField(mID, schemaField, operation.referenceSchema)) {
+                    if (ctxRef.statistics != null) {
+                        long idEntiteObjectId = delegate.getID(fieldValue);
+                        ctxRef.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "IDEntite mID skipped by skipWhen conditions");
+                    }
+                    return;
+                }
+
+                // Format handler hook — gives HTML (or other) handlers a
+                // chance to write a human-readable label for BOTH embedded
+                // and non-embedded IDEntite fields.
+                if (handlerRef != null) {
+                    ctxRef.setField(schemaField, fieldValue);
+                    boolean handled;
+                    try {
+                        handled = handlerRef.onField(ctxRef);
+                    } catch (Exception e) {
+                        handled = false;
+                    }
+                    ctxRef.clearField();
+                    if (handled)
+                        return;
+                }
+
+                boolean isEmbedded = schemaField != null && schemaField.attributes.embedContents;
+
+                if (isEmbedded) {
+                    // Embedded IDEntite: resolve to target entity and export
+                    // inline, wrapped in the field-name element.
+                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteForExport(delegate, fieldValue, className, schemaField, operation.database);
+                    if (resolved == null)
+                        return;
+
+                    if (ctxRef.statistics != null) {
+                        ctxRef.statistics.recordRelationshipExported(parentObjectId, resolved.objectId, parentSourceClassName, sourceFieldName, "resolved IDEntite and traversed as embedded relationship");
+                    }
+
+                    xmlWriter.openStructure(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema));
+                    DODatabaseDelegate savedDelegate = ctxRef.delegate;
+                    try {
+                        ctxRef.delegate = resolved.delegate;
+                        ctxRef.objectExporter.exportObject(resolved.objectId, true);
+                    } finally {
+                        ctxRef.delegate = savedDelegate;
+                        xmlWriter.closeStructure(fieldName);
+                    }
+                } else {
+                    // Non-embedded IDEntite: export mID as a scalar value
+                    if (mID != null) {
+                        if (ctxRef.statistics != null) {
+                            long idEntiteObjectId = delegate.getID(fieldValue);
+                            ctxRef.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
+                        }
+                        Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
+                        String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
+                        xmlWriter.elementWithContent(fieldName, attrs, formattedId, false);
+                    } else {
+                        // IDEntite wrapper exists in DB4O but mID could not be
+                        // read — data integrity issue
+                        long idEntiteObjectId = delegate.getID(fieldValue);
+                        System.err.println("[WARN] IDEntite mID unreadable for field '" + sourceFieldName + "' on " + parentSourceClassName + " (objectId=" + parentObjectId + ", IDEntite objectId=" + idEntiteObjectId + ") — field skipped.");
+                    }
+                }
+                return;
             }
 
             // Before writing field wrapper tags, check if the referenced object
@@ -1102,6 +1144,11 @@ public class FieldExporter {
         }
 
         if (fieldClass != null && fieldClass.isIDEntite()) {
+            // IDEntite inside a collection or map value — the primary
+            // field-level IDEntite handling lives in exportRegularField;
+            // this path is reached only for standalone items (e.g. Vector
+            // elements, Hashtable values).
+
             if (ctxRef.statistics != null) {
                 long idEntiteObjectId = delegate.getID(fieldValue);
                 if (idEntiteObjectId > 0) {
@@ -1109,15 +1156,26 @@ public class FieldExporter {
                 }
             }
 
-            // Skip IDEntite references based on skipWhen conditions (MINUS_ONE, NULL, etc.)
-            // using the extracted mID rather than the GenericObject wrapper
             Long mID = IDEntityHandler.extractMID(delegate, fieldValue);
             if (mID != null && shouldSkipField(mID, schemaField, operation.referenceSchema)) {
                 return;
             }
 
+            // Format handler hook (same as exportRegularField)
+            if (handlerRef != null) {
+                ctxRef.setField(schemaField, fieldValue);
+                boolean handled;
+                try {
+                    handled = handlerRef.onField(ctxRef);
+                } catch (Exception e) {
+                    handled = false;
+                }
+                ctxRef.clearField();
+                if (handled)
+                    return;
+            }
+
             if (isEmbedded) {
-                // Embedded IDEntite: resolve to target entity and export inline
                 ResolvedReference resolved = ReferenceUtil.resolveIDEntiteForExport(delegate, fieldValue, className, schemaField, operation.database);
                 if (resolved == null) {
                     return;
@@ -1133,8 +1191,6 @@ public class FieldExporter {
                     ctxRef.delegate = savedDelegate;
                 }
             } else {
-                // Non-embedded IDEntite: export IDEntite object as-is (writes
-                // its own element with mID field value, e.g. <IDProgramme><valeur>123</valeur></IDProgramme>)
                 long objectId = delegate.getID(fieldValue);
                 if (ctxRef.statistics != null) {
                     ctxRef.statistics.recordRelationshipExported(parentObjectId, objectId, parentSourceClassName, sourceFieldName, "IDEntite exported as object reference (embedContents=false)");

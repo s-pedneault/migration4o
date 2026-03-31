@@ -1957,7 +1957,16 @@
      * name as a small subtitle, and no collapsible wrapper of its own.
      */
     function renderInlineIdEntiteSection(key, value) {
-        if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+        // StructuredWriterJS wraps elementWithContent in an array when
+        // attributes are present, so unwrap single-element arrays.
+        if (Array.isArray(value)) {
+            if (value.length === 1 && value[0] && typeof value[0] === 'object') {
+                value = value[0];
+            } else {
+                return '';
+            }
+        }
+        if (!value || typeof value !== 'object') return '';
 
         // HTML-resolved IDEntite reference: HtmlFormatHandler writes these as
         // {"@attributes":{"_id":"123"},"#text":"label"} so the viewer can both
@@ -2172,8 +2181,9 @@
         let html = '';
 
         if (typeof DETAIL_LAYOUT !== 'undefined' && DETAIL_LAYOUT) {
-            // Layout-driven mode: keep original header
-            html += `<div class="detail-header"><h2>${esc(rec.entity)}</h2><div class="detail-subtitle">ID: ${esc(rec.id || '\u2014')} \u2022 ${esc(t('record'))} #${rec.pos}</div></div>`;
+            // Layout-driven mode
+            var _headerTitle = rec.summary || (typeof entityName !== 'undefined' && entityName ? entityName : rec.entity);
+            html += `<div class="detail-header"><h1 class="detail-header-title">${esc(_headerTitle)}</h1><div class="detail-subtitle">${esc(rec.entity)} \u2022 ID: ${esc(rec.id || '\u2014')}</div></div>`;
             html += '<div class="detail-scroll">';
             html += renderLayoutDetail(rec.raw, DETAIL_LAYOUT);
             html += renderBackRefSection(rec);
@@ -2213,7 +2223,7 @@
             html += '</div>';
             html += '<div class="detail-hero-right">';
             if (rec.id) html += '<div class="detail-hero-meta"><strong>ID</strong>&nbsp;<span class="badge badge-id">' + esc(rec.id) + '</span></div>';
-            html += '<div class="detail-hero-meta">' + esc(t('record')) + ' #' + rec.pos + '</div>';
+            html += '<div class="detail-hero-meta">' + esc(rec.entity) + '</div>';
             html += '</div>';
             html += '</div>';
 
@@ -2264,7 +2274,6 @@
                 // details section; all other objects get their own collapsible section.
                 const idEntiteObjectEntries = allObjectEntries.filter((e) => idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
                 const objectEntries = allObjectEntries.filter((e) => !idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
-
                 if (filteredPrimitives.length > 0 || idEntiteObjectEntries.length > 0) {
                     let sectionTitle = t('details');
                     html += `<details class="detail-section" open><summary><span class="summary-title">${esc(sectionTitle)}</span></summary><div class="section-body">`;
@@ -2536,6 +2545,36 @@
                 var label = p.label || displayFieldLabel(p.ref);
                 var fieldDestName = String(p.ref || '').split('.').pop() || '';
                 var fieldTitleAttr = fieldDestName && fieldDestName !== label ? ' title="' + esc(fieldDestName) + '"' : '';
+                // IDEntite object resolution: extract summary text and optional deep-link
+                if (typeof scalarVal === 'object' && scalarVal !== null && !Array.isArray(scalarVal)) {
+                    // HTML-resolved IDEntite: {#text: "label", @attributes: {_id: "123"}}
+                    if (scalarVal['#text'] !== undefined && scalarVal['@attributes'] && scalarVal['@attributes']['_id'] !== undefined) {
+                        var _refId = String(scalarVal['@attributes']['_id'] ?? '').trim();
+                        var _refText = String(scalarVal['#text'] ?? '').trim();
+                        if (!_refText || _refText === '0' || _refText === '-1') return '';
+                        var _refPtDestName = pointsToByPath[normalizeSchemaPath(p.ref)];
+                        var _refPtHref = _refPtDestName ? navHrefByDestName[_refPtDestName] : null;
+                        var _refLink = (_refPtHref && _refId && _refId !== '0' && _refId !== '-1')
+                            ? _refPtHref + '?open=' + encodeURIComponent(_refId)
+                            : null;
+                        var _refValueHtml = _refLink ? refLinkBtn(_refLink, _refText) : esc(_refText);
+                        return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
+                            + '</div><div class="field-value">' + _refValueHtml + '</div></div>';
+                    }
+                    // Generic embedded object with _summary
+                    if (scalarVal['@attributes'] && scalarVal['@attributes']['_summary']) {
+                        scalarVal = scalarVal['@attributes']['_summary'];
+                    } else {
+                        // Try to extract the first scalar value from the object
+                        var objKeys = Object.keys(scalarVal).filter(function (k) { return k !== '@attributes'; });
+                        if (objKeys.length === 1 && typeof scalarVal[objKeys[0]] !== 'object') {
+                            scalarVal = scalarVal[objKeys[0]];
+                        } else {
+                            return ''; // Cannot render a complex object as a simple field
+                        }
+                    }
+                    if (scalarVal === null || scalarVal === undefined || String(scalarVal).trim() === '') return '';
+                }
                 var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
                 return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                     + '</div><div class="field-value">' + formatted + '</div></div>';
@@ -2554,6 +2593,8 @@
                     return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(p.ref))
                         + '</div><div class="field-value" style="color:var(--c-text-muted)">\u2014</div></div>';
                 }
+                items = expandWrapperCollectionItems(items);
+                var bare = p.bare === 'true';
                 var cols = (p.columns || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                 var widths = (p.widths || '').split(',').map(function (s) { return s.trim(); });
                 var colTitles = (p.columnTitles || '').split(',').map(function (s) { return s.trim(); });
@@ -2564,7 +2605,9 @@
                 var headerStyle = '';
                 if (p.color) headerStyle += 'color:' + esc(p.color) + ';';
                 if (p.hilite) headerStyle += 'background-color:' + esc(p.hilite) + ';';
-                var thtml = '<details class="detail-section" open><summary' + (headerStyle ? ' style="' + headerStyle + '"' : '') + '><span class="summary-title">'
+                var thtml = bare
+                    ? '<div style="padding:8px 12px;overflow-x:auto;"><span class="summary-meta" style="display:block;text-align:right;margin-bottom:4px;">' + items.length + ' ' + esc(t('elements')) + '</span><table class="collection-table"><thead><tr>'
+                    : '<details class="detail-section" open><summary' + (headerStyle ? ' style="' + headerStyle + '"' : '') + '><span class="summary-title">'
                     + esc(displayFieldLabel(p.ref)) + '</span><span class="summary-meta">' + items.length + ' ' + esc(t('elements'))
                     + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
                 cols.forEach(function (col, idx) {
@@ -2577,11 +2620,18 @@
                     thtml += '<tr>';
                     cols.forEach(function (col) {
                         var cellVal = (item && typeof item === 'object') ? item[col] : item;
+                        // Unwrap single-element arrays
+                        if (Array.isArray(cellVal) && cellVal.length === 1) cellVal = cellVal[0];
+                        // IDEntite: extract #text summary
+                        if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
+                            if (cellVal['#text'] !== undefined) cellVal = cellVal['#text'];
+                            else if (cellVal['@attributes'] && cellVal['@attributes']['_summary']) cellVal = cellVal['@attributes']['_summary'];
+                        }
                         thtml += '<td>' + fmtValue(cellVal, col) + '</td>';
                     });
                     thtml += '</tr>';
                 });
-                thtml += '</tbody></table></div></div></details>';
+                thtml += '</tbody></table>' + (bare ? '</div>' : '</div></div></details>');
                 return thtml;
             }
             case 'tabs': {

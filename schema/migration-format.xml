@@ -38,44 +38,7 @@
                     <classRef sourceName="gest.activite.Acte"/>
                     <classRef sourceName="gest.activite.TypeActivQuart"/>
                     <classRef sourceName="gest.champPerso.TypeChampPerso"/>
-                    <classRef sourceName="gest.fournisseur.Fournisseur">
-                        <layout>
-                            <field ref="id"/>
-                            <field ref="cellulaire"/>
-                            <field ref="courriel"/>
-                            <field ref="nom"/>
-                            <field ref="note"/>
-                            <field ref="teleavertisseur"/>
-                            <field ref="siteWeb"/>
-                            <field ref="telephoneTravail"/>
-                            <field ref="telephoneTravailExt"/>
-                            <field ref="idSSI"/>
-                            <field format="longdate:yyyy-MM-dd HH:mm" ref="derniereModification"/>
-                            <section collapsible="true" title="Adresse">
-                                <field format="bool:Oui,Non" ref="adresse.afficherSuite"/>
-                                <field ref="adresse.appartement"/>
-                                <field ref="adresse.arrondissement"/>
-                                <field ref="adresse.codeGeo"/>
-                                <field ref="adresse.codeLien"/>
-                                <field ref="adresse.codePostal"/>
-                                <field ref="adresse.extension"/>
-                                <field ref="adresse.telecopieur"/>
-                                <field ref="adresse.numeroCivique"/>
-                                <field ref="adresse.rue"/>
-                                <field ref="adresse.secteur"/>
-                                <field ref="adresse.suite"/>
-                                <field ref="adresse.telephoneAutre"/>
-                                <field ref="adresse.telephoneAutreExt"/>
-                                <field ref="adresse.telephone"/>
-                                <field ref="adresse.telephoneExtension"/>
-                                <field ref="adresse.typeRue"/>
-                                <field ref="adresse.typeSuite"/>
-                                <field ref="adresse.ville"/>
-                            </section>
-                            <divider/>
-                            <table columnTitles="Date de création,Inclure dans rapport activité,Nom,Photo par page,Format impression,ID de fichier,ID de graph" columns="dateCreation,inclureDansRapportActivite,nom,photoParPage,formatImpression,idFichier,idGraph" ref="listePieceJointe"/>
-                        </layout>
-                    </classRef>
+                    <classRef sourceName="gest.fournisseur.Fournisseur"/>
                     <classRef sourceName="gest.listePerso.ListePerso"/>
                     <classRef sourceName="gest.mobile.Mobile"/>
                     <classRef sourceName="gest.preference.Preference"/>

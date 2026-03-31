@@ -400,10 +400,12 @@ public final class JsViewerHtmlGenerator {
             sb.append(",\"title\":\"").append(escapeJson(field.attributes.title)).append('"');
         }
 
-        // Mark IDEntite fields that do not embed their contents — the HTML
-        // viewer
-        // will render these inline (multicolumn) inside the parent section.
-        if (!field.attributes.isCollection && !field.attributes.embedContents && field.attributes.type != null && refSchema != null) {
+        // Mark IDEntite fields so the HTML viewer renders them inline
+        // (with cross-page link) instead of as expandable nested sections.
+        // This applies to both embedded and non-embedded IDEntite fields
+        // because the HtmlFormatHandler intercepts all IDEntite references
+        // and writes them as flat values with _id attributes.
+        if (!field.attributes.isCollection && field.attributes.type != null && refSchema != null) {
             DOSchemaClass typeClass = refSchema.findClassByName(field.attributes.type);
             if (typeClass != null && typeClass.isIDEntite()) {
                 sb.append(",\"idEntite\":true");

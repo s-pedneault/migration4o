@@ -91,6 +91,13 @@ public class ApplicationService {
         } else {
             System.out.println("Module structure already loaded");
         }
+
+        // Load standalone class layouts (class-layouts.xml)
+        try {
+            moduleService.loadClassLayouts();
+        } catch (Exception e) {
+            System.out.println("No class layouts file found (will be created on first save)");
+        }
     }
 
     /**

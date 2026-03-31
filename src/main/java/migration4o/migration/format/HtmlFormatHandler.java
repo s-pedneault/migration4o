@@ -14,7 +14,10 @@ import migration4o.migration.ExportFormat;
 import migration4o.migration.SummaryGenerator;
 import migration4o.migration.SummaryGenerator.IDEntiteResult;
 import migration4o.migration.tasks.NavTreeBuilder;
+import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.ui.layout.DetailLayout;
+import migration4o.schema.modules.DOModuleService;
 import migration4o.util.ClassUtil;
 import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.MunicipalityCsvReader;
@@ -46,6 +49,8 @@ public class HtmlFormatHandler extends FormatHandler {
      * Captured in {@link #open} — default columns JSON ("null" when not configured).
      */
     private String currentDefaultColumnsJson;
+    /** Resolved layout JSON — computed in {@link #open} when ctx is populated. */
+    private String currentLayoutJson;
     /**
      * Temp file path for streaming JS data to disk; cleaned up in {@link #close}.
      */
@@ -147,8 +152,27 @@ public class HtmlFormatHandler extends FormatHandler {
         this.currentSchemaClass = ctx.schemaClass;
         this.currentConfigTitle = (ctx.exportConfig != null) ? ctx.exportConfig.getTitle() : null;
         this.currentDefaultColumnsJson = (ctx.exportConfig != null && ctx.exportConfig.hasDefaultColumns()) ? ctx.exportConfig.getDefaultColumnsJson() : "null";
+        this.currentLayoutJson = resolveLayoutJson(ctx);
         pendingHrefEntries.clear();
         super.open(ctx);
+    }
+
+    private String resolveLayoutJson(ExportCurrentState ctx) {
+        // Check class-layouts.xml first
+        if (ctx.schemaClass != null) {
+            String sourceName = ctx.schemaClass.attributes.source;
+            DetailLayout layout = DOModuleService.getInstance().getClassLayout(sourceName);
+            if (layout != null) {
+                String json = layout.toResolvedJson(ctx.schemaClass, ctx.request.referenceSchema);
+                if (!"null".equals(json)) {
+                    System.out.println("[Layout] Custom layout applied for: " + sourceName + " (" + layout.nodes.size() + " nodes)");
+                    return json;
+                }
+                System.out.println("[Layout] WARNING: Custom layout for " + sourceName + " resolved to null (" + layout.nodes.size() + " nodes)");
+            }
+        }
+        // Fall back to auto-generated layout
+        return DetailLayout.autoGenerate(ctx.schemaClass, ctx.request.referenceSchema).toResolvedJson(ctx.schemaClass, ctx.request.referenceSchema);
     }
 
     /**
@@ -181,14 +205,14 @@ public class HtmlFormatHandler extends FormatHandler {
         // it drives CROSS_REFS lookups and the ?open= URL parameter regardless
         // of whether the user enabled exportNativeIds for XML output.
         Map<String, String> attrs = null;
-        if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummary(ctx.schemaClass)) {
+        if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema)) {
             attrs = new java.util.LinkedHashMap<>();
             // Always emit id on root objects for the viewer; also emit on all
             // objects when exportNativeIds is explicitly requested.
             if (ctx.isRootObject() || ctx.request.exportNativeIds) {
                 attrs.put("id", String.valueOf(ctx.currentObject().objectId));
             }
-            if (hasSummary(ctx.schemaClass)) {
+            if (hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema)) {
                 String summary = SummaryGenerator.generate(ctx.delegate, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database);
                 if (summary != null && !summary.isBlank()) {
                     attrs.put("_summary", summary);
@@ -216,16 +240,38 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * For non-embedded IDEntite field references: resolves a human-readable label and writes it as flat content, skipping the default pipeline.
+     * For IDEntite field references: resolves a human-readable label using
+     * the IDEntite class's valueMap (or target entity summary) and writes it
+     * as flat content, skipping the default embedded-object pipeline.
+     *
+     * This handles BOTH embedded and non-embedded IDEntite references — the
+     * IDEntite subclass's group-specific valueMap provides the correct label
+     * regardless of the embedContents flag.
      */
     @Override
     public boolean onField(ExportCurrentState ctx) throws Exception {
-        if (ctx.field == null || ctx.field.attributes.embedContents || ctx.fieldValue == null)
+        if (ctx.field == null || ctx.fieldValue == null)
             return false;
 
         try {
             String className = ClassUtil.getClassName(ctx.fieldValue);
             DOSchemaClass fieldClass = ctx.request.referenceSchema.findClassByName(className);
+
+            // Prefer the most specific IDEntite class: if the field's declared
+            // type is more precise than the runtime class (e.g. field declares
+            // IDDsi2003E8 but the DB4O object is stored as the parent IDDSI2003),
+            // use the declared type so its valueMap and group context are available.
+            if (ctx.field.attributes.type != null) {
+                DOSchemaClass declaredClass = ctx.request.referenceSchema.findClassByName(ctx.field.attributes.type);
+                if (declaredClass != null && declaredClass.isIDEntite()) {
+                    if (fieldClass == null) {
+                        fieldClass = declaredClass;
+                    } else if (!declaredClass.attributes.source.equals(fieldClass.attributes.source) && declaredClass.isDescendantOf(fieldClass.attributes.source)) {
+                        fieldClass = declaredClass;
+                    }
+                }
+            }
+
             if (fieldClass == null || !fieldClass.isIDEntite())
                 return false;
 
@@ -333,7 +379,7 @@ public class HtmlFormatHandler extends FormatHandler {
         int levels = ctx.moduleChain.size();
         String baseHref = levels == 0 ? "./" : "../".repeat(levels);
 
-        String layoutJson = (ctx.exportConfig != null && ctx.exportConfig.hasLayout()) ? ctx.exportConfig.getLayout().toJson() : "null";
+        String layoutJson = currentLayoutJson != null ? currentLayoutJson : "null";
 
         Path outputPath = writer.outputPath;
         try {
@@ -483,5 +529,9 @@ public class HtmlFormatHandler extends FormatHandler {
 
     private static boolean hasSummary(DOSchemaClass sc) {
         return sc != null && sc.attributes.summary != null && !sc.attributes.summary.isEmpty();
+    }
+
+    private boolean hasSummaryWithAncestors(DOSchemaClass sc, DOSchema referenceSchema) {
+        return SummaryGenerator.hasSummary(sc, referenceSchema);
     }
 }
