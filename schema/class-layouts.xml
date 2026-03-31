@@ -294,4 +294,41 @@
             </columns>
         </layout>
     </classLayout>
+    <classLayout sourceName="gest.consolide.ParamSSI">
+        <layout>
+            <field format="bool:Oui,Non" ref="mActif"/>
+            <field ref="mCodeConso"/>
+            <field ref="mTypeSync"/>
+            <section collapsible="true" title="Paramètres d'échange">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field format="bool:Oui,Non" ref="mEnvoiPLCentral"/>
+                        <field ref="mEnvRepert"/>
+                        <field ref="mCourrielNotifReplicException"/>
+                        <field format="bool:Oui,Non" ref="mNotifReplicReussie"/>
+                    </column>
+                    <column>
+                        <field format="bool:Oui,Non" ref="mEnvoyerTout"/>
+                        <field format="bool:Oui,Non" ref="mInclurePJ"/>
+                    </column>
+                </columns>
+            </section>
+            <field ref="mDetailEnvoiGeneral"/>
+            <divider/>
+            <field ref="mPeriodicite"/>
+            <section collapsible="true" title="Modules">
+                <table ref="mVectNModuleDetail"/>
+            </section>
+            <section collapsible="true" title="Autres champs">
+                <columns count="2" sizes="50,50">
+                    <column>
+                        <field ref="mDernTSImport"/>
+                    </column>
+                    <column>
+                        <field format="bool:Oui,Non" ref="mAccesMultiTous"/>
+                    </column>
+                </columns>
+            </section>
+        </layout>
+    </classLayout>
 </classLayouts>

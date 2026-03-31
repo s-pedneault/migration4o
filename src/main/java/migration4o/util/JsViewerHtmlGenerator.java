@@ -11,6 +11,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 import migration4o.models.schema.DOSchema;
@@ -421,11 +422,20 @@ public final class JsViewerHtmlGenerator {
             }
         }
 
-        if (depth < 2 && field.childrenSchemaClass != null && field.childrenSchemaClass.fields != null) {
+        // Resolve children class: use pre-linked field, or look up in refSchema
+        DOSchemaClass childrenClass = field.childrenSchemaClass;
+        if (childrenClass == null && refSchema != null) {
+            String typeName = field.attributes.isCollection && field.attributes.childrenType != null ? field.attributes.childrenType : (field.attributes.embedContents ? field.attributes.type : null);
+            if (typeName != null) {
+                childrenClass = refSchema.findClassByName(typeName);
+            }
+        }
+        if (depth < 2 && childrenClass != null) {
+            List<DOSchemaField> childFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childrenClass, refSchema);
             sb.append(",\"children\":[");
             boolean childFirst = true;
             Set<String> childSeen = new HashSet<>();
-            for (DOSchemaField cf : field.childrenSchemaClass.fields) {
+            for (DOSchemaField cf : childFields) {
                 if (!cf.attributes.isExported) {
                     continue;
                 }

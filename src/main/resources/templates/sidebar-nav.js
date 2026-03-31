@@ -2600,7 +2600,31 @@
                 var colTitles = (p.columnTitles || '').split(',').map(function (s) { return s.trim(); });
                 if (cols.length === 0) {
                     var first = items[0];
-                    if (first && typeof first === 'object') cols = Object.keys(first);
+                    if (first && typeof first === 'object') {
+                        Object.keys(first).forEach(function (k) {
+                            if (k === '@attributes') return;
+                            var sample = first[k];
+                            if (Array.isArray(sample) && sample.length === 1) sample = sample[0];
+                            // Flatten embedded objects into dotted sub-columns
+                            if (sample && typeof sample === 'object' && !Array.isArray(sample)
+                                && sample['#text'] === undefined
+                                && !(sample['@attributes'] && sample['@attributes']['_summary'])) {
+                                // Unwrap class-name wrappers (e.g. {DetailIntervEnvoi: [{...}]})
+                                var inner = sample;
+                                var wrapKeys = Object.keys(inner).filter(function (wk) { return wk !== '@attributes'; });
+                                if (wrapKeys.length === 1 && /^[A-Z]/.test(wrapKeys[0])) {
+                                    var wv = inner[wrapKeys[0]];
+                                    if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
+                                    if (wv && typeof wv === 'object' && !Array.isArray(wv)) inner = wv;
+                                }
+                                Object.keys(inner).forEach(function (sk) {
+                                    if (sk !== '@attributes') cols.push(k + '.' + sk);
+                                });
+                            } else {
+                                cols.push(k);
+                            }
+                        });
+                    }
                 }
                 var headerStyle = '';
                 if (p.color) headerStyle += 'color:' + esc(p.color) + ';';
@@ -2619,13 +2643,40 @@
                 items.forEach(function (item) {
                     thtml += '<tr>';
                     cols.forEach(function (col) {
-                        var cellVal = (item && typeof item === 'object') ? item[col] : item;
+                        var cellVal = col.indexOf('.') >= 0 ? resolveFieldValue(item, col)
+                            : (item && typeof item === 'object') ? item[col] : item;
                         // Unwrap single-element arrays
                         if (Array.isArray(cellVal) && cellVal.length === 1) cellVal = cellVal[0];
                         // IDEntite: extract #text summary
                         if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
                             if (cellVal['#text'] !== undefined) cellVal = cellVal['#text'];
                             else if (cellVal['@attributes'] && cellVal['@attributes']['_summary']) cellVal = cellVal['@attributes']['_summary'];
+                            else {
+                                // Unwrap class-name wrapper if present
+                                var obj = cellVal;
+                                var wks = Object.keys(obj).filter(function (wk) { return wk !== '@attributes'; });
+                                if (wks.length === 1 && /^[A-Z]/.test(wks[0])) {
+                                    var wv = obj[wks[0]];
+                                    if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
+                                    if (wv && typeof wv === 'object' && !Array.isArray(wv)) obj = wv;
+                                }
+                                // Compact inline rendering with labels
+                                var segs = [];
+                                Object.keys(obj).forEach(function (k) {
+                                    if (k === '@attributes') return;
+                                    var sv = obj[k];
+                                    if (Array.isArray(sv) && sv.length === 1) sv = sv[0];
+                                    if (sv == null) return;
+                                    if (typeof sv === 'object') {
+                                        if (sv['#text'] !== undefined) sv = sv['#text'];
+                                        else if (sv['@attributes'] && sv['@attributes']['_summary']) sv = sv['@attributes']['_summary'];
+                                        else return;
+                                    }
+                                    segs.push('<span style="color:var(--c-text-muted);font-size:0.85em">' + esc(displayFieldLabel(k)) + ':</span> ' + fmtValue(sv, k));
+                                });
+                                thtml += '<td>' + (segs.length ? segs.join(' &middot; ') : '\u2014') + '</td>';
+                                return;
+                            }
                         }
                         thtml += '<td>' + fmtValue(cellVal, col) + '</td>';
                     });

@@ -61,6 +61,10 @@ public class LayoutCanvas extends JPanel {
 
         default void openEmbeddedLayoutDesigner(String className) {
         }
+
+        /** Called when block structure changes (tab removed, block deleted, etc.) to refresh the palette. */
+        default void onBlockStructureChanged() {
+        }
     }
 
     public LayoutCanvas(DOSchemaClass schemaClass, DOSchema refSchema) {
@@ -441,6 +445,12 @@ public class LayoutCanvas extends JPanel {
             editorCallback.editTabProperties(tabPanel);
     }
 
+    /** Notify the designer that the block structure changed (e.g. tab removed, block deleted). */
+    public void onBlockStructureChanged() {
+        if (editorCallback != null)
+            editorCallback.onBlockStructureChanged();
+    }
+
     // ── Field Resolution ───────────────────────────────────────────
 
     DOSchemaField resolveFieldByRef(String ref) {
@@ -455,26 +465,12 @@ public class LayoutCanvas extends JPanel {
                 return null;
             if (i < parts.length - 1) {
                 String nextType = field.attributes.isCollection && field.attributes.childrenType != null ? field.attributes.childrenType : field.attributes.type;
-                current = findClassByType(nextType);
+                current = refSchema.findClassByName(nextType);
                 if (current == null)
                     return null;
             }
         }
         return field;
-    }
-
-    private DOSchemaClass findClassByType(String typeName) {
-        if (typeName == null || refSchema == null)
-            return null;
-        DOSchemaClass cls = refSchema.findClassByName(typeName);
-        if (cls != null)
-            return cls;
-        String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
-        for (DOSchemaClass c : refSchema.getClasses()) {
-            if (c.attributes.source != null && c.attributes.source.endsWith("." + shortName))
-                return c;
-        }
-        return null;
     }
 
     // ── Empty State ────────────────────────────────────────────────

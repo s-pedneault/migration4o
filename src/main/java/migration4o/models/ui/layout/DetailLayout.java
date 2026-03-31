@@ -11,6 +11,7 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.util.DatabaseUtil;
+import migration4o.util.TypeUtil;
 
 /**
  * Complete detail layout for a class export.
@@ -133,7 +134,7 @@ public class DetailLayout {
                             table.setProp("label", sf.attributes.title);
                         translateTableColumns(table, sf, refSchema);
                         resolved.children.add(table);
-                    } else if (sf.attributes.embedContents && sf.attributes.type != null && !isPrimitiveType(sf.attributes.type)) {
+                    } else if (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)) {
                         // Nested embedded — generate a sub-section
                         DOSchemaClass nestedClass = refSchema.findClassByName(sf.attributes.type);
                         if (nestedClass != null && nestedClass.attributes.migrate) {
@@ -290,7 +291,7 @@ public class DetailLayout {
     /** Generate table column metadata for a collection field. */
     private static void translateTableColumns(LayoutNode table, DOSchemaField collectionField, DOSchema refSchema) {
         String childType = collectionField.attributes.childrenType;
-        if (childType == null || isPrimitiveType(childType))
+        if (childType == null || TypeUtil.isPrimitiveType(childType))
             return;
         DOSchemaClass childClass = refSchema.findClassByName(childType);
         if (childClass == null)
@@ -300,7 +301,7 @@ public class DetailLayout {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection || (sf.attributes.embedContents && sf.attributes.type != null && !isPrimitiveType(sf.attributes.type)))
+            if (sf.attributes.isCollection || (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)))
                 continue;
             colNames.add(sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
@@ -310,12 +311,6 @@ public class DetailLayout {
             if (colTitles.stream().anyMatch(t -> !t.isEmpty()))
                 table.setProp("columnTitles", String.join(",", colTitles));
         }
-    }
-
-    private static boolean isPrimitiveType(String type) {
-        if (type == null)
-            return true;
-        return type.equals("string") || type.equals("int") || type.equals("long") || type.equals("float") || type.equals("double") || type.equals("boolean") || type.equals("date") || type.equals("byte") || type.equals("short") || type.equals("char") || type.startsWith("java.lang.");
     }
 
     private static LayoutNode prefixRefs(LayoutNode node, String prefix, DOSchemaClass embeddedClass, DOSchema refSchema) {
@@ -370,7 +365,7 @@ public class DetailLayout {
             List<DOSchemaField> flatFields = new ArrayList<>();
             List<DOSchemaField> embeddedFields = new ArrayList<>();
             for (DOSchemaField f : fields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     embeddedFields.add(f);
                 else
                     flatFields.add(f);
@@ -391,7 +386,7 @@ public class DetailLayout {
             List<DOSchemaField> flatFields = new ArrayList<>();
             List<DOSchemaField> embeddedFields = new ArrayList<>();
             for (DOSchemaField f : fields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     embeddedFields.add(f);
                 else
                     flatFields.add(f);
@@ -409,7 +404,7 @@ public class DetailLayout {
                     String nextGk = nextEntry[0];
                     List<DOSchemaField> nextFlat = new ArrayList<>();
                     for (DOSchemaField f : groups.get(nextGk)) {
-                        if (!(f.attributes.embedContents && !isPrimitiveType(f.attributes.type)))
+                        if (!(f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type)))
                             nextFlat.add(f);
                     }
                     if (nextFlat.size() <= 4) {
@@ -517,7 +512,7 @@ public class DetailLayout {
             List<DOSchemaField> otherFlat = new ArrayList<>();
             List<DOSchemaField> otherEmbedded = new ArrayList<>();
             for (DOSchemaField f : otherFields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     otherEmbedded.add(f);
                 else
                     otherFlat.add(f);
@@ -552,7 +547,7 @@ public class DetailLayout {
                 continue;
             if (field.attributes.source == null || field.attributes.source.isEmpty())
                 continue;
-            if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type)) {
+            if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type)) {
                 DOSchemaClass typeClass = refSchema.findClassByName(field.attributes.type);
                 if (typeClass != null && !typeClass.attributes.migrate)
                     continue;
@@ -568,7 +563,7 @@ public class DetailLayout {
             return field.attributes.group;
         if (field.attributes.isCollection)
             return "collections";
-        if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type))
+        if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type))
             return "embedded";
         if (field.attributes.type != null) {
             switch (field.attributes.type) {
@@ -712,7 +707,7 @@ public class DetailLayout {
 
     private static void agAddTableColumns(LayoutNode table, DOSchemaField collectionField, DOSchema refSchema) {
         String childType = collectionField.attributes.childrenType;
-        if (childType == null || isPrimitiveType(childType))
+        if (childType == null || TypeUtil.isPrimitiveType(childType))
             return;
         DOSchemaClass childClass = refSchema.findClassByName(childType);
         if (childClass == null)
@@ -722,7 +717,7 @@ public class DetailLayout {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection || (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type)))
+            if (sf.attributes.isCollection || (sf.attributes.embedContents && !TypeUtil.isPrimitiveType(sf.attributes.type)))
                 continue;
             colNames.add(sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");

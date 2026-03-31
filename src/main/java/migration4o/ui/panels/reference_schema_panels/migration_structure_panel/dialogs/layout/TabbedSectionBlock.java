@@ -1,6 +1,7 @@
 package migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.layout;
 
 import java.awt.*;
+import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.List;
 import javax.swing.*;
@@ -36,6 +37,22 @@ public class TabbedSectionBlock extends LayoutBlockPanel {
 
         tabbedPane = new JTabbedPane(JTabbedPane.TOP);
         tabbedPane.setTabLayoutPolicy(JTabbedPane.SCROLL_TAB_LAYOUT);
+
+        // Right-click on tab header → context menu with Remove Tab
+        tabbedPane.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showTabContextMenu(e);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent e) {
+                if (e.isPopupTrigger())
+                    showTabContextMenu(e);
+            }
+        });
+
         add(tabbedPane, BorderLayout.CENTER);
 
         buildTabs();
@@ -87,6 +104,45 @@ public class TabbedSectionBlock extends LayoutBlockPanel {
             layoutNode.children.add(tp.collectNode());
         }
         return layoutNode;
+    }
+
+    private void showTabContextMenu(MouseEvent e) {
+        int tabIndex = tabbedPane.indexAtLocation(e.getX(), e.getY());
+        if (tabIndex < 0)
+            return;
+
+        JPopupMenu menu = new JPopupMenu();
+        String tabTitle = tabbedPane.getTitleAt(tabIndex);
+        JMenuItem removeItem = new JMenuItem("Remove \u201C" + tabTitle + "\u201D");
+        removeItem.addActionListener(ev -> removeTab(tabIndex));
+        menu.add(removeItem);
+        menu.show(tabbedPane, e.getX(), e.getY());
+    }
+
+    /**
+     * Remove a tab at the given index. If it was the last tab, the entire
+     * tabbed section block is removed from the canvas.
+     */
+    public void removeTab(int index) {
+        if (index < 0 || index >= tabPanels.size())
+            return;
+
+        tabPanels.remove(index);
+        layoutNode.children.remove(index);
+        tabbedPane.removeTabAt(index);
+
+        if (tabPanels.isEmpty()) {
+            // Last tab removed → remove the whole tabbed section block
+            if (getCanvas() != null) {
+                getCanvas().removeBlock(this);
+                getCanvas().onBlockStructureChanged();
+            }
+        } else {
+            revalidate();
+            repaint();
+            if (getCanvas() != null)
+                getCanvas().onBlockStructureChanged();
+        }
     }
 
     @Override

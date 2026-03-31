@@ -3223,18 +3223,23 @@
     <class source="gest.consolide.ParamSSI" destinationName="ParamSSI" isExported="true" title="Paramètres de consolidation SSI" summary="Consolidation [codeConso]" parentClass="gest.gen.EntiteParam">
         <field source="mAccesMultiTous" destinationName="accesMultiTous" isExported="true" skipWhen="NULL" type="boolean" title="Accès multi tous" />
         <field source="mActif" definition="mActif" />
-        <field source="mCodeConso" destinationName="codeConso" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code conso" />
-        <field source="mCourrielNotifReplicException" destinationName="courrielNotifReplicException" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel notif replic exception" />
-        <field source="mDernTSImport" destinationName="dernTSImport" isExported="true" skipWhen="NULL" type="long" title="Dern TS import" />
-        <field source="mDetailEnvoiGeneral" destinationName="detailEnvoiGeneral" isExported="true" skipWhen="NULL" type="gest.consolide.DetailEnvoi" embedContents="true" title="Détail envoi général" />
-        <field source="mEnvRepert" destinationName="envRepert" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Env répert" />
-        <field source="mEnvoiPLCentral" destinationName="envoiPLCentral" isExported="true" skipWhen="NULL" type="boolean" title="Envoi PL central" />
+        <field source="mCodeConso" destinationName="codeConso" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code de consolidation" />
+        <field source="mCourrielNotifReplicException" destinationName="courrielNotifReplicException" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel de notification" />
+        <field source="mDernTSImport" destinationName="dernTSImport" isExported="true" skipWhen="NULL" type="long" title="Dernier import" />
+        <field source="mDetailEnvoiGeneral" destinationName="detailEnvoiGeneral" isExported="true" skipWhen="NULL" type="gest.consolide.DetailEnvoi" embedContents="true" title="Détail d'envoi" />
+        <field source="mEnvRepert" destinationName="envRepert" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Échanger via le répertoire" />
+        <field source="mEnvoiPLCentral" destinationName="envoiPLCentral" isExported="true" skipWhen="NULL" type="boolean" title="Échanger via PL central" />
         <field source="mEnvoyerTout" destinationName="envoyerTout" isExported="true" skipWhen="NULL" type="boolean" title="Envoyer tout" />
-        <field source="mInclurePJ" destinationName="inclurePJ" isExported="true" skipWhen="NULL" type="boolean" title="Inclure PJ" />
-        <field source="mNotifReplicReussie" destinationName="notifReplicReussie" isExported="true" skipWhen="NULL" type="boolean" title="Notif replic réussie" />
+        <field source="mInclurePJ" destinationName="inclurePJ" isExported="true" skipWhen="NULL" type="boolean" title="Inclure les pièces jointes" />
+        <field source="mNotifReplicReussie" destinationName="notifReplicReussie" isExported="true" skipWhen="NULL" type="boolean" title="Notifier aussi en cas de réussite" />
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="NULL" type="gest.gen.Periodicite" embedContents="true" title="Périodicité" />
-        <field source="mTypeSync" destinationName="typeSync" isExported="true" skipWhen="NULL" type="int" title="Type de sync" />
-        <field source="mVectNModuleDetail" destinationName="listeNModuleDetail" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.consolide.ParamSSI$NModuleDetail" title="Détail de modules" />
+        <field source="mTypeSync" destinationName="typeSync" isExported="true" skipWhen="NULL" type="int" title="Type d'échange">
+            <valueMap>
+                <mapping from="1" to="LECTURE_SEULEMENT" />
+                <mapping from="2" to="MODIFIABLE" />
+            </valueMap>
+        </field>
+        <field source="mVectNModuleDetail" destinationName="listeNModuleDetail" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.consolide.ParamSSI$NModuleDetail" title="Modules" />
     </class>
     <class source="gest.consolide.ParamSSI$NModuleDetail" destinationName="ModuleDetail" isExported="true" title="Module détail" parentClass="gest.gen.Entite">
         <reference class="gest.consolide.ParamSSI" field="mVectNModuleDetail" />

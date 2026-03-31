@@ -17,6 +17,7 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.layout.*;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.dialogs.layout.popups.*;
 import migration4o.util.DatabaseUtil;
+import migration4o.util.TypeUtil;
 
 /**
  * WYSIWYG designer for record detail view layouts.
@@ -85,7 +86,10 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
         bar.addSeparator();
         bar.add(makeBtn("Auto Layout", e -> autoLayout()));
         bar.addSeparator();
-        bar.add(makeBtn("\u2717 Delete", e -> canvas.deleteSelected()));
+        bar.add(makeBtn("\u2717 Delete", e -> {
+            canvas.deleteSelected();
+            refreshFieldPalette();
+        }));
         bar.addSeparator();
         JButton saveBtn = makeBtn("Save", e -> save());
         saveBtn.setFont(saveBtn.getFont().deriveFont(Font.BOLD));
@@ -238,6 +242,11 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
         designer.setVisible(true);
     }
 
+    @Override
+    public void onBlockStructureChanged() {
+        refreshFieldPalette();
+    }
+
     // ── Field Palette ──────────────────────────────────────────────
 
     private JScrollPane buildFieldPalette() {
@@ -294,7 +303,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
                     if (field.attributes.embedContents)
                         addEmbeddedSubFields(collNode, field.attributes.childrenType, src, usedRefs);
                     groupNode.add(collNode);
-                } else if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type)) {
+                } else if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type)) {
                     DefaultMutableTreeNode embNode = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(field), src, false, ft));
                     addEmbeddedSubFields(embNode, field.attributes.type, src, usedRefs);
                     groupNode.add(embNode);
@@ -311,9 +320,9 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
     private String classifyFieldType(DOSchemaField field) {
         if (field.attributes.isCollection)
             return "collection";
-        if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type))
+        if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type))
             return "embedded";
-        if (isIDEntiteType(field))
+        if (TypeUtil.isIDEntiteField(field, refSchema))
             return "reference";
         String type = field.attributes.type;
         if (type == null)
@@ -367,7 +376,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
     private void addEmbeddedSubFields(DefaultMutableTreeNode parentNode, String typeName, String parentPath, Set<String> usedRefs) {
         if (typeName == null)
             return;
-        DOSchemaClass embeddedClass = findClassByType(typeName);
+        DOSchemaClass embeddedClass = refSchema.findClassByName(typeName);
         if (embeddedClass == null)
             return;
 
@@ -380,7 +389,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
                 continue;
             String ft = classifyFieldType(sf);
             DefaultMutableTreeNode child = new DefaultMutableTreeNode(new FieldPaletteItem(getFieldLabel(sf), dotPath, sf.attributes.isCollection, ft));
-            if (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type) && !sf.attributes.isCollection) {
+            if (sf.attributes.embedContents && !TypeUtil.isPrimitiveType(sf.attributes.type) && !sf.attributes.isCollection) {
                 addEmbeddedSubFields(child, sf.attributes.type, dotPath, usedRefs);
             }
             parentNode.add(child);
@@ -421,41 +430,12 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
                 return null;
             if (i < parts.length - 1) {
                 String nextType = field.attributes.isCollection && field.attributes.childrenType != null ? field.attributes.childrenType : field.attributes.type;
-                current = findClassByType(nextType);
+                current = refSchema.findClassByName(nextType);
                 if (current == null)
                     return null;
             }
         }
         return field;
-    }
-
-    private DOSchemaClass findClassByType(String typeName) {
-        if (typeName == null || refSchema == null)
-            return null;
-        DOSchemaClass cls = refSchema.findClassByName(typeName);
-        if (cls != null)
-            return cls;
-        String shortName = typeName.contains(".") ? typeName.substring(typeName.lastIndexOf('.') + 1) : typeName;
-        for (DOSchemaClass c : refSchema.getClasses()) {
-            if (c.attributes.source != null && c.attributes.source.endsWith("." + shortName))
-                return c;
-        }
-        return null;
-    }
-
-    private boolean isPrimitiveType(String type) {
-        if (type == null)
-            return true;
-        return type.equals("string") || type.equals("int") || type.equals("long") || type.equals("float") || type.equals("double") || type.equals("boolean") || type.equals("date") || type.equals("byte") || type.equals("short") || type.equals("char") || type.startsWith("java.lang.");
-    }
-
-    private boolean isIDEntiteType(DOSchemaField field) {
-        if (field.attributes.type == null)
-            return false;
-        DOSchemaClass typeClass = findClassByType(field.attributes.type);
-        if (typeClass == null)
-            return false;
-        return typeClass.isIDEntite();
     }
 
     private static String humanize(String s) {
@@ -547,8 +527,8 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             if (field.attributes.source == null || field.attributes.source.isEmpty())
                 continue;
             // Skip embedded fields whose type class is not exported (e.g. java.util.UUID)
-            if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type)) {
-                DOSchemaClass typeClass = findClassByType(field.attributes.type);
+            if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type)) {
+                DOSchemaClass typeClass = refSchema.findClassByName(field.attributes.type);
                 if (typeClass != null && !typeClass.attributes.migrate)
                     continue;
             }
@@ -563,7 +543,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             return field.attributes.group;
         if (field.attributes.isCollection)
             return "collections";
-        if (field.attributes.embedContents && !isPrimitiveType(field.attributes.type))
+        if (field.attributes.embedContents && !TypeUtil.isPrimitiveType(field.attributes.type))
             return "embedded";
         if (field.attributes.type != null) {
             switch (field.attributes.type) {
@@ -575,7 +555,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             case "java.lang.Boolean":
                 return "status";
             }
-            if (isIDEntiteType(field))
+            if (TypeUtil.isIDEntiteField(field, refSchema))
                 return "reference";
         }
         if ("long".equals(field.attributes.type) || "java.lang.Long".equals(field.attributes.type)) {
@@ -621,7 +601,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             List<DOSchemaField> flatFields = new ArrayList<>();
             List<DOSchemaField> embeddedFields = new ArrayList<>();
             for (DOSchemaField f : fields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     embeddedFields.add(f);
                 else
                     flatFields.add(f);
@@ -646,7 +626,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             List<DOSchemaField> flatFields = new ArrayList<>();
             List<DOSchemaField> embeddedFields = new ArrayList<>();
             for (DOSchemaField f : fields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     embeddedFields.add(f);
                 else
                     flatFields.add(f);
@@ -670,7 +650,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
                     String nextGk = nextEntry[0];
                     List<DOSchemaField> nextFlat = new ArrayList<>();
                     for (DOSchemaField f : groups.get(nextGk)) {
-                        if (!(f.attributes.embedContents && !isPrimitiveType(f.attributes.type)))
+                        if (!(f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type)))
                             nextFlat.add(f);
                     }
                     if (nextFlat.size() <= 4) {
@@ -786,7 +766,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
             List<DOSchemaField> otherFlat = new ArrayList<>();
             List<DOSchemaField> otherEmbedded = new ArrayList<>();
             for (DOSchemaField f : otherFields) {
-                if (f.attributes.embedContents && !isPrimitiveType(f.attributes.type))
+                if (f.attributes.embedContents && !TypeUtil.isPrimitiveType(f.attributes.type))
                     otherEmbedded.add(f);
                 else
                     otherFlat.add(f);
@@ -874,7 +854,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
     }
 
     private void populateEmbedded(LayoutNode parent, DOSchemaField field) {
-        DOSchemaClass embeddedClass = findClassByType(field.attributes.type);
+        DOSchemaClass embeddedClass = refSchema.findClassByName(field.attributes.type);
         if (embeddedClass != null) {
             parent.setProp("layoutRef", embeddedClass.attributes.source);
             parent.setProp("ref", field.attributes.source);
@@ -913,9 +893,9 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
 
     private void addAutoTableColumns(LayoutNode table, DOSchemaField collectionField) {
         String childType = collectionField.attributes.childrenType;
-        if (childType == null || isPrimitiveType(childType))
+        if (childType == null || TypeUtil.isPrimitiveType(childType))
             return;
-        DOSchemaClass childClass = findClassByType(childType);
+        DOSchemaClass childClass = refSchema.findClassByName(childType);
         if (childClass == null)
             return;
 
@@ -924,7 +904,7 @@ public class DetailLayoutDesigner extends JFrame implements LayoutCanvas.Propert
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection || (sf.attributes.embedContents && !isPrimitiveType(sf.attributes.type)))
+            if (sf.attributes.isCollection || (sf.attributes.embedContents && !TypeUtil.isPrimitiveType(sf.attributes.type)))
                 continue;
             colNames.add(sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
