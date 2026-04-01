@@ -2670,7 +2670,21 @@
                                     if (typeof sv === 'object') {
                                         if (sv['#text'] !== undefined) sv = sv['#text'];
                                         else if (sv['@attributes'] && sv['@attributes']['_summary']) sv = sv['@attributes']['_summary'];
-                                        else return;
+                                        else {
+                                            // Recursively extract leaf scalar values from nested objects/collections
+                                            var leafVals = [];
+                                            (function extractLeaves(node) {
+                                                if (node == null) return;
+                                                if (Array.isArray(node)) { node.forEach(extractLeaves); return; }
+                                                if (typeof node !== 'object') { leafVals.push(String(node)); return; }
+                                                Object.keys(node).forEach(function (nk) {
+                                                    if (nk === '@attributes') return;
+                                                    extractLeaves(node[nk]);
+                                                });
+                                            })(sv);
+                                            if (leafVals.length > 0) sv = leafVals.join(', ');
+                                            else return;
+                                        }
                                     }
                                     segs.push('<span style="color:var(--c-text-muted);font-size:0.85em">' + esc(displayFieldLabel(k)) + ':</span> ' + fmtValue(sv, k));
                                 });

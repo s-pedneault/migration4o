@@ -2923,17 +2923,22 @@
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.cauca.ParamCauca" destinationName="ParamCauca" isExported="true" title="Paramètres CAUCA" summary="Connexion à CAUCA via [adresseServ]:[portServ]" parentClass="gest.gen.EntiteParam">
-        <field source="mAdresseServ" destinationName="adresseServ" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Adresse serv" />
-        <field source="mPortServ" destinationName="portServ" isExported="true" skipWhen="NULL" type="int" title="Port serv" />
-        <field source="mSens" destinationName="sens" isExported="true" skipWhen="NULL" type="int" title="Sens" />
+        <field source="mAdresseServ" destinationName="adresseServ" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Adresse du serveur" />
+        <field source="mPortServ" destinationName="portServ" isExported="true" skipWhen="NULL" type="int" title="Port du serveur" />
+        <field source="mSens" destinationName="sens" isExported="true" skipWhen="NULL" type="int" title="Sens">
+            <valueMap>
+                <mapping from="2" to="CAUCA_VERS_PL" />
+                <mapping from="3" to="PL_VERS_CAUCA" />
+            </valueMap>
+        </field>
         <field source="mVectNDernImport" destinationName="listeNDernImport" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.cauca.ParamCauca$NDernImport" title="Derniers imports" />
     </class>
-    <class source="gest.cauca.ParamCauca$NDernImport" destinationName="DernierImportCauca" isExported="true" title="Dernier import cauca" parentClass="gest.gen.Entite">
+    <class source="gest.cauca.ParamCauca$NDernImport" destinationName="DernierImportCauca" isExported="true" title="Dernier import CAUCA" parentClass="gest.gen.Entite">
         <reference class="gest.cauca.ParamCauca" field="mVectNDernImport" />
         <field source="iDernImport" destinationName="dernierImport" isExported="true" skipWhen="NULL" type="date" title="Dernier import" />
-        <field source="iCodeGeo" destinationName="codeGeo" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code geo" />
+        <field source="iCodeGeo" destinationName="codeGeo" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code géographique" />
     </class>
-    <class source="gest.centreDesRapports.IDRapportCentral" destinationName="IDRapportCentral" isExported="true" title="ID de rapport central" parentClass="gest.gen.IDEntite" pointsTo="gest.centreDesRapports.RapportCentral">
+    <class source="gest.centreDesRapports.IDRapportCentral" destinationName="IDRapportCentral" isExported="true" title="Rapport central" parentClass="gest.gen.IDEntite" pointsTo="gest.centreDesRapports.RapportCentral">
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mIDRapportCentral" />
         <field source="mID" definition="mID" />
     </class>
@@ -2944,8 +2949,18 @@
         <field source="mDateFin" definition="mDateFin" />
         <field source="mDescription" definition="mDescription" />
         <field source="mNom" definition="mNom" />
-        <field source="mPeriodes" destinationName="periodes" isExported="true" skipWhen="NULL" type="int" title="Périodes" />
-        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut" />
+        <field source="mPeriodes" destinationName="periodes" isExported="true" skipWhen="NULL" type="int" title="Périodes">
+            <valueMap>
+                <mapping from="0" to="ANNEES" />
+                <mapping from="1" to="MOIS" />
+            </valueMap>
+        </field>
+        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut">
+            <valueMap>
+                <mapping from="0" to="ACTIF" />
+                <mapping from="1" to="MODELE" />
+            </valueMap>
+        </field>
         <field source="mTemplate" destinationName="template" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.fichier.IDFichier" title="Gabarit" />
         <field source="mVectSection" destinationName="listeSection" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.centreDesRapports.SectionRapportCentral" title="Sections" />
         <field source="mIDSSI" definition="mIDSSI" />
@@ -2953,12 +2968,27 @@
     <class source="gest.centreDesRapports.SectionRapportCentral" destinationName="SectionRapportCentral" isExported="true" title="Section de rapport" parentClass="gest.gen.Entite">
         <reference class="gest.centreDesRapports.RapportCentral" field="mVectSection" />
         <field source="mFiltresRequete" destinationName="filtresRequete" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Filtres requête" />
-        <field source="mFormatPapier" destinationName="formatPapier" isExported="true" skipWhen="NULL" type="int" title="Format de papier" />
+        <field source="mFormatPapier" destinationName="formatPapier" isExported="true" skipWhen="NULL" type="int" title="Format de papier">
+            <valueMap>
+                <mapping from="1" to="LETTRE" />
+                <mapping from="2" to="LEGAL" />
+            </valueMap>
+        </field>
         <field source="mIdentHJTable" destinationName="identHJTable" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Identification HJ table" />
-        <field source="mModeRapport" destinationName="modeRapport" isExported="true" skipWhen="NULL" type="int" title="Mode de rapport" />
+        <field source="mModeRapport" destinationName="modeRapport" isExported="true" skipWhen="NULL" type="int" title="Mode de rapport">
+            <valueMap>
+                <mapping from="1" to="SIMPLIFIE" />
+                <mapping from="2" to="EXPERT" />
+            </valueMap>
+        </field>
         <field source="mNom" definition="mNom" />
         <field source="mNomOngletXLS" destinationName="nomOngletXLS" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom d'onglet XLS" />
-        <field source="mOrientation" destinationName="orientation" isExported="true" skipWhen="NULL" type="int" title="Orientation" />
+        <field source="mOrientation" destinationName="orientation" isExported="true" skipWhen="NULL" type="int" title="Orientation">
+            <valueMap>
+                <mapping from="1" to="PORTRAIT" />
+                <mapping from="2" to="PAYSAGE" />
+            </valueMap>
+        </field>
         <field source="mSource" destinationName="source" isExported="true" skipWhen="NULL" type="int" title="Source" />
         <field source="mTitre1" destinationName="titre1" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Titre 1" />
         <field source="mTitre2" destinationName="titre2" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Titre 2" />
@@ -2966,8 +2996,8 @@
         <field source="mVectNGroupe" destinationName="listeNGroupe" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.listePerso.ListePerso$NGroupe" title="Groupes" />
         <field source="mVectNTri" destinationName="listeNTri" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.listePerso.ListePerso$NTri" title="Tris" />
         <field source="mVectRequete" destinationName="listeRequete" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.gen.Requete" title="Requêtes" />
-        <field source="mIDRapportCentral" destinationName="idRapportCentral" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.centreDesRapports.IDRapportCentral" title="ID de rapport central" />
-        <field source="mIDRapportExpert" destinationName="idRapportExpert" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" title="ID de rapport expert" />
+        <field source="mIDRapportCentral" destinationName="idRapportCentral" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.centreDesRapports.IDRapportCentral" title="Rapport central" />
+        <field source="mIDRapportExpert" destinationName="idRapportExpert" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.rapport.IDRapport" title="Rapport d'expert" />
     </class>
     <class source="gest.champPerso.ChampPerso" destinationName="ChampPerso" isExported="true" title="Champ personnalisé" parentClass="gest.gen.Entite">
         <reference class="gest.champPerso.TypeChampPerso" field="mValDefaut" />
@@ -4511,10 +4541,10 @@
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportActivite" isExported="true" skipWhen="NULL" type="boolean" title="Inclure dans rapport activité" />
         <field source="mNom" definition="mNom" />
-        <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="int" title="Photo par page" />
+        <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="int" title="Photos par page" />
         <field source="mPrintFormat" destinationName="formatImpression" isExported="true" skipWhen="NULL" type="int" title="Format impression" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="ID de fichier" />
-        <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" title="ID de graph" />
+        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Fichier" embedContents="true" />
+        <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" title="Graph" />
     </class>
     <class source="gest.gen.Qte" destinationName="Quantite" isExported="true" title="Quantité" parentClass="gest.gen.Entite">
         <reference class="gest.vehicule.Vehicule" field="mQteReservoir" />

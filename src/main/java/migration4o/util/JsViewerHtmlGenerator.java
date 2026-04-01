@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -430,8 +431,35 @@ public final class JsViewerHtmlGenerator {
                 childrenClass = refSchema.findClassByName(typeName);
             }
         }
-        if (depth < 2 && childrenClass != null) {
+        if (depth < 4 && childrenClass != null) {
             List<DOSchemaField> childFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childrenClass, refSchema);
+            // Include subclass-specific fields so polymorphic types
+            // (e.g. DetailEnvoi → DetailIntervEnvoi) have all fields indexed for title lookup
+            if (refSchema != null && refSchema.getClasses() != null) {
+                Set<String> existingNames = new HashSet<>();
+                for (DOSchemaField f : childFields) {
+                    String fn = f.attributes.destinationName != null ? f.attributes.destinationName : f.attributes.source;
+                    if (fn != null)
+                        existingNames.add(fn);
+                }
+                List<DOSchemaField> extra = new ArrayList<>();
+                for (DOSchemaClass cls : refSchema.getClasses()) {
+                    if (!cls.attributes.source.equals(childrenClass.attributes.source) && cls.isDescendantOf(childrenClass.attributes.source)) {
+                        for (DOSchemaField sf : cls.fields) {
+                            if (!sf.attributes.isExported)
+                                continue;
+                            String sfn = sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source;
+                            if (sfn != null && existingNames.add(sfn)) {
+                                extra.add(sf);
+                            }
+                        }
+                    }
+                }
+                if (!extra.isEmpty()) {
+                    childFields = new ArrayList<>(childFields);
+                    childFields.addAll(extra);
+                }
+            }
             sb.append(",\"children\":[");
             boolean childFirst = true;
             Set<String> childSeen = new HashSet<>();
