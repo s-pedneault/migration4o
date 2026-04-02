@@ -431,7 +431,7 @@ public final class JsViewerHtmlGenerator {
                 childrenClass = refSchema.findClassByName(typeName);
             }
         }
-        if (depth < 4 && childrenClass != null) {
+        if (depth < 6 && childrenClass != null) {
             List<DOSchemaField> childFields = DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childrenClass, refSchema);
             // Include subclass-specific fields so polymorphic types
             // (e.g. DetailEnvoi → DetailIntervEnvoi) have all fields indexed for title lookup

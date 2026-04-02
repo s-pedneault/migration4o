@@ -193,9 +193,17 @@ public class HtmlFormatHandler extends FormatHandler {
                 collectBackRef(ctx, ctx.schemaClass, result.targetObjectId);
             }
             if (result.label != null && !result.label.isBlank()) {
-                Map<String, String> idEntiteAttrs = result.targetObjectId != null ? java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId)) : null;
-                writer.elementWithContent(SchemaUtil.stripIdPrefix(ctx.schemaClass.attributes.destinationName), idEntiteAttrs, result.label, false);
-                return true; // fully written — skip field loop
+                // Write as an open structure with _summary + _id attributes so
+                // the JS viewer receives both the human-readable label AND the
+                // embedded entity's child fields (exported by the field loop).
+                // The viewer renders these as expandable toggle rows in tables.
+                Map<String, String> idEntiteAttrs = new java.util.LinkedHashMap<>();
+                if (result.targetObjectId != null) {
+                    idEntiteAttrs.put("_id", String.valueOf(result.targetObjectId));
+                }
+                idEntiteAttrs.put("_summary", result.label);
+                writer.openStructure(ctx.schemaClass.attributes.destinationName, idEntiteAttrs);
+                return false; // let field loop export child fields
             }
             // No label resolved — fall through to default structure export
         }
@@ -273,6 +281,15 @@ public class HtmlFormatHandler extends FormatHandler {
             }
 
             if (fieldClass == null || !fieldClass.isIDEntite())
+                return false;
+
+            // For embedded IDEntite fields (embedContents=true), let the
+            // FieldExporter handle them through the embedded export path so
+            // that the target entity's child fields are included in the output.
+            // The onObject hook will add _summary + _id attributes to the
+            // structure, and the JS viewer will render them as expandable
+            // toggles in collection tables.
+            if (ctx.field.attributes.embedContents)
                 return false;
 
             IDEntiteResult result = SummaryGenerator.resolveIDEntiteResult(ctx.delegate, ctx.fieldValue, fieldClass, ctx.request.referenceSchema, ctx.request.database, idEntiteTargetCache, idEntiteSummaryCache);

@@ -1992,6 +1992,31 @@
                 + '</div></div>';
         }
 
+        // Embedded IDEntite with child fields: unwrap class-name wrapper and
+        // extract _summary from @attributes.  Render as a simple labeled field
+        // with an optional cross-page link (same as the #text path above).
+        var _uwKeys = Object.keys(value).filter(function (k) { return k !== '@attributes'; });
+        if (_uwKeys.length === 1 && /^[A-Z]/.test(_uwKeys[0])) {
+            var _uwv = value[_uwKeys[0]];
+            if (Array.isArray(_uwv) && _uwv.length === 1) _uwv = _uwv[0];
+            if (_uwv && typeof _uwv === 'object' && _uwv['@attributes'] && _uwv['@attributes']['_summary']) {
+                var _eId = String(_uwv['@attributes']['_id'] ?? '').trim();
+                var _eTxt = String(_uwv['@attributes']['_summary']).trim();
+                if (_eTxt && _eTxt !== '0' && _eTxt !== '-1') {
+                    var _ePtDN = pointsToByPath[normalizeSchemaPath(key)];
+                    var _ePtHr = _ePtDN ? navHrefByDestName[_ePtDN] : null;
+                    var _eLk = (_ePtHr && _eId && _eId !== '0' && _eId !== '-1')
+                        ? _ePtHr + '?open=' + encodeURIComponent(_eId) : null;
+                    var _eLbl = displayFieldLabel(key);
+                    var _eVHtml = _eLk ? refLinkBtn(_eLk, _eTxt) : esc(_eTxt);
+                    return '<div class="field-group"><div class="field-row">'
+                        + '<div class="field-label">' + esc(_eLbl) + '</div>'
+                        + '<div class="field-value">' + _eVHtml + '</div>'
+                        + '</div></div>';
+                }
+            }
+        }
+
         const entries = getObjectEntries(value);
         const primitiveEntries = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive'));
         const collectionEntries = entries.filter((e) => e.type === 'collection');
@@ -2649,7 +2674,9 @@
                         if (Array.isArray(cellVal) && cellVal.length === 1) cellVal = cellVal[0];
                         // IDEntite: extract #text summary
                         if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
-                            if (cellVal['#text'] !== undefined) cellVal = cellVal['#text'];
+                            if (cellVal['#text'] !== undefined) {
+                                cellVal = cellVal['#text'];
+                            }
                             else if (cellVal['@attributes'] && cellVal['@attributes']['_summary']) cellVal = cellVal['@attributes']['_summary'];
                             else {
                                 // Unwrap class-name wrapper if present
@@ -2659,6 +2686,56 @@
                                     var wv = obj[wks[0]];
                                     if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
                                     if (wv && typeof wv === 'object' && !Array.isArray(wv)) obj = wv;
+                                }
+                                // Embedded IDEntite with child fields: render as expandable toggle
+                                if (obj['@attributes'] && obj['@attributes']['_summary']) {
+                                    var _embSum = String(obj['@attributes']['_summary'] || '').trim();
+                                    var _embId = String(obj['@attributes']['_id'] || '').trim();
+                                    var _refPtDN = pointsToByPath[normalizeSchemaPath(col)];
+                                    var _refPtHr = _refPtDN ? navHrefByDestName[_refPtDN] : null;
+                                    var _refLk = (_refPtHr && _embId && _embId !== '0' && _embId !== '-1')
+                                        ? _refPtHr + '?open=' + encodeURIComponent(_embId) : null;
+                                    var _sHtml = _refLk ? refLinkBtn(_refLk, _embSum) : fmtValue(_embSum, col);
+                                    var _dRows = '';
+                                    Object.keys(obj).forEach(function (dk) {
+                                        if (dk === '@attributes' || dk === 'derniereModification' || dk === 'donnees') return;
+                                        var dv = obj[dk];
+                                        if (Array.isArray(dv) && dv.length === 1) dv = dv[0];
+                                        if (dv == null) return;
+                                        if (typeof dv === 'object') {
+                                            if (dv['#text'] !== undefined) dv = dv['#text'];
+                                            else if (dv['@attributes'] && dv['@attributes']['_summary']) dv = dv['@attributes']['_summary'];
+                                            else {
+                                                var _lv = [];
+                                                (function _el(n) {
+                                                    if (n == null) return;
+                                                    if (Array.isArray(n)) { n.forEach(_el); return; }
+                                                    if (typeof n !== 'object') { _lv.push(String(n)); return; }
+                                                    Object.keys(n).forEach(function (nk) { if (nk !== '@attributes') _el(n[nk]); });
+                                                })(dv);
+                                                if (_lv.length > 0) dv = _lv.join(', ');
+                                                else return;
+                                            }
+                                        }
+                                        var dvStr = String(dv ?? '').trim();
+                                        if (!dvStr) return;
+                                        _dRows += '<div style="padding:1px 0;font-size:0.85em;">'
+                                            + '<span style="color:var(--c-text-muted)">' + esc(displayFieldLabel(dk)) + ':</span> '
+                                            + fmtValue(dv, dk) + '</div>';
+                                    });
+                                    if (_dRows) {
+                                        thtml += '<td><div style="cursor:pointer" onclick="var d=this.querySelector(\'.ebd\');'
+                                            + 'var a=this.querySelector(\'.eta\');if(d.style.display===\'none\'){'
+                                            + 'd.style.display=\'block\';a.textContent=\'\\u25BC\'}else{'
+                                            + 'd.style.display=\'none\';a.textContent=\'\\u25B6\'}">'
+                                            + '<span class="eta" style="font-size:0.7em;margin-right:3px">&#9654;</span>'
+                                            + _sHtml
+                                            + '<div class="ebd" style="display:none;margin-top:4px;border-top:1px solid var(--c-border);padding-top:4px">'
+                                            + _dRows + '</div></div></td>';
+                                    } else {
+                                        thtml += '<td>' + _sHtml + '</td>';
+                                    }
+                                    return;
                                 }
                                 // Compact inline rendering with labels
                                 var segs = [];
