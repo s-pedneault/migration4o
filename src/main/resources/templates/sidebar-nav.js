@@ -2642,6 +2642,11 @@
                                     if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
                                     if (wv && typeof wv === 'object' && !Array.isArray(wv)) inner = wv;
                                 }
+                                // Embedded IDEntite with _summary: keep as single toggle column
+                                if (inner['@attributes'] && inner['@attributes']['_summary']) {
+                                    cols.push(k);
+                                    return;
+                                }
                                 Object.keys(inner).forEach(function (sk) {
                                     if (sk !== '@attributes') cols.push(k + '.' + sk);
                                 });

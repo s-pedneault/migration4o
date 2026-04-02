@@ -27,18 +27,12 @@ if isinstance(objects, list) and len(objects) > 0:
             continue
         if not isinstance(pjs, list):
             pjs = [pjs]
-        # Show the raw structure of first piece jointe
         pj = pjs[0]
-        print('PJ type:', type(pj).__name__)
-        print('PJ keys:', list(pj.keys()) if isinstance(pj, dict) else 'N/A')
         # Unwrap PieceJointe wrapper
         inner = pj.get('PieceJointe', pj)
         if isinstance(inner, list):
             inner = inner[0]
-        print('Inner type:', type(inner).__name__)
-        print('Inner keys:', list(inner.keys()) if isinstance(inner, dict) else 'N/A')
         idf = inner.get('idFichier')
-        print()
-        print('idFichier raw type:', type(idf).__name__)
-        print('idFichier raw:', json.dumps(idf, indent=2, ensure_ascii=False)[:2000])
+        print('idFichier:')
+        print(json.dumps(idf, indent=2, ensure_ascii=False))
         break
