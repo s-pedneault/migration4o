@@ -24,6 +24,8 @@ import migration4o.util.MunicipalityCsvReader;
 import migration4o.util.MunicipalityInfo;
 import migration4o.util.ResolvedReference;
 import migration4o.util.SchemaUtil;
+import migration4o.util.formatters.FormatterContext;
+import migration4o.util.previews.ObjectPreview;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterJS;
 
@@ -213,7 +215,7 @@ public class HtmlFormatHandler extends FormatHandler {
         // it drives CROSS_REFS lookups and the ?open= URL parameter regardless
         // of whether the user enabled exportNativeIds for XML output.
         Map<String, String> attrs = null;
-        if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema)) {
+        if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema) || ctx.schemaClass.attributes.preview != null) {
             attrs = new java.util.LinkedHashMap<>();
             // Always emit id on root objects for the viewer; also emit on all
             // objects when exportNativeIds is explicitly requested.
@@ -227,6 +229,23 @@ public class HtmlFormatHandler extends FormatHandler {
                     if (ctx.isRootObject()) {
                         currentRootObjectId = ctx.currentObject().objectId;
                         currentRootObjectSummary = summary;
+                    }
+                }
+            }
+            if (ctx.schemaClass.attributes.preview != null) {
+                String previewString = ctx.schemaClass.attributes.preview;
+                int openParen = previewString.indexOf('(');
+                int closeParen = previewString.lastIndexOf(')');
+                if (openParen != -1 && closeParen != -1 && closeParen > openParen) {
+                    String fieldName = previewString.substring(openParen + 1, closeParen).trim();
+                    Object fieldRaw = ctx.delegate.getStoredFieldValue(ctx.currentObject().obj, fieldName);
+                    if (fieldRaw != null) {
+                        String fieldValue = fieldRaw.toString().trim();
+                        FormatterContext fmtCtx = new FormatterContext(ctx.basePath, ctx.schemaClass, ctx.currentObject().obj);
+                        String previewHtml = ObjectPreview.generatePreview(ctx.delegate, fmtCtx, fieldValue, previewString);
+                        if (previewHtml != null) {
+                            attrs.put("_preview", previewHtml);
+                        }
                     }
                 }
             }
@@ -248,13 +267,9 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * For IDEntite field references: resolves a human-readable label using
-     * the IDEntite class's valueMap (or target entity summary) and writes it
-     * as flat content, skipping the default embedded-object pipeline.
+     * For IDEntite field references: resolves a human-readable label using the IDEntite class's valueMap (or target entity summary) and writes it as flat content, skipping the default embedded-object pipeline.
      *
-     * This handles BOTH embedded and non-embedded IDEntite references — the
-     * IDEntite subclass's group-specific valueMap provides the correct label
-     * regardless of the embedContents flag.
+     * This handles BOTH embedded and non-embedded IDEntite references — the IDEntite subclass's group-specific valueMap provides the correct label regardless of the embedContents flag.
      */
     @Override
     public boolean onField(ExportCurrentState ctx) throws Exception {

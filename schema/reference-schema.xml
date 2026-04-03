@@ -4087,7 +4087,7 @@
         <field source="mIDInfoEmploye" destinationName="idInfoEmploye" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDInfoEmploye" embedContents="true" title="Information d'employé" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile">
+    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile" preview="file(mID)">
         <reference class="gest.borne.ModeleBorne" field="mIDCroquis" />
         <reference class="gest.centreDesRapports.RapportCentral" field="mTemplate" />
         <reference class="gest.classif.Classif" field="mIDFormulaire" />

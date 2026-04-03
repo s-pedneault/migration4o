@@ -731,7 +731,8 @@
         const fields = {};
         const attrs = raw && raw['@attributes'] && typeof raw['@attributes'] === 'object' ? raw['@attributes'] : null;
         const serverSummary = attrs && attrs._summary ? attrs._summary : null;
-        if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k !== '_summary') appendField(fields, `${k}`, v); });
+        const serverPreview = attrs && attrs._preview ? attrs._preview : null;
+        if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k !== '_summary' && k !== '_preview') appendField(fields, `${k}`, v); });
         if (raw && typeof raw === 'object') {
             Object.entries(raw).forEach(([k, v]) => {
                 if (k === '@attributes') return;
@@ -746,7 +747,8 @@
             id: String(id || ''),
             fields,
             raw,
-            summary: serverSummary || ''
+            summary: serverSummary || '',
+            preview: serverPreview || null
         };
     }
 
@@ -2091,7 +2093,8 @@
         }
 
         const entries = getObjectEntries(value);
-        const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive'));
+        const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive' && String(entry.key || '').split('.').pop() !== '_preview' && String(entry.key || '').split('.').pop() !== '_summary'));
+        const previewEntry = entries.find((e) => e.type === 'primitive' && String(e.key || '').split('.').pop() === '_preview');
         const allObjectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
         const collectionEntries = entries.filter((entry) => entry.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
@@ -2116,6 +2119,11 @@
         let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title"${sectionTitleAttr(label)}>${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + idEntiteEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
 
         html += renderPrimitiveGroup(primitiveEntries);
+
+        if (previewEntry) {
+            var _prevSrc = String(previewEntry.value || '').match(/src="([^"]+)"/);
+            if (_prevSrc) html += '<div class="detail-hero-preview"><a href="' + esc(_prevSrc[1]) + '" target="_blank"><img src="' + esc(_prevSrc[1]) + '" /></a></div>';
+        }
 
         // Render IDEntite sub-objects inline (multicolumn, no separate header)
         idEntiteEntries.forEach((entry) => {
@@ -2249,6 +2257,10 @@
             html += '<div class="detail-hero-right">';
             if (rec.id) html += '<div class="detail-hero-meta"><strong>ID</strong>&nbsp;<span class="badge badge-id">' + esc(rec.id) + '</span></div>';
             html += '<div class="detail-hero-meta">' + esc(rec.entity) + '</div>';
+            if (rec.preview) {
+                var _prevSrc = rec.preview.match(/src="([^"]+)"/);
+                if (_prevSrc) html += '<div class="detail-hero-preview"><a href="' + esc(_prevSrc[1]) + '" target="_blank" title="' + esc(rec.summary || rec.entity) + '"><img src="' + esc(_prevSrc[1]) + '" /></a></div>';
+            }
             html += '</div>';
             html += '</div>';
 
@@ -2264,7 +2276,7 @@
                     if (entry.type !== 'primitive') return;
                     const lo = String(entry.key || '').toLowerCase();
                     const lastPart = lo.split('.').pop() || lo;
-                    if (lastPart === '_summary') return;
+                    if (lastPart === '_summary' || lastPart === '_preview') return;
                     const isKeyField = KEY_INFO_PATTERNS.some((p) => lastPart === p || lastPart.includes(p));
                     const isDateField = lastPart.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(String(entry.value ?? ''));
                     if (isKeyField || isDateField) {
@@ -2729,6 +2741,12 @@
                                             + fmtValue(dv, dk) + '</div>';
                                     });
                                     if (_dRows) {
+                                        var _prevHtml = '';
+                                        var _prevAttr = obj['@attributes'] && obj['@attributes']['_preview'] ? obj['@attributes']['_preview'] : null;
+                                        if (_prevAttr) {
+                                            var _prevSrcM = String(_prevAttr).match(/src="([^"]+)"/);
+                                            if (_prevSrcM) _prevHtml = '<div style="margin-top:6px;"><a href="' + esc(_prevSrcM[1]) + '" target="_blank"><img src="' + esc(_prevSrcM[1]) + '" style="max-width:100%;max-height:200px;border-radius:4px;" /></a></div>';
+                                        }
                                         thtml += '<td><div style="cursor:pointer" onclick="var d=this.querySelector(\'.ebd\');'
                                             + 'var a=this.querySelector(\'.eta\');if(d.style.display===\'none\'){'
                                             + 'd.style.display=\'block\';a.textContent=\'\\u25BC\'}else{'
@@ -2736,7 +2754,7 @@
                                             + '<span class="eta" style="font-size:0.7em;margin-right:3px">&#9654;</span>'
                                             + _sHtml
                                             + '<div class="ebd" style="display:none;margin-top:4px;border-top:1px solid var(--c-border);padding-top:4px">'
-                                            + _dRows + '</div></div></td>';
+                                            + _dRows + _prevHtml + '</div></div></td>';
                                     } else {
                                         thtml += '<td>' + _sHtml + '</td>';
                                     }

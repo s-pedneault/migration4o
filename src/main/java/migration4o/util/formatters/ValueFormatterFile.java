@@ -3,6 +3,7 @@ package migration4o.util.formatters;
 import java.io.File;
 
 import migration4o.database.DODatabaseDelegate;
+import migration4o.util.DatabaseFileUtil;
 import migration4o.util.FileUtil;
 
 public class ValueFormatterFile implements ValueFormatter {
@@ -23,17 +24,7 @@ public class ValueFormatterFile implements ValueFormatter {
         File sourceFile = new File(sourcePath);
         // System.out.println("Processing file for value " + value + " with source path: " + sourcePath + " (exists: " + sourceFile.exists() + ", isFile: " + sourceFile.isFile() + ")");
 
-        String originalFileName = null;
-        if (context != null && context.currentObject != null) {
-            Object nomValue = delegate.getStoredFieldValue(context.currentObject, "mNom");
-            if (nomValue != null) {
-                originalFileName = nomValue.toString().trim();
-            }
-        }
-        if (originalFileName == null || originalFileName.isEmpty()) {
-            System.err.println("No mNom provided for file " + value);
-            return null;
-        }
+        String originalFileName = DatabaseFileUtil.getOriginalFileName(delegate, context.currentObject);
         String extension = FileUtil.getExtension(originalFileName, "pdf");
 
         if (!sourceFile.exists() || !sourceFile.isFile()) {

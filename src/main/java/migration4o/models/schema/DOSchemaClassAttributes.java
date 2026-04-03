@@ -12,5 +12,6 @@ public class DOSchemaClassAttributes {
     public String summary;
     public String pointsTo; // For IDEntite classes: the target class name this points to
     public boolean isStatic;
+    public String preview; // Optional: preview generator keyword, e.g. "FILE(path/[ID])"
 
 }

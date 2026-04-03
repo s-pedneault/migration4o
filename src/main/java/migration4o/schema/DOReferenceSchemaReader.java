@@ -130,6 +130,7 @@ public class DOReferenceSchemaReader {
         String isExportedAttr = classElement.getAttribute("isExported");
         String pointsTo = classElement.getAttribute("pointsTo");
         String isStaticAttr = classElement.getAttribute("isStatic");
+        String preview = classElement.getAttribute("preview");
 
         // Use destinationName as simpleName if available, otherwise derive from
         // source
@@ -154,6 +155,7 @@ public class DOReferenceSchemaReader {
         newClass.attributes.migrate = migrate;
         newClass.attributes.pointsTo = pointsToValue;
         newClass.attributes.isStatic = "true".equalsIgnoreCase(isStaticAttr);
+        newClass.attributes.preview = preview != null && !preview.trim().isEmpty() ? preview : null;
 
         // Parse fields, passing newClass so each field knows its parent
         List<DOSchemaField> fieldList = new ArrayList<>();

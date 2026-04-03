@@ -11,8 +11,7 @@ import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.util.FileUtil;
 
 /**
- * Writes DOSchema back to XML format matching reference-schema.xml structure.
- * Preserves element order and all attributes.
+ * Writes DOSchema back to XML format matching reference-schema.xml structure. Preserves element order and all attributes.
  */
 public class DOReferenceSchemaWriter {
 
@@ -161,6 +160,10 @@ public class DOReferenceSchemaWriter {
 
         if (schemaClass.attributes.isStatic) {
             writeAttribute(writer, "isStatic", "true");
+        }
+
+        if (schemaClass.attributes.preview != null && !schemaClass.attributes.preview.isEmpty()) {
+            writeAttribute(writer, "preview", schemaClass.attributes.preview);
         }
 
         // Check if we have fields, references or nested content

@@ -22,6 +22,10 @@ public class FormatterContext {
     /** The raw DB4O object currently being exported (typically a {@code GenericObject}). */
     public final Object currentObject;
 
+    public FormatterContext(Path destinationFolder, DOSchemaClass schemaClass, Object currentObject) {
+        this(destinationFolder, schemaClass, null, currentObject);
+    }
+
     public FormatterContext(Path destinationFolder, DOSchemaClass schemaClass, DOSchemaField schemaField, Object currentObject) {
         this.destinationFolder = destinationFolder;
         this.schemaClass = schemaClass;
