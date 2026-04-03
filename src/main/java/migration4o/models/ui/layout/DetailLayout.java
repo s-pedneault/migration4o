@@ -14,8 +14,7 @@ import migration4o.util.DatabaseUtil;
 import migration4o.util.TypeUtil;
 
 /**
- * Complete detail layout for a class export.
- * Contains top-level layout nodes that define the record detail view structure.
+ * Complete detail layout for a class export. Contains top-level layout nodes that define the record detail view structure.
  */
 public class DetailLayout {
     public List<LayoutNode> nodes = new ArrayList<>();
@@ -39,17 +38,14 @@ public class DetailLayout {
     }
 
     /**
-     * Serialize to JSON, resolving any layoutRef references by inlining the
-     * referenced class layouts with prefixed field paths.
+     * Serialize to JSON, resolving any layoutRef references by inlining the referenced class layouts with prefixed field paths.
      */
     public String toResolvedJson() {
         return toResolvedJson(null, null);
     }
 
     /**
-     * Serialize to JSON, resolving layoutRef references, translating source-name
-     * refs to destination-name refs, adding field title labels, and auto-generating
-     * layouts for embedded classes that don't have one.
+     * Serialize to JSON, resolving layoutRef references, translating source-name refs to destination-name refs, adding field title labels, and auto-generating layouts for embedded classes that don't have one.
      */
     public String toResolvedJson(DOSchemaClass schemaClass, DOSchema refSchema) {
         if (nodes.isEmpty())
@@ -142,6 +138,7 @@ public class DetailLayout {
                             sub.setProp("title", sf.attributes.title != null ? sf.attributes.title : destName);
                             sub.setProp("collapsible", "true");
                             String subPrefix = destPrefix + "." + destName;
+                            sub.setProp("ref", subPrefix);
                             for (DOSchemaField nsf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(nestedClass, refSchema)) {
                                 if (!nsf.attributes.isExported || nsf.attributes.source == null)
                                     continue;
@@ -198,9 +195,7 @@ public class DetailLayout {
     }
 
     /**
-     * Recursively mark TABLE nodes as "bare" when they are the sole child of a
-     * collapsible SECTION — the section already provides the collapsible header,
-     * so the table should not render its own duplicate wrapper.
+     * Recursively mark TABLE nodes as "bare" when they are the sole child of a collapsible SECTION — the section already provides the collapsible header, so the table should not render its own duplicate wrapper.
      */
     private static void markBareTables(List<LayoutNode> nodes) {
         for (LayoutNode node : nodes) {
@@ -335,9 +330,7 @@ public class DetailLayout {
     private static final String[][] GROUP_ORDER = { { "identity", null }, { "text", "Texte" }, { "status", "\u00c9tat" }, { "dates", "Dates" }, { "contact", "Contact" }, { "address", "Adresse" }, { "reference", "R\u00e9f\u00e9rences" }, { "embedded", null }, { "attachment", "Pi\u00e8ces jointes" }, { "collections", null }, { "other", "Autres champs" }, };
 
     /**
-     * Auto-generate a smart layout for a class that has no custom WYSIWYG layout.
-     * Groups fields by semantic category (dates, status, references, etc.) and
-     * arranges them in columns, tabs, and collapsible sections.
+     * Auto-generate a smart layout for a class that has no custom WYSIWYG layout. Groups fields by semantic category (dates, status, references, etc.) and arranges them in columns, tabs, and collapsible sections.
      */
     public static DetailLayout autoGenerate(DOSchemaClass schemaClass, DOSchema refSchema) {
         DetailLayout layout = new DetailLayout();

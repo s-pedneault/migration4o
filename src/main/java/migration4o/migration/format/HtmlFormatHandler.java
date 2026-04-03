@@ -204,6 +204,21 @@ public class HtmlFormatHandler extends FormatHandler {
                     idEntiteAttrs.put("_id", String.valueOf(result.targetObjectId));
                 }
                 idEntiteAttrs.put("_summary", result.label);
+                DOSchemaClass targetClass = ctx.schemaClass.getPointsToClass();
+                if (targetClass != null && targetClass.attributes.preview != null && result.targetObjectId != null && result.mId != null) {
+                    try {
+                        Object targetObj = ctx.delegate.getByID(result.targetObjectId);
+                        if (targetObj != null) {
+                            migration4o.util.ObjectResolverUtil.activateObjectShallow(ctx.delegate, targetObj, result.targetObjectId);
+                            FormatterContext prevFmtCtx = new FormatterContext(ctx.basePath, targetClass, targetObj);
+                            String previewHtml = ObjectPreview.generatePreview(ctx.delegate, prevFmtCtx, result.mId.toString(), targetClass.attributes.preview);
+                            if (previewHtml != null) {
+                                idEntiteAttrs.put("_preview", previewHtml);
+                            }
+                        }
+                    } catch (Exception ignored) {
+                        /* preview is optional */ }
+                }
                 writer.openStructure(ctx.schemaClass.attributes.destinationName, idEntiteAttrs);
                 return false; // let field loop export child fields
             }

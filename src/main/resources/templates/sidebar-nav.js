@@ -1988,10 +1988,16 @@
             var _refValueHtml = _refLink
                 ? refLinkBtn(_refLink, _refText)
                 : esc(_refText);
+            var _refPreviewHtml = '';
+            var _refPrevAttr = value['@attributes']['_preview'];
+            if (_refPrevAttr) {
+                var _refPrevSrc = String(_refPrevAttr).match(/src="([^"]+)"/);
+                if (_refPrevSrc) _refPreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_refPrevSrc[1]) + '" target="_blank"><img src="' + esc(_refPrevSrc[1]) + '" /></a></div>';
+            }
             return '<div class="field-group"><div class="field-row">'
                 + '<div class="field-label">' + esc(_refLabel) + '</div>'
                 + '<div class="field-value">' + _refValueHtml + '</div>'
-                + '</div></div>';
+                + '</div>' + _refPreviewHtml + '</div>';
         }
 
         // Embedded IDEntite with child fields: unwrap class-name wrapper and
@@ -2011,10 +2017,16 @@
                         ? _ePtHr + '?open=' + encodeURIComponent(_eId) : null;
                     var _eLbl = displayFieldLabel(key);
                     var _eVHtml = _eLk ? refLinkBtn(_eLk, _eTxt) : esc(_eTxt);
+                    var _ePreviewHtml = '';
+                    var _ePrevAttr = _uwv['@attributes']['_preview'];
+                    if (_ePrevAttr) {
+                        var _ePrevSrc = String(_ePrevAttr).match(/src="([^"]+)"/);
+                        if (_ePrevSrc) _ePreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_ePrevSrc[1]) + '" target="_blank"><img src="' + esc(_ePrevSrc[1]) + '" /></a></div>';
+                    }
                     return '<div class="field-group"><div class="field-row">'
                         + '<div class="field-label">' + esc(_eLbl) + '</div>'
                         + '<div class="field-value">' + _eVHtml + '</div>'
-                        + '</div></div>';
+                        + '</div>' + _ePreviewHtml + '</div>';
                 }
             }
         }
@@ -2555,14 +2567,34 @@
                 if (p.hilite) titleInline += 'background-color:' + esc(p.hilite) + ';';
                 if (p.style) titleInline += layoutStyleFont(p.style);
                 var titleAttr = titleInline ? ' style="' + titleInline + '"' : '';
+                var _sBody = renderLayoutChildren(data, children);
+                if (p.ref) {
+                    var _sData = resolveFieldValue(data, p.ref);
+                    if (_sData) {
+                        if (Array.isArray(_sData) && _sData.length === 1) _sData = _sData[0];
+                        if (_sData && typeof _sData === 'object') {
+                            var _sWk = Object.keys(_sData).filter(function (k) { return k !== '@attributes'; });
+                            if (_sWk.length === 1 && /^[A-Z]/.test(_sWk[0])) {
+                                var _sIn = _sData[_sWk[0]];
+                                if (Array.isArray(_sIn) && _sIn.length === 1) _sIn = _sIn[0];
+                                if (_sIn && typeof _sIn === 'object') _sData = _sIn;
+                            }
+                            var _sPrev = _sData['@attributes'] && _sData['@attributes']['_preview'] ? _sData['@attributes']['_preview'] : null;
+                            if (_sPrev) {
+                                var _sPrevSrc = String(_sPrev).match(/src="([^"]+)"/);
+                                if (_sPrevSrc) _sBody += '<div class="detail-hero-preview"><a href="' + esc(_sPrevSrc[1]) + '" target="_blank"><img src="' + esc(_sPrevSrc[1]) + '" /></a></div>';
+                            }
+                        }
+                    }
+                }
                 if (collapsible) {
                     return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
                         + esc(p.title || '') + '</span></summary><div class="section-body">'
-                        + renderLayoutChildren(data, children) + '</div></details>';
+                        + _sBody + '</div></details>';
                 }
                 return '<div class="detail-section"><div class="section-body">'
                     + (p.title ? '<div class="layout-section-title" style="padding:8px 12px;' + titleInline + '">' + esc(p.title) + '</div>' : '')
-                    + renderLayoutChildren(data, children) + '</div></div>';
+                    + _sBody + '</div></div>';
             }
             case 'columns': {
                 var sizes = (p.sizes || '').split(',').map(function (s) { return s.trim() + '%'; });
