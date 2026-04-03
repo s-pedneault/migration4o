@@ -11,8 +11,7 @@ import java.nio.file.StandardCopyOption;
 public class FileUtil {
 
     /**
-     * Formats a file size in bytes into a human-readable string with appropriate
-     * units.
+     * Formats a file size in bytes into a human-readable string with appropriate units.
      * 
      * @param bytes The file size in bytes
      * @return A formatted string with appropriate units (B, KB, MB, GB)
@@ -30,9 +29,7 @@ public class FileUtil {
     }
 
     /**
-     * Sanitize a name for use in XML (remove invalid characters).
-     * Converts accentuated characters to their non-accentuated equivalents
-     * (e.g., é→e, à→a, ñ→n) and preserves single quotes.
+     * Sanitize a name for use in XML (remove invalid characters). Converts accentuated characters to their non-accentuated equivalents (e.g., é→e, à→a, ñ→n) and preserves single quotes.
      */
     public static String sanitizeName(String name) {
         if (name == null) {
@@ -69,6 +66,53 @@ public class FileUtil {
         // Create the backup
         Files.copy(originalFile.toPath(), backupFile.toPath(), StandardCopyOption.COPY_ATTRIBUTES);
         // System.out.println("Created backup: " + backupFile.getName());
+    }
+
+    /**
+     * Returns the extension of a file name (excluding the dot), or an empty string if there is no extension. For example, {@code "photo.jpg"} → {@code "jpg"}, {@code "archive.tar.gz"} → {@code "gz"}, {@code "README"} → {@code ""}.
+     *
+     * @param fileName the file name (or full path — only the last component is examined)
+     * @return the extension, never {@code null}
+     */
+    public static String getExtension(String fileName) {
+        return getExtension(fileName, "");
+    }
+
+    /**
+     * Returns the extension of a file name (excluding the dot), or {@code defaultExtension} if the file name has no valid extension.
+     *
+     * @param fileName the file name or full path
+     * @param defaultExtension value to return when no extension is found
+     * @return the extension, or {@code defaultExtension}
+     */
+    public static String getExtension(String fileName, String defaultExtension) {
+        if (fileName == null) {
+            return defaultExtension;
+        }
+        String name = new File(fileName).getName();
+        int dot = name.lastIndexOf('.');
+        if (dot < 1 || dot == name.length() - 1) {
+            return defaultExtension;
+        }
+        return name.substring(dot + 1);
+    }
+
+    /**
+     * Copies {@code source} to {@code destination}, creating parent directories as needed. If {@code destination} already exists it is overwritten.
+     *
+     * @param source the file to copy; must exist and be a regular file
+     * @param destination the target file path
+     */
+    public static void copyFile(File source, File destination) {
+        try {
+            File parent = destination.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            Files.copy(source.toPath(), destination.toPath(), StandardCopyOption.REPLACE_EXISTING);
+        } catch (IOException e) {
+            System.err.println("[FileUtil] Failed to copy " + source + " → " + destination + ": " + e.getMessage());
+        }
     }
 
 }

@@ -4112,7 +4112,7 @@
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisLieu" />
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
         <reference class="gest.secCiv.Mission" field="mIDFichier" />
-        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="ID" format="link(../file/)" />
+        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="ID" format="file(file/[ID])" />
         <field source="mData" destinationName="donnees" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="byte[]" title="Données" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="NULL" type="date" title="Date de l'ajout" />
         <field source="mDateDernModif" destinationName="dateDerniereModification" isExported="true" skipWhen="NULL" type="date" title="Date de dernière modification" />

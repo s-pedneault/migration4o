@@ -1,8 +1,7 @@
 package migration4o.ui.common;
 
 /**
- * Callback interface for monitoring export progress.
- * Allows UI components to track and display the progress of export operations.
+ * Callback interface for monitoring export progress. Allows UI components to track and display the progress of export operations.
  * 
  * Similar to DODatabaseMonitor but specialized for export operations.
  */
@@ -125,6 +124,14 @@ public interface DOExportMonitor {
      * @param message Status message
      */
     void onStatusMessage(String message);
+
+    /**
+     * Called after XML validation completes. Default implementation is a no-op so existing implementations are not required to override it.
+     *
+     * @param allPassed {@code true} if every XML file passed validation
+     */
+    default void onValidationComplete(boolean allPassed) {
+    }
 
     /**
      * Returns true if the export should be cancelled.

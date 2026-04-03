@@ -147,12 +147,12 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
 
     private JPanel createSuccessPanel() {
         JPanel panel = new JPanel(new BorderLayout());
-        panel.setBackground(new Color(198, 239, 206));
+        panel.setBackground(new Color(56, 142, 60)); // slightly dark green — updated by onValidationComplete
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
 
         successLabel = new JLabel("Export successful!", SwingConstants.CENTER);
         successLabel.setFont(successLabel.getFont().deriveFont(Font.BOLD, 22f));
-        successLabel.setForeground(new Color(0, 97, 0));
+        successLabel.setForeground(Color.WHITE);
         panel.add(successLabel, BorderLayout.CENTER);
 
         return panel;
@@ -286,10 +286,32 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
             if (warnings > 0) {
                 statsText += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
             }
+            // Validation hasn't run yet when this fires — default to green;
+            // onValidationComplete will update the colour once results arrive.
+            applySuccessPanelColor(true);
             successLabel.setText(String.format("<html><center><b>Export successful!</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
             ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
         } else {
             titleLabel.setText("Export complete with errors: " + exportName);
+        }
+    }
+
+    @Override
+    public void onValidationComplete(boolean allPassed) {
+        // Update the success panel colour once validation results are known.
+        // Only relevant when the success card is currently visible.
+        applySuccessPanelColor(allPassed);
+        if (!allPassed) {
+            successLabel.setText("<html><center><b>Export complete — validation failed</b><br>" + "<span style='font-size:10px'>Some XML files did not pass XSD validation</span></center></html>");
+        }
+    }
+
+    private void applySuccessPanelColor(boolean allPassed) {
+        JPanel successPanel = (JPanel) successLabel.getParent();
+        if (allPassed) {
+            successPanel.setBackground(new Color(56, 142, 60)); // slightly dark green
+        } else {
+            successPanel.setBackground(new Color(183, 28, 28)); // slightly dark red
         }
     }
 

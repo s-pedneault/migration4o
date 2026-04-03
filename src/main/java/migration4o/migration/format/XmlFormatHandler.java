@@ -21,12 +21,9 @@ import migration4o.util.tools.structuredwriter.StructuredWriterMetadata;
 import migration4o.util.tools.structuredwriter.formats.StructuredWriterXML;
 
 /**
- * Format handler for XML output, with optional XSD schema generation and
- * validation.
+ * Format handler for XML output, with optional XSD schema generation and validation.
  * <p>
- * Own state: {@code xsdBuilder}, {@code exportedXMLFiles}, {@code generateXsd}.
- * Overrides four hooks: {@code init}, {@code open}, {@code close},
- * {@code done}.
+ * Own state: {@code xsdBuilder}, {@code exportedXMLFiles}, {@code generateXsd}. Overrides four hooks: {@code init}, {@code open}, {@code close}, {@code done}.
  */
 public class XmlFormatHandler extends FormatHandler {
 
@@ -62,8 +59,7 @@ public class XmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Opens the root {@code <export>} element with an XSD schema location
-     * attribute, then writes class metadata and opens {@code <objects>}.
+     * Opens the root {@code <export>} element with an XSD schema location attribute, then writes class metadata and opens {@code <objects>}.
      */
     @Override
     public void open(ExportCurrentState ctx) throws Exception {
@@ -76,8 +72,7 @@ public class XmlFormatHandler extends FormatHandler {
     }
 
     /**
-     * Closes {@code <objects>} and {@code <export>}, flushes the writer, and
-     * records the file path for post-export validation.
+     * Closes {@code <objects>} and {@code <export>}, flushes the writer, and records the file path for post-export validation.
      */
     @Override
     public void close(ExportCurrentState ctx) throws Exception {
@@ -284,6 +279,10 @@ public class XmlFormatHandler extends FormatHandler {
             }
             System.out.println();
 
+            if (ctx.statistics != null) {
+                ctx.statistics.allValidationPassed = result.allValid();
+            }
+
             if (ctx.request.monitor != null) {
                 if (result.allValid()) {
                     ctx.request.monitor.onStatusMessage("✓ All " + result.getTotalCount() + " XML files validated successfully");
@@ -293,6 +292,7 @@ public class XmlFormatHandler extends FormatHandler {
                         ctx.request.monitor.onStatusMessage("  ✗ " + new java.io.File(failed).getName());
                     }
                 }
+                ctx.request.monitor.onValidationComplete(result.allValid());
             }
         } catch (Exception e) {
             if (ctx.request.monitor != null) {

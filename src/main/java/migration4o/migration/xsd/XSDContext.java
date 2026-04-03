@@ -15,9 +15,7 @@ import migration4o.schema.DOSchemaService;
 /**
  * Shared context for XSD generation, providing schema navigation utilities.
  * <p>
- * The XSD is generated from the full reference schema — no observation-based
- * registration is needed. This class provides helper methods used by
- * {@link XSDSchemaWriter}, {@link XSDClassWriter}, and {@link XSDFieldWriter}.
+ * The XSD is generated from the full reference schema — no observation-based registration is needed. This class provides helper methods used by {@link XSDSchemaWriter}, {@link XSDClassWriter}, and {@link XSDFieldWriter}.
  */
 class XSDContext {
 
@@ -31,17 +29,15 @@ class XSDContext {
     // ── Schema navigation utilities (used by writers) ──────────────────────
 
     /**
-     * Returns all exported fields for a class including fields inherited from
-     * ancestor classes. Ancestors are processed root-first so a child class
-     * field overrides an ancestor field with the same destinationName.
+     * Returns all exported fields for a class including fields inherited from ancestor classes. The class's own fields are loaded first; ancestor fields are only added when no field with the same source name has already been loaded, so a child's redefinition always wins without needing a post-processing override step.
      */
     Map<String, DOSchemaField> getAllExportedFieldsIncludingAncestors(DOSchemaClass schemaClass) {
         DOSchema schema = getReferenceSchema();
-        // Build ancestry chain from root down to this class
+        // Collect the ancestry chain from this class up to the root
         List<DOSchemaClass> chain = new ArrayList<>();
         DOSchemaClass current = schemaClass;
         while (current != null) {
-            chain.add(0, current); // prepend so root is first
+            chain.add(current); // child first
             String parentName = current.attributes.parentClassName;
             if (parentName == null || parentName.isEmpty())
                 break;
@@ -50,14 +46,14 @@ class XSDContext {
                 break;
             current = parent;
         }
-        // Merge fields root-first; child fields override ancestor fields with
-        // same name
+        // Load child fields first; putIfAbsent ensures ancestor fields never
+        // override a field that the child class has already defined.
         Map<String, DOSchemaField> result = new LinkedHashMap<>();
         for (DOSchemaClass cls : chain) {
             if (cls.fields != null) {
                 for (DOSchemaField f : cls.fields) {
                     if (f.attributes.isExported) {
-                        result.put(f.attributes.destinationName, f);
+                        result.putIfAbsent(f.attributes.source, f);
                     }
                 }
             }
@@ -66,14 +62,11 @@ class XSDContext {
     }
 
     /**
-     * Returns only the fields declared directly on this class that are not
-     * already defined in any ancestor class. Used for xs:extension where
-     * inherited fields come from the parent type — re-emitting them would
-     * violate the XSD Unique Particle Attribution (UPA) constraint.
+     * Returns only the fields declared directly on this class that are not already defined in any ancestor class. Used for xs:extension where inherited fields come from the parent type — re-emitting them would violate the XSD Unique Particle Attribution (UPA) constraint.
      */
     Map<String, DOSchemaField> getOwnExportedFields(DOSchemaClass schemaClass) {
-        // Collect all ancestor field destinationNames so we can exclude them
-        Set<String> ancestorFieldNames = new HashSet<>();
+        // Collect all ancestor field source names so we can exclude them
+        Set<String> ancestorSourceNames = new HashSet<>();
         DOSchema schema = getReferenceSchema();
         String parentName = schemaClass.attributes.parentClassName;
         while (parentName != null && !parentName.isEmpty()) {
@@ -83,7 +76,7 @@ class XSDContext {
             if (parent.fields != null) {
                 for (DOSchemaField f : parent.fields) {
                     if (f.attributes.isExported) {
-                        ancestorFieldNames.add(f.attributes.destinationName);
+                        ancestorSourceNames.add(f.attributes.source);
                     }
                 }
             }
@@ -93,12 +86,53 @@ class XSDContext {
         Map<String, DOSchemaField> result = new LinkedHashMap<>();
         if (schemaClass.fields != null) {
             for (DOSchemaField f : schemaClass.fields) {
-                if (f.attributes.isExported && !ancestorFieldNames.contains(f.attributes.destinationName)) {
-                    result.put(f.attributes.destinationName, f);
+                if (f.attributes.isExported && !ancestorSourceNames.contains(f.attributes.source)) {
+                    result.put(f.attributes.source, f);
                 }
             }
         }
         return result;
+    }
+
+    /**
+     * Returns true if the class locally declares a field whose destinationName is already defined in an ancestor class AND the XSD type differs from the ancestor's XSD type. Re-using the same definition (same type via a shared field) is NOT an override and must not trigger a flat-layout fallback.
+     * <p>
+     * Only a genuine type change (e.g. {@code int} → {@code string}) requires falling back to flat layout, because xs:extension cannot re-declare an inherited field with a different type.
+     */
+    boolean hasOverrideFields(DOSchemaClass schemaClass) {
+        // Collect ancestor fields: source name → XSD type string
+        Map<String, String> ancestorXsdTypes = new java.util.HashMap<>();
+        DOSchema schema = getReferenceSchema();
+        String parentName = schemaClass.attributes.parentClassName;
+        while (parentName != null && !parentName.isEmpty()) {
+            DOSchemaClass parent = schema.findClassByName(parentName);
+            if (parent == null)
+                break;
+            if (parent.fields != null) {
+                for (DOSchemaField f : parent.fields) {
+                    if (f.attributes.isExported && f.attributes.type != null && !f.attributes.type.isEmpty()) {
+                        ancestorXsdTypes.putIfAbsent(f.attributes.source, XSDTypeMapper.getXSDType(f.attributes.type));
+                    }
+                }
+            }
+            parentName = parent.attributes.parentClassName;
+        }
+        if (schemaClass.fields != null) {
+            for (DOSchemaField f : schemaClass.fields) {
+                if (!f.attributes.isExported)
+                    continue;
+                String ancestorXsdType = ancestorXsdTypes.get(f.attributes.source);
+                if (ancestorXsdType == null)
+                    continue; // not an ancestor field — not an override
+                if (f.attributes.type == null || f.attributes.type.isEmpty())
+                    continue; // no type to compare — not a genuine override
+                String ownXsdType = XSDTypeMapper.getXSDType(f.attributes.type);
+                if (!ancestorXsdType.equals(ownXsdType)) {
+                    return true; // genuine type change — requires flat layout
+                }
+            }
+        }
+        return false;
     }
 
     /**
@@ -118,8 +152,7 @@ class XSDContext {
     }
 
     /**
-     * Returns all exported descendant classes (direct and transitive) of the
-     * given class. Uses BFS over parentClassName to find all descendants.
+     * Returns all exported descendant classes (direct and transitive) of the given class. Uses BFS over parentClassName to find all descendants.
      */
     List<DOSchemaClass> getAllExportedDescendants(DOSchemaClass schemaClass) {
         DOSchema schema = getReferenceSchema();
@@ -143,8 +176,7 @@ class XSDContext {
     }
 
     /**
-     * Checks whether a schema class has an exported parent class that uses
-     * xs:extension. Returns the parent class if it's exported, null otherwise.
+     * Checks whether a schema class has an exported parent class that uses xs:extension. Returns the parent class if it's exported, null otherwise.
      */
     DOSchemaClass getExportedParent(DOSchemaClass schemaClass) {
         if (schemaClass.attributes.parentClassName == null || schemaClass.attributes.parentClassName.isEmpty()) {

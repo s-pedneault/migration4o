@@ -58,10 +58,10 @@ public class ObjectExporter {
         try {
             // Use ctx.delegate directly — it is always set to the correct
             // delegate before each call:
-            //  • Root objects: ObjectExportLoop sets ctx.delegate = dbClass.delegate
-            //  • Embedded IDEntite targets: FieldExporter switches ctx.delegate
-            //    = resolved.delegate before recursing
-            //  • Regular embedded objects: come from the same delegate as parent
+            // • Root objects: ObjectExportLoop sets ctx.delegate = dbClass.delegate
+            // • Embedded IDEntite targets: FieldExporter switches ctx.delegate
+            // = resolved.delegate before recursing
+            // • Regular embedded objects: come from the same delegate as parent
             // Using the multi-delegate DODatabase.getByID(objectId) here would
             // only search the user delegate (to avoid cross-database reads),
             // which silently drops static-DB objects.
@@ -170,7 +170,7 @@ public class ObjectExporter {
                             }
                         } else if (!(obj instanceof GenericObject) && schemaClass != null) {
                             // Native Java object — export method-call fields via reflection
-                            fieldExporter.exportMethodCallFields(obj, schemaClass, 0, schemaClass.attributes.destinationName, schemaClass.attributes.source, objectId);
+                            fieldExporter.exportMethodCallFields(ctx.delegate, obj, schemaClass, 0, schemaClass.attributes.destinationName, schemaClass.attributes.source, objectId);
                         }
                     } finally {
                         handler.writer.closeStructure(elementName);
@@ -209,8 +209,7 @@ public class ObjectExporter {
     }
 
     /**
-     * Counts the number of exported fields in a schema class (non-method-call
-     * fields only, since method-call fields are handled separately).
+     * Counts the number of exported fields in a schema class (non-method-call fields only, since method-call fields are handled separately).
      */
     private static int countExportedFields(DOSchemaClass schemaClass) {
         if (schemaClass.fields == null)
@@ -224,10 +223,7 @@ public class ObjectExporter {
     }
 
     /**
-     * Returns true if the schema class has at least one method-call field
-     * (source ending with "()") that is exported. These fields invoke methods
-     * via reflection on native Java objects and may produce output even when
-     * the collection itself is empty.
+     * Returns true if the schema class has at least one method-call field (source ending with "()") that is exported. These fields invoke methods via reflection on native Java objects and may produce output even when the collection itself is empty.
      */
     private static boolean hasMethodCallFields(DOSchemaClass schemaClass) {
         if (schemaClass.fields == null)

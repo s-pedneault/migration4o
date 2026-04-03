@@ -42,6 +42,10 @@ public class ExportStatistics {
      * When {@code false}, all expensive analytical tracking is disabled: {@link #allExportedObjectIds} is not populated, per-object decision notes and relationship notes are not collected, and {@link #exportedObjectIds} is not built in {@link #setExportInfo}. {@link #exportedClassCounts} is always maintained for the count column in the coverage panel. Defaults to {@code true} for full backwards-compatible behaviour.
      */
     public boolean fullTracking = true;
+    /**
+     * Set after XML validation. {@code null} means validation has not run yet (e.g. XSD generation was disabled or validation threw an exception).
+     */
+    public Boolean allValidationPassed = null;
     public final Map<String, Set<Long>> exportedObjectIdsSet = new java.util.HashMap<>();
     public String currentClassName = "";
     public String currentFormatName = "";

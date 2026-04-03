@@ -4,8 +4,11 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 
+import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.util.formatters.FormatterContext;
+import migration4o.util.formatters.ValueFormatter;
 
 /**
  * Utility class for value-related operations, particularly for determining if values are considered "empty" for export purposes.
@@ -198,7 +201,7 @@ public class ValueUtil {
      * @param field The schema field that may define format rules
      * @return Formatted value
      */
-    public static String formatFieldValue(String value, DOSchemaField field) {
+    public static String formatFieldValue(DODatabaseDelegate delegate, FormatterContext context, String value, DOSchemaField field) {
         if (value == null) {
             return null;
         }
@@ -210,25 +213,7 @@ public class ValueUtil {
         String formattedValue = value;
         String[] formatKeywords = field.attributes.format.split(",");
         for (String keyword : formatKeywords) {
-            String normalizedKeyword = keyword.trim().toUpperCase();
-
-            switch (normalizedKeyword) {
-            case "TRIM":
-                formattedValue = formattedValue.trim();
-                break;
-
-            case "LOWERCASE":
-                formattedValue = formattedValue.toLowerCase();
-                break;
-
-            case "UPPERCASE":
-                formattedValue = formattedValue.toUpperCase();
-                break;
-
-            default:
-                // Ignore unknown formatting keywords
-                break;
-            }
+            formattedValue = ValueFormatter.formatValue(delegate, context, formattedValue, keyword.trim());
         }
 
         return formattedValue;
@@ -237,11 +222,11 @@ public class ValueUtil {
     /**
      * Formats any object value according to DOSchemaField.format by converting it to string first.
      */
-    public static String formatFieldValue(Object value, DOSchemaField field) {
+    public static String formatFieldValue(DODatabaseDelegate delegate, FormatterContext context, Object value, DOSchemaField field) {
         if (value == null) {
             return null;
         }
-        return formatFieldValue(String.valueOf(value), field);
+        return formatFieldValue(delegate, context, String.valueOf(value), field);
     }
 
     /**

@@ -10,16 +10,11 @@ import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 
 /**
- * Writes a single class complexType and global element definition into the XSD
- * output.
+ * Writes a single class complexType and global element definition into the XSD output.
  * <p>
- * Uses {@code xs:extension} for classes with exported parent classes, emitting
- * only the class's own fields. For classes without an exported parent, all
- * fields (including inherited) are flattened into a single {@code xs:sequence}.
+ * Uses {@code xs:extension} for classes with exported parent classes, emitting only the class's own fields. For classes without an exported parent, all fields (including inherited) are flattened into a single {@code xs:sequence}.
  * <p>
- * The XML export engine sorts fields in inheritance-aware order (ancestor
- * fields first, then own fields) to match the {@code xs:extension} content
- * model.
+ * The XML export engine sorts fields in inheritance-aware order (ancestor fields first, then own fields) to match the {@code xs:extension} content model.
  */
 class XSDClassWriter {
 
@@ -32,12 +27,19 @@ class XSDClassWriter {
     }
 
     /**
-     * Writes the XSD declarations for a single exported class: a named
-     * complexType and a global element referencing it.
+     * Writes the XSD declarations for a single exported class: a named complexType and a global element referencing it.
      */
     void writeClassTypeDefinition(FileWriter writer, DOSchemaClass schemaClass) throws IOException {
         String destClassName = schemaClass.attributes.destinationName;
         DOSchemaClass exportedParent = context.getExportedParent(schemaClass);
+
+        // If the class locally redefines a field from its parent, xs:extension
+        // cannot re-declare that field (XSD UPA constraint). Fall back to a flat
+        // layout so getAllExportedFieldsIncludingAncestors can let the child
+        // override take precedence.
+        if (exportedParent != null && context.hasOverrideFields(schemaClass)) {
+            exportedParent = null;
+        }
 
         // Determine which fields to include in this complexType
         Map<String, DOSchemaField> fields;
@@ -46,7 +48,8 @@ class XSDClassWriter {
             // type)
             fields = context.getOwnExportedFields(schemaClass);
         } else {
-            // No exported parent: flatten all fields including inherited
+            // No exported parent (or has overrides): flatten all fields,
+            // child fields take priority over ancestor fields with the same name
             fields = context.getAllExportedFieldsIncludingAncestors(schemaClass);
         }
 
@@ -99,8 +102,7 @@ class XSDClassWriter {
     }
 
     /**
-     * Writes the field list inside an {@code <xs:sequence>}. All fields are
-     * sorted alphabetically by destination name.
+     * Writes the field list inside an {@code <xs:sequence>}. All fields are sorted alphabetically by destination name.
      */
     private void writeFieldsSequence(FileWriter writer, Map<String, DOSchemaField> fields, String indent) throws IOException {
         writer.write(indent + "<xs:sequence>\n");
@@ -115,9 +117,7 @@ class XSDClassWriter {
     }
 
     /**
-     * Writes the {@code <items>} element definition used inside collection/map
-     * root types. Contains a choice of collection items (primitives + exported
-     * classes) and map entry elements.
+     * Writes the {@code <items>} element definition used inside collection/map root types. Contains a choice of collection items (primitives + exported classes) and map entry elements.
      */
     private void writeItemsElement(FileWriter writer, String indent) throws IOException {
         writer.write(indent + "<xs:element name=\"items\" minOccurs=\"0\">\n");
@@ -137,9 +137,7 @@ class XSDClassWriter {
     }
 
     /**
-     * Returns true if the class is a collection or map type by ancestry,
-     * meaning its runtime content is dynamic child elements rather than
-     * schema-defined fields.
+     * Returns true if the class is a collection or map type by ancestry, meaning its runtime content is dynamic child elements rather than schema-defined fields.
      */
     private boolean isCollectionOrMapClass(DOSchemaClass schemaClass) {
         return schemaClass.isCollectionOrMap();

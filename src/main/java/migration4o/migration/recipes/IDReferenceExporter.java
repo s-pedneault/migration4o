@@ -7,12 +7,11 @@ import migration4o.migration.format.ExportCurrentState;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ValueUtil;
+import migration4o.util.formatters.FormatterContext;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
- * Recipe for exporting entity objects as ID reference wrappers. Creates
- * synthetic ID objects (e.g., IDCompartiment) with the mID field set to the
- * entity's DB object ID.
+ * Recipe for exporting entity objects as ID reference wrappers. Creates synthetic ID objects (e.g., IDCompartiment) with the mID field set to the entity's DB object ID.
  */
 public class IDReferenceExporter {
 
@@ -53,7 +52,7 @@ public class IDReferenceExporter {
 
         if (idField != null) {
             // Export the ID value
-            String formattedValue = ValueUtil.formatFieldValue(String.valueOf(entityObjectId), idField);
+            String formattedValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctx.basePath, ctx.schemaClass, idField, ctx.currentObject().obj), String.valueOf(entityObjectId), idField);
             xmlWriter.elementWithContent(idField.attributes.destinationName, formattedValue, false);
         }
 

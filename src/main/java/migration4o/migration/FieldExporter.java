@@ -35,6 +35,7 @@ import migration4o.util.DatabaseUtil;
 import migration4o.util.ReferenceUtil;
 import migration4o.util.ResolvedReference;
 import migration4o.util.ValueUtil;
+import migration4o.util.formatters.FormatterContext;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
 /**
@@ -246,7 +247,7 @@ public class FieldExporter {
                         // Null values for strict XSD primitive types (int,
                         // long, boolean, double, float, etc.) must be omitted
                         // entirely — an empty element like <field /> is not
-                        // valid content for xs:int and friends.  The XSD
+                        // valid content for xs:int and friends. The XSD
                         // already declares minOccurs="0" so omission is legal.
                         if (isStrictXsdPrimitiveType(schemaField.attributes.type)) {
                             continue;
@@ -287,7 +288,7 @@ public class FieldExporter {
                     } else if (fieldValue instanceof byte[]) {
                         // Special handling for byte arrays - export as Base64
                         // string
-                        exportByteArrayField((byte[]) fieldValue, schemaField, indentLevel);
+                        exportByteArrayField(delegate, (byte[]) fieldValue, schemaField, indentLevel);
                         fieldsWritten++;
                     } else if (fieldValue.getClass().isArray()) {
                         if (exportArrayField(delegate, fieldValue, schemaField, indentLevel, destinationClassName, sourceClassName, parentObjectId)) {
@@ -399,7 +400,7 @@ public class FieldExporter {
             boolean resolveEmbeddedMIDs = schemaField.attributes.embedContents && schemaField.attributes.childrenType != null && operation.database != null;
 
             // Pre-resolve the target entity schema class for embedded mID
-            // collections.  findObjectByMID uses its isStatic flag to
+            // collections. findObjectByMID uses its isStatic flag to
             // route to the correct delegate automatically.
             DOSchemaClass embeddedMIDTargetClass = null;
             if (resolveEmbeddedMIDs) {
@@ -591,7 +592,7 @@ public class FieldExporter {
         return list;
     }
 
-    private void exportByteArrayField(byte[] byteArray, DOSchemaField schemaField, int indentLevel) throws IOException {
+    private void exportByteArrayField(DODatabaseDelegate delegate, byte[] byteArray, DOSchemaField schemaField, int indentLevel) throws IOException {
         String fieldName = schemaField.attributes.destinationName;
 
         // Check skip conditions for empty byte arrays
@@ -603,7 +604,7 @@ public class FieldExporter {
         } else {
             // Convert byte array to Base64 string
             String base64String = Base64.getEncoder().encodeToString(byteArray);
-            base64String = ValueUtil.formatFieldValue(base64String, schemaField);
+            base64String = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), base64String, schemaField);
             xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(byteArray, schemaField, operation.referenceSchema), base64String, false);
         }
     }
@@ -638,7 +639,7 @@ public class FieldExporter {
                 return;
             }
 
-            className = ValueUtil.formatFieldValue(className, schemaField);
+            className = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), className, schemaField);
             xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), className, false);
             return;
         }
@@ -665,7 +666,7 @@ public class FieldExporter {
                 // ── Unified IDEntite handler (embedded + non-embedded) ──
                 // All field-level IDEntite processing happens here so that
                 // the format handler hook is invoked regardless of the
-                // embedContents flag.  Embedded IDEntite no longer falls
+                // embedContents flag. Embedded IDEntite no longer falls
                 // through to the generic-object path / exportFieldValue.
 
                 if (ctxRef.statistics != null) {
@@ -732,7 +733,7 @@ public class FieldExporter {
                             ctxRef.statistics.recordRelationshipSkipped(parentObjectId, idEntiteObjectId, parentSourceClassName, sourceFieldName, "relationship exported as scalar mID (embedContents=false), target object not traversed");
                         }
                         Map<String, String> attrs = skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema);
-                        String formattedId = ValueUtil.formatFieldValue(mID.toString(), schemaField);
+                        String formattedId = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), mID.toString(), schemaField);
                         xmlWriter.elementWithContent(fieldName, attrs, formattedId, false);
                     } else {
                         // IDEntite wrapper exists in DB4O but mID could not be
@@ -795,7 +796,7 @@ public class FieldExporter {
 
             // Apply value mapping if defined for this field
             stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
-            stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
+            stringValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), stringValue, schemaField);
 
             xmlWriter.elementWithContent(fieldName, skippedBecauseAttributes(fieldValue, schemaField, operation.referenceSchema), stringValue, true);
         }
@@ -855,7 +856,7 @@ public class FieldExporter {
      *
      * @return number of method-call fields written
      */
-    public int exportMethodCallFields(Object nativeObj, DOSchemaClass schemaClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
+    public int exportMethodCallFields(DODatabaseDelegate delegate, Object nativeObj, DOSchemaClass schemaClass, int indentLevel, String destinationClassName, String sourceClassName, long parentObjectId) throws IOException {
         int fieldsWritten = 0;
 
         if (schemaClass == null || schemaClass.fields == null) {
@@ -887,7 +888,7 @@ public class FieldExporter {
                         continue;
                     }
                     stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
-                    stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
+                    stringValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), stringValue, schemaField);
                     xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(result, schemaField, operation.referenceSchema), stringValue, true);
                 }
                 fieldsWritten++;
@@ -928,7 +929,7 @@ public class FieldExporter {
             return 0;
         }
 
-        return exportMethodCallFields(nativeObj, schemaClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
+        return exportMethodCallFields(delegate, nativeObj, schemaClass, indentLevel, destinationClassName, sourceClassName, parentObjectId);
     }
 
     /**
@@ -989,10 +990,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports items from a standalone collection or map object being exported as a
-     * root-level element (e.g., in Extra.xml). Normal field export finds no
-     * meaningful schema fields for these types — their items are stored via DB4O
-     * translator fields, not as schema-defined fields.
+     * Exports items from a standalone collection or map object being exported as a root-level element (e.g., in Extra.xml). Normal field export finds no meaningful schema fields for these types — their items are stored via DB4O translator fields, not as schema-defined fields.
      *
      * @return number of items exported
      */
@@ -1043,9 +1041,7 @@ public class FieldExporter {
     }
 
     /**
-     * Exports a single item from a standalone collection/map.
-     * Persistent DB4O objects are exported recursively; primitives are written as
-     * text elements.
+     * Exports a single item from a standalone collection/map. Persistent DB4O objects are exported recursively; primitives are written as text elements.
      */
     private void exportCollectionItem(DODatabaseDelegate delegate, Object item, long parentObjectId) throws IOException {
         if (item == null)
@@ -1219,7 +1215,7 @@ public class FieldExporter {
                     classNameValue = str;
                 }
             }
-            classNameValue = ValueUtil.formatFieldValue(classNameValue, schemaField);
+            classNameValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), classNameValue, schemaField);
             xmlWriter.elementWithContent(fieldName, classNameValue, false);
             return;
         }
@@ -1243,7 +1239,7 @@ public class FieldExporter {
             } else {
                 stringValue = fieldValue.toString();
             }
-            stringValue = ValueUtil.formatFieldValue(stringValue, schemaField);
+            stringValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), stringValue, schemaField);
             xmlWriter.elementWithContent(fieldName, stringValue, true);
         }
     }
@@ -1276,10 +1272,7 @@ public class FieldExporter {
     }
 
     /**
-     * Returns true when the schema type maps to an XSD primitive that does not
-     * accept empty string as valid content (everything except xs:string).
-     * Used to suppress empty self-closing elements for null values — the XSD
-     * already declares minOccurs="0" so omission is schema-valid.
+     * Returns true when the schema type maps to an XSD primitive that does not accept empty string as valid content (everything except xs:string). Used to suppress empty self-closing elements for null values — the XSD already declares minOccurs="0" so omission is schema-valid.
      */
     private static boolean isStrictXsdPrimitiveType(String schemaType) {
         if (schemaType == null || schemaType.isEmpty()) {
@@ -1566,7 +1559,46 @@ public class FieldExporter {
         if (schemaClass.attributes.parentClassName == null || schemaClass.attributes.parentClassName.isEmpty())
             return false;
         DOSchemaClass parent = schema.findClassByName(schemaClass.attributes.parentClassName);
-        return parent != null && parent.attributes.migrate;
+        if (parent == null || !parent.attributes.migrate)
+            return false;
+        // When the child class redefines an ancestor field with a different type,
+        // xs:extension cannot re-declare that field. The XSD writer falls back to
+        // a flat alphabetical sequence in that case, so the export engine must use
+        // the same flat alphabetical sort to keep XML and XSD in sync.
+        return !hasTypeOverrideFields(schemaClass, schema);
+    }
+
+    /**
+     * Returns true when the class declares an own field whose source name matches an ancestor field but with a different schema type string. This is the same condition that causes {@code XSDContext} to emit a flat sequence instead of an {@code xs:extension}, so both systems must agree on whether to use inheritance-aware (depth-first) or flat (alphabetical) field ordering.
+     */
+    private boolean hasTypeOverrideFields(DOSchemaClass schemaClass, DOSchema schema) {
+        // Collect ancestor fields: source name → type string
+        Map<String, String> ancestorTypes = new java.util.HashMap<>();
+        String parentName = schemaClass.attributes.parentClassName;
+        while (parentName != null && !parentName.isEmpty()) {
+            DOSchemaClass parent = schema.findClassByName(parentName);
+            if (parent == null)
+                break;
+            if (parent.fields != null) {
+                for (DOSchemaField f : parent.fields) {
+                    if (f.attributes.isExported && f.attributes.type != null && !f.attributes.type.isEmpty()) {
+                        ancestorTypes.putIfAbsent(f.attributes.source, f.attributes.type);
+                    }
+                }
+            }
+            parentName = parent.attributes.parentClassName;
+        }
+        if (schemaClass.fields != null) {
+            for (DOSchemaField f : schemaClass.fields) {
+                if (!f.attributes.isExported || f.attributes.type == null || f.attributes.type.isEmpty())
+                    continue;
+                String ancestorType = ancestorTypes.get(f.attributes.source);
+                if (ancestorType != null && !ancestorType.equals(f.attributes.type)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private boolean isFieldTypeCollection(DOSchemaField schemaField) {
