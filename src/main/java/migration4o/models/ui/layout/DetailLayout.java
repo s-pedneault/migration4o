@@ -153,52 +153,7 @@ public class DetailLayout {
                 }
                 resolved.setProp("ref", destPrefix);
                 visiting.add(layoutRef);
-                for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema)) {
-                    if (!sf.attributes.isExported || sf.attributes.source == null)
-                        continue;
-                    String destName = sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source;
-                    if (sf.attributes.isCollection) {
-                        LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
-                        table.setProp("ref", destPrefix + "." + destName);
-                        if (sf.attributes.title != null && !sf.attributes.title.isEmpty())
-                            table.setProp("label", sf.attributes.title);
-                        translateTableColumns(table, sf, refSchema);
-                        resolved.children.add(table);
-                    } else if (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)) {
-                        // Nested embedded — generate a sub-section
-                        DOSchemaClass nestedClass = refSchema.findClassByName(sf.attributes.type);
-                        // IDEntite → resolve through pointsTo to the real entity
-                        if (nestedClass != null && nestedClass.isIDEntite() && nestedClass.attributes.pointsTo != null) {
-                            DOSchemaClass target = refSchema.findClassByName(nestedClass.attributes.pointsTo);
-                            if (target != null)
-                                nestedClass = target;
-                        }
-                        if (nestedClass != null && nestedClass.attributes.migrate) {
-                            LayoutNode sub = new LayoutNode(LayoutNodeType.SECTION);
-                            sub.setProp("title", sf.attributes.title != null ? sf.attributes.title : destName);
-                            sub.setProp("collapsible", "true");
-                            String subPrefix = destPrefix + "." + destName;
-                            sub.setProp("ref", subPrefix);
-                            for (DOSchemaField nsf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(nestedClass, refSchema)) {
-                                if (!nsf.attributes.isExported || nsf.attributes.source == null)
-                                    continue;
-                                String ndn = nsf.attributes.destinationName != null ? nsf.attributes.destinationName : nsf.attributes.source;
-                                LayoutNode fld = new LayoutNode(LayoutNodeType.FIELD);
-                                fld.setProp("ref", subPrefix + "." + ndn);
-                                if (nsf.attributes.title != null && !nsf.attributes.title.isEmpty())
-                                    fld.setProp("label", nsf.attributes.title);
-                                sub.children.add(fld);
-                            }
-                            resolved.children.add(sub);
-                        }
-                    } else {
-                        LayoutNode fld = new LayoutNode(LayoutNodeType.FIELD);
-                        fld.setProp("ref", destPrefix + "." + destName);
-                        if (sf.attributes.title != null && !sf.attributes.title.isEmpty())
-                            fld.setProp("label", sf.attributes.title);
-                        resolved.children.add(fld);
-                    }
-                }
+                populateInlineFields(resolved, embeddedClass, destPrefix, refSchema, visiting);
                 visiting.remove(layoutRef);
                 return resolved;
             }
@@ -322,6 +277,52 @@ public class DetailLayout {
         tableNode.setProp("columns", String.join(",", destCols));
         if (titles.stream().anyMatch(t -> !t.isEmpty()))
             tableNode.setProp("columnTitles", String.join(",", titles));
+    }
+
+    /**
+     * Recursively populate a layout node with children for each exported field
+     * of the given class. Collections become TABLE nodes, embedded non-primitive
+     * fields become collapsible SECTION nodes (with recursive children), and
+     * simple fields become FIELD nodes.
+     */
+    private static void populateInlineFields(LayoutNode parent, DOSchemaClass cls, String prefix, DOSchema refSchema, Set<String> visiting) {
+        for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(cls, refSchema)) {
+            if (!sf.attributes.isExported || sf.attributes.source == null)
+                continue;
+            String destName = sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source;
+            if (sf.attributes.isCollection) {
+                LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
+                table.setProp("ref", prefix + "." + destName);
+                if (sf.attributes.title != null && !sf.attributes.title.isEmpty())
+                    table.setProp("label", sf.attributes.title);
+                translateTableColumns(table, sf, refSchema);
+                parent.children.add(table);
+            } else if (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)) {
+                DOSchemaClass nestedClass = refSchema.findClassByName(sf.attributes.type);
+                if (nestedClass != null && nestedClass.isIDEntite() && nestedClass.attributes.pointsTo != null) {
+                    DOSchemaClass target = refSchema.findClassByName(nestedClass.attributes.pointsTo);
+                    if (target != null)
+                        nestedClass = target;
+                }
+                if (nestedClass != null && nestedClass.attributes.migrate && !visiting.contains(nestedClass.attributes.source)) {
+                    LayoutNode sub = new LayoutNode(LayoutNodeType.SECTION);
+                    sub.setProp("title", sf.attributes.title != null ? sf.attributes.title : destName);
+                    sub.setProp("collapsible", "true");
+                    String subPrefix = prefix + "." + destName;
+                    sub.setProp("ref", subPrefix);
+                    visiting.add(nestedClass.attributes.source);
+                    populateInlineFields(sub, nestedClass, subPrefix, refSchema, visiting);
+                    visiting.remove(nestedClass.attributes.source);
+                    parent.children.add(sub);
+                }
+            } else {
+                LayoutNode fld = new LayoutNode(LayoutNodeType.FIELD);
+                fld.setProp("ref", prefix + "." + destName);
+                if (sf.attributes.title != null && !sf.attributes.title.isEmpty())
+                    fld.setProp("label", sf.attributes.title);
+                parent.children.add(fld);
+            }
+        }
     }
 
     /** Generate table column metadata for a collection field. */
