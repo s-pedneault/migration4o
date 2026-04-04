@@ -12,12 +12,9 @@ import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 
 /**
- * Drives the recursive module/class export loop, dispatching each class to
- * every {@link FormatHandler} in order.
+ * Drives the recursive module/class export loop, dispatching each class to every {@link FormatHandler} in order.
  * <p>
- * The class-to-class ordering (all handlers write one class before moving on)
- * keeps statistics and reference tracking shared across formats without
- * reopening files.
+ * The class-to-class ordering (all handlers write one class before moving on) keeps statistics and reference tracking shared across formats without reopening files.
  */
 public class ExportModuleLoop {
 
@@ -74,6 +71,7 @@ public class ExportModuleLoop {
                     runClass(dbClass);
                 } catch (Throwable t) {
                     recordClassError(className, t);
+                    fireClassComplete(className);
                 } finally {
                     ctx.clearClass();
                 }
@@ -146,24 +144,34 @@ public class ExportModuleLoop {
     private void recordClassError(String className, Throwable t) {
         String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
         System.err.println("[Export error] class " + className + ": " + msg);
+        t.printStackTrace(System.err);
         if (ctx.statistics != null) {
             Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(msg, t);
             ctx.statistics.addError(-1, className, "Class export failed: " + msg, wrapped);
         }
         if (ctx.request.monitor != null) {
-            ctx.request.monitor.onStatusMessage("Error exporting " + className + ": " + msg);
+            ctx.request.monitor.onStatusMessage("[ERROR] Class " + className + ": " + msg);
+            ctx.request.monitor.onStatusMessage(formatStackTrace(t));
         }
     }
 
     private void recordHandlerCloseError(String className, FormatHandler handler, Throwable t) {
         String msg = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
         System.err.println("[Export error] handler.close() [" + handler.displayName() + "] " + className + ": " + msg);
+        t.printStackTrace(System.err);
         if (ctx.statistics != null) {
             Exception wrapped = t instanceof Exception ? (Exception) t : new RuntimeException(msg, t);
             ctx.statistics.addError(-1, className, handler.displayName() + " write failed: " + msg, wrapped);
         }
         if (ctx.request.monitor != null) {
             ctx.request.monitor.onStatusMessage("[ERROR] " + handler.displayName() + " write failed for " + className + ": " + msg);
+            ctx.request.monitor.onStatusMessage(formatStackTrace(t));
         }
+    }
+
+    private static String formatStackTrace(Throwable t) {
+        java.io.StringWriter sw = new java.io.StringWriter();
+        t.printStackTrace(new java.io.PrintWriter(sw));
+        return sw.toString();
     }
 }

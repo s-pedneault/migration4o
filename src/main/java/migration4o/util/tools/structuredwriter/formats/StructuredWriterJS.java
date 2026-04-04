@@ -11,12 +11,24 @@ import migration4o.util.tools.structuredwriter.StructuredWriterElementWithStruct
 import migration4o.util.tools.structuredwriter.StructuredWriterElementWithoutContent;
 
 /**
- * Compact JavaScript writer.
+ * Compact JavaScript writer producing JS-native data.
  *
- * Output format (single-line, minified):
- * window.__m4o={...};
+ * <p>
+ * Output format (single-line, minified): {@code window.__m4o={...};}
+ *
+ * <p>
+ * Data contract:
+ * <ul>
+ * <li>Scalars are direct values: {@code "nom":"value"}
+ * <li>Objects use {@code {}} with reserved {@code _class}, {@code _id}, {@code _summary}, {@code _preview}, {@code _label} properties
+ * <li>Collections use {@code []} via explicit {@code openArray/closeArray}
+ * <li>No {@code @attributes}, {@code #text}, or forced single-element arrays
+ * </ul>
  */
 public class StructuredWriterJS implements StructuredWriterAPI {
+
+    /** Reserved attribute keys emitted in fixed order before other attributes. */
+    private static final String[] RESERVED_KEYS = { "_id", "_summary", "_preview" };
 
     @Override
     public String getName() {
@@ -38,126 +50,179 @@ public class StructuredWriterJS implements StructuredWriterAPI {
         writer.writer.write(";\n");
     }
 
+    // ── Element without content (e.g. empty field / empty reference) ──
+
     @Override
     public void add(StructuredWriterElementWithoutContent element) throws IOException {
-        beginValue(element, element.prefix);
+        StringBuilder out = element.prefix;
+        writeComma(element, out);
         if (hasAttributes(element)) {
-            element.prefix.append("{\"@attributes\":");
-            appendAttributesObject(element.attributes, element.prefix);
-            element.prefix.append("}");
-            return;
+            writeKey(element, out);
+            out.append('{');
+            writeInlineAttributes(element.attributes, out);
+            out.append('}');
+        } else {
+            writeKey(element, out);
+            out.append("null");
         }
-        element.prefix.append("null");
     }
+
+    // ── Element with content (scalar value, possibly with attributes) ──
 
     @Override
     public void addContent(StructuredWriterElementWithContent element, String content) throws IOException {
-        beginValue(element, element.prefix);
+        StringBuilder out = element.prefix;
+        writeComma(element, out);
         if (hasAttributes(element)) {
-            element.prefix.append("{\"@attributes\":");
-            appendAttributesObject(element.attributes, element.prefix);
-            element.prefix.append(",\"#text\":");
-            appendQuoted(content, element.prefix);
-            element.prefix.append("}");
-            return;
+            writeKey(element, out);
+            out.append('{');
+            writeInlineAttributes(element.attributes, out);
+            out.append(',');
+            appendQuoted("_label", out);
+            out.append(':');
+            appendQuoted(content, out);
+            out.append('}');
+        } else {
+            writeKey(element, out);
+            appendQuoted(content, out);
         }
-        appendQuoted(content, element.prefix);
     }
+
+    // ── Open/close structure (object: {...}) ──
 
     @Override
     public void openStructure(StructuredWriterElementWithStructure element) throws IOException {
+        StringBuilder out = element.prefix;
         if (element.parent == null) {
-            appendQuoted(element.name, element.prefix);
-            element.prefix.append(":{");
+            // Root-level key (e.g. top module name inside window.__m4o)
+            appendQuoted(element.name, out);
+            out.append(":{");
         } else {
-            beginValue(element, element.prefix);
-            element.prefix.append("{");
+            writeComma(element, out);
+            writeKey(element, out);
+            out.append('{');
+            if (isParentArray(element)) {
+                // Inside an array: emit _class discriminator
+                appendQuoted("_class", out);
+                out.append(':');
+                appendQuoted(element.name, out);
+                if (hasAttributes(element)) {
+                    out.append(',');
+                }
+            }
         }
-
-        if (!hasAttributes(element)) {
-            return;
+        if (hasAttributes(element) && element.parent != null) {
+            writeInlineAttributes(element.attributes, out);
+            element.hasWrittenChild = true;
+        } else if (isParentArray(element)) {
+            // _class was written; mark so first child gets a comma
+            element.hasWrittenChild = true;
         }
-
-        element.prefix.append("\"@attributes\":");
-        appendAttributesObject(element.attributes, element.prefix);
     }
 
     @Override
     public void closeStructure(StructuredWriterElementWithStructure element) throws IOException {
-        closeOpenChildArray(element, element.suffix);
-        element.suffix.append("}");
-
+        element.suffix.append('}');
         if (element.indent == 0) {
-            element.suffix.append("}");
+            element.suffix.append('}');
         }
     }
+
+    // ── Open/close array ([...]) ──
+
+    @Override
+    public void openArray(StructuredWriterElementWithStructure element) throws IOException {
+        StringBuilder out = element.prefix;
+        if (element.parent == null) {
+            appendQuoted(element.name, out);
+            out.append(":[");
+        } else {
+            writeComma(element, out);
+            writeKey(element, out);
+            out.append('[');
+        }
+    }
+
+    @Override
+    public void closeArray(StructuredWriterElementWithStructure element) throws IOException {
+        element.suffix.append(']');
+        if (element.indent == 0) {
+            element.suffix.append('}');
+        }
+    }
+
+    // ── Private helpers ──
 
     private boolean hasAttributes(StructuredWriterElement element) {
         return element.attributes != null && !element.attributes.isEmpty();
     }
 
-    private void beginValue(StructuredWriterElement element, StringBuilder destination) {
+    private boolean isParentArray(StructuredWriterElement element) {
+        return element.parent != null && element.parent.isArray;
+    }
+
+    /**
+     * Writes the element key ({@code "name":}) when inside an object context. Inside an array context, no key is written.
+     */
+    private void writeKey(StructuredWriterElement element, StringBuilder out) {
+        if (!isParentArray(element)) {
+            appendQuoted(element.name, out);
+            out.append(':');
+        }
+    }
+
+    /**
+     * Writes a comma separator before a child element when the parent already has written children.
+     */
+    private void writeComma(StructuredWriterElement element, StringBuilder out) {
         StructuredWriterElement parent = element.parent;
-        if (parent == null) {
-            appendQuoted(element.name, destination);
-            destination.append(":");
-            return;
-        }
-
-        String childName = element.name;
-        if (parent.openChildArrayName == null) {
-            if (hasAttributes(parent) || parent.hasWrittenChild) {
-                destination.append(',');
+        if (parent != null) {
+            if (parent.hasWrittenChild) {
+                out.append(',');
             }
-            openChildArray(parent, childName, destination);
-        } else if (!parent.openChildArrayName.equals(childName)) {
-            closeOpenChildArray(parent, destination);
-            destination.append(',');
-            openChildArray(parent, childName, destination);
-        }
-
-        if (parent.openChildArrayHasElements) {
-            destination.append(',');
-        } else {
-            parent.openChildArrayHasElements = true;
+            parent.hasWrittenChild = true;
         }
     }
 
-    private void openChildArray(StructuredWriterElement parent, String childName, StringBuilder destination) {
-        appendQuoted(childName, destination);
-        destination.append(":[");
-
-        parent.openChildArrayName = childName;
-        parent.openChildArrayHasElements = false;
-        parent.hasWrittenChild = true;
-    }
-
-    private void closeOpenChildArray(StructuredWriterElement parent, StringBuilder destination) {
-        if (parent.openChildArrayName == null) {
-            return;
-        }
-
-        destination.append(']');
-        parent.openChildArrayName = null;
-        parent.openChildArrayHasElements = false;
-    }
-
-    private void appendAttributesObject(Map<String, String> attributes, StringBuilder destination) {
-        destination.append('{');
+    /**
+     * Writes reserved properties in a fixed order ({@code _id}, {@code _summary}, {@code _preview}), then any remaining attributes.
+     */
+    private void writeInlineAttributes(Map<String, String> attributes, StringBuilder out) {
         boolean first = true;
+        // Emit reserved keys in fixed order
+        for (String key : RESERVED_KEYS) {
+            String value = attributes.get(key);
+            if (value != null) {
+                if (!first)
+                    out.append(',');
+                appendQuoted(key, out);
+                out.append(':');
+                appendQuoted(value, out);
+                first = false;
+            }
+        }
+        // Emit remaining keys (skip reserved keys already emitted)
         for (Map.Entry<String, String> entry : attributes.entrySet()) {
-            if (entry.getKey() == null || entry.getValue() == null) {
+            String key = entry.getKey();
+            if (key == null || entry.getValue() == null)
                 continue;
-            }
-            if (!first) {
-                destination.append(',');
-            }
-            appendQuoted(entry.getKey(), destination);
-            destination.append(':');
-            appendQuoted(entry.getValue(), destination);
+            if (isReservedKey(key))
+                continue;
+            if (!first)
+                out.append(',');
+            appendQuoted(key, out);
+            out.append(':');
+            appendQuoted(entry.getValue(), out);
             first = false;
         }
-        destination.append('}');
+    }
+
+    private boolean isReservedKey(String key) {
+        for (String reserved : RESERVED_KEYS) {
+            if (reserved.equals(key))
+                return true;
+        }
+        return false;
     }
 
     private void appendQuoted(String value, StringBuilder destination) {

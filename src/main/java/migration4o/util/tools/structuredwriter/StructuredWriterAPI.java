@@ -23,4 +23,12 @@ public interface StructuredWriterAPI {
     public void openStructure(StructuredWriterElementWithStructure element) throws IOException;
 
     public void closeStructure(StructuredWriterElementWithStructure element) throws IOException;
+
+    default void openArray(StructuredWriterElementWithStructure element) throws IOException {
+        openStructure(element);
+    }
+
+    default void closeArray(StructuredWriterElementWithStructure element) throws IOException {
+        closeStructure(element);
+    }
 }

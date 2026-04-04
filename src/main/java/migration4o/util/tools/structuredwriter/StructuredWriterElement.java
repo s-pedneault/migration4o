@@ -14,6 +14,7 @@ public abstract class StructuredWriterElement {
     public StringBuilder content = new StringBuilder();
     public StringBuilder suffix = new StringBuilder();
     public boolean hasWrittenChild;
+    public boolean isArray;
     public String openChildArrayName;
     public boolean openChildArrayHasElements;
 

@@ -2261,6 +2261,58 @@ body {
     border-color: var(--c-border-light);
 }
 
+/* ── Inline sub-section (nested embedded entity inside a field row) ── */
+.inline-subsection {
+    width: 100%;
+}
+
+.inline-subsection summary {
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--c-primary, #4f6ef7);
+    list-style: none;
+    padding: 2px 0;
+    user-select: none;
+}
+
+.inline-subsection summary::-webkit-details-marker {
+    display: none;
+}
+
+.inline-subsection summary::before {
+    content: '\25B6';
+    display: inline-block;
+    font-size: 9px;
+    margin-right: 6px;
+    transition: transform 0.15s ease;
+}
+
+.inline-subsection[open] summary::before {
+    transform: rotate(90deg);
+}
+
+.inline-subsection-body {
+    margin-top: 4px;
+    border-left: 2px solid var(--c-border, #dde1e9);
+    padding-left: 8px;
+}
+
+.inline-subsection-body .field-row {
+    min-height: 28px;
+}
+
+.inline-subsection-body .field-label {
+    flex: 0 0 180px;
+    font-size: 11px;
+    padding: 4px 10px;
+}
+
+.inline-subsection-body .field-value {
+    font-size: 12px;
+    padding: 4px 10px;
+}
+
 .detail-section summary .summary-meta {
     font-size: 11px;
     color: rgba(255, 255, 255, .7);

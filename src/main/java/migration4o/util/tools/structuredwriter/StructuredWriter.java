@@ -84,25 +84,48 @@ public class StructuredWriter {
     }
 
     public StructuredWriter openStructure(String name, Map<String, String> attributes) throws IOException {
+        return openElement(name, attributes, false);
+    }
+
+    public StructuredWriter openArray(String name) throws IOException {
+        return openArray(name, null);
+    }
+
+    public StructuredWriter openArray(String name, Map<String, String> attributes) throws IOException {
+        return openElement(name, attributes, true);
+    }
+
+    private StructuredWriter openElement(String name, Map<String, String> attributes, boolean isArray) throws IOException {
         StructuredWriterElementWithStructure element = new StructuredWriterElementWithStructure(name, attributes);
+        element.isArray = isArray;
         pushElement(element);
-        api.openStructure(element);
+        if (isArray) {
+            api.openArray(element);
+        } else {
+            api.openStructure(element);
+        }
         writer.write(element.prefix.toString());
         return this;
     }
 
     public StructuredWriter closeStructure(String name) throws IOException {
+        return closeElement(name);
+    }
+
+    public StructuredWriter closeArray(String name) throws IOException {
+        return closeElement(name);
+    }
+
+    private StructuredWriter closeElement(String name) throws IOException {
         StructuredWriterElement element = element();
         if (element == null) {
-            System.err.println("[WARN] closeStructure(\"" + name + "\"): branch stack is empty — ignored");
+            System.err.println("[WARN] closeElement(\"" + name + "\"): branch stack is empty — ignored");
             return this;
         }
 
         if (element instanceof StructuredWriterElementWithStructure && element.name.equals(name)) {
             // Normal case: top matches the expected name
-            api.closeStructure((StructuredWriterElementWithStructure) element);
-            writer.write(element.suffix.toString());
-            popElement(element);
+            closeStructureElement((StructuredWriterElementWithStructure) element);
         } else {
             // Mismatch: search the stack for the target name and close all
             // intervening elements to recover a consistent state.
@@ -119,8 +142,7 @@ public class StructuredWriter {
                 while (!branch.isEmpty()) {
                     StructuredWriterElement top = branch.lastElement();
                     if (top instanceof StructuredWriterElementWithStructure) {
-                        api.closeStructure((StructuredWriterElementWithStructure) top);
-                        writer.write(top.suffix.toString());
+                        closeStructureElement((StructuredWriterElementWithStructure) top);
                     }
                     popElement(top);
                     if (top.name.equals(name)) {
@@ -129,7 +151,7 @@ public class StructuredWriter {
                 }
             } else {
                 // Target not found in stack — ignore the close to avoid further corruption
-                System.err.println("[WARN] closeStructure(\"" + name + "\"): not found in branch stack — ignored");
+                System.err.println("[WARN] closeElement(\"" + name + "\"): not found in branch stack — ignored");
             }
         }
 
@@ -137,6 +159,16 @@ public class StructuredWriter {
             api.onDocumentComplete(this);
         }
         return this;
+    }
+
+    private void closeStructureElement(StructuredWriterElementWithStructure element) throws IOException {
+        if (element.isArray) {
+            api.closeArray(element);
+        } else {
+            api.closeStructure(element);
+        }
+        writer.write(element.suffix.toString());
+        popElement(element);
     }
 
     private void pushElement(StructuredWriterElement element) {

@@ -386,9 +386,9 @@ public class FieldExporter {
             return true;
         } else {
             if (includeSizeMetadata) {
-                xmlWriter.openStructure(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), itemsValue, schemaField, operation.referenceSchema));
+                xmlWriter.openArray(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), itemsValue, schemaField, operation.referenceSchema));
             } else {
-                xmlWriter.openStructure(fieldName, skippedBecauseAttributes(itemsValue, schemaField, operation.referenceSchema));
+                xmlWriter.openArray(fieldName, skippedBecauseAttributes(itemsValue, schemaField, operation.referenceSchema));
             }
 
             // Check if we should export ID references instead of entities
@@ -449,7 +449,7 @@ public class FieldExporter {
                     }
                 }
             } finally {
-                xmlWriter.closeStructure(fieldName);
+                xmlWriter.closeArray(fieldName);
             }
             return true;
         }
@@ -521,9 +521,9 @@ public class FieldExporter {
         }
 
         if (includeSizeMetadata) {
-            xmlWriter.openStructure(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), map, schemaField, operation.referenceSchema));
+            xmlWriter.openArray(fieldName, withSkippedBecauseAttribute(Map.of("size", size + ""), map, schemaField, operation.referenceSchema));
         } else {
-            xmlWriter.openStructure(fieldName, skippedBecauseAttributes(map, schemaField, operation.referenceSchema));
+            xmlWriter.openArray(fieldName, skippedBecauseAttributes(map, schemaField, operation.referenceSchema));
         }
 
         try {
@@ -543,7 +543,7 @@ public class FieldExporter {
                 }
             }
         } finally {
-            xmlWriter.closeStructure(fieldName);
+            xmlWriter.closeArray(fieldName);
         }
         return true;
     }
@@ -1000,7 +1000,7 @@ public class FieldExporter {
             java.util.Map<?, ?> map = (java.util.Map<?, ?>) obj;
             if (map.isEmpty())
                 return 0;
-            xmlWriter.openStructure("items", null);
+            xmlWriter.openArray("items", null);
             try {
                 int count = 0;
                 for (java.util.Map.Entry<?, ?> entry : map.entrySet()) {
@@ -1015,14 +1015,14 @@ public class FieldExporter {
                 }
                 return count;
             } finally {
-                xmlWriter.closeStructure("items");
+                xmlWriter.closeArray("items");
             }
         }
 
         // Collections (Vector, ArrayList, HashSet, etc.) and GenericObjects wrapping them
         Collection<?> items = RecipeCollectionItems.getItems(delegate, obj);
         if (items != null && !items.isEmpty()) {
-            xmlWriter.openStructure("items", null);
+            xmlWriter.openArray("items", null);
             try {
                 int count = 0;
                 for (Object item : items) {
@@ -1033,7 +1033,7 @@ public class FieldExporter {
                 }
                 return count;
             } finally {
-                xmlWriter.closeStructure("items");
+                xmlWriter.closeArray("items");
             }
         }
 

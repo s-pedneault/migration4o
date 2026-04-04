@@ -156,7 +156,14 @@ public class HtmlFormatHandler extends FormatHandler {
         this.currentDefaultColumnsJson = (ctx.exportConfig != null && ctx.exportConfig.hasDefaultColumns()) ? ctx.exportConfig.getDefaultColumnsJson() : "null";
         this.currentLayoutJson = resolveLayoutJson(ctx);
         pendingHrefEntries.clear();
-        super.open(ctx);
+        // Override base open(): use openArray for "objects" so the JS writer
+        // produces a real array instead of duplicate object keys when
+        // multiple objects of the same class are exported.
+        writer.openStructure("export");
+        if (ctx.schemaClass != null) {
+            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
+        }
+        writer.openArray("objects");
     }
 
     private String resolveLayoutJson(ExportCurrentState ctx) {
@@ -232,10 +239,10 @@ public class HtmlFormatHandler extends FormatHandler {
         Map<String, String> attrs = null;
         if (ctx.isRootObject() || ctx.request.exportNativeIds || hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema) || ctx.schemaClass.attributes.preview != null) {
             attrs = new java.util.LinkedHashMap<>();
-            // Always emit id on root objects for the viewer; also emit on all
-            // objects when exportNativeIds is explicitly requested.
+            // Always emit _id on root objects for the viewer; also emit on
+            // all objects when exportNativeIds is explicitly requested.
             if (ctx.isRootObject() || ctx.request.exportNativeIds) {
-                attrs.put("id", String.valueOf(ctx.currentObject().objectId));
+                attrs.put("_id", String.valueOf(ctx.currentObject().objectId));
             }
             if (hasSummaryWithAncestors(ctx.schemaClass, ctx.request.referenceSchema)) {
                 String summary = SummaryGenerator.generate(ctx.delegate, ctx.currentObject().obj, ctx.schemaClass, ctx.request.referenceSchema, ctx.request.database);
@@ -417,7 +424,7 @@ public class HtmlFormatHandler extends FormatHandler {
     @Override
     public void close(ExportCurrentState ctx) throws Exception {
         // Close the JS structures so onDocumentComplete writes the final ";\n"
-        writer.closeStructure("objects");
+        writer.closeArray("objects");
         writer.closeStructure("export");
         writer.writer.flush();
         writer.writer.close(); // flush + close the temp JS file on disk

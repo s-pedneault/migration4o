@@ -693,15 +693,14 @@
             return;
         }
 
-        if (value['@attributes'] && typeof value['@attributes'] === 'object') {
-            Object.entries(value['@attributes']).forEach(([k, v]) => appendField(out, `${path}.${k}`, v));
-        }
-        if (value['#text'] !== undefined) {
-            appendField(out, path, value['#text']);
-        }
+        // Reserved properties: promote _id, _summary, _preview, _label as fields
+        if (value._id !== undefined) appendField(out, `${path}._id`, value._id);
+        if (value._summary !== undefined) appendField(out, `${path}._summary`, value._summary);
+        if (value._preview !== undefined) appendField(out, `${path}._preview`, value._preview);
+        if (value._label !== undefined) appendField(out, path, value._label);
 
         Object.entries(value).forEach(([k, v]) => {
-            if (k === '@attributes' || k === '#text') return;
+            if (k.startsWith('_')) return;
             const nextPath = path ? `${path}.${k}` : k;
             flattenValue(v, nextPath, out);
         });
@@ -729,17 +728,15 @@
 
     function buildRecord(entity, raw, pos) {
         const fields = {};
-        const attrs = raw && raw['@attributes'] && typeof raw['@attributes'] === 'object' ? raw['@attributes'] : null;
-        const serverSummary = attrs && attrs._summary ? attrs._summary : null;
-        const serverPreview = attrs && attrs._preview ? attrs._preview : null;
-        if (attrs) Object.entries(attrs).forEach(([k, v]) => { if (k !== '_summary' && k !== '_preview') appendField(fields, `${k}`, v); });
+        const serverSummary = raw && raw._summary ? raw._summary : null;
+        const serverPreview = raw && raw._preview ? raw._preview : null;
         if (raw && typeof raw === 'object') {
             Object.entries(raw).forEach(([k, v]) => {
-                if (k === '@attributes') return;
+                if (k.startsWith('_')) return;
                 flattenValue(v, k, fields);
             });
         }
-        const id = (attrs && attrs.id) || pickBest(fields, ['id', 'identifiant', 'numero', 'code']) || '';
+        const id = (raw && raw._id) || pickBest(fields, ['id', 'identifiant', 'numero', 'code']) || '';
         return {
             key: `${entity}#${pos}`,
             pos,
@@ -780,11 +777,21 @@
         }
 
         const acc = [];
-        if (Array.isArray(root.objects)) {
-            root.objects.forEach((entry) => {
-                if (!entry || typeof entry !== 'object') return;
-                Object.entries(entry).forEach(([entity, value]) => collectFromNamedArray(entity, value, acc));
-            });
+        if (root.objects && typeof root.objects === 'object') {
+            if (Array.isArray(root.objects)) {
+                root.objects.forEach((item) => {
+                    if (!item || typeof item !== 'object') return;
+                    // Direct objects with _class discriminator (clean JS format)
+                    if (item._class) {
+                        acc.push(buildRecord(item._class, item, acc.length + 1));
+                    } else {
+                        // Legacy wrapper: {EntityName: value}
+                        Object.entries(item).forEach(([entity, value]) => collectFromNamedArray(entity, value, acc));
+                    }
+                });
+            } else {
+                Object.entries(root.objects).forEach(([entity, value]) => collectFromNamedArray(entity, value, acc));
+            }
         }
 
         if (acc.length === 0) {
@@ -1410,59 +1417,10 @@
         return name.length <= 24 && text.length <= 26;
     }
 
-    function mergeAttributes(target, attrs) {
-        if (!attrs || typeof attrs !== 'object' || !target || typeof target !== 'object' || Array.isArray(target)) {
-            return;
-        }
-        const next = target['@attributes'] && typeof target['@attributes'] === 'object' ? target['@attributes'] : {};
-        Object.entries(attrs).forEach(([k, v]) => {
-            if (next[k] === undefined) next[k] = v;
-        });
-        if (Object.keys(next).length > 0) target['@attributes'] = next;
-    }
-
-    function isLikelyCollectionField(fieldName, arrayValue) {
-        if (!Array.isArray(arrayValue)) return false;
-        if (arrayValue.length > 1) return true;
-        const name = String(fieldName || '').toLowerCase();
-        return name.startsWith('liste') || name.startsWith('table') || name.startsWith('set') || name.includes('collection');
-    }
-
-    function unwrapEmbeddedValue(fieldName, value) {
-        let current = value;
-        let guard = 0;
-        while (current && typeof current === 'object' && !Array.isArray(current) && guard < 8) {
-            const keys = Object.keys(current).filter((k) => k !== '@attributes' && k !== '#text');
-            if (keys.length !== 1) break;
-
-            const childKey = keys[0];
-            const childValue = current[childKey];
-            const parentLo = String(fieldName || '').toLowerCase();
-            const childLo = String(childKey || '').toLowerCase();
-            const parentNoList = parentLo.replace(/^liste/, '');
-            const childNoList = childLo.replace(/^liste/, '');
-            const looksWrapper = childLo === parentLo
-                || childNoList === parentNoList
-                || /^[A-Z]/.test(childKey);
-
-            if (!looksWrapper) break;
-
-            const currentAttrs = current['@attributes'];
-            if (Array.isArray(childValue) && childValue.length === 1 && childValue[0] && typeof childValue[0] === 'object') {
-                current = childValue[0];
-                mergeAttributes(current, currentAttrs);
-                guard++;
-                continue;
-            }
-            if (childValue && typeof childValue === 'object' && !Array.isArray(childValue)) {
-                current = childValue;
-                mergeAttributes(current, currentAttrs);
-                guard++;
-                continue;
-            }
-            break;
-        }
-        return current;
+    /** Check if an object only carries reference metadata (_id, _summary, _preview, _label, _class) and no real fields. */
+    function isReferenceOnly(obj) {
+        if (!obj || typeof obj !== 'object' || Array.isArray(obj)) return false;
+        return Object.keys(obj).every((k) => k.startsWith('_'));
     }
 
     function classifyFieldEntry(key, value) {
@@ -1471,35 +1429,21 @@
         }
 
         if (Array.isArray(value)) {
-            if (isLikelyCollectionField(key, value)) {
-                return { key, type: 'collection', value };
-            }
-
             if (value.length === 0) {
                 return { key, type: 'primitive', value: '' };
             }
-
-            if (value.length === 1) {
-                const single = value[0];
-                if (single === null || single === undefined) {
-                    return { key, type: 'primitive', value: '' };
-                }
-                if (typeof single !== 'object') {
-                    return { key, type: 'primitive', value: single };
-                }
-                return { key, type: 'object', value: unwrapEmbeddedValue(key, single) };
-            }
-
             const allPrimitive = value.every((item) => item === null || item === undefined || typeof item !== 'object');
             if (allPrimitive) {
                 return { key, type: 'primitive', value: value.map((item) => String(item ?? '')).join(' | ') };
             }
-
             return { key, type: 'collection', value };
         }
 
         if (typeof value === 'object') {
-            return { key, type: 'object', value: unwrapEmbeddedValue(key, value) };
+            if (isReferenceOnly(value)) {
+                return { key, type: 'reference', value };
+            }
+            return { key, type: 'object', value };
         }
 
         return { key, type: 'primitive', value };
@@ -1508,18 +1452,9 @@
     function getObjectEntries(value) {
         if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
         const entries = [];
-        const attrs = value['@attributes'];
-        if (attrs && typeof attrs === 'object') {
-            Object.entries(attrs).forEach(([k, v]) => {
-                entries.push({ key: k, value: v, type: 'primitive' });
-            });
-        }
-        if (value['#text'] !== undefined) {
-            entries.push({ key: '#text', value: value['#text'], type: 'primitive' });
-        }
 
         Object.entries(value).forEach(([k, v]) => {
-            if (k === '@attributes' || k === '#text') return;
+            if (k.startsWith('_')) return;
             entries.push(classifyFieldEntry(k, v));
         });
 
@@ -1812,28 +1747,25 @@
             return;
         }
 
-        const attrs = value['@attributes'];
-        if (attrs && typeof attrs === 'object') {
-            Object.entries(attrs).forEach(([k, v]) => {
-                appendRowValue(out, path ? `${path}.${k}` : k, v);
-            });
-        }
-        if (value['#text'] !== undefined) {
-            appendRowValue(out, path || 'value', value['#text']);
-        }
+        // Unwrap class-name wrapper from embedded object export
+        value = unwrapClassWrapper(value);
+        // Promote reserved properties as labeled fields
+        if (value._id !== undefined) appendRowValue(out, path ? `${path}._id` : '_id', value._id);
+        if (value._summary !== undefined) appendRowValue(out, path ? `${path}._summary` : '_summary', value._summary);
+        if (value._preview !== undefined) appendRowValue(out, path ? `${path}._preview` : '_preview', value._preview);
+        if (value._label !== undefined) appendRowValue(out, path || 'value', value._label);
 
         Object.entries(value).forEach(([k, v]) => {
-            if (k === '@attributes' || k === '#text') return;
+            if (k.startsWith('_')) return;
             flattenRow(v, path ? `${path}.${k}` : k, out);
         });
     }
 
     function computeCollectionTable(items) {
-        const normalizedItems = expandWrapperCollectionItems(items);
         const rows = [];
         const columnsSet = new Set();
 
-        normalizedItems.forEach((item) => {
+        items.forEach((item) => {
             if (item && typeof item === 'object') {
                 const row = {};
                 flattenRow(item, '', row);
@@ -1848,50 +1780,6 @@
 
         const columns = Array.from(columnsSet).sort((a, b) => a.localeCompare(b));
         return { columns, rows };
-    }
-
-    function expandWrapperCollectionItems(items) {
-        if (!Array.isArray(items)) return [];
-
-        const expanded = [];
-        items.forEach((item) => {
-            if (!item || typeof item !== 'object' || Array.isArray(item)) {
-                expanded.push(item);
-                return;
-            }
-
-            const wrapperKeys = Object.keys(item).filter((k) => k !== '@attributes' && k !== '#text');
-            if (wrapperKeys.length !== 1) {
-                expanded.push(item);
-                return;
-            }
-
-            const wrapperKey = wrapperKeys[0];
-            const inner = item[wrapperKey];
-            if (!Array.isArray(inner) || inner.length === 0) {
-                expanded.push(item);
-                return;
-            }
-
-            const isObjectArray = inner.every((entry) => entry && typeof entry === 'object' && !Array.isArray(entry));
-            if (!isObjectArray) {
-                expanded.push(item);
-                return;
-            }
-
-            const wrapperAttrs = item['@attributes'];
-            inner.forEach((entry) => {
-                if (wrapperAttrs && typeof wrapperAttrs === 'object') {
-                    const copy = JSON.parse(JSON.stringify(entry));
-                    mergeAttributes(copy, wrapperAttrs);
-                    expanded.push(copy);
-                } else {
-                    expanded.push(entry);
-                }
-            });
-        });
-
-        return expanded;
     }
 
     function renderCollectionTableBody(view) {
@@ -1912,7 +1800,7 @@
         return html;
     }
 
-    function renderCollectionSection(label, items, level) {
+    function renderCollectionSection(label, items, ctx) {
         const collectionId = `c${collectionIdCounter++}`;
         const table = computeCollectionTable(items);
         const pageSize = 25;
@@ -1925,7 +1813,7 @@
             pageSize
         };
 
-        const openAttr = level <= 1 ? ' open' : '';
+        const openAttr = ctx === 'detail' ? ' open' : '';
         let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title"${sectionTitleAttr(label)}>${esc(formatSectionTitle(label))}</span><span class="summary-meta">${items.length} ${esc(t('elements'))}</span></summary><div class="section-body">`;
 
         html += `<div class="collection-toolbar"><span>${items.length} ${esc(t('elements'))}</span><span class="collection-pager">`
@@ -1954,221 +1842,201 @@
     }
 
     /**
-     * Renders a non-embedding IDEntite sub-object inline inside its parent section.
-     * The sub-object's primitive fields are shown in a 2-column grid with the field
-     * name as a small subtitle, and no collapsible wrapper of its own.
+     * Single dispatch entry point for rendering any value.
+     * Routes to the appropriate renderer based on value type and rendering context.
+     * @param {string} label - display label / field path
+     * @param {*} value - the data value
+     * @param {string} ctx - rendering context: 'detail', 'embedded', or 'tabular'
      */
-    function renderInlineIdEntiteSection(key, value) {
-        // StructuredWriterJS wraps elementWithContent in an array when
-        // attributes are present, so unwrap single-element arrays.
+    function renderValue(label, value, ctx) {
+        if (value === null || value === undefined) return '';
+        if (typeof value !== 'object') {
+            return renderFieldRow({ key: label, value: value, type: 'primitive' });
+        }
         if (Array.isArray(value)) {
-            if (value.length === 1 && value[0] && typeof value[0] === 'object') {
-                value = value[0];
-            } else {
-                return '';
-            }
+            return renderCollectionSection(label, value, ctx);
         }
-        if (!value || typeof value !== 'object') return '';
-
-        // HTML-resolved IDEntite reference: HtmlFormatHandler writes these as
-        // {"@attributes":{"_id":"123"},"#text":"label"} so the viewer can both
-        // display a human-readable name AND build a deep-link to the target record.
-        // We detect this by the presence of @attributes._id + #text — not by key count,
-        // so additional future attributes don't silently break the link.
-        if (value['#text'] !== undefined && value['@attributes'] && value['@attributes']['_id'] !== undefined) {
-            var _refId = String(value['@attributes']['_id'] ?? '').trim();
-            var _refText = String(value['#text'] ?? '').trim();
-            if (!_refText || _refText === '0' || _refText === '-1') return '';
-            var _refPtDestName = pointsToByPath[normalizeSchemaPath(key)];
-            var _refPtHref = _refPtDestName ? navHrefByDestName[_refPtDestName] : null;
-            var _refLink = (_refPtHref && _refId && _refId !== '0' && _refId !== '-1')
-                ? _refPtHref + '?open=' + encodeURIComponent(_refId)
-                : null;
-            var _refLabel = displayFieldLabel(key);
-            var _refValueHtml = _refLink
-                ? refLinkBtn(_refLink, _refText)
-                : esc(_refText);
-            var _refPreviewHtml = '';
-            var _refPrevAttr = value['@attributes']['_preview'];
-            if (_refPrevAttr) {
-                var _refPrevSrc = String(_refPrevAttr).match(/src="([^"]+)"/);
-                if (_refPrevSrc) _refPreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_refPrevSrc[1]) + '" target="_blank"><img src="' + esc(_refPrevSrc[1]) + '" /></a></div>';
-            }
-            return '<div class="field-group"><div class="field-row">'
-                + '<div class="field-label">' + esc(_refLabel) + '</div>'
-                + '<div class="field-value">' + _refValueHtml + '</div>'
-                + '</div>' + _refPreviewHtml + '</div>';
+        // Unwrap class-name wrapper from embedded object export
+        value = unwrapClassWrapper(value);
+        if (isReferenceOnly(value)) {
+            return renderReferenceRow(label, value);
         }
-
-        // Embedded IDEntite with child fields: unwrap class-name wrapper and
-        // extract _summary from @attributes.  Render as a simple labeled field
-        // with an optional cross-page link (same as the #text path above).
-        var _uwKeys = Object.keys(value).filter(function (k) { return k !== '@attributes'; });
-        if (_uwKeys.length === 1 && /^[A-Z]/.test(_uwKeys[0])) {
-            var _uwv = value[_uwKeys[0]];
-            if (Array.isArray(_uwv) && _uwv.length === 1) _uwv = _uwv[0];
-            if (_uwv && typeof _uwv === 'object' && _uwv['@attributes'] && _uwv['@attributes']['_summary']) {
-                var _eId = String(_uwv['@attributes']['_id'] ?? '').trim();
-                var _eTxt = String(_uwv['@attributes']['_summary']).trim();
-                if (_eTxt && _eTxt !== '0' && _eTxt !== '-1') {
-                    var _ePtDN = pointsToByPath[normalizeSchemaPath(key)];
-                    var _ePtHr = _ePtDN ? navHrefByDestName[_ePtDN] : null;
-                    var _eLk = (_ePtHr && _eId && _eId !== '0' && _eId !== '-1')
-                        ? _ePtHr + '?open=' + encodeURIComponent(_eId) : null;
-                    var _eLbl = displayFieldLabel(key);
-                    var _eVHtml = _eLk ? refLinkBtn(_eLk, _eTxt) : esc(_eTxt);
-                    var _ePreviewHtml = '';
-                    var _ePrevAttr = _uwv['@attributes']['_preview'];
-                    if (_ePrevAttr) {
-                        var _ePrevSrc = String(_ePrevAttr).match(/src="([^"]+)"/);
-                        if (_ePrevSrc) _ePreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_ePrevSrc[1]) + '" target="_blank"><img src="' + esc(_ePrevSrc[1]) + '" /></a></div>';
-                    }
-                    return '<div class="field-group"><div class="field-row">'
-                        + '<div class="field-label">' + esc(_eLbl) + '</div>'
-                        + '<div class="field-value">' + _eVHtml + '</div>'
-                        + '</div>' + _ePreviewHtml + '</div>';
-                }
-            }
-        }
-
-        const entries = getObjectEntries(value);
-        const primitiveEntries = sortPrimitiveEntries(entries.filter((e) => e.type === 'primitive'));
-        const collectionEntries = entries.filter((e) => e.type === 'collection');
-        // If effectively empty (e.g. just a zero ID), skip
-        if (primitiveEntries.length === 0 && collectionEntries.length === 0) return '';
-        if (primitiveEntries.length <= 1 && collectionEntries.length === 0) {
-            const single = primitiveEntries[0];
-            if (single) {
-                const lo = String(single.key || '').toLowerCase().split('.').pop() || '';
-                const valStr = String(single.value ?? '').trim();
-                if ((lo === 'mid' || lo === 'id') && (!valStr || valStr === '0' || valStr === '-1')) return '';
-            }
-        }
-
-        // Determine cross-page link: resolve pointsTo target + find matching nav href
-        var _ptDestName = pointsToByPath[normalizeSchemaPath(key)];
-        var _ptHref = _ptDestName ? navHrefByDestName[_ptDestName] : null;
-        var _idEntry = primitiveEntries.find(function (e) {
-            var lo = String(e.key || '').toLowerCase().split('.').pop() || '';
-            return lo === 'mid' || lo === 'id' || lo === '_id';
-        });
-        var _idVal = _idEntry ? String(_idEntry.value ?? '').trim() : null;
-        if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
-        var _targetLink = (_ptHref && _idVal) ? _ptHref + '?open=' + encodeURIComponent(_idVal) : null;
-
-        // Render a single field row, optionally wrapping the value in a navigation link
-        function renderFieldRowMaybeLinked(entry) {
-            var label = displayFieldLabel(entry.key);
-            var destName = String(entry.key || '').split('.').pop() || '';
-            var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
-            var lo = String(entry.key || '').toLowerCase().split('.').pop() || '';
-            var isIdField = (lo === 'mid' || lo === 'id' || lo === '_id') && _targetLink;
-            var valueHtml = isIdField
-                ? refLinkBtn(_targetLink, String(entry.value ?? ''))
-                : fmtValue(entry.value, entry.key);
-            return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
-        }
-
-        let html = '<div class="field-group">';
-        // Subtitle — also shows a ↗ icon when a cross-page link is available
-        if (_targetLink) {
-            html += '<div class="field-group-subtitle ref-subtitle"' + sectionTitleAttr(key) + '>'
-                + '<span>' + esc(formatSectionTitle(key)) + '</span>'
-                + '<a class="ref-link" href="' + esc(_targetLink) + '" title="' + esc(t('openLinkedRecord')) + '">' + REF_ARROW_SVG + '</a></div>';
-        } else {
-            html += '<div class="field-group-subtitle"' + sectionTitleAttr(key) + '>' + esc(formatSectionTitle(key)) + '</div>';
-        }
-        if (primitiveEntries.length >= 2) {
-            html += '<div class="field-columns-2">';
-            primitiveEntries.forEach((e) => { html += renderFieldRowMaybeLinked(e); });
-            html += '</div>';
-        } else {
-            primitiveEntries.forEach((e) => { html += renderFieldRowMaybeLinked(e); });
-        }
-        collectionEntries.forEach((e) => { html += renderCollectionSection(e.key, e.value, 2); });
-        html += '</div>';
-        return html;
+        return renderObjectSection(label, value, ctx);
     }
 
-    function renderNodeSection(label, value, level) {
-        level = level || 0;
-        if (value === null || value === undefined) {
-            return '';
+    /**
+     * Renders a reference-only object ({_id, _label, _preview?}) as a field row
+     * with an optional cross-page link and thumbnail.
+     */
+    function renderReferenceRow(label, value) {
+        var _refId = String(value._id ?? '').trim();
+        var _refText = String(value._label || value._summary || _refId || '').trim();
+        if (!_refText || _refText === '0' || _refText === '-1') return '';
+        var _refPtDestName = pointsToByPath[normalizeSchemaPath(label)];
+        var _refPtHref = _refPtDestName ? navHrefByDestName[_refPtDestName] : null;
+        var _refLink = (_refPtHref && _refId && _refId !== '0' && _refId !== '-1')
+            ? _refPtHref + '?open=' + encodeURIComponent(_refId)
+            : null;
+        var _refLabel = displayFieldLabel(label);
+        var _refValueHtml = _refLink
+            ? refLinkBtn(_refLink, _refText)
+            : esc(_refText);
+        var _refPreviewHtml = '';
+        if (value._preview) {
+            var _refPrevSrc = String(value._preview).match(/src="([^"]+)"/);
+            if (_refPrevSrc) _refPreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_refPrevSrc[1]) + '" target="_blank"><img src="' + esc(_refPrevSrc[1]) + '" /></a></div>';
+        }
+        return '<div class="field-group"><div class="field-row">'
+            + '<div class="field-label">' + esc(_refLabel) + '</div>'
+            + '<div class="field-value">' + _refValueHtml + '</div>'
+            + '</div>' + _refPreviewHtml + '</div>';
+    }
+
+    /**
+     * Universal object renderer — replaces renderNodeSection and renderInlineIdEntiteSection.
+     * Renders the same object differently depending on context:
+     *  - 'detail':   Full field grid, hero _preview, collapsible nested sections, tabs
+     *  - 'embedded': Compact <details> with thumbnail _preview + _summary header, fields inside
+     *  - 'tabular':  Summary label as link + mini thumbnail only; no fields, no recursion
+     */
+    function renderObjectSection(label, value, ctx) {
+        ctx = ctx || 'detail';
+        if (!value || typeof value !== 'object' || Array.isArray(value)) return '';
+
+        // Extract reserved properties
+        var objId = value._id ? String(value._id).trim() : null;
+        var objSummary = value._summary ? String(value._summary).trim() : null;
+        var objPreview = value._preview || null;
+        var objClass = value._class || null;
+
+        // Resolve cross-page link
+        var _ptDestName = pointsToByPath[normalizeSchemaPath(label)];
+        var _ptHref = _ptDestName ? navHrefByDestName[_ptDestName] : null;
+        if (objId === '0' || objId === '-1' || objId === '') objId = null;
+        var linkHref = (_ptHref && objId) ? _ptHref + '?open=' + encodeURIComponent(objId) : null;
+
+        // ── Tabular context: summary + mini thumbnail only ──
+        if (ctx === 'tabular') {
+            var tabText = objSummary || objId || '';
+            if (!tabText) return '';
+            var tabHtml = linkHref ? refLinkBtn(linkHref, tabText) : esc(tabText);
+            if (objPreview) {
+                var _tPrevSrc = String(objPreview).match(/src="([^"]+)"/);
+                if (_tPrevSrc) tabHtml += ' <img src="' + esc(_tPrevSrc[1]) + '" style="max-height:24px;vertical-align:middle;border-radius:2px;" />';
+            }
+            return tabHtml;
         }
 
-        if (Array.isArray(value)) {
-            return renderCollectionSection(label, value, level);
+        // Classify entries
+        var entries = getObjectEntries(value);
+        var primitiveEntries = sortPrimitiveEntries(entries.filter(function (e) { return e.type === 'primitive'; }));
+        var referenceEntries = entries.filter(function (e) { return e.type === 'reference'; });
+        var objectEntries = entries.filter(function (e) { return e.type === 'object'; }).sort(function (a, b) { return String(a.key || '').localeCompare(String(b.key || '')); });
+        var collectionEntries = entries.filter(function (e) { return e.type === 'collection'; }).sort(function (a, b) { return String(a.key || '').localeCompare(String(b.key || '')); });
+
+        // If effectively empty (only a zero-valued ID), skip
+        if (primitiveEntries.length === 0 && referenceEntries.length === 0 && objectEntries.length === 0 && collectionEntries.length === 0) {
+            if (!objSummary && !objId) return '';
         }
-
-        if (typeof value !== 'object') {
-            return renderPrimitiveGroup([{ key: label, value, type: 'primitive' }]);
-        }
-
-        const entries = getObjectEntries(value);
-        const primitiveEntries = sortPrimitiveEntries(entries.filter((entry) => entry.type === 'primitive' && String(entry.key || '').split('.').pop() !== '_preview' && String(entry.key || '').split('.').pop() !== '_summary'));
-        const previewEntry = entries.find((e) => e.type === 'primitive' && String(e.key || '').split('.').pop() === '_preview');
-        const allObjectEntries = entries.filter((entry) => entry.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
-        const collectionEntries = entries.filter((entry) => entry.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
-
-        // Separate IDEntite sub-objects (rendered inline) from regular sub-objects
-        const idEntiteEntries = allObjectEntries.filter((e) => idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
-        const objectEntries = allObjectEntries.filter((e) => !idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
-
-        // If the section only contains a single ID-like field and nothing else, render inline
-        if (objectEntries.length === 0 && idEntiteEntries.length === 0 && collectionEntries.length === 0 && primitiveEntries.length <= 1) {
-            const single = primitiveEntries[0];
+        if (primitiveEntries.length <= 1 && referenceEntries.length === 0 && objectEntries.length === 0 && collectionEntries.length === 0 && !objSummary) {
+            var single = primitiveEntries[0];
             if (single) {
-                const lo = String(single.key || '').toLowerCase().split('.').pop() || '';
-                const valStr = String(single.value ?? '').trim();
+                var lo = String(single.key || '').toLowerCase().split('.').pop() || '';
+                var valStr = String(single.value ?? '').trim();
                 if ((lo === 'mid' || lo === 'id' || lo.startsWith('id')) && (!valStr || valStr === '0' || valStr === '-1')) {
-                    // Empty ID reference — skip entirely
                     return '';
                 }
             }
         }
 
-        const openAttr = level <= 1 ? ' open' : '';
-        let html = `<details class="detail-section"${openAttr}><summary><span class="summary-title"${sectionTitleAttr(label)}>${esc(formatSectionTitle(label))}</span><span class="summary-meta">${(objectEntries.length + idEntiteEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : ''}</span></summary><div class="section-body">`;
+        // ── Embedded context: compact <details> with thumbnail header ──
+        if (ctx === 'embedded') {
+            // Header: label + summary + optional link + thumbnail
+            var embHeader = '';
+            var embLabel = displayFieldLabel(label);
+            var embSummaryHtml = '';
+            if (objSummary) {
+                embSummaryHtml = linkHref ? refLinkBtn(linkHref, objSummary) : esc(objSummary);
+            } else if (objId && linkHref) {
+                embSummaryHtml = refLinkBtn(linkHref, objId);
+            }
+            var embPreviewHtml = '';
+            if (objPreview) {
+                var _ePrevSrc = String(objPreview).match(/src="([^"]+)"/);
+                if (_ePrevSrc) embPreviewHtml = '<img src="' + esc(_ePrevSrc[1]) + '" style="max-height:40px;vertical-align:middle;border-radius:3px;margin-left:8px;" />';
+            }
 
-        html += renderPrimitiveGroup(primitiveEntries);
+            embHeader = '<div class="field-group-subtitle' + (linkHref ? ' ref-subtitle' : '') + '"' + sectionTitleAttr(label) + '>'
+                + '<span>' + esc(embLabel) + '</span>';
+            if (embSummaryHtml) embHeader += ' <span style="font-weight:normal">' + embSummaryHtml + '</span>';
+            if (embPreviewHtml) embHeader += embPreviewHtml;
+            if (linkHref) embHeader += '<a class="ref-link" href="' + esc(linkHref) + '" title="' + esc(t('openLinkedRecord')) + '">' + REF_ARROW_SVG + '</a>';
+            embHeader += '</div>';
 
-        if (previewEntry) {
-            var _prevSrc = String(previewEntry.value || '').match(/src="([^"]+)"/);
+            var embHtml = '<div class="field-group">' + embHeader;
+            if (primitiveEntries.length >= 2) {
+                embHtml += '<div class="field-columns-2">';
+                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                embHtml += '</div>';
+            } else {
+                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+            }
+            referenceEntries.forEach(function (e) { embHtml += renderReferenceRow(e.key, e.value); });
+            objectEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
+            collectionEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
+            embHtml += '</div>';
+            return embHtml;
+        }
+
+        // ── Detail context: full collapsible section ──
+        var openAttr = ' open';
+        var html = '<details class="detail-section"' + openAttr + '><summary><span class="summary-title"' + sectionTitleAttr(label) + '>' + esc(formatSectionTitle(label)) + '</span>'
+            + '<span class="summary-meta">' + ((objectEntries.length + referenceEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : '') + '</span></summary><div class="section-body">';
+
+        // Hero _preview at top for detail context
+        if (objPreview) {
+            var _prevSrc = String(objPreview).match(/src="([^"]+)"/);
             if (_prevSrc) html += '<div class="detail-hero-preview"><a href="' + esc(_prevSrc[1]) + '" target="_blank"><img src="' + esc(_prevSrc[1]) + '" /></a></div>';
         }
 
-        // Render IDEntite sub-objects inline (multicolumn, no separate header)
-        idEntiteEntries.forEach((entry) => {
-            html += renderInlineIdEntiteSection(entry.key, entry.value);
+        html += renderPrimitiveGroup(primitiveEntries);
+
+        // Render references inline
+        referenceEntries.forEach(function (entry) {
+            html += renderReferenceRow(entry.key, entry.value);
         });
 
         // Build inner section list; use tabbed view when more than one sub-section
-        const innerSectionEntries =
-            objectEntries.map((entry) => ({
-                label: formatSectionTitle(entry.key),
-                content: renderNodeSection(entry.key, entry.value, level + 1)
-            })).concat(
-                collectionEntries.map((entry) => ({
+        var innerSectionEntries =
+            objectEntries.map(function (entry) {
+                return {
                     label: formatSectionTitle(entry.key),
-                    content: renderCollectionSection(entry.key, entry.value, level + 1)
-                }))
-            ).filter((sec) => sec.content.trim() !== '');
+                    content: renderValue(entry.key, entry.value, 'embedded')
+                };
+            }).concat(
+                collectionEntries.map(function (entry) {
+                    return {
+                        label: formatSectionTitle(entry.key),
+                        content: renderCollectionSection(entry.key, entry.value, 'embedded')
+                    };
+                })
+            ).filter(function (sec) { return sec.content.trim() !== ''; });
 
         if (innerSectionEntries.length > 1) {
-            const autoTabId = 'at' + (collectionIdCounter++);
+            var autoTabId = 'at' + (collectionIdCounter++);
             html += '<div class="layout-tabs"><div class="tab-bar" data-tabgroup="' + autoTabId + '">';
-            innerSectionEntries.forEach((sec, idx) => {
+            innerSectionEntries.forEach(function (sec, idx) {
                 html += '<button type="button" data-tab-target="' + autoTabId + '-' + idx + '"'
                     + (idx === 0 ? ' class="active"' : '') + '>' + esc(sec.label) + '</button>';
             });
             html += '</div>';
-            innerSectionEntries.forEach((sec, idx) => {
+            innerSectionEntries.forEach(function (sec, idx) {
                 html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + autoTabId + '-' + idx + '">'
                     + sec.content + '</div>';
             });
             html += '</div>';
         } else {
-            innerSectionEntries.forEach((sec) => { html += sec.content; });
+            innerSectionEntries.forEach(function (sec) { html += sec.content; });
         }
 
         html += '</div></details>';
@@ -2316,19 +2184,16 @@
                     if (lastPart === 'id') return false;
                     return true;
                 }));
-                const allObjectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
+                const referenceEntries = entries.filter((e) => e.type === 'reference');
+                const objectEntries = entries.filter((e) => e.type === 'object').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
                 const collectionEntries = entries.filter((e) => e.type === 'collection').sort((a, b) => String(a.key || '').localeCompare(String(b.key || '')));
 
-                // Split object entries: IDEntite non-embedding fields rendered inline in the
-                // details section; all other objects get their own collapsible section.
-                const idEntiteObjectEntries = allObjectEntries.filter((e) => idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
-                const objectEntries = allObjectEntries.filter((e) => !idEntiteFieldSet.has(normalizeSchemaPath(e.key)));
-                if (filteredPrimitives.length > 0 || idEntiteObjectEntries.length > 0) {
+                if (filteredPrimitives.length > 0 || referenceEntries.length > 0) {
                     let sectionTitle = t('details');
                     html += `<details class="detail-section" open><summary><span class="summary-title">${esc(sectionTitle)}</span></summary><div class="section-body">`;
                     html += renderPrimitiveGroup(filteredPrimitives);
-                    idEntiteObjectEntries.forEach((entry) => {
-                        html += renderInlineIdEntiteSection(entry.key, entry.value);
+                    referenceEntries.forEach((entry) => {
+                        html += renderReferenceRow(entry.key, entry.value);
                     });
                     html += '</div></details>';
                 }
@@ -2336,11 +2201,11 @@
                 const topInnerSections =
                     objectEntries.map((entry) => ({
                         label: formatSectionTitle(entry.key),
-                        content: renderNodeSection(entry.key, entry.value, 1)
+                        content: renderValue(entry.key, entry.value, 'embedded')
                     })).concat(
                         collectionEntries.map((entry) => ({
                             label: formatSectionTitle(entry.key),
-                            content: renderCollectionSection(entry.key, entry.value, 1)
+                            content: renderCollectionSection(entry.key, entry.value, 'detail')
                         }))
                     ).filter((sec) => sec.content.trim() !== '');
 
@@ -2361,7 +2226,7 @@
                     topInnerSections.forEach((sec) => { html += sec.content; });
                 }
             } else {
-                html += renderNodeSection(rec.entity, rawData, 0);
+                html += renderObjectSection(rec.entity, rawData, 'detail');
             }
 
             html += renderBackRefSection(rec);
@@ -2463,26 +2328,35 @@
 
     /* ── Layout-driven detail renderer ──────────────────────────── */
 
+    /**
+     * Unwraps a single-key class-name wrapper produced by the export engine
+     * when FieldExporter wraps an embedded object in a field-name structure
+     * and ObjectExporter adds a class-name structure inside it.
+     * E.g. {"Fichier": {_id: "456", nom: "photo.jpg"}} → {_id: "456", nom: "photo.jpg"}
+     */
+    function unwrapClassWrapper(obj) {
+        if (obj == null || typeof obj !== 'object' || Array.isArray(obj)) return obj;
+        var nonUKeys = Object.keys(obj).filter(function (k) { return k.charAt(0) !== '_'; });
+        if (nonUKeys.length === 1 && typeof obj[nonUKeys[0]] === 'object' && obj[nonUKeys[0]] !== null && !Array.isArray(obj[nonUKeys[0]])) {
+            return obj[nonUKeys[0]];
+        }
+        return obj;
+    }
+
     function resolveFieldValue(data, ref) {
         if (!data || !ref) return null;
         return ref.split('.').reduce(function (obj, key) {
             if (obj == null) return null;
-            // Unwrap single-element arrays at every step
-            if (Array.isArray(obj) && obj.length === 1) obj = obj[0];
             if (typeof obj !== 'object' || obj === null) return null;
             // Direct lookup
             if (obj[key] !== undefined) return obj[key];
-            // Look through single-key class-name wrapper objects
-            // e.g. adresse: [{Adresse: [{numeroCivique: [...]}]}]
-            // After unwrapping adresse we get {Adresse: [...]}, then we need to
-            // look inside Adresse to find numeroCivique.
-            var wrapKeys = Object.keys(obj);
-            if (wrapKeys.length === 1) {
-                var inner = obj[wrapKeys[0]];
-                if (Array.isArray(inner) && inner.length === 1) inner = inner[0];
-                if (typeof inner === 'object' && inner !== null && inner[key] !== undefined) {
-                    return inner[key];
-                }
+            // Transparent class-name wrapper navigation: if the object has
+            // exactly one non-_ key whose value is an object, look inside
+            // that inner object for the requested key.
+            var wk = Object.keys(obj).filter(function (k) { return k.charAt(0) !== '_'; });
+            if (wk.length === 1 && typeof obj[wk[0]] === 'object' && obj[wk[0]] !== null) {
+                var inner = obj[wk[0]];
+                if (!Array.isArray(inner) && inner[key] !== undefined) return inner[key];
             }
             return null;
         }, data);
@@ -2569,23 +2443,27 @@
                 var titleAttr = titleInline ? ' style="' + titleInline + '"' : '';
                 var _sBody = renderLayoutChildren(data, children);
                 if (p.ref) {
-                    var _sData = resolveFieldValue(data, p.ref);
-                    if (_sData) {
-                        if (Array.isArray(_sData) && _sData.length === 1) _sData = _sData[0];
-                        if (_sData && typeof _sData === 'object') {
-                            var _sWk = Object.keys(_sData).filter(function (k) { return k !== '@attributes'; });
-                            if (_sWk.length === 1 && /^[A-Z]/.test(_sWk[0])) {
-                                var _sIn = _sData[_sWk[0]];
-                                if (Array.isArray(_sIn) && _sIn.length === 1) _sIn = _sIn[0];
-                                if (_sIn && typeof _sIn === 'object') _sData = _sIn;
-                            }
-                            var _sPrev = _sData['@attributes'] && _sData['@attributes']['_preview'] ? _sData['@attributes']['_preview'] : null;
-                            if (_sPrev) {
-                                var _sPrevSrc = String(_sPrev).match(/src="([^"]+)"/);
-                                if (_sPrevSrc) _sBody += '<div class="detail-hero-preview"><a href="' + esc(_sPrevSrc[1]) + '" target="_blank"><img src="' + esc(_sPrevSrc[1]) + '" /></a></div>';
-                            }
+                    var _sData = unwrapClassWrapper(resolveFieldValue(data, p.ref));
+                    if (_sData && typeof _sData === 'object' && !Array.isArray(_sData)) {
+                        var _sPrev = _sData._preview || null;
+                        if (_sPrev) {
+                            var _sPrevSrc = String(_sPrev).match(/src="([^"]+)"/);
+                            if (_sPrevSrc) _sBody += '<div class="detail-hero-preview"><a href="' + esc(_sPrevSrc[1]) + '" target="_blank"><img src="' + esc(_sPrevSrc[1]) + '" /></a></div>';
                         }
                     }
+                }
+                // Nested embedded section (collapsible + has ref): render as
+                // a field-row with the title on the left and a pre-collapsed
+                // details block of children on the right, so it sits inline
+                // with sibling field rows instead of a big blue header.
+                if (collapsible && p.ref) {
+                    var _nestedLabel = p.title || displayFieldLabel(p.ref);
+                    var _nestedSummary = (_sData && _sData._summary) ? String(_sData._summary) : _nestedLabel;
+                    return '<div class="field-row"><div class="field-label">' + esc(_nestedLabel)
+                        + '</div><div class="field-value"><details class="inline-subsection">'
+                        + '<summary>' + esc(_nestedSummary) + '</summary>'
+                        + '<div class="inline-subsection-body">' + _sBody + '</div>'
+                        + '</details></div></div>';
                 }
                 if (collapsible) {
                     return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
@@ -2608,18 +2486,19 @@
             case 'field': {
                 var val = resolveFieldValue(data, p.ref);
                 if (val === null || val === undefined) return '';
-                // Unwrap single-element arrays to their scalar value
-                var scalarVal = (Array.isArray(val) && val.length === 1) ? val[0] : val;
+                var scalarVal = val;
                 if (scalarVal === null || scalarVal === undefined || String(scalarVal).trim() === '') return '';
                 var label = p.label || displayFieldLabel(p.ref);
                 var fieldDestName = String(p.ref || '').split('.').pop() || '';
                 var fieldTitleAttr = fieldDestName && fieldDestName !== label ? ' title="' + esc(fieldDestName) + '"' : '';
                 // IDEntite object resolution: extract summary text and optional deep-link
                 if (typeof scalarVal === 'object' && scalarVal !== null && !Array.isArray(scalarVal)) {
-                    // HTML-resolved IDEntite: {#text: "label", @attributes: {_id: "123"}}
-                    if (scalarVal['#text'] !== undefined && scalarVal['@attributes'] && scalarVal['@attributes']['_id'] !== undefined) {
-                        var _refId = String(scalarVal['@attributes']['_id'] ?? '').trim();
-                        var _refText = String(scalarVal['#text'] ?? '').trim();
+                    // Unwrap class-name wrapper from embedded object export
+                    scalarVal = unwrapClassWrapper(scalarVal);
+                    // Reference with _id: render as linked label or summary
+                    if (scalarVal._id !== undefined) {
+                        var _refId = String(scalarVal._id ?? '').trim();
+                        var _refText = String(scalarVal._label || scalarVal._summary || _refId || '').trim();
                         if (!_refText || _refText === '0' || _refText === '-1') return '';
                         var _refPtDestName = pointsToByPath[normalizeSchemaPath(p.ref)];
                         var _refPtHref = _refPtDestName ? navHrefByDestName[_refPtDestName] : null;
@@ -2630,19 +2509,23 @@
                         return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                             + '</div><div class="field-value">' + _refValueHtml + '</div></div>';
                     }
-                    // Generic embedded object with _summary
-                    if (scalarVal['@attributes'] && scalarVal['@attributes']['_summary']) {
-                        scalarVal = scalarVal['@attributes']['_summary'];
-                    } else {
-                        // Try to extract the first scalar value from the object
-                        var objKeys = Object.keys(scalarVal).filter(function (k) { return k !== '@attributes'; });
-                        if (objKeys.length === 1 && typeof scalarVal[objKeys[0]] !== 'object') {
-                            scalarVal = scalarVal[objKeys[0]];
-                        } else {
-                            return ''; // Cannot render a complex object as a simple field
-                        }
-                    }
-                    if (scalarVal === null || scalarVal === undefined || String(scalarVal).trim() === '') return '';
+                    // Delegate all complex objects/arrays to the recursive
+                    // renderValue pipeline, wrapped in an inline-subsection
+                    // so it sits in a field-row like its siblings.
+                    var _embEntries = getObjectEntries(scalarVal);
+                    var _embBody = '';
+                    _embEntries.forEach(function (e) {
+                        _embBody += renderValue(e.key, e.value, 'embedded');
+                    });
+                    if (!_embBody) return '';
+                    return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
+                        + '</div><div class="field-value"><details class="inline-subsection">'
+                        + '<summary>' + esc(label) + '</summary>'
+                        + '<div class="inline-subsection-body">' + _embBody + '</div>'
+                        + '</details></div></div>';
+                }
+                if (Array.isArray(scalarVal)) {
+                    return renderValue(label, scalarVal, 'embedded');
                 }
                 var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
                 return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
@@ -2662,7 +2545,6 @@
                     return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(p.ref))
                         + '</div><div class="field-value" style="color:var(--c-text-muted)">\u2014</div></div>';
                 }
-                items = expandWrapperCollectionItems(items);
                 var bare = p.bare === 'true';
                 var cols = (p.columns || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                 var widths = (p.widths || '').split(',').map(function (s) { return s.trim(); });
@@ -2671,28 +2553,14 @@
                     var first = items[0];
                     if (first && typeof first === 'object') {
                         Object.keys(first).forEach(function (k) {
-                            if (k === '@attributes') return;
-                            var sample = first[k];
-                            if (Array.isArray(sample) && sample.length === 1) sample = sample[0];
+                            if (k.charAt(0) === '_') return;
+                            var sample = unwrapClassWrapper(first[k]);
                             // Flatten embedded objects into dotted sub-columns
                             if (sample && typeof sample === 'object' && !Array.isArray(sample)
-                                && sample['#text'] === undefined
-                                && !(sample['@attributes'] && sample['@attributes']['_summary'])) {
-                                // Unwrap class-name wrappers (e.g. {DetailIntervEnvoi: [{...}]})
-                                var inner = sample;
-                                var wrapKeys = Object.keys(inner).filter(function (wk) { return wk !== '@attributes'; });
-                                if (wrapKeys.length === 1 && /^[A-Z]/.test(wrapKeys[0])) {
-                                    var wv = inner[wrapKeys[0]];
-                                    if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
-                                    if (wv && typeof wv === 'object' && !Array.isArray(wv)) inner = wv;
-                                }
-                                // Embedded IDEntite with _summary: keep as single toggle column
-                                if (inner['@attributes'] && inner['@attributes']['_summary']) {
-                                    cols.push(k);
-                                    return;
-                                }
-                                Object.keys(inner).forEach(function (sk) {
-                                    if (sk !== '@attributes') cols.push(k + '.' + sk);
+                                && !sample._label
+                                && !sample._summary) {
+                                Object.keys(sample).forEach(function (sk) {
+                                    if (sk.charAt(0) !== '_') cols.push(k + '.' + sk);
                                 });
                             } else {
                                 cols.push(k);
@@ -2719,99 +2587,85 @@
                     cols.forEach(function (col) {
                         var cellVal = col.indexOf('.') >= 0 ? resolveFieldValue(item, col)
                             : (item && typeof item === 'object') ? item[col] : item;
-                        // Unwrap single-element arrays
-                        if (Array.isArray(cellVal) && cellVal.length === 1) cellVal = cellVal[0];
-                        // IDEntite: extract #text summary
+                        // Unwrap class-name wrapper from embedded object export
+                        cellVal = unwrapClassWrapper(cellVal);
+                        // Object cell: extract displayable value
                         if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
-                            if (cellVal['#text'] !== undefined) {
-                                cellVal = cellVal['#text'];
-                            }
-                            else if (cellVal['@attributes'] && cellVal['@attributes']['_summary']) cellVal = cellVal['@attributes']['_summary'];
-                            else {
-                                // Unwrap class-name wrapper if present
-                                var obj = cellVal;
-                                var wks = Object.keys(obj).filter(function (wk) { return wk !== '@attributes'; });
-                                if (wks.length === 1 && /^[A-Z]/.test(wks[0])) {
-                                    var wv = obj[wks[0]];
-                                    if (Array.isArray(wv) && wv.length === 1) wv = wv[0];
-                                    if (wv && typeof wv === 'object' && !Array.isArray(wv)) obj = wv;
-                                }
-                                // Embedded IDEntite with child fields: render as expandable toggle
-                                if (obj['@attributes'] && obj['@attributes']['_summary']) {
-                                    var _embSum = String(obj['@attributes']['_summary'] || '').trim();
-                                    var _embId = String(obj['@attributes']['_id'] || '').trim();
-                                    var _refPtDN = pointsToByPath[normalizeSchemaPath(col)];
-                                    var _refPtHr = _refPtDN ? navHrefByDestName[_refPtDN] : null;
-                                    var _refLk = (_refPtHr && _embId && _embId !== '0' && _embId !== '-1')
-                                        ? _refPtHr + '?open=' + encodeURIComponent(_embId) : null;
-                                    var _sHtml = _refLk ? refLinkBtn(_refLk, _embSum) : fmtValue(_embSum, col);
-                                    var _dRows = '';
-                                    Object.keys(obj).forEach(function (dk) {
-                                        if (dk === '@attributes' || dk === 'derniereModification' || dk === 'donnees') return;
-                                        var dv = obj[dk];
-                                        if (Array.isArray(dv) && dv.length === 1) dv = dv[0];
-                                        if (dv == null) return;
-                                        if (typeof dv === 'object') {
-                                            if (dv['#text'] !== undefined) dv = dv['#text'];
-                                            else if (dv['@attributes'] && dv['@attributes']['_summary']) dv = dv['@attributes']['_summary'];
-                                            else {
-                                                var _lv = [];
-                                                (function _el(n) {
-                                                    if (n == null) return;
-                                                    if (Array.isArray(n)) { n.forEach(_el); return; }
-                                                    if (typeof n !== 'object') { _lv.push(String(n)); return; }
-                                                    Object.keys(n).forEach(function (nk) { if (nk !== '@attributes') _el(n[nk]); });
-                                                })(dv);
-                                                if (_lv.length > 0) dv = _lv.join(', ');
-                                                else return;
-                                            }
+                            // Reference or labeled value
+                            if (cellVal._label !== undefined) {
+                                cellVal = cellVal._label;
+                            } else if (cellVal._summary) {
+                                // Embedded object with summary: render as expandable toggle
+                                var _embSum = String(cellVal._summary || '').trim();
+                                var _embId = String(cellVal._id || '').trim();
+                                var _refPtDN = pointsToByPath[normalizeSchemaPath(col)];
+                                var _refPtHr = _refPtDN ? navHrefByDestName[_refPtDN] : null;
+                                var _refLk = (_refPtHr && _embId && _embId !== '0' && _embId !== '-1')
+                                    ? _refPtHr + '?open=' + encodeURIComponent(_embId) : null;
+                                var _sHtml = _refLk ? refLinkBtn(_refLk, _embSum) : fmtValue(_embSum, col);
+                                var _dRows = '';
+                                Object.keys(cellVal).forEach(function (dk) {
+                                    if (dk.charAt(0) === '_' || dk === 'derniereModification' || dk === 'donnees') return;
+                                    var dv = cellVal[dk];
+                                    if (dv == null) return;
+                                    if (typeof dv === 'object') {
+                                        if (dv._label !== undefined) dv = dv._label;
+                                        else if (dv._summary) dv = dv._summary;
+                                        else {
+                                            var _lv = [];
+                                            (function _el(n) {
+                                                if (n == null) return;
+                                                if (Array.isArray(n)) { n.forEach(_el); return; }
+                                                if (typeof n !== 'object') { _lv.push(String(n)); return; }
+                                                Object.keys(n).forEach(function (nk) { if (nk.charAt(0) !== '_') _el(n[nk]); });
+                                            })(dv);
+                                            if (_lv.length > 0) dv = _lv.join(', ');
+                                            else return;
                                         }
-                                        var dvStr = String(dv ?? '').trim();
-                                        if (!dvStr) return;
-                                        _dRows += '<div style="padding:1px 0;font-size:0.85em;">'
-                                            + '<span style="color:var(--c-text-muted)">' + esc(displayFieldLabel(dk)) + ':</span> '
-                                            + fmtValue(dv, dk) + '</div>';
-                                    });
-                                    if (_dRows) {
-                                        var _prevHtml = '';
-                                        var _prevAttr = obj['@attributes'] && obj['@attributes']['_preview'] ? obj['@attributes']['_preview'] : null;
-                                        if (_prevAttr) {
-                                            var _prevSrcM = String(_prevAttr).match(/src="([^"]+)"/);
-                                            if (_prevSrcM) _prevHtml = '<div style="margin-top:6px;"><a href="' + esc(_prevSrcM[1]) + '" target="_blank"><img src="' + esc(_prevSrcM[1]) + '" style="max-width:100%;max-height:200px;border-radius:4px;" /></a></div>';
-                                        }
-                                        thtml += '<td><div style="cursor:pointer" onclick="var d=this.querySelector(\'.ebd\');'
-                                            + 'var a=this.querySelector(\'.eta\');if(d.style.display===\'none\'){'
-                                            + 'd.style.display=\'block\';a.textContent=\'\\u25BC\'}else{'
-                                            + 'd.style.display=\'none\';a.textContent=\'\\u25B6\'}">'
-                                            + '<span class="eta" style="font-size:0.7em;margin-right:3px">&#9654;</span>'
-                                            + _sHtml
-                                            + '<div class="ebd" style="display:none;margin-top:4px;border-top:1px solid var(--c-border);padding-top:4px">'
-                                            + _dRows + _prevHtml + '</div></div></td>';
-                                    } else {
-                                        thtml += '<td>' + _sHtml + '</td>';
                                     }
-                                    return;
+                                    var dvStr = String(dv ?? '').trim();
+                                    if (!dvStr) return;
+                                    _dRows += '<div style="padding:1px 0;font-size:0.85em;">'
+                                        + '<span style="color:var(--c-text-muted)">' + esc(displayFieldLabel(dk)) + ':</span> '
+                                        + fmtValue(dv, dk) + '</div>';
+                                });
+                                if (_dRows) {
+                                    var _prevHtml = '';
+                                    var _prevAttr = cellVal._preview || null;
+                                    if (_prevAttr) {
+                                        var _prevSrcM = String(_prevAttr).match(/src="([^"]+)"/);
+                                        if (_prevSrcM) _prevHtml = '<div style="margin-top:6px;"><a href="' + esc(_prevSrcM[1]) + '" target="_blank"><img src="' + esc(_prevSrcM[1]) + '" style="max-width:100%;max-height:200px;border-radius:4px;" /></a></div>';
+                                    }
+                                    thtml += '<td><div style="cursor:pointer" onclick="var d=this.querySelector(\'.ebd\');'
+                                        + 'var a=this.querySelector(\'.eta\');if(d.style.display===\'none\'){'
+                                        + 'd.style.display=\'block\';a.textContent=\'\\u25BC\'}else{'
+                                        + 'd.style.display=\'none\';a.textContent=\'\\u25B6\'}">'
+                                        + '<span class="eta" style="font-size:0.7em;margin-right:3px">&#9654;</span>'
+                                        + _sHtml
+                                        + '<div class="ebd" style="display:none;margin-top:4px;border-top:1px solid var(--c-border);padding-top:4px">'
+                                        + _dRows + _prevHtml + '</div></div></td>';
+                                } else {
+                                    thtml += '<td>' + _sHtml + '</td>';
                                 }
+                                return;
+                            } else {
                                 // Compact inline rendering with labels
                                 var segs = [];
-                                Object.keys(obj).forEach(function (k) {
-                                    if (k === '@attributes') return;
-                                    var sv = obj[k];
-                                    if (Array.isArray(sv) && sv.length === 1) sv = sv[0];
+                                Object.keys(cellVal).forEach(function (k) {
+                                    if (k.charAt(0) === '_') return;
+                                    var sv = cellVal[k];
                                     if (sv == null) return;
                                     if (typeof sv === 'object') {
-                                        if (sv['#text'] !== undefined) sv = sv['#text'];
-                                        else if (sv['@attributes'] && sv['@attributes']['_summary']) sv = sv['@attributes']['_summary'];
+                                        if (sv._label !== undefined) sv = sv._label;
+                                        else if (sv._summary) sv = sv._summary;
                                         else {
-                                            // Recursively extract leaf scalar values from nested objects/collections
                                             var leafVals = [];
                                             (function extractLeaves(node) {
                                                 if (node == null) return;
                                                 if (Array.isArray(node)) { node.forEach(extractLeaves); return; }
                                                 if (typeof node !== 'object') { leafVals.push(String(node)); return; }
                                                 Object.keys(node).forEach(function (nk) {
-                                                    if (nk === '@attributes') return;
-                                                    extractLeaves(node[nk]);
+                                                    if (nk.charAt(0) !== '_') extractLeaves(node[nk]);
                                                 });
                                             })(sv);
                                             if (leafVals.length > 0) sv = leafVals.join(', ');

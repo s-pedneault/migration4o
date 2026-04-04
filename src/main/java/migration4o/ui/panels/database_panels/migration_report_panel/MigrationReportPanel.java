@@ -292,7 +292,13 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
             successLabel.setText(String.format("<html><center><b>Export successful!</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
             ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
         } else {
-            titleLabel.setText("Export complete with errors: " + exportName);
+            String statsText = String.format("%,d objects exported, %,d error%s", objectsExported, errorCount, errorCount == 1 ? "" : "s");
+            if (warnings > 0) {
+                statsText += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
+            }
+            applySuccessPanelColor(false);
+            successLabel.setText(String.format("<html><center><b>Export complete with errors</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
+            ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
         }
     }
 

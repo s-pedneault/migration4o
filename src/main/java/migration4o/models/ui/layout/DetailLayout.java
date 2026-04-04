@@ -2,9 +2,11 @@ package migration4o.models.ui.layout;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
@@ -50,9 +52,12 @@ public class DetailLayout {
     public String toResolvedJson(DOSchemaClass schemaClass, DOSchema refSchema) {
         if (nodes.isEmpty())
             return "null";
+        Set<String> visiting = new HashSet<>();
+        if (schemaClass != null && schemaClass.attributes.source != null)
+            visiting.add(schemaClass.attributes.source);
         List<LayoutNode> resolved = new ArrayList<>();
         for (LayoutNode node : nodes)
-            resolved.add(resolveNode(node, schemaClass, refSchema));
+            resolved.add(resolveNode(node, schemaClass, refSchema, visiting));
         // Post-process: mark lone table children of collapsible sections as
         // bare so the JS renderer skips the duplicate header.
         markBareTables(resolved);
@@ -66,15 +71,16 @@ public class DetailLayout {
         return sb.toString();
     }
 
-    private static LayoutNode resolveNode(LayoutNode node, DOSchemaClass schemaClass, DOSchema refSchema) {
+    private static LayoutNode resolveNode(LayoutNode node, DOSchemaClass schemaClass, DOSchema refSchema, Set<String> visiting) {
         String layoutRef = node.prop("layoutRef");
         if (layoutRef != null && (node.type == LayoutNodeType.SECTION || node.type == LayoutNodeType.TAB)) {
             String refPrefix = node.prop("ref");
             // Translate the ref prefix (source name) to destination name
             String destPrefix = refPrefix;
             DOSchemaClass embeddedClass = null;
+            DOSchemaField parentField = null;
             if (refPrefix != null && schemaClass != null && refSchema != null) {
-                DOSchemaField parentField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(schemaClass, refPrefix, refSchema);
+                parentField = DatabaseUtil.findSchemaFieldByNameIncludingAncestors(schemaClass, refPrefix, refSchema);
                 if (parentField != null) {
                     destPrefix = parentField.attributes.destinationName != null ? parentField.attributes.destinationName : refPrefix;
                     embeddedClass = refSchema.findClassByName(parentField.attributes.type);
@@ -84,11 +90,36 @@ public class DetailLayout {
                 embeddedClass = refSchema.findClassByName(layoutRef);
             }
 
-            // IDEntite wrappers are exported as compact {#text, @attributes._id}
-            // by HtmlFormatHandler — not as sub-field structures. Generate a
-            // single field ref matching the compact data instead of expanding
-            // the wrapper's own fields (valeur, id, contrainte, etc.).
+            // IDEntite wrappers: when embedContents=true the exported data
+            // contains the TARGET entity's full field set (e.g. Fichier),
+            // not the IDEntite wrapper's fields. Resolve through pointsTo
+            // to the target class so the layout generates a full section.
+            // When embedContents=false the data is a compact {_id, _label}
+            // reference — collapse to a single FIELD node.
             if (embeddedClass != null && embeddedClass.isIDEntite()) {
+                if (parentField != null && parentField.attributes.embedContents && embeddedClass.attributes.pointsTo != null && refSchema != null) {
+                    DOSchemaClass targetClass = refSchema.findClassByName(embeddedClass.attributes.pointsTo);
+                    if (targetClass != null) {
+                        embeddedClass = targetClass;
+                        layoutRef = targetClass.attributes.source;
+                        // Fall through to section generation below
+                    }
+                }
+                // Still an IDEntite after resolution attempt — compact reference
+                if (embeddedClass.isIDEntite()) {
+                    LayoutNode fld = new LayoutNode(LayoutNodeType.FIELD);
+                    fld.setProp("ref", destPrefix);
+                    String title = node.prop("title");
+                    if (title != null && !title.isEmpty())
+                        fld.setProp("label", title);
+                    return fld;
+                }
+            }
+
+            // Cycle detection: if we've already visited this class in the
+            // current resolution chain, emit a compact FIELD to avoid
+            // infinite recursion (e.g. Prevention → X → Prevention).
+            if (visiting.contains(layoutRef)) {
                 LayoutNode fld = new LayoutNode(LayoutNodeType.FIELD);
                 fld.setProp("ref", destPrefix);
                 String title = node.prop("title");
@@ -106,9 +137,11 @@ public class DetailLayout {
                         resolved.setProp(e.getKey(), e.getValue());
                 }
                 resolved.setProp("ref", destPrefix);
+                visiting.add(layoutRef);
                 for (LayoutNode refChild : refLayout.nodes) {
-                    resolved.children.add(prefixRefs(resolveNode(refChild, embeddedClass, refSchema), destPrefix, embeddedClass, refSchema));
+                    resolved.children.add(prefixRefs(resolveNode(refChild, embeddedClass, refSchema, visiting), destPrefix, embeddedClass, refSchema));
                 }
+                visiting.remove(layoutRef);
                 return resolved;
             }
             // No custom layout — auto-generate a flat field list for the embedded class
@@ -119,6 +152,7 @@ public class DetailLayout {
                         resolved.setProp(e.getKey(), e.getValue());
                 }
                 resolved.setProp("ref", destPrefix);
+                visiting.add(layoutRef);
                 for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(embeddedClass, refSchema)) {
                     if (!sf.attributes.isExported || sf.attributes.source == null)
                         continue;
@@ -133,6 +167,12 @@ public class DetailLayout {
                     } else if (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)) {
                         // Nested embedded — generate a sub-section
                         DOSchemaClass nestedClass = refSchema.findClassByName(sf.attributes.type);
+                        // IDEntite → resolve through pointsTo to the real entity
+                        if (nestedClass != null && nestedClass.isIDEntite() && nestedClass.attributes.pointsTo != null) {
+                            DOSchemaClass target = refSchema.findClassByName(nestedClass.attributes.pointsTo);
+                            if (target != null)
+                                nestedClass = target;
+                        }
                         if (nestedClass != null && nestedClass.attributes.migrate) {
                             LayoutNode sub = new LayoutNode(LayoutNodeType.SECTION);
                             sub.setProp("title", sf.attributes.title != null ? sf.attributes.title : destName);
@@ -159,6 +199,7 @@ public class DetailLayout {
                         resolved.children.add(fld);
                     }
                 }
+                visiting.remove(layoutRef);
                 return resolved;
             }
         }
@@ -178,7 +219,7 @@ public class DetailLayout {
                         translateTableColumnsFromProps(copy, tr.resolvedField, refSchema);
                     }
                     for (LayoutNode child : node.children)
-                        copy.children.add(resolveNode(child, schemaClass, refSchema));
+                        copy.children.add(resolveNode(child, schemaClass, refSchema, visiting));
                     return copy;
                 }
             }
@@ -190,7 +231,7 @@ public class DetailLayout {
         LayoutNode copy = new LayoutNode(node.type);
         copy.properties = new LinkedHashMap<>(node.properties);
         for (LayoutNode child : node.children)
-            copy.children.add(resolveNode(child, schemaClass, refSchema));
+            copy.children.add(resolveNode(child, schemaClass, refSchema, visiting));
         return copy;
     }
 
