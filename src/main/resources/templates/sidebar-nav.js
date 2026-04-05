@@ -1390,12 +1390,23 @@
         } catch (_) { return null; }
     }
 
+    /** Inline SVG checkmark icon for boolean true values. */
+    var BOOL_CHECK_SVG = '<svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg>';
+
+    /** Renders a boolean value as a styled on/off pill with label. */
+    function renderBoolValue(value, trueLabel, falseLabel) {
+        var bv = String(value).toLowerCase();
+        if (bv === 'true') return '<span class="field-bool on"><span class="bool-icon">' + BOOL_CHECK_SVG + '</span>' + esc(trueLabel) + '</span>';
+        if (bv === 'false') return '<span class="field-bool off"><span class="bool-icon"></span>' + esc(falseLabel) + '</span>';
+        return null;
+    }
+
     function fmtValue(v, key) {
         const val = String(v ?? '');
         if (!val.trim()) return '<span style="color:var(--c-text-muted)">\u2014</span>';
         const lowerKey = String(key || '').toLowerCase();
-        if (val === 'true') return '<span class="field-bool on"><span class="bool-icon"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg></span>' + esc(t('boolTrue')) + '</span>';
-        if (val === 'false') return '<span class="field-bool off"><span class="bool-icon"></span>' + esc(t('boolFalse')) + '</span>';
+        if (val === 'true') return renderBoolValue(val, t('boolTrue'), t('boolFalse'));
+        if (val === 'false') return renderBoolValue(val, t('boolTrue'), t('boolFalse'));
         // Date detection (before numeric check so dates aren't caught)
         if (lowerKey.includes('date') || /^\d{4}-\d{2}-\d{2}/.test(val)) {
             const formatted = fmtDate(val);
@@ -1561,6 +1572,43 @@
     /** Builds an internal reference link button with arrow icon. */
     function refLinkBtn(href, text) {
         return '<a class="ref-id-link" href="' + esc(href) + '">' + esc(text) + REF_ARROW_SVG + '</a>';
+    }
+
+    /**
+     * Extracts the image src URL from a raw _preview HTML string.
+     * @param {string} preview - raw _preview value (contains an <img> tag with src)
+     * @returns {string|null} the src URL, or null if not found
+     */
+    function extractPreviewSrc(preview) {
+        if (!preview) return null;
+        var m = String(preview).match(/src="([^"]+)"/);
+        return m ? m[1] : null;
+    }
+
+    /**
+     * Renders a preview image from a raw _preview HTML string.
+     * All preview rendering (hero blocks, inline thumbnails) goes through here.
+     * @param {string} preview - raw _preview value (contains an <img> tag with src)
+     * @param {object} [opts] - rendering options
+     * @param {string} [opts.size] - 'hero' (default), 'thumb-sm', 'thumb-md', or 'inline'
+     * @param {string} [opts.title] - title attribute on the link (hero/inline only)
+     * @returns {string} HTML string or empty string if no valid src found
+     */
+    function renderPreview(preview, opts) {
+        var src = extractPreviewSrc(preview);
+        if (!src) return '';
+        var size = (opts && opts.size) || 'hero';
+        var titleAttr = (opts && opts.title) ? ' title="' + esc(opts.title) + '"' : '';
+        if (size === 'thumb-sm') {
+            return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-sm" />';
+        }
+        if (size === 'thumb-md') {
+            return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-md" />';
+        }
+        if (size === 'inline') {
+            return '<div class="preview-inline"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '" /></a></div>';
+        }
+        return '<div class="detail-hero-preview"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '" /></a></div>';
     }
 
     function renderFieldRow(entry) {
@@ -1881,11 +1929,7 @@
         var _refValueHtml = _refLink
             ? refLinkBtn(_refLink, _refText)
             : esc(_refText);
-        var _refPreviewHtml = '';
-        if (value._preview) {
-            var _refPrevSrc = String(value._preview).match(/src="([^"]+)"/);
-            if (_refPrevSrc) _refPreviewHtml = '<div class="detail-hero-preview"><a href="' + esc(_refPrevSrc[1]) + '" target="_blank"><img src="' + esc(_refPrevSrc[1]) + '" /></a></div>';
-        }
+        var _refPreviewHtml = renderPreview(value._preview);
         return '<div class="field-group"><div class="field-row">'
             + '<div class="field-label">' + esc(_refLabel) + '</div>'
             + '<div class="field-value">' + _refValueHtml + '</div>'
@@ -1920,10 +1964,7 @@
             var tabText = objSummary || objId || '';
             if (!tabText) return '';
             var tabHtml = linkHref ? refLinkBtn(linkHref, tabText) : esc(tabText);
-            if (objPreview) {
-                var _tPrevSrc = String(objPreview).match(/src="([^"]+)"/);
-                if (_tPrevSrc) tabHtml += ' <img src="' + esc(_tPrevSrc[1]) + '" style="max-height:24px;vertical-align:middle;border-radius:2px;" />';
-            }
+            tabHtml += ' ' + renderPreview(objPreview, { size: 'thumb-sm' });
             return tabHtml;
         }
 
@@ -1960,11 +2001,7 @@
             } else if (objId && linkHref) {
                 embSummaryHtml = refLinkBtn(linkHref, objId);
             }
-            var embPreviewHtml = '';
-            if (objPreview) {
-                var _ePrevSrc = String(objPreview).match(/src="([^"]+)"/);
-                if (_ePrevSrc) embPreviewHtml = '<img src="' + esc(_ePrevSrc[1]) + '" style="max-height:40px;vertical-align:middle;border-radius:3px;margin-left:8px;" />';
-            }
+            var embPreviewHtml = renderPreview(objPreview, { size: 'thumb-md' });
 
             embHeader = '<div class="field-group-subtitle' + (linkHref ? ' ref-subtitle' : '') + '"' + sectionTitleAttr(label) + '>'
                 + '<span>' + esc(embLabel) + '</span>';
@@ -1994,10 +2031,7 @@
             + '<span class="summary-meta">' + ((objectEntries.length + referenceEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : '') + '</span></summary><div class="section-body">';
 
         // Hero _preview at top for detail context
-        if (objPreview) {
-            var _prevSrc = String(objPreview).match(/src="([^"]+)"/);
-            if (_prevSrc) html += '<div class="detail-hero-preview"><a href="' + esc(_prevSrc[1]) + '" target="_blank"><img src="' + esc(_prevSrc[1]) + '" /></a></div>';
-        }
+        html += renderPreview(objPreview);
 
         html += renderPrimitiveGroup(primitiveEntries);
 
@@ -2137,10 +2171,7 @@
             html += '<div class="detail-hero-right">';
             if (rec.id) html += '<div class="detail-hero-meta"><strong>ID</strong>&nbsp;<span class="badge badge-id">' + esc(rec.id) + '</span></div>';
             html += '<div class="detail-hero-meta">' + esc(rec.entity) + '</div>';
-            if (rec.preview) {
-                var _prevSrc = rec.preview.match(/src="([^"]+)"/);
-                if (_prevSrc) html += '<div class="detail-hero-preview"><a href="' + esc(_prevSrc[1]) + '" target="_blank" title="' + esc(rec.summary || rec.entity) + '"><img src="' + esc(_prevSrc[1]) + '" /></a></div>';
-            }
+            html += renderPreview(rec.preview, { title: rec.summary || rec.entity });
             html += '</div>';
             html += '</div>';
 
@@ -2397,8 +2428,8 @@
             var parts = fmtSpec.split(',');
             var tv = parts[0] || 'True', fv = parts[1] || 'False';
             var bv = String(value).toLowerCase();
-            if (bv === 'true') return '<span class="field-bool on"><span class="bool-icon"><svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1.5,5 4,7.5 8.5,2.5"/></svg></span>' + esc(tv) + '</span>';
-            if (bv === 'false') return '<span class="field-bool off"><span class="bool-icon"></span>' + esc(fv) + '</span>';
+            var boolHtml = renderBoolValue(bv, tv, fv);
+            if (boolHtml) return boolHtml;
             return esc(String(value));
         }
         if (fmtType === 'num') {
@@ -2445,11 +2476,7 @@
                 if (p.ref) {
                     var _sData = unwrapClassWrapper(resolveFieldValue(data, p.ref));
                     if (_sData && typeof _sData === 'object' && !Array.isArray(_sData)) {
-                        var _sPrev = _sData._preview || null;
-                        if (_sPrev) {
-                            var _sPrevSrc = String(_sPrev).match(/src="([^"]+)"/);
-                            if (_sPrevSrc) _sBody += '<div class="detail-hero-preview"><a href="' + esc(_sPrevSrc[1]) + '" target="_blank"><img src="' + esc(_sPrevSrc[1]) + '" /></a></div>';
-                        }
+                        _sBody += renderPreview(_sData._preview);
                     }
                 }
                 // Nested embedded section (collapsible + has ref): render as
@@ -2630,12 +2657,7 @@
                                         + fmtValue(dv, dk) + '</div>';
                                 });
                                 if (_dRows) {
-                                    var _prevHtml = '';
-                                    var _prevAttr = cellVal._preview || null;
-                                    if (_prevAttr) {
-                                        var _prevSrcM = String(_prevAttr).match(/src="([^"]+)"/);
-                                        if (_prevSrcM) _prevHtml = '<div style="margin-top:6px;"><a href="' + esc(_prevSrcM[1]) + '" target="_blank"><img src="' + esc(_prevSrcM[1]) + '" style="max-width:100%;max-height:200px;border-radius:4px;" /></a></div>';
-                                    }
+                                    var _prevHtml = renderPreview(cellVal._preview, { size: 'inline' });
                                     thtml += '<td><div style="cursor:pointer" onclick="var d=this.querySelector(\'.ebd\');'
                                         + 'var a=this.querySelector(\'.eta\');if(d.style.display===\'none\'){'
                                         + 'd.style.display=\'block\';a.textContent=\'\\u25BC\'}else{'

@@ -4348,8 +4348,8 @@
     <class source="gest.gen.EntiteContientID" destinationName="EntitePrincipale" isExported="true" title="Entité principale" schemaNotes="Ancestor-only class, reached through leaves" parentClass="gest.gen.Entite">
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
-        <field source="mDernModif" destinationName="derniereModification" isExported="true" skipWhen="NULL" type="long" title="Dernière modification" />
-        <field source="mLastFusionTime" destinationName="derniereFusion" isExported="false" skipWhen="NULL" type="long" title="Dernière fusion" />
+        <field source="mDernModif" destinationName="derniereModification" isExported="true" skipWhen="NULL" type="string" title="Dernière modification" format="date" />
+        <field source="mLastFusionTime" destinationName="derniereFusion" isExported="false" skipWhen="NULL" type="string" title="Dernière fusion" format="date" />
         <field source="mIDDBConso" definition="mIDDBConso" />
         <field source="mIDEntiteFusionSrc" destinationName="idEntiteFusionSource" isExported="false" skipWhen="MINUS_ONE,NULL" type="long" embedContents="true" title="Entité-source de fusion" />
     </class>

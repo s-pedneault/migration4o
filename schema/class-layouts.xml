@@ -81,6 +81,7 @@
                         <field ref="mValeur"/>
                         <field ref="mValeurImmeuble"/>
                         <field ref="mValeurTerrain"/>
+                        <field ref="mAireAuSol"/>
                     </column>
                     <column>
                         <field ref="mIDPlancher"/>

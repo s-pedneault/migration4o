@@ -31,6 +31,9 @@ public interface ValueFormatter {
         if (normalizedKeyword.startsWith("FILE")) {
             return ValueFormatterFile.formatter.format(delegate, context, value, parameter);
         }
+        if (normalizedKeyword.startsWith("DATE")) {
+            return ValueFormatterDate.formatter.format(delegate, context, value, parameter);
+        }
         return value;
     }
 

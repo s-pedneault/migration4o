@@ -1828,6 +1828,45 @@ body {
     font-weight: 600;
 }
 
+/* ── Preview images ──────────────────────────────────────────────── */
+/* Hero preview – large clickable block at the top of a detail view */
+.detail-hero-preview {
+    margin: 8px 0;
+}
+
+.detail-hero-preview img {
+    max-width: 100%;
+    max-height: 280px;
+    border-radius: 4px;
+}
+
+/* Inline thumbnail – small image next to text in headers / table cells */
+.preview-thumb {
+    vertical-align: middle;
+    border-radius: 3px;
+}
+
+.preview-thumb-sm {
+    max-height: 24px;
+    border-radius: 2px;
+}
+
+.preview-thumb-md {
+    max-height: 40px;
+    margin-left: 8px;
+}
+
+/* Inline linked preview – medium preview inside expandable content */
+.preview-inline {
+    margin-top: 6px;
+}
+
+.preview-inline img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 4px;
+}
+
 /* ── Key Info Card ────────────────────────────────────────────────── */
 .detail-key-info {
     background: var(--c-surface);
