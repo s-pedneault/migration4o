@@ -66,7 +66,7 @@ public class XmlFormatHandler extends FormatHandler {
         String schemaLocation = computeSchemaLocation(ctx);
         writer.openRootStructure("export", schemaLocation);
         if (ctx.schemaClass != null) {
-            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
+            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName(), ctx.classObjectCount));
         }
         writer.openStructure("objects");
     }

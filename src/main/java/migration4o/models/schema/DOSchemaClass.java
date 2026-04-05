@@ -193,14 +193,14 @@ public class DOSchemaClass {
         return false;
     }
 
-    public StructuredWriterMetadata getMetadata(String module) {
+    public StructuredWriterMetadata getMetadata(String module, int objectCount) {
         StructuredWriterMetadata metadata = new StructuredWriterMetadata();
         metadata.generator = DOSchemaConstants.METADATA_GENERATOR;
         metadata.schemaVersion = DOSchemaConstants.METADATA_SCHEMA_VERSION;
         metadata.provider = DOSchemaConstants.METADATA_PROVIDER;
         metadata.module = module != null ? module : "";
         metadata.type = attributes.destinationName != null ? attributes.destinationName : getSourceName();
-        metadata.objects = objectIds != null ? String.valueOf(objectIds.length) : "0";
+        metadata.objects = String.valueOf(objectCount);
         return metadata;
     }
 

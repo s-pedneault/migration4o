@@ -58,17 +58,18 @@ public class ExportModuleLoop {
                 if (ctx.request.database != null) {
                     dbClass = ctx.request.database.findClassByName(className);
                 }
-                if (dbClass == null) {
-                    fireClassComplete(className);
-                    continue;
-                }
-                if (dbClass.schemaClass == null) {
+                if (dbClass != null && dbClass.schemaClass == null) {
                     System.err.println("[WARNING] Database class '" + className + "' has no reference schema link — data may be lost during export.");
                 }
 
                 ctx.setClass(schemaClass, config);
+                ctx.classObjectCount = (dbClass != null && dbClass.objects.objectIds != null) ? dbClass.objects.objectIds.length : 0;
                 try {
-                    runClass(dbClass);
+                    if (dbClass != null) {
+                        runClass(dbClass);
+                    } else {
+                        runEmptyClass(className);
+                    }
                 } catch (Throwable t) {
                     recordClassError(className, t);
                     fireClassComplete(className);
@@ -130,6 +131,38 @@ public class ExportModuleLoop {
                         ctx.statistics.skipDiagnostics = false;
                     }
                 }
+            }
+        }
+    }
+
+    /**
+     * Creates empty output files (with header/footer but zero objects) for a class that has no objects in the database.
+     */
+    private void runEmptyClass(String className) throws Exception {
+        DOSchemaClass refClass = ctx.schemaClass;
+        ClassExportConfig refConfig = ctx.exportConfig;
+        Path moduleRelPath = ctx.moduleRelativePath();
+
+        for (FormatHandler handler : handlers) {
+            ctx.setClass(refClass, refConfig);
+            Path filePath = ctx.basePath.resolve(handler.folderName()).resolve(moduleRelPath).resolve(ctx.exportConfig.getDestinationFileName() + handler.extension());
+
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onStatusMessage("Exporting " + handler.displayName() + " (empty): " + className);
+                ctx.request.monitor.onClassStart(className, refClass.attributes.destinationName, 0, handler.displayName());
+            }
+            handler.openWriter(filePath);
+            try {
+                handler.open(ctx);
+            } finally {
+                try {
+                    handler.close(ctx);
+                } catch (Throwable t) {
+                    recordHandlerCloseError(className, handler, t);
+                }
+            }
+            if (ctx.request.monitor != null) {
+                ctx.request.monitor.onClassComplete(className, 0, handler.displayName());
             }
         }
     }

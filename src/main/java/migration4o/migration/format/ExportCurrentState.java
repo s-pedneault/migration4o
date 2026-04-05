@@ -22,15 +22,11 @@ import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 
 /**
- * Mutable state tracking the current position in the export tree (module →
- * class → object → field), plus all runtime-accumulated shared state
- * (statistics, caches, nav tree, …).
+ * Mutable state tracking the current position in the export tree (module → class → object → field), plus all runtime-accumulated shared state (statistics, caches, nav tree, …).
  * <p>
- * Immutable configuration (schemas, output paths, flags) lives on
- * {@link ExportRequest}, accessible as {@link #request}.
+ * Immutable configuration (schemas, output paths, flags) lives on {@link ExportRequest}, accessible as {@link #request}.
  * <p>
- * All fields are public. Computed methods derive values from the current state
- * without external parameters.
+ * All fields are public. Computed methods derive values from the current state without external parameters.
  */
 public class ExportCurrentState {
 
@@ -60,15 +56,16 @@ public class ExportCurrentState {
     /** Export config for the current class; null for referenced classes. */
     public ClassExportConfig exportConfig;
 
+    /** Number of database objects for the current class (0 when absent from DB). */
+    public int classObjectCount;
+
     // ── Object level ─────────────────────────────────────────────────────────
 
     /** Object stack: last = current, previous = parent. */
     public final List<ObjectFrame> objectChain = new ArrayList<>();
 
     /**
-     * When non-null, only objects whose IDs are in this set are exported. Used
-     * by {@code XmlFormatHandler.done()} for the unreached-objects pass. Null
-     * means "allow all".
+     * When non-null, only objects whose IDs are in this set are exported. Used by {@code XmlFormatHandler.done()} for the unreached-objects pass. Null means "allow all".
      */
     public Set<Long> allowedObjectIds;
 
@@ -89,8 +86,7 @@ public class ExportCurrentState {
     // ────────────────────────────────────────────────
 
     /**
-     * Modules being exported — set by {@code MigrationExportService} so that
-     * {@code HtmlFormatHandler.init()} can build the nav tree.
+     * Modules being exported — set by {@code MigrationExportService} so that {@code HtmlFormatHandler.init()} can build the nav tree.
      */
     public List<DOSchemaModule> exportModules;
 
@@ -101,8 +97,7 @@ public class ExportCurrentState {
     public final List<NavNode> navTree = new ArrayList<>();
 
     /**
-     * Nav JSON serialized once from {@link #navTree}; injected verbatim into
-     * every HTML file.
+     * Nav JSON serialized once from {@link #navTree}; injected verbatim into every HTML file.
      */
     public String cachedNavJson = "[]";
 
@@ -115,17 +110,12 @@ public class ExportCurrentState {
     // ── IDEntite label-resolution caches ─────────────────────────────────────
 
     /**
-     * Maps a composite key {@code "<mID>:<expectedType>"} to the resolved
-     * target entity's DB4O object ID. Populated lazily; avoids repeating the
-     * O(n) mID scan when multiple fields reference the same entity type with
-     * the same mID.
+     * Maps a composite key {@code "<mID>:<expectedType>"} to the resolved target entity's DB4O object ID. Populated lazily; avoids repeating the O(n) mID scan when multiple fields reference the same entity type with the same mID.
      */
     public Map<String, Long> idEntiteTargetCache = new HashMap<>();
 
     /**
-     * Maps a resolved target entity's DB4O object ID to its generated
-     * human-readable summary label. Populated lazily; avoids regenerating the
-     * same summary when the same entity is referenced from multiple records.
+     * Maps a resolved target entity's DB4O object ID to its generated human-readable summary label. Populated lazily; avoids regenerating the same summary when the same entity is referenced from multiple records.
      */
     public Map<Long, String> idEntiteSummaryCache = new HashMap<>();
 
@@ -133,9 +123,7 @@ public class ExportCurrentState {
     // ─────────────────────────────────────────────────
 
     /**
-     * The {@link ObjectExporter} instance currently driving the export. Set by
-     * {@code ObjectExporter}'s constructor so that {@code FieldExporter} can
-     * call back into it for embedded references.
+     * The {@link ObjectExporter} instance currently driving the export. Set by {@code ObjectExporter}'s constructor so that {@code FieldExporter} can call back into it for embedded references.
      */
     public ObjectExporter objectExporter;
 
@@ -178,6 +166,7 @@ public class ExportCurrentState {
     public void clearClass() {
         this.schemaClass = null;
         this.exportConfig = null;
+        this.classObjectCount = 0;
     }
 
     public void pushObject(Object obj, long objectId) {
@@ -201,10 +190,7 @@ public class ExportCurrentState {
     // ── Computed methods ─────────────────────────────────────────────────────
 
     /**
-     * Absolute path to the directory for the current module chain, derived from
-     * {@code basePath} and each module's ID bottom-to-top. Does <em>not</em>
-     * include any per-format sub-folder — use {@link #modulePath(String)} or
-     * {@link #moduleRelativePath()} for format-specific paths.
+     * Absolute path to the directory for the current module chain, derived from {@code basePath} and each module's ID bottom-to-top. Does <em>not</em> include any per-format sub-folder — use {@link #modulePath(String)} or {@link #moduleRelativePath()} for format-specific paths.
      */
     public Path modulePath() {
         Path path = basePath;
@@ -215,9 +201,7 @@ public class ExportCurrentState {
     }
 
     /**
-     * Returns the module chain as a relative path (no {@code basePath} prefix).
-     * Used by the export engine to build per-format file paths:
-     * {@code basePath / formatFolder / moduleRelativePath / fileName}.
+     * Returns the module chain as a relative path (no {@code basePath} prefix). Used by the export engine to build per-format file paths: {@code basePath / formatFolder / moduleRelativePath / fileName}.
      */
     public java.nio.file.Path moduleRelativePath() {
         java.nio.file.Path path = java.nio.file.Paths.get("");
@@ -228,8 +212,7 @@ public class ExportCurrentState {
     }
 
     /**
-     * Human-readable display name for the current module chain, e.g.
-     * {@code "Parent/Child"}.
+     * Human-readable display name for the current module chain, e.g. {@code "Parent/Child"}.
      */
     public String moduleDisplayName() {
         StringBuilder sb = new StringBuilder();
@@ -252,8 +235,7 @@ public class ExportCurrentState {
     }
 
     /**
-     * Returns the DB4O object ID of the parent object, or {@code null} when the
-     * current object is a root object.
+     * Returns the DB4O object ID of the parent object, or {@code null} when the current object is a root object.
      */
     public Long parentObjectId() {
         int size = objectChain.size();

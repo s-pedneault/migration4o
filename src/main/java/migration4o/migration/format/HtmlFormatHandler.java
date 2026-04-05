@@ -161,7 +161,7 @@ public class HtmlFormatHandler extends FormatHandler {
         // multiple objects of the same class are exported.
         writer.openStructure("export");
         if (ctx.schemaClass != null) {
-            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
+            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName(), ctx.classObjectCount));
         }
         writer.openArray("objects");
     }

@@ -3459,7 +3459,7 @@
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
         <field source="mVectProdDang" destinationName="listeProduitDangereux" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.dossPrev.ProdDang" title="Produits dangereux" />
         <field source="mIDAuteur" destinationName="idAuteur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Auteur" />
-        <field source="mIDCategRisque" destinationName="idCategorieRisque" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E2" embedContents="false" title="Catégorie de risque" />
+        <field source="mIDCategRisque" destinationName="idCategorieRisque" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E2" title="Catégorie de risque" />
         <field source="mIDClassif" destinationName="idClassification" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.classif.IDClassif" title="Classification" />
         <field source="mIDDossPrevAssoc" destinationName="idDossierAdresseAssocie" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" title="Dossier adresse associé" />
         <field source="mIDDossPrevAttach" destinationName="idDossierAdresseAttache" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" title="Dossier adresse attaché" />
@@ -4112,7 +4112,7 @@
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisLieu" />
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
         <reference class="gest.secCiv.Mission" field="mIDFichier" />
-        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="ID" format="file(file/[ID])" />
+        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" format="file(file/[ID])" title="ID" />
         <field source="mData" destinationName="donnees" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="byte[]" title="Données" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="NULL" type="date" title="Date de l'ajout" />
         <field source="mDateDernModif" destinationName="dateDerniereModification" isExported="true" skipWhen="NULL" type="date" title="Date de dernière modification" />
@@ -4348,8 +4348,8 @@
     <class source="gest.gen.EntiteContientID" destinationName="EntitePrincipale" isExported="true" title="Entité principale" schemaNotes="Ancestor-only class, reached through leaves" parentClass="gest.gen.Entite">
         <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
-        <field source="mDernModif" destinationName="derniereModification" isExported="true" skipWhen="NULL" type="string" title="Dernière modification" format="date" />
-        <field source="mLastFusionTime" destinationName="derniereFusion" isExported="false" skipWhen="NULL" type="string" title="Dernière fusion" format="date" />
+        <field source="mDernModif" destinationName="derniereModification" isExported="true" skipWhen="NULL" type="string" format="date" title="Dernière modification" />
+        <field source="mLastFusionTime" destinationName="derniereFusion" isExported="false" skipWhen="NULL" type="string" format="date" title="Dernière fusion" />
         <field source="mIDDBConso" definition="mIDDBConso" />
         <field source="mIDEntiteFusionSrc" destinationName="idEntiteFusionSource" isExported="false" skipWhen="MINUS_ONE,NULL" type="long" embedContents="true" title="Entité-source de fusion" />
     </class>
@@ -4543,7 +4543,7 @@
         <field source="mNom" definition="mNom" />
         <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="int" title="Photos par page" />
         <field source="mPrintFormat" destinationName="formatImpression" isExported="true" skipWhen="NULL" type="int" title="Format impression" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Fichier" embedContents="true" />
+        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Fichier" />
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" title="Graph" />
     </class>
     <class source="gest.gen.Qte" destinationName="Quantite" isExported="true" title="Quantité" parentClass="gest.gen.Entite">
@@ -5042,12 +5042,12 @@
         <reference class="gest.rci.Rci" field="mIntervCause" />
         <reference class="gest.intervention.Intervention" field="mCauseIncendie" />
         <field source="mAmpleurDesc" destinationName="ampleurDescription" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Ampleur description" />
-        <field source="mAmpleurIncendie" destinationName="ampleurIncendie" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G6" embedContents="false" title="Ampleur incendie" />
+        <field source="mAmpleurIncendie" destinationName="ampleurIncendie" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G6" title="Ampleur incendie" />
         <field source="mCauseProbable" destinationName="causeProbable" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G4" title="Cause probable" />
         <field source="mCauseProbableDesc" destinationName="causeProbableDescription" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Cause probable description" />
         <field source="mCombustible" destinationName="combustible" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G3" title="Combustible" />
         <field source="mCombustibleDesc" destinationName="combustibleDescription" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Combustible description" />
-        <field source="mDommage" destinationName="dommage" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G8" embedContents="false" title="Dommage" />
+        <field source="mDommage" destinationName="dommage" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G8" title="Dommage" />
         <field source="mDommageDesc" destinationName="dommageDescription" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Dommage description" />
         <field source="mEnergieDesc" destinationName="energieDescription" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Énergie description" />
         <field source="mLieuOrigine" destinationName="lieuOrigine" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003G1" title="Lieu origine" />
@@ -5074,8 +5074,8 @@
         <field source="mDescriptionRaisonDelai" destinationName="descriptionRaisonDelai" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Description raison délai" />
         <field source="mForceAtteint" destinationName="forceAtteint" isExported="true" skipWhen="NULL" type="boolean" title="Force atteint" />
         <field source="mMaitrise" destinationName="maitrise" isExported="true" skipWhen="NULL" type="date" title="Maîtrise" />
-        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" embedContents="false" title="Moyen transmission" />
-        <field source="mRaisonDelai" destinationName="raisonDelai" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D8" embedContents="false" title="Raison délai" />
+        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" title="Moyen transmission" />
+        <field source="mRaisonDelai" destinationName="raisonDelai" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D8" title="Raison délai" />
         <field source="mRetour" destinationName="retour" isExported="true" skipWhen="NULL" type="date" title="Retour" />
         <field source="mTransmission" destinationName="transmission" isExported="true" skipWhen="NULL" type="date" title="Transmission" />
     </class>
@@ -5114,7 +5114,7 @@
         <reference class="gest.intervention.Intervention" field="mIntervFeuExterieur" />
         <field source="mDetail" definition="mDetail" />
         <field source="mPerte" destinationName="perte" isExported="true" skipWhen="ZERO" type="double" title="Perte" />
-        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003H5" embedContents="false" title="Assurance" />
+        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003H5" title="Assurance" />
     </class>
     <class source="gest.intervention.IntervIntervEmploye" destinationName="InterventionIntervenantEmploye" isExported="true" title="Employé intervenant" parentClass="gest.activite.InfoEmploye">
         <field source="mHeureDepart" destinationName="heureDepart" isExported="true" skipWhen="NULL" type="date" title="Heure de départ" />
@@ -5163,7 +5163,7 @@
     <class source="gest.intervention.IntervMateriel" destinationName="InterventionMateriel" isExported="true" title="Intervention matériel" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.IntervEquipement" field="mVectIntervMateriel" />
         <field source="mQuantite" destinationName="quantite" isExported="true" skipWhen="NULL" type="int" title="Quantité" />
-        <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDTypeEquipement" embedContents="false" title="ID de type équipement" />
+        <field source="mIDTypeEquipement" destinationName="idTypeEquipement" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDTypeEquipement" title="ID de type équipement" />
     </class>
     <class source="gest.intervention.IntervMemoFacturation" destinationName="InterventionMemoFacturation" isExported="true" title="Intervention memo facturation" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mIntervMemoFacturation" />
@@ -5176,7 +5176,7 @@
         <field source="mPerteBatiment" destinationName="perteBatiment" isExported="true" skipWhen="NULL" type="double" title="Perte bâtiment" />
         <field source="mPerteContenu" destinationName="perteContenu" isExported="true" skipWhen="NULL" type="double" title="Perte contenu" />
         <field source="mValeurBatiment" destinationName="valeurBatiment" isExported="true" skipWhen="NULL" type="double" title="Valeur bâtiment" />
-        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E12" embedContents="false" title="ID d'assurance" />
+        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E12" title="ID d'assurance" />
     </class>
     <class source="gest.intervention.IntervPerteIndirecte" destinationName="InterventionPerteIndirecte" isExported="true" title="Intervention perte indirecte" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mIntervPerteIndirecte" />
@@ -5202,9 +5202,9 @@
         <field source="mNoteAvertFonctionne" destinationName="noteAvertisseurFonctionne" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Note avertisseur fonctionne" />
         <field source="mNoteExtinctionFonctionne" destinationName="noteExtinctionFonctionne" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Note extinction fonctionne" />
         <field source="mNoteSystAlarmeFonctionne" destinationName="noteSystemeAlarmeFonctionne" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Note système alarme fonctionne" />
-        <field source="mIDAvertFonctionne" destinationName="idAvertisseurFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F2" embedContents="false" title="ID d'avertisseur fonctionne" />
-        <field source="mIDExtinctionFonctionne" destinationName="idExtinctionFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F6" embedContents="false" title="ID d'extinction fonctionne" />
-        <field source="mIDSystAlarmeFonctionne" destinationName="idSystemeAlarmeFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F4" embedContents="false" title="ID de système alarme fonctionne" />
+        <field source="mIDAvertFonctionne" destinationName="idAvertisseurFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F2" title="ID d'avertisseur fonctionne" />
+        <field source="mIDExtinctionFonctionne" destinationName="idExtinctionFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F6" title="ID d'extinction fonctionne" />
+        <field source="mIDSystAlarmeFonctionne" destinationName="idSystemeAlarmeFonctionne" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003F4" title="ID de système alarme fonctionne" />
     </class>
     <class source="gest.intervention.IntervRemiseProp" destinationName="InterventionRemisePropriete" isExported="true" title="Intervention remise propriété" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mRemiseProp" />
@@ -5275,8 +5275,8 @@
         <field source="mNbrSauvetage" destinationName="nombreSauvetage" isExported="true" skipWhen="NULL" type="int" title="Nombre sauvetage" />
         <field source="mVectIntervVictimeDetail" destinationName="listeInterventionVictimeDetail" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.IntervVictimeDetail" title="Liste d'intervention victime détail" />
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
-        <field source="mIDEvacuation" destinationName="idEvacuation" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E13" embedContents="false" title="ID d'evacuation" />
-        <field source="mIDSauvetage" destinationName="idSauvetage" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E14" embedContents="false" title="ID de sauvetage" />
+        <field source="mIDEvacuation" destinationName="idEvacuation" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E13" title="ID d'evacuation" />
+        <field source="mIDSauvetage" destinationName="idSauvetage" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E14" title="ID de sauvetage" />
     </class>
     <class source="gest.intervention.IntervVehicule" destinationName="InterventionVehicule" isExported="true" title="Intervention véhicule" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.intervention.Intervention" field="mVectIntervVehicule" />
@@ -5298,7 +5298,7 @@
         <field source="mVehModele" destinationName="vehiculeModele" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Véhicule modèle" />
         <field source="mVehNumSerie" destinationName="vehiculeNumSerie" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Véhicule num série" />
         <field source="mVehPlaque" destinationName="vehiculePlaque" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Véhicule plaque" />
-        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003H5" embedContents="false" title="ID d'assurance" />
+        <field source="mIDAssurance" destinationName="idAssurance" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003H5" title="ID d'assurance" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.intervention.IntervVictimeDetail" destinationName="InterventionVictimeDetail" isExported="true" title="Intervention victime détail" parentClass="gest.gen.Entite">
@@ -5363,7 +5363,7 @@
         <field source="mRepondant" destinationName="repondant" isExported="true" skipWhen="NULL" type="gest.intervention.IntervRepondant" embedContents="true" title="Répondant" />
         <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut" />
         <field source="mTemperature" destinationName="temperature" isExported="true" skipWhen="NULL" type="gest.intervention.IntervTemperature" embedContents="true" title="Température" />
-        <field source="mTypeEvenement" destinationName="typeEvenement" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003C1" embedContents="false" title="Type d'événement" />
+        <field source="mTypeEvenement" destinationName="typeEvenement" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003C1" title="Type d'événement" />
         <field source="mUtiliseCarteAppel" destinationName="utiliseCarteAppel" isExported="true" skipWhen="NULL" type="boolean" title="Utilisé carte appel" />
         <field source="mVectCarteAppelRenfort" destinationName="listeCarteAppelRenfort" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.intervention.CarteAppel" title="Liste de carte appel renfort" />
         <field source="mVectEtape" destinationName="listeEtape" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.processus.Etape" title="Liste d'étape" />
@@ -5438,7 +5438,7 @@
         <field source="mAffArronConformesSeulementDansDSI" destinationName="afficherArrondissementsConformesSeulementDansDSI" isExported="true" skipWhen="NULL" type="boolean" title="Afficher arrondissements conformes seulement dans DSI" />
         <field source="mAffArronDansDSI" destinationName="afficherArrondissementsDansDSI" isExported="true" skipWhen="NULL" type="boolean" title="Afficher arrondissements dans DSI" />
         <field source="mCourrielDSI2003" destinationName="courrielDSI2003" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel DSI 2003" />
-        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" embedContents="false" title="Moyen transmission" />
+        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" title="Moyen transmission" />
         <field source="mTypeEnvoiDSI2003" destinationName="typeEnvoiDSI2003" isExported="true" skipWhen="NULL" type="int" title="Type d'envoi DSI 2003" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mCodeUtilDSI2003" destinationName="codeUtilisateurDSI2003" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code utilisateur DSI 2003" />
@@ -5459,7 +5459,7 @@
         <field source="mEquipeGeneralePresente" destinationName="equipeGeneralePresente" isExported="true" skipWhen="NULL" type="boolean" title="Équipe générale présente" />
         <field source="mMntBaseSAAQ" destinationName="montantBaseSAAQ" isExported="true" skipWhen="NULL" type="double" title="Montant base SAAQ" />
         <field source="mMotPasseDSI2003" destinationName="motDePasseDSI2003" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Mot de passe DSI 2003" />
-        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" embedContents="false" title="Moyen transmission" />
+        <field source="mMoyenTrans" destinationName="moyenTransmission" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.DSI2003.IDDsi2003D6" title="Moyen transmission" />
         <field source="mNumDossPoliceDefaut" destinationName="numeroDossierPoliceDefaut" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Numéro dossier police défaut" />
         <field source="mPrefixe" definition="mPrefixe" />
         <field source="mStrategieNumerotationActivite" destinationName="strategieNumerotationActivite" isExported="true" skipWhen="NULL" type="int" title="Stratégie numérotation activité" />
@@ -5875,7 +5875,7 @@
     <class source="gest.planInterv.ConfigSectionEtatInitialPourPlan" destinationName="ConfigurationSectionEtatInitialPourPlan" isExported="true" title="Configuration section état initial pour plan" summary="[idCategorieRisque.code] - [idCategorieRisque.nom]" parentClass="gest.gen.EntiteContientID">
         <field source="mID" definition="mID" />
         <field source="mVectEtatSections" destinationName="listeEtatSections" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.planInterv.EtatSection" title="Liste d'état sections" />
-        <field source="mIDCategRisque" destinationName="idCategorieRisque" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E2" embedContents="false" title="ID de catégorie risque" />
+        <field source="mIDCategRisque" destinationName="idCategorieRisque" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.DSI2003.IDDsi2003E2" title="ID de catégorie risque" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.planInterv.EtatSection" destinationName="EtatSection" isExported="true" title="État section" parentClass="gest.gen.Entite">
@@ -7237,7 +7237,7 @@
         <reference class="gest.planInterv.AlimDisp" field="mIDVehicule" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.vehicule.Vehicule" destinationName="Vehicule" isExported="true" title="Véhicule" parentClass="gest.gen.EntiteContientID">
+    <class source="gest.vehicule.Vehicule" destinationName="Vehicule" isExported="true" title="Véhicule" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.maintenance.Maintenance" field="mVectIDVehicule" />
         <reference class="gest.employe.Employe" field="mIDVehicule" />
         <reference class="gest.equipement.SituationEquipement" field="mIDVehicule" />

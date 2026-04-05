@@ -15,9 +15,7 @@ import migration4o.util.tools.structuredwriter.StructuredWriter;
 /**
  * Abstract base class for format-specific export implementations.
  * <p>
- * The engine calls all hooks unconditionally; handlers override only what they
- * need. Subclasses must call {@code super} or replicate its schema-observation
- * callbacks (XSD registration) — all other handlers leave them as no-ops.
+ * The engine calls all hooks unconditionally; handlers override only what they need. Subclasses must call {@code super} or replicate its schema-observation callbacks (XSD registration) — all other handlers leave them as no-ops.
  */
 public abstract class FormatHandler {
 
@@ -33,9 +31,7 @@ public abstract class FormatHandler {
     public StructuredWriter writer;
 
     /**
-     * Per-format set of exported object IDs — prevents writing the same object
-     * twice within one format's output. Shared statistics and reference
-     * tracking live on {@link ExportCurrentState} instead.
+     * Per-format set of exported object IDs — prevents writing the same object twice within one format's output. Shared statistics and reference tracking live on {@link ExportCurrentState} instead.
      */
     public final Set<Long> exportedIds = new HashSet<>();
 
@@ -50,48 +46,38 @@ public abstract class FormatHandler {
     // ──────────────────────────────────────────────────────
 
     /**
-     * Returns the output file extension including the leading dot, e.g.
-     * {@code ".xml"}, {@code ".html"}, {@code ".json"}, {@code ".xlsx"}.
+     * Returns the output file extension including the leading dot, e.g. {@code ".xml"}, {@code ".html"}, {@code ".json"}, {@code ".xlsx"}.
      */
     public abstract String extension();
 
     /**
-     * Returns the human-readable display name for UI labels, e.g.
-     * {@code "XML"}, {@code "HTML"}, {@code "JSON"}, {@code "Excel"}.
+     * Returns the human-readable display name for UI labels, e.g. {@code "XML"}, {@code "HTML"}, {@code "JSON"}, {@code "Excel"}.
      */
     public abstract String displayName();
 
     /**
-     * Creates a new {@link StructuredWriter} for the given output file. Each
-     * implementation instantiates its own {@code StructuredWriterAPI} directly
-     * (no {@code StructuredWriterProvider}).
+     * Creates a new {@link StructuredWriter} for the given output file. Each implementation instantiates its own {@code StructuredWriterAPI} directly (no {@code StructuredWriterProvider}).
      * <p>
-     * Implementations should pass {@code filePath} as the third argument to the
-     * {@code StructuredWriter} constructor so that {@code writer.outputPath} is
-     * always set — even when the underlying {@code Writer} is in-memory.
+     * Implementations should pass {@code filePath} as the third argument to the {@code StructuredWriter} constructor so that {@code writer.outputPath} is always set — even when the underlying {@code Writer} is in-memory.
      */
     protected abstract StructuredWriter createWriter(Path filePath) throws IOException;
 
     /**
-     * Returns the format-specific output sub-folder name, e.g. {@code "xml"},
-     * {@code "html"}, {@code "json"}, {@code "excel"}. Defaults to
-     * {@code format.name().toLowerCase()}.
+     * Returns the format-specific output sub-folder name, e.g. {@code "xml"}, {@code "html"}, {@code "json"}, {@code "excel"}. Defaults to {@code format.name().toLowerCase()}.
      */
     public String folderName() {
         return format.name().toLowerCase();
     }
 
     /**
-     * Returns the root output directory for this format:
-     * {@code ctx.basePath / folderName()}.
+     * Returns the root output directory for this format: {@code ctx.basePath / folderName()}.
      */
     public Path formatBasePath(ExportCurrentState ctx) {
         return ctx.basePath.resolve(folderName());
     }
 
     /**
-     * Public facade: creates a writer for {@code filePath} and assigns it to
-     * {@link #writer}. Called by the engine before each {@code open} call.
+     * Public facade: creates a writer for {@code filePath} and assigns it to {@link #writer}. Called by the engine before each {@code open} call.
      */
     public final void openWriter(Path filePath) throws IOException {
         this.writer = createWriter(filePath);
@@ -107,27 +93,24 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called at the start of each class data file, after {@code writer} has
-     * been set by the engine. Default opens the standard two-level structure:
+     * Called at the start of each class data file, after {@code writer} has been set by the engine. Default opens the standard two-level structure:
      * 
      * <pre>
      *   writer.openStructure("export")
-     *   writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()))
+     *   writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName(), ctx.classObjectCount))
      *   writer.openStructure("objects")
      * </pre>
      */
     public void open(ExportCurrentState ctx) throws Exception {
         writer.openStructure("export");
         if (ctx.schemaClass != null) {
-            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName()));
+            writer.metadata(ctx.schemaClass.getMetadata(ctx.moduleDisplayName(), ctx.classObjectCount));
         }
         writer.openStructure("objects");
     }
 
     /**
-     * Called after {@code open}, before field export. Returns {@code true} if
-     * the handler has fully written this object (field loop is skipped);
-     * {@code false} to proceed with the default field pipeline.
+     * Called after {@code open}, before field export. Returns {@code true} if the handler has fully written this object (field loop is skipped); {@code false} to proceed with the default field pipeline.
      * <p>
      * Default opens the object element:
      * 
@@ -137,9 +120,7 @@ public abstract class FormatHandler {
      * return false;
      * </pre>
      * 
-     * When {@code false} is returned the engine calls
-     * {@code writer.closeStructure(ctx.schemaClass.attributes.destinationName)} after the
-     * field loop.
+     * When {@code false} is returned the engine calls {@code writer.closeStructure(ctx.schemaClass.attributes.destinationName)} after the field loop.
      */
     public boolean onObject(ExportCurrentState ctx) throws Exception {
         if (ctx.schemaClass == null)
@@ -153,18 +134,14 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called before the default field pipeline. Returns {@code true} if the
-     * handler has fully written this field (default pipeline is skipped);
-     * {@code false} to let the pipeline handle it. Default:
-     * {@code return false}.
+     * Called before the default field pipeline. Returns {@code true} if the handler has fully written this field (default pipeline is skipped); {@code false} to let the pipeline handle it. Default: {@code return false}.
      */
     public boolean onField(ExportCurrentState ctx) throws Exception {
         return false;
     }
 
     /**
-     * Called after the data file is fully written. Default closes the two
-     * structures opened by {@code open} and flushes the writer:
+     * Called after the data file is fully written. Default closes the two structures opened by {@code open} and flushes the writer:
      * 
      * <pre>
      *   writer.closeStructure("objects")
@@ -179,8 +156,7 @@ public abstract class FormatHandler {
     }
 
     /**
-     * Called once per handler after all modules finish, for final tasks.
-     * Default: no-op.
+     * Called once per handler after all modules finish, for final tasks. Default: no-op.
      */
     public void done(ExportCurrentState ctx) throws Exception {
     }
@@ -192,8 +168,7 @@ public abstract class FormatHandler {
      * Creates handler instances for the requested formats.
      *
      * @param formats list of formats to export
-     * @param generateXsd whether to generate XSD (passed to
-     * {@link XmlFormatHandler})
+     * @param generateXsd whether to generate XSD (passed to {@link XmlFormatHandler})
      * @return one handler per format, in request order
      */
     public static List<FormatHandler> create(List<ExportFormat> formats, boolean generateXsd) {
