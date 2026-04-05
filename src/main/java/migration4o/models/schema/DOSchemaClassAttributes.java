@@ -11,6 +11,7 @@ public class DOSchemaClassAttributes {
     public String description;
     public String summary;
     public String pointsTo; // For IDEntite classes: the target class name this points to
+    public String pointsToFilter; // e.g. "mCode=E2" — additional field=value filter to disambiguate pointsTo target
     public boolean isStatic;
     public String preview; // Optional: preview generator keyword, e.g. "FILE(path/[ID])"
 

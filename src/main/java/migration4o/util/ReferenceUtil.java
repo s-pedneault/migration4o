@@ -24,14 +24,22 @@ public class ReferenceUtil {
     public static ResolvedReference resolveIDEntiteForExport(DODatabaseDelegate delegate, Object idEntiteObj, String idClassName, DOSchemaField schemaField, DODatabase database) {
         long idEntiteId = delegate.getID(idEntiteObj);
 
-        // Look up the IDEntite schema class to check if the target entity is exportable
+        // Look up the IDEntite schema class to check if the target entity is exportable.
+        // Prefer the schema field's declared type over the runtime class name,
+        // because the runtime class may be a base type (e.g. IDDSI2003) while the
+        // field type is a more specific subtype (e.g. IDDsi2003E2) that carries
+        // the pointsToFilter needed for disambiguation.
         if (schemaField != null && schemaField.schema != null) {
-            DOSchemaClass idEntiteClass = schemaField.schema.findClassByName(idClassName);
+            String typeName = schemaField.attributes.type != null ? schemaField.attributes.type : idClassName;
+            DOSchemaClass idEntiteClass = schemaField.schema.findClassByName(typeName);
+            if (idEntiteClass == null) {
+                idEntiteClass = schemaField.schema.findClassByName(idClassName);
+            }
             if (idEntiteClass != null) {
                 DOSchemaClass targetClass = idEntiteClass.getPointsToClass();
                 if (targetClass != null && targetClass.attributes.migrate) {
                     // Target entity is exportable — resolve to it
-                    ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, targetClass, database);
+                    ResolvedReference resolved = resolveIDEntiteReference(delegate, idEntiteObj, targetClass, idEntiteClass, database);
                     if (resolved != null) {
                         return resolved;
                     }
@@ -45,23 +53,28 @@ public class ReferenceUtil {
     }
 
     /**
-     * Resolves an IDEntite reference to find the target object.
-     * Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID}
-     * with the target entity class to route to the correct delegate.
+     * Resolves an IDEntite reference to find the target object. Extracts the mID from the wrapper, then uses {@link DODatabase#findObjectByMID} with the target entity class to route to the correct delegate. When the IDEntite class has a pointsToFilter, uses filter-aware lookup to disambiguate non-unique mID values (e.g., DSI2003 mCode+mID).
      * 
-     * @param delegate          Database delegate that owns the IDEntite wrapper object
-     * @param idEntiteObj       The IDEntite object to resolve
+     * @param delegate Database delegate that owns the IDEntite wrapper object
+     * @param idEntiteObj The IDEntite object to resolve
      * @param targetEntityClass The target Entite schema class (drives type filter and delegate routing)
-     * @param database          The database (DODatabase) containing all classes across all delegates
+     * @param idEntiteClass The IDEntite schema class (may carry pointsToFilter), or null
+     * @param database The database (DODatabase) containing all classes across all delegates
      * @return The resolved reference (objectId + owning delegate), or null if not found
      */
-    public static ResolvedReference resolveIDEntiteReference(DODatabaseDelegate delegate, Object idEntiteObj, DOSchemaClass targetEntityClass, DODatabase database) {
+    public static ResolvedReference resolveIDEntiteReference(DODatabaseDelegate delegate, Object idEntiteObj, DOSchemaClass targetEntityClass, DOSchemaClass idEntiteClass, DODatabase database) {
         try {
             // Activate the IDEntite object to read its mID (uses the wrapper's own delegate)
             Long mID = IDEntityHandler.extractMID(delegate, idEntiteObj);
 
             if (mID == null) {
                 return null;
+            }
+
+            // Use filter-aware lookup when the IDEntite class specifies a pointsToFilter
+            DOSchemaClass.PointsToFilter filter = idEntiteClass != null ? idEntiteClass.getPointsToFilter() : null;
+            if (filter != null) {
+                return database.findObjectByMID(mID, targetEntityClass, filter);
             }
 
             // Search for the target object with matching mID, routed to the correct delegate

@@ -174,7 +174,7 @@
         <reference class="gest.DSI2003.DSI2003Perso" field="mIDSousCodeMSP" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" title="IDDsi2003 C1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" title="IDDsi2003 C1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=C1">
         <reference class="gest.intervention.Intervention" field="mTypeEvenement" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -188,7 +188,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" title="IDDsi2003 D6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003D6" destinationName="IDDsi2003D6" isExported="true" title="IDDsi2003 D6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=D6">
         <reference class="gest.intervention.ParamIntervDSI2003" field="mMoyenTrans" />
         <reference class="gest.intervention.ParamIntervention" field="mMoyenTrans" />
         <reference class="gest.intervention.IntervChronologie" field="mMoyenTrans" />
@@ -204,7 +204,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" title="IDDsi2003 D8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" title="IDDsi2003 D8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=D8">
         <reference class="gest.intervention.IntervChronologie" field="mRaisonDelai" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -219,7 +219,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" title="IDDsi2003 E12" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" title="IDDsi2003 E12" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E12">
         <reference class="gest.intervention.IntervPerte" field="mIDAssurance" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -229,7 +229,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" title="IDDsi2003 E13" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" title="IDDsi2003 E13" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E13">
         <reference class="gest.intervention.IntervVehFeu" field="mIDEvacuation" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDEvacuation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -243,7 +243,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" title="IDDsi2003 E14" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" title="IDDsi2003 E14" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E14">
         <reference class="gest.intervention.IntervVehFeu" field="mIDSauvetage" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDSauvetage" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -256,7 +256,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" title="IDDsi2003 E2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" title="IDDsi2003 E2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E2">
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.planInterv.ConfigSectionEtatInitialPourPlan" field="mIDCategRisque" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -269,13 +269,13 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" title="IDDsi2003 E6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" title="IDDsi2003 E6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E6">
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" title="IDDsi2003 H3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" title="IDDsi2003 H3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=H3">
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E3">
         <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
         <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1626,7 +1626,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" title="IDDsi2003 E8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" title="IDDsi2003 E8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E8">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1644,7 +1644,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" title="IDDsi2003 F1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" title="IDDsi2003 F1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F1">
         <reference class="gest.dossPrev.Protection" field="mIDAvertisseur" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1655,7 +1655,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" title="IDDsi2003 F2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" title="IDDsi2003 F2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F2">
         <reference class="gest.intervention.IntervProtection" field="mIDAvertFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1673,7 +1673,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" title="IDDsi2003 F3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" title="IDDsi2003 F3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F3">
         <reference class="gest.dossPrev.Protection" field="mIDSystAlarme" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1685,7 +1685,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" title="IDDsi2003 F4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" title="IDDsi2003 F4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F4">
         <reference class="gest.intervention.IntervProtection" field="mIDSystAlarmeFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1701,7 +1701,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" title="IDDsi2003 F5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" title="IDDsi2003 F5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F5">
         <reference class="gest.dossPrev.Protection" field="mIDExtinction" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1714,7 +1714,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" title="IDDsi2003 F6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" title="IDDsi2003 F6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F6">
         <reference class="gest.intervention.IntervProtection" field="mIDExtinctionFonctionne" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -1734,7 +1734,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" title="IDDsi2003 G1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" title="IDDsi2003 G1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G1">
         <reference class="gest.intervention.IntervCauseIncendie" field="mLieuOrigine" />
         <reference class="gest.rci.RciLieu" field="mIDLieuOrigine" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1844,7 +1844,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" title="IDDsi2003 G2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" title="IDDsi2003 G2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G2">
         <reference class="gest.intervention.IntervCauseIncendie" field="mSourceChaleur" />
         <reference class="gest.rci.SourceChaleur" field="mSource" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1965,7 +1965,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" title="IDDsi2003 G3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" title="IDDsi2003 G3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G3">
         <reference class="gest.rci.Combustible" field="mCombus" />
         <reference class="gest.intervention.IntervCauseIncendie" field="mCombustible" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -1986,7 +1986,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" title="IDDsi2003 G4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" title="IDDsi2003 G4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mCauseProbable" />
         <reference class="gest.rci.RciLieu" field="mIDCauseProbable" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2041,7 +2041,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" title="IDDsi2003 G5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" title="IDDsi2003 G5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPremMatEnflamme" />
         <reference class="gest.rci.RciLieu" field="mIDPremMatEnflamme" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2151,7 +2151,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" title="IDDsi2003 G6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" title="IDDsi2003 G6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G6">
         <reference class="gest.intervention.IntervCauseIncendie" field="mAmpleurIncendie" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -2171,7 +2171,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" title="IDDsi2003 G7" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" title="IDDsi2003 G7" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G7">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPropagation" />
         <reference class="gest.rci.RciLieu" field="mIDPropagation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2187,7 +2187,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" title="IDDsi2003 G8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" title="IDDsi2003 G8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G8">
         <reference class="gest.intervention.IntervCauseIncendie" field="mDommage" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
             <valueMap>
@@ -2202,7 +2202,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" title="IDDsi2003 H5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" title="IDDsi2003 H5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=H5">
         <reference class="gest.intervention.IntervFeuExterieur" field="mIDAssurance" />
         <reference class="gest.intervention.IntervVehicule" field="mIDAssurance" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2213,7 +2213,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" title="IDDsi2003 M4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" title="IDDsi2003 M4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=M4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDModeInflammation" />
         <reference class="gest.rci.RciLieu" field="mIDModeInflammation" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -2234,7 +2234,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" title="IDDsi2003 M5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003">
+    <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" title="IDDsi2003 M5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=M5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
         <reference class="gest.rci.RciLieu" field="mIDEnergie" />
         <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
@@ -7136,7 +7136,7 @@
         <field source="mUtiliseFormElec" destinationName="utiliseFormulaireElectronique" isExported="true" skipWhen="NULL" type="boolean" title="Utilisé formulaire électronique" />
         <field source="mVectIDTypeAnom" destinationName="listeIdTypeAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typeAnom.IDTypeAnom" title="Liste d'ID de type anomalie" />
         <field source="mVectSignature" destinationName="listeSignature" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typePrev.TypePrev$NSignature" title="Liste de signature" />
-        <field source="mVectTypeAnom" destinationName="listeTypeAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typeAnom.TypeAnom" title="Liste de type anomalie" />
+        <field source="mVectTypeAnom" destinationName="listeTypeAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typeAnom.IDTypeAnom" title="Liste de type anomalie" />
         <field source="mVectTypeChampPerso" destinationName="listeTypeChampPersonnalise" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.champPerso.TypeChampPerso" title="Liste de type champ personnalisé" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mVectAssocExtraDataCP" destinationName="listeAssociationExtraDonneesChampPersonnalise" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="gen.util.VectObjetToString" collection="true" embedContents="true" childrenType="gen.util.ObjetToString" title="Liste d'association extra données champ personnalisé" />

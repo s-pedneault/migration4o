@@ -158,6 +158,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "pointsTo", schemaClass.attributes.pointsTo);
         }
 
+        if (schemaClass.attributes.pointsToFilter != null && !schemaClass.attributes.pointsToFilter.isEmpty()) {
+            writeAttribute(writer, "pointsToFilter", schemaClass.attributes.pointsToFilter);
+        }
+
         if (schemaClass.attributes.isStatic) {
             writeAttribute(writer, "isStatic", "true");
         }

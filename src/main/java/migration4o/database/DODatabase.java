@@ -22,12 +22,9 @@ public class DODatabase {
     private final List<DODatabaseDelegate> delegates = new ArrayList<>();
 
     /**
-     * Lazily-built mID index: maps each DODatabaseClass instance to its
-     * mID → ResolvedReference lookup table.  Keyed by object identity so
-     * that same-named classes from different delegates (user vs static)
-     * get separate indexes — preventing mID collisions across databases.
+     * Lazily-built mID index: maps each DODatabaseClass instance to its mID → list of ResolvedReferences. List-based to handle entity classes (like DSI2003) where mID values are not unique — disambiguation is done at lookup time via {@link DOSchemaClass.PointsToFilter}. Keyed by object identity so that same-named classes from different delegates (user vs static) get separate indexes.
      */
-    private final Map<DODatabaseClass, Map<Long, ResolvedReference>> mIdIndex = new java.util.IdentityHashMap<>();
+    private final Map<DODatabaseClass, Map<Long, List<ResolvedReference>>> mIdIndex = new java.util.IdentityHashMap<>();
     /** Tracks which DODatabaseClass instances have already been indexed. */
     private final Set<DODatabaseClass> mIdIndexedClasses = java.util.Collections.newSetFromMap(new java.util.IdentityHashMap<>());
 
@@ -36,10 +33,7 @@ public class DODatabase {
     }
 
     /**
-     * Adds a delegate and rebuilds the merged class array.
-     * User-data delegate should be added first; static-data delegate second.
-     * When the same class name exists in an earlier delegate, the later
-     * delegate's copy is skipped (user DB wins).
+     * Adds a delegate and rebuilds the merged class array. User-data delegate should be added first; static-data delegate second. When the same class name exists in an earlier delegate, the later delegate's copy is skipped (user DB wins).
      */
     public void addDelegate(DODatabaseDelegate delegate) {
         delegates.add(delegate);
@@ -94,9 +88,7 @@ public class DODatabase {
     // ── Multi-delegate lookup methods ────────────────────────────────
 
     /**
-     * Loads an object by its native DB4O ID.  When no IDEntite context is
-     * available, defaults to the <strong>user delegate</strong> to avoid
-     * cross-database reads that corrupt the static DB's memory image.
+     * Loads an object by its native DB4O ID. When no IDEntite context is available, defaults to the <strong>user delegate</strong> to avoid cross-database reads that corrupt the static DB's memory image.
      *
      * @param objectId native DB4O object ID
      * @return the loaded object and its owning delegate, or null
@@ -117,22 +109,29 @@ public class DODatabase {
     }
 
     /**
-     * Finds an entity object by its application-level mID field value,
-     * routed to the correct delegate based on the target entity class's
-     * {@code isStatic} flag.
+     * Finds an entity object by its application-level mID field value, routed to the correct delegate based on the target entity class's {@code isStatic} flag.
      * <p>
-     * When {@code targetEntityClass} is provided its {@code isStatic}
-     * attribute determines which delegate is searched (static DB vs user
-     * DB), and its source name narrows the entity-class scan.  When
-     * {@code null}, only the user delegate is searched.
+     * When {@code targetEntityClass} is provided its {@code isStatic} attribute determines which delegate is searched (static DB vs user DB), and its source name narrows the entity-class scan. When {@code null}, only the user delegate is searched.
      *
-     * @param mID               the application-level mID to search for
-     * @param targetEntityClass the target Entite schema class (determines
-     *                          both type filter and delegate routing); may
-     *                          be null to search user delegate only
+     * @param mID the application-level mID to search for
+     * @param targetEntityClass the target Entite schema class (determines both type filter and delegate routing); may be null to search user delegate only
      * @return the matching object's ID and its owning delegate, or null
      */
     public ResolvedReference findObjectByMID(Long mID, DOSchemaClass targetEntityClass) {
+        return findObjectByMID(mID, targetEntityClass, null);
+    }
+
+    /**
+     * Finds an entity object by its application-level mID field value, routed to the correct delegate based on the target entity class's {@code isStatic} flag.
+     * <p>
+     * When {@code filter} is non-null and multiple objects share the same mID, the filter is used to disambiguate by checking an additional field value on each candidate (e.g. {@code mCode=E2} for DSI2003 entries).
+     *
+     * @param mID the application-level mID to search for
+     * @param targetEntityClass the target Entite schema class (determines both type filter and delegate routing); may be null to search user delegate only
+     * @param filter optional field=value filter to disambiguate when multiple objects share the same mID
+     * @return the matching object's ID and its owning delegate, or null
+     */
+    public ResolvedReference findObjectByMID(Long mID, DOSchemaClass targetEntityClass, DOSchemaClass.PointsToFilter filter) {
         if (mID == null || classes == null) {
             return null;
         }
@@ -177,11 +176,16 @@ public class DODatabase {
                 // Build the mID index for this class on first access
                 ensureMIdIndexBuilt(dbClass);
 
-                Map<Long, ResolvedReference> classIndex = mIdIndex.get(dbClass);
+                Map<Long, List<ResolvedReference>> classIndex = mIdIndex.get(dbClass);
                 if (classIndex != null) {
-                    ResolvedReference ref = classIndex.get(mID);
-                    if (ref != null) {
-                        return ref;
+                    List<ResolvedReference> refs = classIndex.get(mID);
+                    if (refs != null) {
+                        if (refs.size() == 1 || filter == null) {
+                            return refs.get(0);
+                        }
+                        ResolvedReference match = findByFilter(refs, filter);
+                        if (match != null)
+                            return match;
                     }
                 }
             }
@@ -191,9 +195,7 @@ public class DODatabase {
     }
 
     /**
-     * Builds the mID → ResolvedReference index for a single entity class.
-     * Scans all object IDs once, extracting mID values with shallow
-     * activation (depth 2) instead of the previous per-lookup full scan.
+     * Builds the mID → ResolvedReference index for a single entity class. Scans all object IDs once, extracting mID values with shallow activation (depth 2) instead of the previous per-lookup full scan.
      */
     private void ensureMIdIndexBuilt(DODatabaseClass dbClass) {
         if (mIdIndexedClasses.contains(dbClass)) {
@@ -207,14 +209,14 @@ public class DODatabase {
             return;
         }
 
-        Map<Long, ResolvedReference> classIndex = new HashMap<>();
+        Map<Long, List<ResolvedReference>> classIndex = new HashMap<>();
         for (long objectId : objectIds) {
             try {
                 Object obj = classDelegate.getByID(objectId);
                 if (obj != null) {
                     Long objMID = IDEntityHandler.extractMID(classDelegate, obj);
                     if (objMID != null) {
-                        classIndex.put(objMID, new ResolvedReference(objectId, classDelegate));
+                        classIndex.computeIfAbsent(objMID, k -> new ArrayList<>()).add(new ResolvedReference(objectId, classDelegate));
                     }
                     // Release the object after extracting its mID — we only
                     // need the index entry, not the activated object in memory.
@@ -228,14 +230,31 @@ public class DODatabase {
     }
 
     /**
-     * Loads an object by its native DB4O ID, routing to the correct
-     * delegate when the caller provides the IDEntite schema class that
-     * triggered the lookup.  Uses {@code idEntiteClass.getPointsToClass()}
-     * to determine if the target entity lives in the static DB.
+     * Disambiguates multiple mID matches by checking a field value on the target entity object against the expected value from the filter.
+     */
+    private ResolvedReference findByFilter(List<ResolvedReference> candidates, DOSchemaClass.PointsToFilter filter) {
+        for (ResolvedReference ref : candidates) {
+            try {
+                Object obj = ref.delegate.getByID(ref.objectId);
+                if (obj != null) {
+                    String value = IDEntityHandler.extractFieldValue(ref.delegate, obj, filter.fieldName());
+                    ref.delegate.deactivate(obj, 1);
+                    if (filter.expectedValue().equals(value)) {
+                        return ref;
+                    }
+                }
+            } catch (Exception e) {
+                // skip unreadable candidates
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Loads an object by its native DB4O ID, routing to the correct delegate when the caller provides the IDEntite schema class that triggered the lookup. Uses {@code idEntiteClass.getPointsToClass()} to determine if the target entity lives in the static DB.
      *
-     * @param objectId      native DB4O object ID
-     * @param idEntiteClass the IDEntite schema class that owns this
-     *                      reference (may be null)
+     * @param objectId native DB4O object ID
+     * @param idEntiteClass the IDEntite schema class that owns this reference (may be null)
      * @return the loaded object and its owning delegate, or null
      */
     public ResolvedReference getByID(long objectId, DOSchemaClass idEntiteClass) {

@@ -122,8 +122,7 @@ public class SummaryGenerator {
     }
 
     /**
-     * Resolves the summary template for a schema class by walking up the ancestor chain.
-     * Returns the first non-null, non-empty summary found, or {@code null} if none exists.
+     * Resolves the summary template for a schema class by walking up the ancestor chain. Returns the first non-null, non-empty summary found, or {@code null} if none exists.
      */
     public static String resolveSummaryTemplate(DOSchemaClass schemaClass, DOSchema referenceSchema) {
         DOSchemaClass current = schemaClass;
@@ -201,7 +200,7 @@ public class SummaryGenerator {
                 // IDEntite traversal: follow the reference to the target entity
                 if (nextClass != null && nextClass.isIDEntite() && database != null && currentObj != null) {
                     DOSchemaClass targetClass = nextClass.getPointsToClass();
-                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteReference(delegate, currentObj, targetClass, database);
+                    ResolvedReference resolved = ReferenceUtil.resolveIDEntiteReference(delegate, currentObj, targetClass, nextClass, database);
                     if (resolved == null) {
                         return "";
                     }
@@ -292,19 +291,20 @@ public class SummaryGenerator {
             // ── Prefer the IDEntite class's own valueMap for the label ──
             // IDEntite subclasses (e.g. IDDsi2003E8) carry a group-specific
             // valueMap that correctly translates the mID code within their
-            // group context.  Resolving through the target entity's summary
+            // group context. Resolving through the target entity's summary
             // can match the wrong record when mID values overlap across
             // groups (e.g. multiple DSI2003 entries sharing the same mID
             // in different groups like D6, E8, E3).
             String valueMapLabel = resolveValueMapLabel(idEntiteClass, mID);
 
-            String cacheKey = mID + ":" + (targetEntityClass != null ? targetEntityClass.attributes.source : "");
+            DOSchemaClass.PointsToFilter filter = idEntiteClass.getPointsToFilter();
+            String cacheKey = mID + ":" + (targetEntityClass != null ? targetEntityClass.attributes.source : "") + (filter != null ? ":" + filter.fieldName() + "=" + filter.expectedValue() : "");
 
             ResolvedReference resolved;
             if (targetCache != null && targetCache.containsKey(cacheKey)) {
                 resolved = targetCache.get(cacheKey);
             } else {
-                resolved = database.findObjectByMID(mID, targetEntityClass);
+                resolved = database.findObjectByMID(mID, targetEntityClass, filter);
                 if (targetCache != null) {
                     targetCache.put(cacheKey, resolved);
                 }
@@ -352,9 +352,7 @@ public class SummaryGenerator {
     }
 
     /**
-     * Checks whether the IDEntite class has a valueMap on its mID field and
-     * translates the given mID value.  Returns null when no valueMap exists
-     * or the value has no mapping.
+     * Checks whether the IDEntite class has a valueMap on its mID field and translates the given mID value. Returns null when no valueMap exists or the value has no mapping.
      */
     private static String resolveValueMapLabel(DOSchemaClass idEntiteClass, Long mID) {
         if (idEntiteClass.fields == null)

@@ -26,11 +26,25 @@ public class DOSchemaClass {
         this.schema = schema;
     }
 
+    /** Parsed pointsToFilter: matches a field on the target entity to disambiguate non-unique mIDs. */
+    public record PointsToFilter(String fieldName, String expectedValue) {
+    }
+
     public DOSchemaClass getPointsToClass() {
         if (attributes.pointsTo != null) {
             return schema.findClassByName(attributes.pointsTo);
         }
         return null;
+    }
+
+    /** Returns the parsed pointsToFilter, or null if none is configured. */
+    public PointsToFilter getPointsToFilter() {
+        if (attributes.pointsToFilter == null)
+            return null;
+        int eq = attributes.pointsToFilter.indexOf('=');
+        if (eq <= 0)
+            return null;
+        return new PointsToFilter(attributes.pointsToFilter.substring(0, eq).trim(), attributes.pointsToFilter.substring(eq + 1).trim());
     }
 
     public String getSourcePackage() {
