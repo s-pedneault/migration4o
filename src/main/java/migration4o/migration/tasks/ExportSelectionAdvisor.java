@@ -484,10 +484,7 @@ public class ExportSelectionAdvisor {
     // ── Step 1: collect exported classes ────────────────────────────────────
 
     /**
-     * Counts how many times each class appears in criteria-bearing configs across all modules.
-     * Returns a map of className → count (only classes with criteria are included; minimum 1).
-     * For a class that appears 3 times with criteria (e.g. DossPrev with 3 different filter sets),
-     * the count is 3 — meaning the effective preselection cap should be 3× the base cap.
+     * Counts how many times each class appears in criteria-bearing configs across all modules. Returns a map of className → count (only classes with criteria are included; minimum 1). For a class that appears 3 times with criteria (e.g. DossPrev with 3 different filter sets), the count is 3 — meaning the effective preselection cap should be 3× the base cap.
      */
     private static Map<String, Integer> countCriteriaConfigs(List<DOSchemaModule> modules) {
         Map<String, Integer> counts = new HashMap<>();
@@ -768,7 +765,9 @@ public class ExportSelectionAdvisor {
         for (Map.Entry<String, long[]> e : classObjectIds.entrySet()) {
             long[] ids = e.getValue();
             int criteriaCount = criteriaConfigCounts.getOrDefault(e.getKey(), 1);
-            int effectiveCap = cap * criteriaCount;
+            DOSchemaClass seedClass = referenceSchema != null ? referenceSchema.findClassByName(e.getKey()) : null;
+            boolean classAlwaysExportAll = seedClass != null && seedClass.attributes.alwaysExportAll;
+            int effectiveCap = classAlwaysExportAll ? ids.length : cap * criteriaCount;
             Set<Long> s = new LinkedHashSet<>();
             for (int i = 0; i < Math.min(effectiveCap, ids.length); i++)
                 s.add(ids[i]);

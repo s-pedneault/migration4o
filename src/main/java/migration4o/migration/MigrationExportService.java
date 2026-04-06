@@ -12,16 +12,12 @@ import migration4o.migration.tasks.ExportPreSelection;
 import migration4o.migration.tasks.ModuleExporter;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
+import migration4o.util.JsViewerHtmlGenerator;
 
 /**
- * Service for coordinating export operations. Handles validation and
- * multi-format export execution via {@link FormatHandler} hooks.
+ * Service for coordinating export operations. Handles validation and multi-format export execution via {@link FormatHandler} hooks.
  * <p>
- * All exports — whether triggered from the UI Export button or
- * {@code --repeat-export} — use the single {@link #exportModules} method. The
- * main loop runs class-by-class so all format handlers write one class's file
- * before moving to the next, keeping statistics and reference tracking shared
- * across formats.
+ * All exports — whether triggered from the UI Export button or {@code --repeat-export} — use the single {@link #exportModules} method. The main loop runs class-by-class so all format handlers write one class's file before moving to the next, keeping statistics and reference tracking shared across formats.
  */
 public class MigrationExportService {
 
@@ -42,9 +38,7 @@ public class MigrationExportService {
     /**
      * Exports all modules to all requested formats via handler hooks.
      * <p>
-     * Runs a class-to-class loop: all handlers write one class's file before
-     * moving to the next class, so statistics and reference tracking are shared
-     * across formats.
+     * Runs a class-to-class loop: all handlers write one class's file before moving to the next class, so statistics and reference tracking are shared across formats.
      *
      * @param request Fully-configured export request (must have database set)
      * @param modules Modules to export (in order)
@@ -65,6 +59,7 @@ public class MigrationExportService {
         ctx.exportModules = modules;
 
         Files.createDirectories(ctx.basePath);
+        JsViewerHtmlGenerator.copyGlobalAssets(ctx.basePath);
 
         new ExportPreSelection(request).run(modules);
 

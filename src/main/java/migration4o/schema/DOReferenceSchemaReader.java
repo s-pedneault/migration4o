@@ -131,6 +131,7 @@ public class DOReferenceSchemaReader {
         String pointsTo = classElement.getAttribute("pointsTo");
         String pointsToFilter = classElement.getAttribute("pointsToFilter");
         String isStaticAttr = classElement.getAttribute("isStatic");
+        String alwaysExportAllAttr = classElement.getAttribute("alwaysExportAll");
         String preview = classElement.getAttribute("preview");
 
         // Use destinationName as simpleName if available, otherwise derive from
@@ -157,6 +158,7 @@ public class DOReferenceSchemaReader {
         newClass.attributes.pointsTo = pointsToValue;
         newClass.attributes.pointsToFilter = pointsToFilter != null && !pointsToFilter.trim().isEmpty() ? pointsToFilter : null;
         newClass.attributes.isStatic = "true".equalsIgnoreCase(isStaticAttr);
+        newClass.attributes.alwaysExportAll = "true".equalsIgnoreCase(alwaysExportAllAttr);
         newClass.attributes.preview = preview != null && !preview.trim().isEmpty() ? preview : null;
 
         // Parse fields, passing newClass so each field knows its parent

@@ -13,11 +13,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
+import migration4o.models.ui.layout.DetailLayout;
+import migration4o.schema.DOSchemaService;
+import migration4o.schema.modules.DOModuleService;
 
 /**
  * Generates lightweight HTML viewers for JS exports produced by StructuredWriterJS.
@@ -30,11 +34,16 @@ public final class JsViewerHtmlGenerator {
     private static final String SIDEBAR_NAV_JS_RESOURCE = "/templates/sidebar-nav.js";
 
     /**
-     * Assets (classpath resources under {@code /assets/}) that are copied to the
-     * {@code _App/} sub-folder of every HTML export root.  Add entries here to
-     * include new static files automatically on every export.
+     * Assets (classpath resources under {@code /assets/}) that are copied to the {@code _App/} sub-folder of every HTML export root. Add entries here to include new static files automatically on every export.
      */
-    private static final String[] HTML_EXPORT_ASSETS = { "/assets/splash.jpg" };
+    private static final String[] HTML_EXPORT_ASSETS = {
+            // "/assets/splash.jpg"
+    };
+
+    /**
+     * Assets (classpath resources under {@code /assets/}) that are copied directly to the export output root (the container of {@code "file"}, {@code "html"}, and {@code "xml"} sub-folders) on every export. Add entries here to bundle static documentation or reference files alongside the exported data.
+     */
+    static final String[] GLOBAL_EXPORT_ASSETS = { "/assets/Lisez-moi.pdf" };
     private static volatile String cachedTemplate;
     private static volatile String cachedWelcomeTemplate;
     private static volatile String cachedSidebarCss;
@@ -53,6 +62,37 @@ public final class JsViewerHtmlGenerator {
     }
 
     private JsViewerHtmlGenerator() {
+    }
+
+    /**
+     * Builds a JSON object mapping each class's {@code destinationName} to its resolved detail-layout JSON array. Used to populate the {@code CLASS_LAYOUTS} global in the viewer.
+     */
+    static String buildClassLayoutsJson() {
+        try {
+            Map<String, DetailLayout> layouts = DOModuleService.getInstance().getClassLayouts();
+            DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
+            if (layouts.isEmpty())
+                return "{}";
+            StringBuilder sb = new StringBuilder("{");
+            boolean first = true;
+            for (Map.Entry<String, DetailLayout> entry : layouts.entrySet()) {
+                String sourceName = entry.getKey();
+                DetailLayout layout = entry.getValue();
+                DOSchemaClass schemaClass = refSchema != null ? refSchema.findClassByName(sourceName) : null;
+                String layoutJson = layout.toResolvedJson(schemaClass, refSchema);
+                if ("null".equals(layoutJson))
+                    continue;
+                if (!first)
+                    sb.append(',');
+                String destName = schemaClass != null && schemaClass.attributes.destinationName != null ? schemaClass.attributes.destinationName : sourceName;
+                sb.append('"').append(destName.replace("\\", "\\\\").replace("\"", "\\\"")).append('"').append(':').append(layoutJson);
+                first = false;
+            }
+            sb.append('}');
+            return sb.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
     }
 
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass) throws IOException {
@@ -94,7 +134,7 @@ public final class JsViewerHtmlGenerator {
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (outputPath.getParent() != null) {
             Files.createDirectories(outputPath.getParent());
@@ -126,7 +166,7 @@ public final class JsViewerHtmlGenerator {
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -139,13 +179,13 @@ public final class JsViewerHtmlGenerator {
     /**
      * Writes an index.html welcome page at the given database output root.
      *
-     * @param dbRoot         The database root folder (e.g. output/54060/)
-     * @param dbName         Human-readable database name shown in the page header
-     * @param navItemsJson   Serialised NAV_ITEMS JSON array
-     * @param moduleCount    Total number of exported modules (including sub-modules)
-     * @param classCount     Number of exported class data files
-     * @param objectCount    Total number of exported objects; 0 hides the bubble
-     * @param municipality   Optional client municipality info; may be {@code null}
+     * @param dbRoot The database root folder (e.g. output/54060/)
+     * @param dbName Human-readable database name shown in the page header
+     * @param navItemsJson Serialised NAV_ITEMS JSON array
+     * @param moduleCount Total number of exported modules (including sub-modules)
+     * @param classCount Number of exported class data files
+     * @param objectCount Total number of exported objects; 0 hides the bubble
+     * @param municipality Optional client municipality info; may be {@code null}
      */
     public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount, MunicipalityInfo municipality) throws IOException {
         if (dbRoot == null) {
@@ -235,7 +275,7 @@ public final class JsViewerHtmlGenerator {
 
         // Build the full template with all substitutions EXCEPT
         // __EMBEDDED_JS_DATA__
-        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
+        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
         final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";
@@ -261,11 +301,32 @@ public final class JsViewerHtmlGenerator {
     }
 
     /**
-     * Copies static HTML export assets (e.g. {@code splash.jpg}) from classpath
-     * resources into the {@code _App/} sub-folder of the given HTML export root.
-     * Safe to call multiple times — existing files are overwritten.
+     * Copies static global export assets (classpath resources under {@code /assets/}) directly to the export output root (the container of {@code "file"}, {@code "html"}, and {@code "xml"} sub-folders). Safe to call multiple times — existing files are overwritten.
+     *
+     * @param outputRoot the export output root directory (e.g. {@code output/54060/all/})
+     */
+    public static void copyGlobalAssets(Path outputRoot) throws IOException {
+        if (GLOBAL_EXPORT_ASSETS == null || GLOBAL_EXPORT_ASSETS.length == 0) {
+            return;
+        }
+        Files.createDirectories(outputRoot);
+        for (String resource : GLOBAL_EXPORT_ASSETS) {
+            String filename = resource.substring(resource.lastIndexOf('/') + 1);
+            try (InputStream in = JsViewerHtmlGenerator.class.getResourceAsStream(resource)) {
+                if (in != null) {
+                    Files.copy(in, outputRoot.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
+                }
+            }
+        }
+    }
+
+    /**
+     * Copies static HTML export assets (e.g. {@code splash.jpg}) from classpath resources into the {@code _App/} sub-folder of the given HTML export root. Safe to call multiple times — existing files are overwritten.
      */
     public static void copyHtmlAssets(Path htmlBase) throws IOException {
+        if (HTML_EXPORT_ASSETS != null && HTML_EXPORT_ASSETS.length == 0) {
+            return;
+        }
         Path appDir = htmlBase.resolve("_App");
         Files.createDirectories(appDir);
         for (String resource : HTML_EXPORT_ASSETS) {

@@ -505,7 +505,8 @@
             logicAnd: 'ET', logicOr: 'OU',
             backRefs: 'Références',
             backRefsCapped: 'Affichage limité aux 25 premières références',
-            openLinkedRecord: 'Ouvrir l\'enregistrement lié'
+            openLinkedRecord: 'Ouvrir l\'enregistrement lié',
+            emptyTab: 'Aucune donnée'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -524,7 +525,8 @@
             logicAnd: 'AND', logicOr: 'OR',
             backRefs: 'References',
             backRefsCapped: 'Showing first 25 references only',
-            openLinkedRecord: 'Open linked record'
+            openLinkedRecord: 'Open linked record',
+            emptyTab: 'No data'
         }
     };
 
@@ -1848,7 +1850,82 @@
         return html;
     }
 
+    /**
+     * Recursively collect all {ref, label} field entries from a layout JSON node array.
+     * Layout nodes serialise properties under a "props" sub-object (see LayoutNode.appendJson).
+     */
+    function extractLayoutFields(nodes) {
+        var result = [];
+        (nodes || []).forEach(function (n) {
+            var p = n.props || {};
+            if (n.type === 'field' && p.ref) {
+                result.push({ ref: p.ref, label: p.label || displayFieldLabel(p.ref) });
+            } else if (n.children && n.children.length > 0) {
+                extractLayoutFields(n.children).forEach(function (f) { result.push(f); });
+            }
+        });
+        return result;
+    }
+
     function renderCollectionSection(label, items, ctx) {
+        // If items have a _class with a known layout, render as a layout-driven table
+        var _firstItem = items.length > 0 ? unwrapClassWrapper(items[0]) : null;
+        var _itemClass = _firstItem && _firstItem._class ? _firstItem._class : null;
+        var _itemLayout = (_itemClass && typeof CLASS_LAYOUTS !== 'undefined' && CLASS_LAYOUTS) ? CLASS_LAYOUTS[_itemClass] : null;
+        if (_itemLayout) {
+            var layoutFields = extractLayoutFields(_itemLayout);
+            var tableHtml = '<div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
+            layoutFields.forEach(function (f) {
+                tableHtml += '<th>' + esc(f.label) + '</th>';
+            });
+            tableHtml += '</tr></thead><tbody>';
+            items.forEach(function (item) {
+                var itemData = unwrapClassWrapper(item);
+                tableHtml += '<tr>';
+                layoutFields.forEach(function (f) {
+                    var col = f.ref;
+                    var cellVal = resolveFieldValue(itemData, col);
+                    cellVal = unwrapClassWrapper(cellVal);
+                    if (cellVal === null || cellVal === undefined) { tableHtml += '<td></td>'; return; }
+                    if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
+                        if (cellVal._label !== undefined) {
+                            var _lbText = String(cellVal._label || '').trim();
+                            tableHtml += '<td>' + (_lbText ? fmtValue(_lbText, col) : '') + '</td>';
+                        } else if (cellVal._id !== undefined) {
+                            var _refId = String(cellVal._id ?? '').trim();
+                            var _refText = String(cellVal._label || cellVal._summary || _refId || '').trim();
+                            if (!_refText || _refText === '0' || _refText === '-1') { tableHtml += '<td></td>'; return; }
+                            var _refPtDN = pointsToByPath[normalizeSchemaPath(col)];
+                            var _refPtHr = _refPtDN ? navHrefByDestName[_refPtDN] : null;
+                            var _refLk = (_refPtHr && _refId && _refId !== '0' && _refId !== '-1')
+                                ? _refPtHr + '?open=' + encodeURIComponent(_refId) : null;
+                            tableHtml += '<td>' + (_refLk ? refLinkBtn(_refLk, _refText) : esc(_refText)) + '</td>';
+                        } else if (cellVal._summary) {
+                            tableHtml += '<td>' + fmtValue(String(cellVal._summary || '').trim(), col) + '</td>';
+                        } else {
+                            tableHtml += '<td>' + esc(JSON.stringify(cellVal)) + '</td>';
+                        }
+                    } else if (Array.isArray(cellVal)) {
+                        tableHtml += '<td>' + esc(String(cellVal.length) + ' ' + t('elements')) + '</td>';
+                    } else {
+                        tableHtml += '<td>' + fmtValueWithFormat(cellVal, null, col) + '</td>';
+                    }
+                });
+                tableHtml += '</tr>';
+            });
+            tableHtml += '</tbody></table></div>';
+            // In tab (detail) context the section wrapper is provided by the nav - render the table directly.
+            // In embedded context, wrap in a collapsible section as usual.
+            if (ctx === 'detail') {
+                return tableHtml;
+            }
+            var lhtml = '<details class="detail-section"><summary>'
+                + '<span class="summary-title"' + sectionTitleAttr(label) + '>' + esc(formatSectionTitle(label)) + '</span>'
+                + '<span class="summary-meta">' + items.length + ' ' + esc(t('elements')) + '</span>'
+                + '</summary><div class="section-body">' + tableHtml + '</div></details>';
+            return lhtml;
+        }
+
         const collectionId = `c${collectionIdCounter++}`;
         const table = computeCollectionTable(items);
         const pageSize = 25;
@@ -2011,16 +2088,22 @@
             embHeader += '</div>';
 
             var embHtml = '<div class="field-group">' + embHeader;
-            if (primitiveEntries.length >= 2) {
-                embHtml += '<div class="field-columns-2">';
-                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
-                embHtml += '</div>';
+            // If this object's class has a custom layout, use it
+            var _classLayout = (value._class && typeof CLASS_LAYOUTS !== 'undefined' && CLASS_LAYOUTS) ? CLASS_LAYOUTS[value._class] : null;
+            if (_classLayout) {
+                embHtml += renderLayoutChildren(value, _classLayout);
             } else {
-                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                if (primitiveEntries.length >= 2) {
+                    embHtml += '<div class="field-columns-2">';
+                    primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                    embHtml += '</div>';
+                } else {
+                    primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                }
+                referenceEntries.forEach(function (e) { embHtml += renderReferenceRow(e.key, e.value); });
+                objectEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
+                collectionEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
             }
-            referenceEntries.forEach(function (e) { embHtml += renderReferenceRow(e.key, e.value); });
-            objectEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
-            collectionEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });
             embHtml += '</div>';
             return embHtml;
         }
@@ -2132,6 +2215,8 @@
             var _headerTitle = rec.summary || (typeof entityName !== 'undefined' && entityName ? entityName : rec.entity);
             html += `<div class="detail-header"><h1 class="detail-header-title">${esc(_headerTitle)}</h1><div class="detail-subtitle">${esc(rec.entity)} \u2022 ID: ${esc(rec.id || '\u2014')}</div></div>`;
             html += '<div class="detail-scroll">';
+            var _heroPreview = renderPreview(rec.preview, { title: rec.summary || rec.entity });
+            if (_heroPreview) html += _heroPreview;
             html += renderLayoutDetail(rec.raw, DETAIL_LAYOUT);
             html += renderBackRefSection(rec);
             html += '</div>';
@@ -2449,12 +2534,12 @@
     function renderLayoutDetail(data, layout) {
         var html = '';
         for (var i = 0; i < layout.length; i++) {
-            html += renderLayoutNode(data, layout[i]);
+            html += renderLayoutNode(data, layout[i], 'detail');
         }
         return html;
     }
 
-    function renderLayoutNode(data, node) {
+    function renderLayoutNode(data, node, ctx) {
         var p = node.props || {};
         var children = node.children || [];
         var styleCls = p.style ? ' field-' + p.style : '';
@@ -2472,13 +2557,15 @@
                 if (p.hilite) titleInline += 'background-color:' + esc(p.hilite) + ';';
                 if (p.style) titleInline += layoutStyleFont(p.style);
                 var titleAttr = titleInline ? ' style="' + titleInline + '"' : '';
-                var _sBody = renderLayoutChildren(data, children);
+                var _sBody = renderLayoutChildren(data, children, ctx);
                 if (p.ref) {
                     var _sData = unwrapClassWrapper(resolveFieldValue(data, p.ref));
                     if (_sData && typeof _sData === 'object' && !Array.isArray(_sData)) {
                         _sBody += renderPreview(_sData._preview);
                     }
                 }
+                // Nothing to show — suppress the entire section wrapper
+                if (!_sBody.trim()) return '';
                 // Nested embedded section (collapsible + has ref): render as
                 // a field-row with the title on the left and a pre-collapsed
                 // details block of children on the right, so it sits inline
@@ -2492,7 +2579,7 @@
                         + '<div class="inline-subsection-body">' + _sBody + '</div>'
                         + '</details></div></div>';
                 }
-                if (collapsible) {
+                if (collapsible && ctx !== 'detail') {
                     return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
                         + esc(p.title || '') + '</span></summary><div class="section-body">'
                         + _sBody + '</div></details>';
@@ -2505,10 +2592,10 @@
                 var sizes = (p.sizes || '').split(',').map(function (s) { return s.trim() + '%'; });
                 var gridCols = sizes.join(' ');
                 return '<div class="layout-columns" style="grid-template-columns:' + gridCols + '">'
-                    + renderLayoutChildren(data, children) + '</div>';
+                    + renderLayoutChildren(data, children, ctx) + '</div>';
             }
             case 'column':
-                return '<div class="layout-column">' + renderLayoutChildren(data, children) + '</div>';
+                return '<div class="layout-column">' + renderLayoutChildren(data, children, ctx) + '</div>';
 
             case 'field': {
                 var val = resolveFieldValue(data, p.ref);
@@ -2568,11 +2655,14 @@
             }
             case 'table': {
                 var items = resolveFieldValue(data, p.ref);
-                if (!Array.isArray(items) || items.length === 0) {
-                    return '<div class="field-row"><div class="field-label">' + esc(displayFieldLabel(p.ref))
-                        + '</div><div class="field-value" style="color:var(--c-text-muted)">\u2014</div></div>';
-                }
-                var bare = p.bare === 'true';
+                if (!Array.isArray(items) || items.length === 0) return '';
+                // If items have a custom class layout, delegate to layout-driven card rendering
+                var _tblFirst = unwrapClassWrapper(items[0]);
+                var _tblClass = _tblFirst && _tblFirst._class ? _tblFirst._class : null;
+                var _tblLayout = (_tblClass && typeof CLASS_LAYOUTS !== 'undefined' && CLASS_LAYOUTS) ? CLASS_LAYOUTS[_tblClass] : null;
+                if (_tblLayout) return renderCollectionSection(p.ref, items, ctx || 'embedded');
+
+                var bare = p.bare === 'true' || ctx === 'detail';
                 var cols = (p.columns || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
                 var widths = (p.widths || '').split(',').map(function (s) { return s.trim(); });
                 var colTitles = (p.columnTitles || '').split(',').map(function (s) { return s.trim(); });
@@ -2719,14 +2809,15 @@
                 });
                 html += '</div>';
                 children.forEach(function (child, idx) {
-                    html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + tabId + '-' + idx + '">'
-                        + renderLayoutChildren(data, child.children || []) + '</div>';
+                    var panelContent = renderLayoutChildren(data, child.children || [], ctx);
+                    if (!panelContent.trim()) panelContent = '<div class="tab-empty">' + esc(t('emptyTab')) + '</div>';
+                    html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + tabId + '-' + idx + '">' + panelContent + '</div>';
                 });
                 html += '</div>';
                 return html;
             }
             case 'tab':
-                return renderLayoutChildren(data, children);
+                return renderLayoutChildren(data, children, ctx);
 
             default:
                 return '';
@@ -2745,10 +2836,10 @@
         }
     }
 
-    function renderLayoutChildren(data, children) {
+    function renderLayoutChildren(data, children, ctx) {
         var html = '';
         for (var i = 0; i < children.length; i++) {
-            html += renderLayoutNode(data, children[i]);
+            html += renderLayoutNode(data, children[i], ctx);
         }
         return html;
     }

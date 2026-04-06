@@ -112,6 +112,19 @@ public class DetailLayout {
                     String title = node.prop("title");
                     if (title != null && !title.isEmpty())
                         fld.setProp("label", title);
+                    // A TAB node must stay as a TAB so the tabbed-section
+                    // renderer can use its title for the tab button label.
+                    // Wrap the compact field inside a new TAB that preserves
+                    // all props (esp. title) from the original node.
+                    if (node.type == LayoutNodeType.TAB) {
+                        LayoutNode tab = new LayoutNode(LayoutNodeType.TAB);
+                        for (Map.Entry<String, String> e : node.properties.entrySet()) {
+                            if (!"layoutRef".equals(e.getKey()) && !"ref".equals(e.getKey()))
+                                tab.setProp(e.getKey(), e.getValue());
+                        }
+                        tab.children.add(fld);
+                        return tab;
+                    }
                     return fld;
                 }
             }
@@ -280,10 +293,7 @@ public class DetailLayout {
     }
 
     /**
-     * Recursively populate a layout node with children for each exported field
-     * of the given class. Collections become TABLE nodes, embedded non-primitive
-     * fields become collapsible SECTION nodes (with recursive children), and
-     * simple fields become FIELD nodes.
+     * Recursively populate a layout node with children for each exported field of the given class. Collections become TABLE nodes, embedded non-primitive fields become collapsible SECTION nodes (with recursive children), and simple fields become FIELD nodes.
      */
     private static void populateInlineFields(LayoutNode parent, DOSchemaClass cls, String prefix, DOSchema refSchema, Set<String> visiting) {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(cls, refSchema)) {
@@ -338,7 +348,7 @@ public class DetailLayout {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection || (sf.attributes.embedContents && sf.attributes.type != null && !TypeUtil.isPrimitiveType(sf.attributes.type)))
+            if (sf.attributes.isCollection)
                 continue;
             colNames.add(sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
@@ -752,7 +762,7 @@ public class DetailLayout {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection || (sf.attributes.embedContents && !TypeUtil.isPrimitiveType(sf.attributes.type)))
+            if (sf.attributes.isCollection)
                 continue;
             colNames.add(sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");

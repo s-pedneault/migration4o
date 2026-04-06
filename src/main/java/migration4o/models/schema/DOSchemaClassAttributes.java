@@ -14,5 +14,6 @@ public class DOSchemaClassAttributes {
     public String pointsToFilter; // e.g. "mCode=E2" — additional field=value filter to disambiguate pointsTo target
     public boolean isStatic;
     public String preview; // Optional: preview generator keyword, e.g. "FILE(path/[ID])"
+    public boolean alwaysExportAll; // Bypass export limits and export all objects of this class (use with caution, as this will make demo exports more complete)
 
 }

@@ -332,4 +332,16 @@
             </section>
         </layout>
     </classLayout>
+    <classLayout sourceName="gest.champPerso.ChampPerso">
+        <layout>
+            <columns count="2" sizes="50,50">
+                <column>
+                    <field ref="mIDTypeChampPerso"/>
+                </column>
+                <column>
+                    <field ref="mValeur"/>
+                </column>
+            </columns>
+        </layout>
+    </classLayout>
 </classLayouts>

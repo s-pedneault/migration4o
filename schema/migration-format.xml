@@ -46,7 +46,6 @@
                     <classRef sourceName="gest.graph.TypeGraph"/>
                     <classRef sourceName="gest.DSI2003.DSI2003"/>
                     <classRef sourceName="gest.DSI2003.DSI2003Perso"/>
-                    <classRef sourceName="gest.DSI2003.DSI2003E2"/>
                     <classRef sourceName="gest.DSI2003.DSI2003E3"/>
                 </module>
             </module>

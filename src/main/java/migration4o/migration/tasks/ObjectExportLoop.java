@@ -14,8 +14,7 @@ import migration4o.models.schema.DOSchemaClass;
  * <ul>
  * <li>Registers the class in the XSD builder.
  * <li>Fires {@code onClassStart} / {@code onClassComplete} progress callbacks.
- * <li>Iterates over the class's object IDs, respecting
- * {@link ExportOperation#maxObjectsPerClass} and cancellation.
+ * <li>Iterates over the class's object IDs, respecting {@link ExportOperation#maxObjectsPerClass} and cancellation.
  * <li>Calls {@link ObjectExporter#exportObject} for each ID.
  * </ul>
  */
@@ -34,10 +33,7 @@ public class ObjectExportLoop {
     }
 
     /**
-     * New-path variant: iterates {@code dbClass.objects.objectIds} and exports
-     * each via {@link ObjectExporter#exportObject}. The reference schema class
-     * is taken from {@code ctx.schemaClass} (set by the caller before invoking
-     * this method).
+     * New-path variant: iterates {@code dbClass.objects.objectIds} and exports each via {@link ObjectExporter#exportObject}. The reference schema class is taken from {@code ctx.schemaClass} (set by the caller before invoking this method).
      *
      * @param dbClass Database class (carries object IDs)
      */
@@ -66,8 +62,10 @@ public class ObjectExportLoop {
 
         // Compute the true expected export count: the greater of the cap and
         // the required count (required objects bypass the cap).
+        // Classes flagged alwaysExportAll bypass the cap entirely.
+        boolean alwaysExportAll = ctx.schemaClass != null && ctx.schemaClass.attributes.alwaysExportAll;
         int actualCount;
-        if (request.maxObjectsPerClass != null && objectCount > request.maxObjectsPerClass) {
+        if (!alwaysExportAll && request.maxObjectsPerClass != null && objectCount > request.maxObjectsPerClass) {
             actualCount = Math.max(request.maxObjectsPerClass, requiredCount);
         } else {
             actualCount = objectCount;
@@ -110,7 +108,7 @@ public class ObjectExportLoop {
                 // counting only
                 // objects that actually passed criteria and were written to
                 // this file.
-                if (!isRequired && request.maxObjectsPerClass != null && exportedCount >= request.maxObjectsPerClass)
+                if (!isRequired && !alwaysExportAll && request.maxObjectsPerClass != null && exportedCount >= request.maxObjectsPerClass)
                     break;
                 boolean wasAlreadyExported = handler != null && handler.exportedIds.contains(objectId);
                 try {

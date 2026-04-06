@@ -165,6 +165,9 @@ public class DOReferenceSchemaWriter {
         if (schemaClass.attributes.isStatic) {
             writeAttribute(writer, "isStatic", "true");
         }
+        if (schemaClass.attributes.alwaysExportAll) {
+            writeAttribute(writer, "alwaysExportAll", "true");
+        }
 
         if (schemaClass.attributes.preview != null && !schemaClass.attributes.preview.isEmpty()) {
             writeAttribute(writer, "preview", schemaClass.attributes.preview);
