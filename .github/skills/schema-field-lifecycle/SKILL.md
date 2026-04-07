@@ -16,7 +16,7 @@ The only lifecycle operation is `field.copy()` — a deep-copy factory on `DOSch
 ## What `copy()` does and does not duplicate
 
 ```
-DEEP-COPIED:
+DEEP-COPIED (via copy.attributes.*):
   criterias          → new ArrayList with new DOFieldCriteria instances
   criteriasOperator
   valueMap           → valueMap.copy() (new LinkedHashMap)
@@ -24,10 +24,10 @@ DEEP-COPIED:
 SHALLOW-COPIED (strings/primitives are immutable — safe):
   destinationName, type, format, isExported, skipWhen,
   skipUserOption, isCollection, embedContents, childrenType,
-  title, description, pointsTo, definitionId
+  title, description, pointsTo, definitionId, group
 
 NOT COPIED (set externally after copy):
-  source             ← caller sets this explicitly
+  attributes.source  ← caller sets this explicitly
   parentClass        ← set by DOSchemaClass.setFields()
   childrenSchemaClass ← re-resolved at schema-load time
 ```
@@ -35,11 +35,11 @@ NOT COPIED (set externally after copy):
 ## Typical usage: instantiate a shared definition into a class
 
 ```java
-DOSchemaField definition = schema.sharedFields.get(sharedFieldRef.definitionId);
+DOSchemaField definition = field.schema.sharedFields.get(sharedFieldRef.attributes.definitionId);
 if (definition != null) {
     DOSchemaField instance = definition.copy();
-    instance.source = sharedFieldRef.source;  // carry the original DB field name
-    instance.definitionId = null;             // standalone — no longer shared
+    instance.attributes.source = sharedFieldRef.attributes.source;  // carry the original DB field name
+    instance.attributes.definitionId = null;                        // standalone — no longer shared
     // parentClass will be set by setFields() below
 }
 
@@ -49,5 +49,6 @@ schemaClass.setFields(new DOSchemaField[]{ ..., instance, ... });
 
 ## Key files
 - `src/main/java/migration4o/models/schema/DOSchemaField.java`
+- `src/main/java/migration4o/models/schema/DOSchemaFieldAttributes.java`
 - `src/main/java/migration4o/models/schema/DOSchemaValueMap.java`
 - `src/main/java/migration4o/models/schema/DOFieldCriteria.java`

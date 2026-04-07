@@ -13,8 +13,8 @@ A virtual field has `field.source` starting with `@`. Instead of reading a `Stor
 |---|---|
 | Is this field virtual? | `field.isVirtualField()` → `source.startsWith("@")` |
 | DB field name (sans @) | `field.getVirtualFieldName()` → `source.substring(1)` |
-| List of query conditions | `field.criterias` (`List<DOFieldCriteria>`, may be null) |
-| Logic joining conditions | `field.criteriasOperator` — `"AND"` (default) or `"OR"` |
+| List of query conditions | `field.attributes.criterias` (`List<DOFieldCriteria>`, may be null) |
+| Logic joining conditions | `field.attributes.criteriasOperator` — `"AND"` (default) or `"OR"` |
 
 ## DOFieldCriteria fields
 
@@ -37,10 +37,10 @@ if (field.isVirtualField()) {
     Query query = container.query();
     query.constrain(resolveClass(targetFieldName, schema));
 
-    boolean useAnd = !"OR".equalsIgnoreCase(field.criteriasOperator);
+    boolean useAnd = !"OR".equalsIgnoreCase(field.attributes.criteriasOperator);
 
-    if (field.criterias != null) {
-        for (DOFieldCriteria c : field.criterias) {
+    if (field.attributes.criterias != null) {
+        for (DOFieldCriteria c : field.attributes.criterias) {
             Object matchValue = resolveMatchValue(c.match, parentObject);
             Constraint constraint = query.descend(c.with).constrain(matchValue);
             // apply operator — default is equals (no modifier needed)
@@ -57,7 +57,7 @@ if (field.isVirtualField()) {
 ```
 
 ## Notes
-- `field.criterias` may be null for virtual fields that have no conditions defined yet.
+- `field.attributes.criterias` may be null for virtual fields that have no conditions defined yet.
 - Always check `field.isVirtualField()` **before** accessing `criterias` — non-virtual fields do not use this path.
 
 ## Key files

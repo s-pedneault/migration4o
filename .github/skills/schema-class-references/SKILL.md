@@ -36,14 +36,17 @@ if (schemaClass.schemaReferences != null) {
 int refCount = schemaClass.schemaReferences != null
         ? schemaClass.schemaReferences.length : 0;
 
-// Resolve the referring class and field
+## Resolve the referring class and field
+
+```java
 for (DOSchemaReference ref : schemaClass.schemaReferences) {
-    DOSchemaClass referrer = SchemaUtil.findClassByName(ref.className, schema);
+    DOSchemaClass referrer = schema.findClassByName(ref.className);
     if (referrer != null) {
-        DOSchemaField field = referrer.findField(ref.fieldName);
+        DOSchemaField field = referrer.findFieldBySourceName(ref.fieldName);
         // field is the one that points to schemaClass
     }
 }
+```
 ```
 
 ## Notes

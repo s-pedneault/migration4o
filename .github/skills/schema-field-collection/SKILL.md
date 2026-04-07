@@ -5,24 +5,24 @@ description: Access the collection element type and resolved child schema class 
 
 # DOSchemaField — Collection Configuration
 
-Collection fields are identified by `field.isCollection == true`. Only these fields carry meaningful `childrenType` and `childrenSchemaClass` values.
+Collection fields are identified by `field.attributes.isCollection == true`. Only these fields carry meaningful `childrenType` and `childrenSchemaClass` values.
 
 ## Field map
 
 | What you want | How to get it |
 |---|---|
-| Declared element type name | `field.childrenType` — e.g. `"gest.intervention.Note"` |
+| Declared element type name | `field.attributes.childrenType` — e.g. `"gest.intervention.Note"` |
 | Resolved element schema class | `field.childrenSchemaClass` — set at schema-load time, may be null |
 
 ## Example: routing a collection field
 
 ```java
-if (field.isCollection) {
+if (field.attributes.isCollection) {
     DOSchemaClass childClass = field.childrenSchemaClass;
 
-    if (childClass == null && field.childrenType != null) {
+    if (childClass == null && field.attributes.childrenType != null) {
         // Manual fallback resolution
-        childClass = SchemaUtil.findClassByName(field.childrenType, schema);
+        childClass = field.schema.findClassByName(field.attributes.childrenType);
     }
 
     if (childClass != null) {
@@ -37,8 +37,8 @@ if (field.isCollection) {
 ## embedContents applies to collections too
 
 ```java
-if (field.isCollection) {
-    if (field.embedContents) {
+if (field.attributes.isCollection) {
+    if (field.attributes.embedContents) {
         // inline each child's fields
     } else {
         // emit only the mID of each child as a scalar reference
@@ -48,9 +48,9 @@ if (field.isCollection) {
 
 ## Notes
 - `field.childrenSchemaClass` is resolved by `DOReferenceSchemaReader` during schema load. It may be null if the element type is not in the reference schema (e.g. primitive collections).
-- Never assume `childrenSchemaClass` is non-null — always null-check or fall back to `childrenType` resolution.
+- Never assume `childrenSchemaClass` is non-null — always null-check or fall back to `field.attributes.childrenType` resolution via `schema.findClassByName()`.
 
 ## Key files
 - `src/main/java/migration4o/models/schema/DOSchemaField.java`
-- `src/main/java/migration4o/util/SchemaUtil.java`
+- `src/main/java/migration4o/models/schema/DOSchemaFieldAttributes.java`
 - `src/main/java/migration4o/schema/DOReferenceSchemaReader.java`

@@ -49,8 +49,8 @@ if (ValueUtil.matchesSkipCondition(rawValue, "NULL,ZERO", field, schema)) {
 ```
 
 ## Notes
-- `field.skipWhen` is a plain `String` (e.g. `"NULL,ZERO"`) parsed inside `ValueUtil`.
-- `field.skipUserOption` is the UI label of the option — the runtime UI uses it to identify which fields a user has chosen to skip; it does not affect `shouldSkipField` directly.
+- `field.attributes.skipWhen` is a plain `String` (e.g. `"NULL,ZERO"`) parsed inside `ValueUtil`.
+- `field.attributes.skipUserOption` is the UI label of the option — the runtime UI uses it to identify which fields a user has chosen to skip; it does not affect `shouldSkipField` directly.
 - Apply skip evaluation **before** formatting and value mapping.
 
 ## Key files

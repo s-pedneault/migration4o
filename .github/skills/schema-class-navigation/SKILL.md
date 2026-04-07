@@ -5,29 +5,29 @@ description: Navigate the schema class tree — get parent class, ancestors, sub
 
 # DOSchemaClass — Schema Tree Navigation
 
-Tree navigation is **not on `DOSchemaClass` directly** — use `SchemaUtil` static methods and manual iteration over `DOSchema.getClasses()`.
+Tree navigation uses `schema.findClassByName()` (on `DOSchema`) and `schemaClass.hasSubclasses()` (on `DOSchemaClass`). `SchemaUtil.findClassByName()` no longer exists.
 
 ## Method map
 
 | What you want | How to get it |
 |---|---|
-| Parent class | `SchemaUtil.findClassByName(schemaClass.parentClassName, schema)` |
-| Ordered ancestor chain | Walk `parentClassName` links manually (see below) |
-| Direct subclasses | Filter `schema.getClasses()` where `c.parentClassName.equals(schemaClass.source)` |
+| Parent class | `schema.findClassByName(schemaClass.attributes.parentClassName)` |
+| Ordered ancestor chain | Walk `attributes.parentClassName` links manually (see below) |
+| Direct subclasses | Filter `schema.getClasses()` where `c.attributes.parentClassName.equals(schemaClass.attributes.source)` |
 | All descendants (any depth) | BFS over subclasses (see below) |
-| Has any subclasses? | `SchemaUtil.hasSubclasses(schema, schemaClass)` |
-| IDEntite target class | `SchemaUtil.findClassByName(schemaClass.pointsTo, schema)` |
+| Has any subclasses? | `schemaClass.hasSubclasses()` |
+| IDEntite target class | `schemaClass.getPointsToClass()` or `schema.findClassByName(schemaClass.attributes.pointsTo)` |
 
 ## Ancestor chain
 
 ```java
 List<DOSchemaClass> ancestors = new ArrayList<>();
-String current = schemaClass.parentClassName;
+String current = schemaClass.attributes.parentClassName;
 while (current != null && !current.isEmpty()) {
-    DOSchemaClass ancestor = SchemaUtil.findClassByName(current, schema);
+    DOSchemaClass ancestor = schema.findClassByName(current);
     if (ancestor == null) break;
     ancestors.add(ancestor);
-    current = ancestor.parentClassName;
+    current = ancestor.attributes.parentClassName;
 }
 ```
 
@@ -36,7 +36,7 @@ while (current != null && !current.isEmpty()) {
 ```java
 List<DOSchemaClass> subclasses = new ArrayList<>();
 for (DOSchemaClass c : schema.getClasses()) {
-    if (schemaClass.source.equals(c.parentClassName)) {
+    if (schemaClass.attributes.source.equals(c.attributes.parentClassName)) {
         subclasses.add(c);
     }
 }
@@ -51,13 +51,21 @@ while (!queue.isEmpty()) {
     DOSchemaClass node = queue.poll();
     if (descendants.add(node)) {
         for (DOSchemaClass c : schema.getClasses()) {
-            if (node.source.equals(c.parentClassName)) queue.add(c);
+            if (node.attributes.source.equals(c.attributes.parentClassName)) queue.add(c);
         }
     }
 }
 ```
 
 ## Notes
+- `schema.findClassByName()` matches on `attributes.source` (fully-qualified name).
+- `schemaClass.hasSubclasses()` checks if any Entite-type class names this class as parent — it requires the class's `schema` back-reference to be set.
+- `DOSchema` is obtained from `DOSchemaService.getInstance().getReferenceSchema()`.
+
+## Key files
+- `src/main/java/migration4o/models/schema/DOSchemaClass.java`
+- `src/main/java/migration4o/models/schema/DOSchema.java`
+- `src/main/java/migration4o/schema/DOSchemaService.java`
 - `SchemaUtil.findClassByName` does exact match first, then falls back to simple name match.
 - `DOSchema.findClassByName(name)` is a convenience wrapper for the same.
 - `SchemaUtil.hasSubclasses` only counts `Entite`-type subclasses, not all subclasses.

@@ -5,18 +5,23 @@ description: Check whether a DOSchemaClass is included in the export (migrate fl
 
 # DOSchemaClass — Behavioral Flags
 
+All data properties live in `schemaClass.attributes` (`DOSchemaClassAttributes`). Type-classification methods are on `DOSchemaClass` itself.
+
 ## Field / method map
 
 | What you want | How to get it |
 |---|---|
-| Is the class included in the export? | `schemaClass.migrate` (boolean field) |
-| Is the class a Java primitive/wrapper type? | `schemaClass.isPrimitive()` → `TypeUtil.isPrimitiveType(source)` |
+| Is the class included in the export? | `schemaClass.attributes.migrate` (boolean field) |
+| Is the class a Java primitive/wrapper type? | `schemaClass.isPrimitive()` → `TypeUtil.isPrimitiveType(attributes.source)` |
+| Is the class a collection type? | `schemaClass.isCollection()` |
+| Is the class a map type? | `schemaClass.isMap()` |
+| Is the class a collection or map? | `schemaClass.isCollectionOrMap()` |
 
 ## Examples
 
 ```java
 // Skip classes excluded from export
-if (!schemaClass.migrate) {
+if (!schemaClass.attributes.migrate) {
     continue;
 }
 
@@ -26,15 +31,22 @@ if (schemaClass.isPrimitive()) {
 }
 
 // Typical guard at export entry point
-if (schemaClass.migrate && !schemaClass.isPrimitive()) {
+if (schemaClass.attributes.migrate && !schemaClass.isPrimitive()) {
     // proceed with object traversal
+}
+
+// Skip collection/map container classes
+if (schemaClass.isCollectionOrMap()) {
+    return;
 }
 ```
 
 ## Notes
-- `migrate` is set from the `migrate` XML attribute in `schema/reference-schema.xml`.
+- `attributes.migrate` is set from the `migrate` XML attribute in `schema/reference-schema.xml`.
 - `TypeUtil.isPrimitiveType` checks a fixed list covering Java primitives and standard wrappers (`String`, `Integer`, `Long`, `Boolean`, `Date`, `Double`, `Float`, `Short`, `Byte`, `Character`, `BigDecimal`, `BigInteger`).
+- `isCollection()` / `isMap()` detect standard Java collection/map types by source name or ancestry.
 
 ## Key files
 - `src/main/java/migration4o/models/schema/DOSchemaClass.java`
+- `src/main/java/migration4o/models/schema/DOSchemaClassAttributes.java`
 - `src/main/java/migration4o/util/TypeUtil.java`

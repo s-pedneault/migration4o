@@ -14,7 +14,7 @@ Format transformation lives in `ValueUtil.formatFieldValue()` — it is **not on
 | Format a String value | `ValueUtil.formatFieldValue(stringValue, field)` |
 | Format any Object value | `ValueUtil.formatFieldValue(anyObject, field)` — converts with `String.valueOf` first |
 
-## Format keywords (stored in `field.format`, comma-separated, applied in order)
+## Format keywords (stored in `field.attributes.format`, comma-separated, applied in order)
 
 | Keyword | Effect |
 |---|---|

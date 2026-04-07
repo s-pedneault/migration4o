@@ -15,7 +15,8 @@ The current model stores **all fields** in a single flat array `schemaClass.fiel
 |---|---|
 | All fields on this class | `schemaClass.fields` (array, may be null) |
 | Set fields + establish parentClass back-links | `schemaClass.setFields(DOSchemaField[])` |
-| Find a field by destinationName | `schemaClass.findField(destinationName)` → null if absent |
+| Find a field by destinationName | `schemaClass.findFieldByDestinationName(destinationName)` → null if absent |
+| Find a field by source name | `schemaClass.findFieldBySourceName(sourceName)` → null if absent |
 
 ## Setting fields — always use `setFields`, not direct assignment
 
@@ -32,7 +33,7 @@ schemaClass.fields = new DOSchemaField[]{ field1, field2 };
 ```java
 if (schemaClass.fields != null) {
     for (DOSchemaField field : schemaClass.fields) {
-        if (!field.isExported) continue;
+        if (!field.attributes.isExported) continue;
         // process field
     }
 }
@@ -41,23 +42,26 @@ if (schemaClass.fields != null) {
 ## Finding a specific field
 
 ```java
-DOSchemaField f = schemaClass.findField("destinationFieldName"); // null if not found
+DOSchemaField f = schemaClass.findFieldByDestinationName("destinationFieldName"); // null if not found
+DOSchemaField g = schemaClass.findFieldBySourceName("rawDbFieldName");            // null if not found
 ```
 
 ## Manually collecting parent-chain fields (when inheritance matters)
 
 ```java
 List<DOSchemaField> inheritedFields = new ArrayList<>();
-String parentName = schemaClass.parentClassName;
+String parentName = schemaClass.attributes.parentClassName;
 while (parentName != null && !parentName.isEmpty()) {
-    DOSchemaClass parent = SchemaUtil.findClassByName(parentName, schema);
+    DOSchemaClass parent = schema.findClassByName(parentName);
     if (parent == null) break;
     if (parent.fields != null) Collections.addAll(inheritedFields, parent.fields);
-    parentName = parent.parentClassName;
+    parentName = parent.attributes.parentClassName;
 }
 ```
 
 ## Key files
+- `src/main/java/migration4o/models/schema/DOSchemaClass.java`
+- `src/main/java/migration4o/models/schema/DOSchemaField.java`
 - `src/main/java/migration4o/models/schema/DOSchemaClass.java`
 - `src/main/java/migration4o/models/schema/DOSchemaField.java`
 - `src/main/java/migration4o/util/SchemaUtil.java`

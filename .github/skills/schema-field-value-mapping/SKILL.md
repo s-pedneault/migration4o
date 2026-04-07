@@ -11,9 +11,9 @@ The mapping object is `DOSchemaValueMap`, stored on `field.valueMap`.
 
 | What you want | How to get it |
 |---|---|
-| Translate a raw DB value | `field.valueMap.getMappedValue(rawString)` — returns original if no match |
-| Is a value map configured? | `field.valueMap != null && !field.valueMap.isEmpty()` |
-| Inspect / edit the map | `field.valueMap` direct field access |
+| Translate a raw DB value | `field.attributes.valueMap.getMappedValue(rawString)` — returns original if no match |
+| Is a value map configured? | `field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()` |
+| Inspect / edit the map | `field.attributes.valueMap` direct field access |
 
 ## DOSchemaValueMap key methods
 
@@ -41,8 +41,8 @@ if (ValueUtil.shouldSkipField(rawValue, field, schema)) continue;
 String s = ValueUtil.formatFieldValue(rawValue, field);
 
 // 3. Value mapping
-if (field.valueMap != null && !field.valueMap.isEmpty()) {
-    s = field.valueMap.getMappedValue(s);
+if (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+    s = field.attributes.valueMap.getMappedValue(s);
 }
 
 // 4. Write
@@ -50,7 +50,7 @@ writer.writeField(field.destinationName, s);
 ```
 
 ## Notes
-- `field.valueMap` is `null` for the vast majority of fields — this is the common case.
+- `field.attributes.valueMap` is `null` for the vast majority of fields — this is the common case.
 - `getMappedValue` passes through unmapped values unchanged, so it is safe to call unconditionally after a null check.
 - Insertion order is preserved (backed by `LinkedHashMap`).
 

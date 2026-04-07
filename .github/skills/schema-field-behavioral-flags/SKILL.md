@@ -5,31 +5,34 @@ description: Check the behavioral flags on a DOSchemaField — whether it is exp
 
 # DOSchemaField — Behavioral Flags
 
-Three are direct boolean fields; two are methods with logic.
+All data properties live in `field.attributes` (`DOSchemaFieldAttributes`). The boolean flags are fields on `attributes`; virtual/shared detection are methods on `DOSchemaField` itself.
 
 ## Field / method map
 
 | What you want | How to get it |
 |---|---|
-| Is field included in export? | `field.isExported` (boolean field) |
-| Is field a collection? | `field.isCollection` (boolean field) |
-| Is field virtual (criteria-query)? | `field.isVirtualField()` → `source.startsWith("@")` |
-| Is field a shared-definition reference? | `field.isSharedField()` → `definitionId != null && !blank` |
-| Inline referenced object fields? | `field.embedContents` (boolean field) |
+| Is field included in export? | `field.attributes.isExported` (boolean) |
+| Is field a collection? | `field.attributes.isCollection` (boolean) |
+| Is field virtual (criteria-query)? | `field.isVirtualField()` → `attributes.source.startsWith("@")` |
+| Is field a method-call field? | `field.isMethodCallField()` → `attributes.source.endsWith("()")` |
+| Is field a shared-definition reference? | `field.isSharedField()` → `attributes.definitionId != null && !blank` |
+| Inline referenced object fields? | `field.attributes.embedContents` (boolean) |
 
 ## Routing logic in export engine
 
 ```java
-if (!field.isExported) {
+if (!field.attributes.isExported) {
     continue; // silently skip
 }
 
 if (field.isVirtualField()) {
-    // query DB using field.criterias / field.criteriasOperator
-} else if (field.isCollection) {
+    // query DB using field.attributes.criterias / field.attributes.criteriasOperator
+} else if (field.isMethodCallField()) {
+    // invoke field.getMethodCallName() on the object via reflection
+} else if (field.attributes.isCollection) {
     // extract collection, iterate using field.childrenSchemaClass
 } else {
-    // read scalar StoredField value from field.source
+    // read scalar StoredField value from field.attributes.source
 }
 ```
 
@@ -37,7 +40,7 @@ if (field.isVirtualField()) {
 
 ```java
 // Applies to both IDEntite fields and collection items
-if (field.embedContents) {
+if (field.attributes.embedContents) {
     // write all child/referenced fields inline as nested XML
 } else {
     // write only the numeric mID as a scalar value
@@ -48,7 +51,7 @@ if (field.embedContents) {
 
 ```java
 if (field.isSharedField()) {
-    DOSchemaField definition = schema.sharedFields.get(field.definitionId);
+    DOSchemaField definition = field.schema.sharedFields.get(field.attributes.definitionId);
     if (definition != null) {
         // use 'definition' for type, skipWhen, format, valueMap, etc.
     }
@@ -57,3 +60,4 @@ if (field.isSharedField()) {
 
 ## Key files
 - `src/main/java/migration4o/models/schema/DOSchemaField.java`
+- `src/main/java/migration4o/models/schema/DOSchemaFieldAttributes.java`

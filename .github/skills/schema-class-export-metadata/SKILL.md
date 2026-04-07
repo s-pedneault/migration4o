@@ -5,22 +5,23 @@ description: Produce a StructuredWriterMetadata instance for a DOSchemaClass wit
 
 # DOSchemaClass — Export Metadata
 
-`getMetadata(moduleName)` is a method on `DOSchemaClass` that returns a `StructuredWriterMetadata` object written into the XML file header.
+`getMetadata(moduleName, objectCount)` is a method on `DOSchemaClass` that returns a `StructuredWriterMetadata` object written into the XML file header.
 
 ## Method map
 
 | What you want | How to get it |
 |---|---|
-| Metadata for XML file header | `schemaClass.getMetadata(moduleName)` |
+| Metadata for XML file header | `schemaClass.getMetadata(moduleName, objectCount)` |
 
 ## What the returned object contains
 
 ```
-metadata.generator = "Migration4o"
-metadata.provider  = "Gestion Technologies"
-metadata.module    = moduleName  (empty string if null)
-metadata.type      = schemaClass.destinationName  (falls back to getSourceName() if null)
-metadata.objects   = String.valueOf(schemaClass.objectIds.length)  ("0" if objectIds is null)
+metadata.generator     = "Migration4o"
+metadata.schemaVersion = "2.0"
+metadata.provider      = "Gestion Technologies"
+metadata.module        = moduleName  (empty string if null)
+metadata.type          = schemaClass.attributes.destinationName  (falls back to getSourceName() if null)
+metadata.objects       = String.valueOf(objectCount)
 ```
 
 ## Example
@@ -28,7 +29,8 @@ metadata.objects   = String.valueOf(schemaClass.objectIds.length)  ("0" if objec
 ```java
 // In the export engine when opening an XML file for a class
 String moduleName = doSchemaModule.name; // e.g. "Intervention"
-StructuredWriterMetadata meta = schemaClass.getMetadata(moduleName);
+int objectCount = /* count of exported objects */;
+StructuredWriterMetadata meta = schemaClass.getMetadata(moduleName, objectCount);
 writer.writeMetadata(meta);
 
 // Accessing fields on the result
@@ -38,8 +40,9 @@ meta.module;   // owning module name
 ```
 
 ## Notes
-- `objectIds` is populated during the database scan phase before export begins. If missing, `objects` is `"0"`.
-- `destinationName` is preferred over `getSourceName()` for the `type` field.
+- `objectCount` must be provided by the caller (e.g. from the export counter or `DODatabaseClassObjects`).
+- `schemaClass.objectIds` is **deprecated** — do not read it for the object count. Use `DODatabaseClassObjects` instead.
+- `attributes.destinationName` is preferred over `getSourceName()` for the `type` field.
 - The module name comes from `DOSchemaModule.name`, resolved via `DOModuleService`.
 
 ## Key files
