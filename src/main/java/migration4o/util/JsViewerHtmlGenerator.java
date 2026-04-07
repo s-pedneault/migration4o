@@ -31,7 +31,10 @@ public final class JsViewerHtmlGenerator {
     private static final String TEMPLATE_RESOURCE = "/templates/class-viewer-template.html";
     private static final String WELCOME_TEMPLATE_RESOURCE = "/templates/welcome-template.html";
     private static final String SIDEBAR_CSS_RESOURCE = "/templates/sidebar.css";
-    private static final String SIDEBAR_NAV_JS_RESOURCE = "/templates/sidebar-nav.js";
+    /**
+     * Ordered list of JS module resources under {@code /templates/scripts/}. They are concatenated in this order to produce the sidebar JS embedded in every HTML viewer. The data-viewer modules (viewer-*.js) share a single IIFE whose open is in viewer-state.js and whose close is in viewer-wire.js; all intermediate files are function definitions.
+     */
+    private static final String[] SIDEBAR_NAV_JS_RESOURCES = { "/templates/scripts/nav-sidebar.js", "/templates/scripts/viewer-state.js", "/templates/scripts/viewer-schema.js", "/templates/scripts/viewer-data.js", "/templates/scripts/viewer-fieldpicker.js", "/templates/scripts/viewer-search.js", "/templates/scripts/viewer-results.js", "/templates/scripts/viewer-formatting.js", "/templates/scripts/viewer-rendering.js", "/templates/scripts/viewer-detail.js", "/templates/scripts/viewer-layout.js", "/templates/scripts/viewer-wire.js" };
 
     /**
      * Assets (classpath resources under {@code /assets/}) that are copied to the {@code _App/} sub-folder of every HTML export root. Add entries here to include new static files automatically on every export.
@@ -47,7 +50,7 @@ public final class JsViewerHtmlGenerator {
     private static volatile String cachedTemplate;
     private static volatile String cachedWelcomeTemplate;
     private static volatile String cachedSidebarCss;
-    private static volatile String cachedSidebarNavJs;
+    private static volatile String cachedSidebarNavJs; // concatenated result of all SIDEBAR_NAV_JS_RESOURCES
 
     /**
      * Export language code ({@code "fr"} or {@code "en"}). Set before HTML generation; replaces the {@code __EXPORT_LANGUAGE__} placeholder in the sidebar JS.
@@ -392,7 +395,12 @@ public final class JsViewerHtmlGenerator {
         synchronized (JsViewerHtmlGenerator.class) {
             if (cachedSidebarNavJs != null)
                 return cachedSidebarNavJs;
-            cachedSidebarNavJs = loadResource(SIDEBAR_NAV_JS_RESOURCE);
+            StringBuilder sb = new StringBuilder();
+            for (String resource : SIDEBAR_NAV_JS_RESOURCES) {
+                sb.append(loadResource(resource));
+                sb.append('\n');
+            }
+            cachedSidebarNavJs = sb.toString();
             return cachedSidebarNavJs;
         }
     }
