@@ -1867,6 +1867,39 @@ body {
     border-radius: 4px;
 }
 
+/* Turquoise button that reveals an attachment preview on click */
+.preview-reveal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 10px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #134e4a;
+    background: #ccfbf1;
+    border: 1px solid #5eead4;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.preview-reveal-btn:hover {
+    background: #99f6e4;
+    border-color: #2dd4bf;
+}
+
+.preview-reveal-img {
+    margin-top: 6px;
+}
+
+.preview-reveal-img img {
+    max-width: 100%;
+    max-height: 220px;
+    border-radius: 4px;
+    display: block;
+}
+
 /* ── Key Info Card ────────────────────────────────────────────────── */
 .detail-key-info {
     background: var(--c-surface);
@@ -2030,6 +2063,142 @@ body {
 }
 
 .collection-table tr:last-child td {
+    border-bottom: none;
+}
+
+/* ── Cell popup trigger button ─────────────────────────────────────── */
+.cell-popup-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #dcfce7;
+    color: #15803d;
+    border: 1px solid #86efac;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 7px;
+    cursor: pointer;
+    white-space: nowrap;
+    line-height: 1.5;
+    transition: background 0.1s, border-color 0.1s;
+}
+
+.cell-popup-btn:hover {
+    background: #bbf7d0;
+    border-color: #4ade80;
+}
+
+/* ── Cell popup: per-level overlay model ────────────────────────────── */
+/* Each popup gets its own full-screen overlay. The overlay for level N sits
+   on top of the overlay+dialog of level N-1, blocking interaction and
+   dimming everything below it. z-index is set inline by JS. */
+
+.cell-popup-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.35);
+    /* z-index set inline: 9000 + depth*20 */
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+}
+
+.cell-popup-overlay.open {
+    display: flex;
+}
+
+.cell-popup-dialog {
+    background: var(--c-surface, #fff);
+    border: 1px solid var(--c-border, #e2e8f0);
+    border-radius: var(--radius, 8px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: min(860px, 92vw);
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    /* slight cascading offset applied via margin by JS */
+}
+
+.cell-popup-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--c-border, #e2e8f0);
+    background: #f8fafc;
+    flex-shrink: 0;
+}
+
+.cell-popup-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.35px;
+    color: var(--c-text-secondary, #475569);
+}
+
+.cell-popup-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    color: var(--c-text-muted, #94a3b8);
+    padding: 2px 5px;
+    line-height: 1;
+    border-radius: 4px;
+}
+
+.cell-popup-close:hover {
+    background: var(--c-hover, #f1f5f9);
+    color: var(--c-text-primary, #0f172a);
+}
+
+.cell-popup-body {
+    overflow-y: auto;
+    padding: 12px;
+    flex: 1;
+}
+
+.popup-empty {
+    color: var(--c-text-muted, #94a3b8);
+    padding: 16px;
+    text-align: center;
+    margin: 0;
+}
+
+/* Key-value table for single-item popups */
+.popup-kv-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.popup-kv-table th {
+    width: 38%;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--c-text-secondary, #475569);
+    background: var(--c-surface-alt, #f8fafc);
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--c-border, #e2e8f0);
+    vertical-align: top;
+}
+
+.popup-kv-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--c-border, #e2e8f0);
+    vertical-align: top;
+    color: var(--c-text-primary, #0f172a);
+}
+
+.popup-kv-table tr:last-child th,
+.popup-kv-table tr:last-child td {
     border-bottom: none;
 }
 

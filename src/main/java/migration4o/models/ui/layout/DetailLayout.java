@@ -348,8 +348,6 @@ public class DetailLayout {
         for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
             if (!sf.attributes.isExported || sf.attributes.source == null)
                 continue;
-            if (sf.attributes.isCollection)
-                continue;
             colNames.add(sf.attributes.destinationName != null ? sf.attributes.destinationName : sf.attributes.source);
             colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
         }
@@ -521,7 +519,7 @@ public class DetailLayout {
                 tab.setProp("title", agGetFieldLabel(f));
                 LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
                 table.setProp("ref", f.attributes.source);
-                agAddTableColumns(table, f, refSchema);
+                translateTableColumns(table, f, refSchema);
                 tab.children.add(table);
                 tabs.children.add(tab);
             }
@@ -533,7 +531,7 @@ public class DetailLayout {
                 section.setProp("collapsible", "true");
                 LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
                 table.setProp("ref", f.attributes.source);
-                agAddTableColumns(table, f, refSchema);
+                translateTableColumns(table, f, refSchema);
                 section.children.add(table);
                 layout.nodes.add(section);
             }
@@ -546,7 +544,7 @@ public class DetailLayout {
             section.setProp("collapsible", "true");
             LayoutNode table = new LayoutNode(LayoutNodeType.TABLE);
             table.setProp("ref", f.attributes.source);
-            agAddTableColumns(table, f, refSchema);
+            translateTableColumns(table, f, refSchema);
             section.children.add(table);
             layout.nodes.add(section);
         }
@@ -750,27 +748,4 @@ public class DetailLayout {
         }
     }
 
-    private static void agAddTableColumns(LayoutNode table, DOSchemaField collectionField, DOSchema refSchema) {
-        String childType = collectionField.attributes.childrenType;
-        if (childType == null || TypeUtil.isPrimitiveType(childType))
-            return;
-        DOSchemaClass childClass = refSchema.findClassByName(childType);
-        if (childClass == null)
-            return;
-        List<String> colNames = new ArrayList<>();
-        List<String> colTitles = new ArrayList<>();
-        for (DOSchemaField sf : DatabaseUtil.getAllSchemaFieldsIncludingAncestors(childClass, refSchema)) {
-            if (!sf.attributes.isExported || sf.attributes.source == null)
-                continue;
-            if (sf.attributes.isCollection)
-                continue;
-            colNames.add(sf.attributes.source);
-            colTitles.add(sf.attributes.title != null ? sf.attributes.title : "");
-        }
-        if (!colNames.isEmpty()) {
-            table.setProp("columns", String.join(",", colNames));
-            if (colTitles.stream().anyMatch(t -> t != null && !t.isBlank()))
-                table.setProp("columnTitles", String.join(",", colTitles));
-        }
-    }
 }
