@@ -89,11 +89,76 @@ function fmtValueWithFormat(value, formatSpec, key) {
 }
 
 function renderLayoutDetail(data, layout) {
-    var html = '';
-    for (var i = 0; i < layout.length; i++) {
-        html += renderLayoutNode(data, layout[i], 'detail');
+    return renderLayoutChildren(data, layout, 'detail');
+}
+
+/**
+ * Checks whether all non-empty field children of a section resolve to complex
+ * embedded objects (not references, not arrays). Returns an array of {label, value}
+ * pairs if ≥2 such fields exist and no other content types are present; otherwise
+ * returns null (tab-view is not applicable for this section).
+ */
+function _collectComplexObjectFields(data, children) {
+    var complex = [];
+    var nonEmptyCount = 0;
+    for (var i = 0; i < children.length; i++) {
+        var child = children[i];
+        if (child.type === 'divider') continue;
+        if (child.type !== 'field') return null;
+        var cp = child.props || {};
+        if (!cp.ref) continue;
+        var fVal = unwrapClassWrapper(resolveFieldValue(data, cp.ref));
+        if (fVal === null || fVal === undefined) continue;
+        if (typeof fVal === 'string' && fVal.trim() === '') continue;
+        nonEmptyCount++;
+        if (typeof fVal !== 'object' || Array.isArray(fVal) || fVal._id !== undefined) {
+            return null;
+        }
+        complex.push({ label: cp.label || displayFieldLabel(cp.ref), value: fVal });
     }
-    return html;
+    return complex.length >= 2 && complex.length === nonEmptyCount ? complex : null;
+}
+
+/**
+ * Identifies table columns whose values are consistently flat complex objects
+ * (no arrays, no nested objects, no _id references). Returns a map from column
+ * key to an array of sub-field keys. Only non-dotted columns are evaluated.
+ */
+function _detectColumnExpansions(items, cols) {
+    var expansions = {};
+    cols.forEach(function (col) {
+        if (col.indexOf('.') >= 0) return;
+        var subKeys = null;
+        var allFlat = true;
+        for (var i = 0; i < items.length && allFlat; i++) {
+            var v = unwrapClassWrapper((items[i] && typeof items[i] === 'object') ? items[i][col] : undefined);
+            if (v === null || v === undefined) continue;
+            if (typeof v !== 'object' || Array.isArray(v) || v._id !== undefined || v._label !== undefined) {
+                allFlat = false;
+                break;
+            }
+            var keys = Object.keys(v).filter(function (k) { return k.charAt(0) !== '_'; });
+            if (keys.length === 0) { allFlat = false; break; }
+            for (var ki = 0; ki < keys.length && allFlat; ki++) {
+                var fv = v[keys[ki]];
+                if (fv !== null && fv !== undefined && typeof fv === 'object' && !Array.isArray(fv) && fv._label === undefined) {
+                    allFlat = false;
+                }
+                if (Array.isArray(fv)) { allFlat = false; }
+            }
+            if (allFlat) {
+                if (subKeys === null) {
+                    subKeys = keys.slice();
+                } else {
+                    keys.forEach(function (k) { if (subKeys.indexOf(k) < 0) subKeys.push(k); });
+                }
+            }
+        }
+        if (allFlat && subKeys && subKeys.length > 0) {
+            expansions[col] = subKeys;
+        }
+    });
+    return expansions;
 }
 
 function renderLayoutNode(data, node, ctx) {
@@ -114,6 +179,35 @@ function renderLayoutNode(data, node, ctx) {
             if (p.hilite) titleInline += 'background-color:' + esc(p.hilite) + ';';
             if (p.style) titleInline += layoutStyleFont(p.style);
             var titleAttr = titleInline ? ' style="' + titleInline + '"' : '';
+            // Tab view: when all non-empty field children are complex embedded objects
+            // (≥2 required), replace the list of popup buttons with a vertical tab strip.
+            // Skip for collapsible-ref sections — those produce a popup for the whole section.
+            if (!collapsible || !p.ref) {
+                var _fieldsToTab = _collectComplexObjectFields(data, children);
+                if (_fieldsToTab !== null) {
+                    var _tabId = 'lt' + (collectionIdCounter++);
+                    var _tabHtml = '<div class="layout-tabs">';
+                    if (p.title) _tabHtml += '<div class="layout-tabs-header">' + esc(p.title) + '</div>';
+                    _tabHtml += '<div class="tab-bar" data-tabgroup="' + _tabId + '">';
+                    _fieldsToTab.forEach(function (field, idx) {
+                        _tabHtml += '<button type="button" data-tab-target="' + _tabId + '-' + idx + '"'
+                            + (idx === 0 ? ' class="active"' : '') + '>' + esc(field.label) + '</button>';
+                    });
+                    _tabHtml += '</div>';
+                    _fieldsToTab.forEach(function (field, idx) {
+                        var _objClass = field.value._class || null;
+                        var _objLayout = (_objClass && typeof CLASS_LAYOUTS !== 'undefined' && CLASS_LAYOUTS) ? CLASS_LAYOUTS[_objClass] : null;
+                        var _tabContent = _objLayout
+                            ? renderLayoutDetail(field.value, _objLayout)
+                            : renderObjectSection(field.label, field.value, 'embedded');
+                        if (!_tabContent.trim()) _tabContent = '<div class="tab-empty">' + esc(t('emptyTab')) + '</div>';
+                        _tabHtml += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + _tabId + '-' + idx + '">'
+                            + _tabContent + '</div>';
+                    });
+                    _tabHtml += '</div>';
+                    return _tabHtml;
+                }
+            }
             var _sBody = renderLayoutChildren(data, children, ctx);
             if (p.ref) {
                 var _sData = unwrapClassWrapper(resolveFieldValue(data, p.ref));
@@ -132,7 +226,7 @@ function renderLayoutNode(data, node, ctx) {
                 var _nestedSummary = (_sData && _sData._summary) ? String(_sData._summary) : null;
                 var _hpIdx = _registerHtmlPopup(_sBody);
                 return '<div class="field-row"><div class="field-label">' + esc(_nestedLabel)
-                    + '</div><div class="field-value">' + _htmlPopupBtn(_hpIdx, _nestedLabel, _nestedSummary || _nestedLabel) + '</div></div>';
+                    + '</div><div class="field-value">' + _popupBtn(_hpIdx, _nestedLabel, _nestedSummary || _nestedLabel) + '</div></div>';
             }
             if (collapsible && ctx !== 'detail') {
                 return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
@@ -180,8 +274,9 @@ function renderLayoutNode(data, node, ctx) {
                 }
                 // Complex embedded object: open in a popup.
                 var _embIdx = _registerPopup([scalarVal]);
+                var _embText = scalarVal._summary || scalarVal._label || label;
                 return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
-                    + '</div><div class="field-value">' + _cellPopupBtn(_embIdx, label, '\u25a6') + '</div></div>';
+                    + '</div><div class="field-value">' + _popupBtn(_embIdx, label, _embText) + '</div></div>';
             }
             if (Array.isArray(scalarVal)) {
                 return renderValue(label, scalarVal, 'embedded');
@@ -233,39 +328,84 @@ function renderLayoutNode(data, node, ctx) {
             var headerStyle = '';
             if (p.color) headerStyle += 'color:' + esc(p.color) + ';';
             if (p.hilite) headerStyle += 'background-color:' + esc(p.hilite) + ';';
+            // Detect columns whose values are uniformly flat complex objects → expand into sub-columns.
+            var expansions = _detectColumnExpansions(items, cols);
+            var hasExpansions = Object.keys(expansions).length > 0;
+            var effectiveCols = cols.map(function (col, idx) {
+                var label = (colTitles[idx] && colTitles[idx].length > 0) ? colTitles[idx] : displayFieldLabel(col);
+                var width = widths[idx] ? ' style="width:' + esc(widths[idx]) + '%"' : '';
+                var subKeys = expansions[col] || null;
+                return {
+                    key: col,
+                    label: label,
+                    width: width,
+                    subCols: subKeys ? subKeys.map(function (sk) { return { key: sk, label: displayFieldLabel(sk) }; }) : null
+                };
+            });
             var thtml = bare
-                ? '<div style="padding:8px 12px;overflow-x:auto;"><span class="summary-meta" style="display:block;text-align:right;margin-bottom:4px;">' + items.length + ' ' + esc(t('elements')) + '</span><table class="collection-table"><thead><tr>'
+                ? '<div style="padding:8px 12px;overflow-x:auto;"><span class="summary-meta" style="display:block;text-align:right;margin-bottom:4px;">' + items.length + ' ' + esc(t('elements')) + '</span><table class="collection-table"><thead>'
                 : '<details class="detail-section" open><summary' + (headerStyle ? ' style="' + headerStyle + '"' : '') + '><span class="summary-title">'
                 + esc(displayFieldLabel(p.ref)) + '</span><span class="summary-meta">' + items.length + ' ' + esc(t('elements'))
-                + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead><tr>';
-            cols.forEach(function (col, idx) {
-                var w = widths[idx] ? ' style="width:' + esc(widths[idx]) + '%"' : '';
-                var thText = (colTitles[idx] && colTitles[idx].length > 0) ? colTitles[idx] : displayFieldLabel(col);
-                thtml += '<th' + w + '>' + esc(thText) + '</th>';
-            });
-            thtml += '</tr></thead><tbody>';
+                + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead>';
+            if (hasExpansions) {
+                // Two-row header: plain columns span both rows; group columns show sub-column labels in row 2.
+                thtml += '<tr>';
+                effectiveCols.forEach(function (ec) {
+                    if (ec.subCols) {
+                        thtml += '<th class="col-group" colspan="' + ec.subCols.length + '"' + ec.width + '>' + esc(ec.label) + '</th>';
+                    } else {
+                        thtml += '<th rowspan="2"' + ec.width + '>' + esc(ec.label) + '</th>';
+                    }
+                });
+                thtml += '</tr><tr>';
+                effectiveCols.forEach(function (ec) {
+                    if (!ec.subCols) return;
+                    ec.subCols.forEach(function (sub) {
+                        thtml += '<th>' + esc(sub.label) + '</th>';
+                    });
+                });
+                thtml += '</tr>';
+            } else {
+                thtml += '<tr>';
+                effectiveCols.forEach(function (ec) {
+                    thtml += '<th' + ec.width + '>' + esc(ec.label) + '</th>';
+                });
+                thtml += '</tr>';
+            }
+            thtml += '</thead><tbody>';
             items.forEach(function (item) {
                 thtml += '<tr>';
-                cols.forEach(function (col) {
-                    var cellVal = col.indexOf('.') >= 0 ? resolveFieldValue(item, col)
-                        : (item && typeof item === 'object') ? item[col] : item;
-                    // Unwrap class-name wrapper from embedded object export
-                    cellVal = unwrapClassWrapper(cellVal);
-                    // Object cell: labeled scalars render inline; all other objects open as popup.
-                    if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
-                        if (cellVal._label !== undefined) {
-                            cellVal = cellVal._label; // fall through to scalar render below
-                        } else {
-                            var _oidx = _registerPopup([cellVal]);
-                            thtml += '<td>' + _cellPopupBtn(_oidx, displayFieldLabel(col), '\u25a6') + '</td>';
-                            return;
-                        }
-                    }
-                    if (Array.isArray(cellVal)) {
-                        if (cellVal.length === 0) { thtml += '<td></td>'; }
-                        else { var _pidx = _registerPopup(cellVal); thtml += '<td>' + _cellPopupBtn(_pidx, displayFieldLabel(col), cellVal.length) + '</td>'; }
+                effectiveCols.forEach(function (ec) {
+                    if (ec.subCols) {
+                        // Expanded column: one cell per sub-field of the embedded object.
+                        var colObj = unwrapClassWrapper((item && typeof item === 'object') ? item[ec.key] : null);
+                        ec.subCols.forEach(function (sub) {
+                            var subVal = (colObj && typeof colObj === 'object') ? colObj[sub.key] : null;
+                            subVal = unwrapClassWrapper(subVal);
+                            if (subVal && typeof subVal === 'object' && !Array.isArray(subVal) && subVal._label !== undefined) subVal = subVal._label;
+                            thtml += '<td>' + fmtValue(subVal, sub.key) + '</td>';
+                        });
                     } else {
-                        thtml += '<td>' + fmtValue(cellVal, col) + '</td>';
+                        var col = ec.key;
+                        var cellVal = col.indexOf('.') >= 0 ? resolveFieldValue(item, col)
+                            : (item && typeof item === 'object') ? item[col] : item;
+                        cellVal = unwrapClassWrapper(cellVal);
+                        if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
+                            if (cellVal._label !== undefined) {
+                                cellVal = cellVal._label; // fall through to scalar render below
+                            } else {
+                                var _oidx = _registerPopup([cellVal]);
+                                var _oText = cellVal._summary || cellVal._label || displayFieldLabel(col);
+                                thtml += '<td>' + _popupBtn(_oidx, displayFieldLabel(col), _oText) + '</td>';
+                                return;
+                            }
+                        }
+                        if (Array.isArray(cellVal)) {
+                            if (cellVal.length === 0) { thtml += '<td></td>'; }
+                            else { var _pidx = _registerPopup(cellVal); thtml += '<td>' + _popupBtn(_pidx, displayFieldLabel(col), displayFieldLabel(col)) + '</td>'; }
+                        } else {
+                            thtml += '<td>' + fmtValue(cellVal, col) + '</td>';
+                        }
                     }
                 });
                 thtml += '</tr>';
@@ -312,10 +452,54 @@ function layoutStyleFont(style) {
     }
 }
 
+function _renderCollapsibleSectionsAsTabs(data, sections, ctx) {
+    var tabId = 'lt' + (collectionIdCounter++);
+    var html = '<div class="layout-tabs"><div class="tab-bar" data-tabgroup="' + tabId + '">';
+    sections.forEach(function (node, idx) {
+        var p = node.props || {};
+        var label = p.title || displayFieldLabel(p.ref);
+        html += '<button type="button" data-tab-target="' + tabId + '-' + idx + '"'
+            + (idx === 0 ? ' class="active"' : '') + '>' + esc(label) + '</button>';
+    });
+    html += '</div>';
+    sections.forEach(function (node, idx) {
+        var p = node.props || {};
+        // Mirror the original case 'section' path exactly:
+        // children render against the parent data (their refs are fully qualified from root).
+        // _sData is only used for _preview metadata.
+        var tabContent = renderLayoutChildren(data, node.children || [], ctx);
+        var _sData = unwrapClassWrapper(resolveFieldValue(data, p.ref));
+        if (_sData && typeof _sData === 'object' && !Array.isArray(_sData)) {
+            tabContent = renderPreview(_sData._preview) + tabContent;
+        }
+        if (!tabContent.trim()) tabContent = '<div class="tab-empty">' + esc(t('emptyTab')) + '</div>';
+        html += '<div class="tab-panel' + (idx === 0 ? ' active' : '') + '" data-tab-id="' + tabId + '-' + idx + '">'
+            + tabContent + '</div>';
+    });
+    html += '</div>';
+    return html;
+}
+
 function renderLayoutChildren(data, children, ctx) {
     var html = '';
-    for (var i = 0; i < children.length; i++) {
-        html += renderLayoutNode(data, children[i], ctx);
+    var i = 0;
+    while (i < children.length) {
+        var node = children[i];
+        var np = node.props || {};
+        if (node.type === 'section' && np.collapsible === 'true' && np.ref) {
+            var run = [];
+            while (i < children.length) {
+                var rn = children[i]; var rp = rn.props || {};
+                if (rn.type === 'section' && rp.collapsible === 'true' && rp.ref) { run.push(rn); i++; }
+                else break;
+            }
+            html += run.length >= 2
+                ? _renderCollapsibleSectionsAsTabs(data, run, ctx)
+                : renderLayoutNode(data, run[0], ctx);
+        } else {
+            html += renderLayoutNode(data, node, ctx);
+            i++;
+        }
     }
     return html;
 }

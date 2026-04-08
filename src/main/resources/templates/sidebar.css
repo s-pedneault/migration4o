@@ -2601,6 +2601,13 @@ body {
     background: #dde2ec;
 }
 
+/* Group header spanning multiple sub-columns (column-expansion feature) */
+.collection-table thead th.col-group {
+    text-align: center;
+    border-bottom: 1px solid var(--c-border);
+    background: linear-gradient(to bottom, #dde2ec, #d4dae8);
+}
+
 .collection-table thead th .sort-indicator {
     font-size: 10px;
     margin-left: 4px;

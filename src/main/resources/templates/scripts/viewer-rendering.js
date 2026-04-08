@@ -252,15 +252,23 @@ function extractLayoutFields(nodes) {
     return result;
 }
 
-// ── Cell popup: registry + render + stacked open/close ───────────────────
-// _cellPopupRegistry holds arrays encountered during render, referenced by
+// ── Popup: single registry + render + stacked open/close ─────────────────
+// _popupRegistry holds entries { type: 'data'|'html', content } referenced by
 // integer index from inline onclick handlers. Never reset — indices are stable.
-var _cellPopupRegistry = [];
-var _cellPopupStack = [];   // stack of live dialog elements
+var _popupRegistry = [];
+var _cellPopupStack = [];   // stack of live overlay elements
 
+// Register an array of data objects — rendered by renderPopupTable at open time.
 function _registerPopup(items) {
-    var idx = _cellPopupRegistry.length;
-    _cellPopupRegistry.push(items);
+    var idx = _popupRegistry.length;
+    _popupRegistry.push({ type: 'data', content: items });
+    return idx;
+}
+
+// Register a pre-rendered HTML string — injected directly at open time.
+function _registerHtmlPopup(html) {
+    var idx = _popupRegistry.length;
+    _popupRegistry.push({ type: 'html', content: html });
     return idx;
 }
 
@@ -271,11 +279,48 @@ var _POPUP_ICON = '<svg width="11" height="11" viewBox="0 0 14 14" fill="current
     + '<rect x="1" y="1" width="6" height="6" rx="1" ry="1" fill="var(--c-surface,#fff)"/>'
     + '</svg>';
 
-// Green trigger button placed in the table cell.
-function _cellPopupBtn(idx, label, count) {
-    var safe = String(label).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return '<button type="button" class="cell-popup-btn" onclick="window.openCellPopup(' + idx + ',\'' + safe + '\')">'
-        + count + _POPUP_ICON + '</button>';
+// Single popup trigger button used everywhere.
+function _popupBtn(idx, title, displayText) {
+    var safe = String(title).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    return '<button type="button" class="cell-popup-btn" onclick="window.openPopup(' + idx + ',\'' + safe + '\')">'
+        + esc(String(displayText || title)) + _POPUP_ICON + '</button>';
+}
+
+// Renders a single table cell value. Used by both renderPopupTable and
+// renderCollectionSection — the single place where object→popup routing lives.
+// col is { key, label }. Returns an HTML string or null (→ render as empty).
+function renderTableCell(v, col) {
+    if (v === null || v === undefined) return null;
+    if (col.key === '_preview') {
+        var _prevSrc = extractPreviewSrc(v);
+        if (!_prevSrc) return null;
+        var _CLIP = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
+            + '<path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"/>'
+            + '</svg>';
+        var _ss = _prevSrc.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        return '<button type="button" class="preview-reveal-btn" onclick="window.openPreviewPopup(\'' + _ss + '\',\'Fichier\')">' + _CLIP + 'Fichier</button>';
+    }
+    if (Array.isArray(v)) {
+        if (v.length === 0) return null;
+        var _pi = _registerPopup(v);
+        return _popupBtn(_pi, col.label, col.label);
+    }
+    if (v && typeof v === 'object') {
+        if (v._id !== undefined) {
+            var _rId = String(v._id ?? '').trim();
+            var _rTxt = String(v._label || v._summary || _rId || '').trim();
+            if (!_rTxt || _rTxt === '0' || _rTxt === '-1') return null;
+            var _rDN = pointsToByPath[normalizeSchemaPath(col.key)] || (v._class ? v._class : null);
+            var _rHr = _rDN ? navHrefByDestName[_rDN] : null;
+            var _rLk = (_rHr && _rId && _rId !== '0' && _rId !== '-1') ? _rHr + '?open=' + encodeURIComponent(_rId) : null;
+            return _rLk ? refLinkBtn(_rLk, _rTxt) : esc(_rTxt);
+        }
+        if (v._label !== undefined) return fmtValue(String(v._label || '').trim(), col.key);
+        // Any other complex object: open as popup.
+        var _oi = _registerPopup([v]);
+        return _popupBtn(_oi, col.label, v._summary || v._label || col.label);
+    }
+    return fmtValueWithFormat(v, null, col.key);
 }
 
 // Renders items as a <table> inside the popup. Array cells get their own
@@ -301,48 +346,13 @@ function renderPopupTable(items) {
     var _hasPreview = items.some(function (ri) { var it = unwrapClassWrapper(ri); return it && it._preview; });
     if (_hasPreview) cols.push({ key: '_preview', label: 'Aperçu' });
 
-    // Shared cell renderer — returns HTML string or null (skip row/cell).
-    function _renderCellValue(v, col) {
-        if (v === null || v === undefined) return null;
-        if (col.key === '_preview') {
-            var _prevSrc = extractPreviewSrc(v);
-            if (!_prevSrc) return null;
-            var _CLIP = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
-                + '<path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"/>'
-                + '</svg>';
-            var _ss = _prevSrc.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-            return '<button type="button" class="preview-reveal-btn" onclick="window.openPreviewPopup(\'' + _ss + '\',\'Fichier\')">' + _CLIP + 'Fichier</button>';
-        }
-        if (Array.isArray(v)) {
-            if (v.length === 0) return null;
-            var _pi = _registerPopup(v);
-            return _cellPopupBtn(_pi, col.label, v.length);
-        }
-        if (v && typeof v === 'object') {
-            if (v._id !== undefined) {
-                var _rId = String(v._id ?? '').trim();
-                var _rTxt = String(v._label || v._summary || _rId || '').trim();
-                if (!_rTxt || _rTxt === '0' || _rTxt === '-1') return null;
-                var _rDN = pointsToByPath[normalizeSchemaPath(col.key)] || (v._class ? v._class : null);
-                var _rHr = _rDN ? navHrefByDestName[_rDN] : null;
-                var _rLk = (_rHr && _rId && _rId !== '0' && _rId !== '-1') ? _rHr + '?open=' + encodeURIComponent(_rId) : null;
-                return _rLk ? refLinkBtn(_rLk, _rTxt) : esc(_rTxt);
-            }
-            if (v._label !== undefined) return fmtValue(String(v._label || '').trim(), col.key);
-            if (v._summary) return fmtValue(String(v._summary || '').trim(), col.key);
-            var _oi = _registerPopup([v]);
-            return _cellPopupBtn(_oi, col.label, '\u25a6');
-        }
-        return fmtValueWithFormat(v, null, col.key);
-    }
-
     // Single item: 2-column key/value table.
     if (items.length === 1) {
         var singleItem = unwrapClassWrapper(items[0]);
         var html = '<table class="popup-kv-table">';
         cols.forEach(function (col) {
             var v = _layout ? resolveFieldValue(singleItem, col.key) : (singleItem ? singleItem[col.key] : undefined);
-            var cell = _renderCellValue(unwrapClassWrapper(v), col);
+            var cell = renderTableCell(unwrapClassWrapper(v), col);
             if (cell !== null) html += '<tr><th>' + esc(col.label) + '</th><td>' + cell + '</td></tr>';
         });
         html += '</table>';
@@ -358,7 +368,7 @@ function renderPopupTable(items) {
         html += '<tr>';
         cols.forEach(function (col) {
             var v = _layout ? resolveFieldValue(item, col.key) : (item ? item[col.key] : undefined);
-            var cell = _renderCellValue(unwrapClassWrapper(v), col);
+            var cell = renderTableCell(unwrapClassWrapper(v), col);
             html += cell !== null ? '<td>' + cell + '</td>' : '<td></td>';
         });
         html += '</tr>';
@@ -367,32 +377,31 @@ function renderPopupTable(items) {
     return html;
 }
 
-// Each openCellPopup call creates a fresh full-screen overlay that contains
-// the dialog. The overlay for level N covers — and thus dims and blocks —
-// everything at level N-1 and below. Closing pops only the topmost overlay.
-function openCellPopup(idx, title) {
+// Single open function: dispatches on entry type.
+function openPopup(idx, title) {
+    var entry = _popupRegistry[idx];
     var depth = _cellPopupStack.length;
     var overlay = document.createElement('div');
     overlay.className = 'cell-popup-overlay open';
     overlay.style.zIndex = String(9000 + depth * 20);
-    // Clicking the dim area (not the dialog) closes this popup only.
     overlay.addEventListener('click', function (e) {
         if (e.target === overlay) window.closeCellPopup();
     });
     var offsetPx = depth * 20;
+    var body = entry.type === 'html' ? entry.content : renderPopupTable(entry.content);
     overlay.innerHTML = '<div class="cell-popup-dialog" style="margin-top:' + offsetPx + 'px;margin-left:' + offsetPx + 'px">'
         + '<div class="cell-popup-header">'
         + '<span class="cell-popup-title">' + esc(title) + '</span>'
         + '<button type="button" class="cell-popup-close" onclick="window.closeCellPopup()">&#x2715;</button>'
         + '</div>'
-        + '<div class="cell-popup-body">' + renderPopupTable(_cellPopupRegistry[idx]) + '</div>'
+        + '<div class="cell-popup-body">' + body + '</div>'
         + '</div>';
     document.body.appendChild(overlay);
     _cellPopupStack.push(overlay);
 }
-window.openCellPopup = openCellPopup;
+window.openPopup = openPopup;
 
-// Opens an image attachment in a stacked popup — same stack as openCellPopup.
+// Opens an image attachment in a stacked popup — same stack as openPopup.
 function openPreviewPopup(src, title) {
     var depth = _cellPopupStack.length;
     var overlay = document.createElement('div');
@@ -422,36 +431,6 @@ function closeCellPopup() {
 }
 window.closeCellPopup = closeCellPopup;
 
-// HTML popup: for pre-rendered layout sections (collapsible section with ref).
-var _htmlPopupRegistry = [];
-function _registerHtmlPopup(html) {
-    var idx = _htmlPopupRegistry.length;
-    _htmlPopupRegistry.push(html);
-    return idx;
-}
-function _htmlPopupBtn(idx, title, displayText) {
-    var safe = String(title).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-    return '<button type="button" class="cell-popup-btn" onclick="window.openHtmlPopup(' + idx + ',\'' + safe + '\')">' + esc(String(displayText || title)) + _POPUP_ICON + '</button>';
-}
-function openHtmlPopup(idx, title) {
-    var depth = _cellPopupStack.length;
-    var overlay = document.createElement('div');
-    overlay.className = 'cell-popup-overlay open';
-    overlay.style.zIndex = String(9000 + depth * 20);
-    overlay.addEventListener('click', function (e) { if (e.target === overlay) window.closeCellPopup(); });
-    var offsetPx = depth * 20;
-    overlay.innerHTML = '<div class="cell-popup-dialog" style="margin-top:' + offsetPx + 'px;margin-left:' + offsetPx + 'px">'
-        + '<div class="cell-popup-header">'
-        + '<span class="cell-popup-title">' + esc(title) + '</span>'
-        + '<button type="button" class="cell-popup-close" onclick="window.closeCellPopup()">&#x2715;</button>'
-        + '</div>'
-        + '<div class="cell-popup-body">' + _htmlPopupRegistry[idx] + '</div>'
-        + '</div>';
-    document.body.appendChild(overlay);
-    _cellPopupStack.push(overlay);
-}
-window.openHtmlPopup = openHtmlPopup;
-
 function renderCollectionSection(label, items, ctx) {
     // If items have a _class with a known layout, render as a layout-driven table
     var _firstItem = items.length > 0 ? unwrapClassWrapper(items[0]) : null;
@@ -472,27 +451,11 @@ function renderCollectionSection(label, items, ctx) {
                 var cellVal = resolveFieldValue(itemData, col);
                 cellVal = unwrapClassWrapper(cellVal);
                 if (cellVal === null || cellVal === undefined) { tableHtml += '<td></td>'; return; }
-                if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
-                    if (cellVal._label !== undefined) {
-                        var _lbText = String(cellVal._label || '').trim();
-                        tableHtml += '<td>' + (_lbText ? fmtValue(_lbText, col) : '') + '</td>';
-                    } else if (cellVal._id !== undefined) {
-                        var _refId = String(cellVal._id ?? '').trim();
-                        var _refText = String(cellVal._label || cellVal._summary || _refId || '').trim();
-                        if (!_refText || _refText === '0' || _refText === '-1') { tableHtml += '<td></td>'; return; }
-                        var _refPtDN = pointsToByPath[normalizeSchemaPath(col)];
-                        var _refPtHr = _refPtDN ? navHrefByDestName[_refPtDN] : null;
-                        var _refLk = (_refPtHr && _refId && _refId !== '0' && _refId !== '-1')
-                            ? _refPtHr + '?open=' + encodeURIComponent(_refId) : null;
-                        tableHtml += '<td>' + (_refLk ? refLinkBtn(_refLk, _refText) : esc(_refText)) + '</td>';
-                    } else if (cellVal._summary) {
-                        tableHtml += '<td>' + fmtValue(String(cellVal._summary || '').trim(), col) + '</td>';
-                    } else {
-                        tableHtml += '<td>' + esc(JSON.stringify(cellVal)) + '</td>';
-                    }
-                } else if (Array.isArray(cellVal)) {
-                    if (cellVal.length === 0) { tableHtml += '<td></td>'; }
-                    else { var _pidx = _registerPopup(cellVal); tableHtml += '<td>' + _cellPopupBtn(_pidx, f.label, cellVal.length) + '</td>'; }
+                var _col = { key: col, label: f.label };
+                if (Array.isArray(cellVal)) {
+                    tableHtml += '<td>' + (renderTableCell(cellVal, _col) || '') + '</td>';
+                } else if (cellVal && typeof cellVal === 'object') {
+                    tableHtml += '<td>' + (renderTableCell(cellVal, _col) || '') + '</td>';
                 } else {
                     tableHtml += '<td>' + fmtValueWithFormat(cellVal, null, col) + '</td>';
                 }
