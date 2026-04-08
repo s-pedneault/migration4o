@@ -217,13 +217,17 @@ function renderLayoutNode(data, node, ctx) {
             }
             // Nothing to show — suppress the entire section wrapper
             if (!_sBody.trim()) return '';
-            // Nested embedded section (collapsible + has ref): render as
-            // a field-row with the title on the left and a pre-collapsed
-            // details block of children on the right, so it sits inline
-            // with sibling field rows instead of a big blue header.
+            // Nested embedded section (collapsible + has ref): small objects (< 15 fields)
+            // render inline as a titled section; large objects open as a popup button.
             if (collapsible && p.ref) {
                 var _nestedLabel = p.title || displayFieldLabel(p.ref);
                 var _nestedSummary = (_sData && _sData._summary) ? String(_sData._summary) : null;
+                var _fieldCount = _sData ? Object.keys(_sData).filter(function (k) { return k.charAt(0) !== '_'; }).length : 0;
+                if (_fieldCount < 15) {
+                    return '<div class="detail-section"><div class="section-body">'
+                        + '<div class="layout-section-title" style="padding:8px 12px;' + titleInline + '">' + esc(_nestedLabel) + '</div>'
+                        + _sBody + '</div></div>';
+                }
                 var _hpIdx = _registerHtmlPopup(_sBody);
                 return '<div class="field-row"><div class="field-label">' + esc(_nestedLabel)
                     + '</div><div class="field-value">' + _popupBtn(_hpIdx, _nestedLabel, _nestedSummary || _nestedLabel) + '</div></div>';
