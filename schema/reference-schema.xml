@@ -2793,7 +2793,7 @@
         <field source="mPriorite" destinationName="priorite" isExported="true" skipWhen="NULL" type="int" title="Priorité" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.borne.ParamMaintBorne" destinationName="ParamMaintBorne" isExported="true" title="Paramètres de maintenance de borne" parentClass="gest.gen.EntiteParam">
+    <class source="gest.borne.ParamMaintBorne" destinationName="ParamMaintBorne" isExported="true" title="Paramètres de maintenance de borne" summary="Paramètres de maintenance de borne" parentClass="gest.gen.EntiteParam">
         <field source="mConfigCompressionImages" destinationName="configCompressionImages" isExported="true" skipWhen="NULL" type="gest.config.ConfigCompressionImages" embedContents="true" title="Configuration de compression des images" />
         <field source="mParamDebitCouleur" destinationName="paramDebitCouleur" isExported="true" skipWhen="NULL" type="gest.gen.ParamPropCouleur" embedContents="true" title="Paramètres de couleur de débit" />
         <field source="mPrefixe" definition="mPrefixe" />
@@ -3142,7 +3142,7 @@
         <field source="mRappelsOptimisation" destinationName="rappelsOptimisation" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" childrenType="java.lang.Long" title="Rappels optimisation" />
         <field source="mRepert" destinationName="repert" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Répert" />
     </class>
-    <class source="gest.config.ParamCalendrier" destinationName="ParamCalendrier" isExported="true" title="Paramètres de calendrier" parentClass="gest.gen.EntiteParam">
+    <class source="gest.config.ParamCalendrier" destinationName="ParamCalendrier" isExported="true" title="Paramètres de calendrier" summary="Paramètres de calendrier" parentClass="gest.gen.EntiteParam">
         <field source="mActivitesSimultaneesLayout" destinationName="activitesSimultaneesLayout" isExported="true" skipWhen="NULL" type="int" title="Activités simultanées layout" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -3160,7 +3160,7 @@
         <field source="mVectVilleEntraide" destinationName="listeVilleEntraide" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.config.VilleGeo" title="Villes d'entraide" />
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="NULL" type="gest.config.VilleGeo" embedContents="true" title="Ville" />
     </class>
-    <class source="gest.config.ParamConfigGeneral" destinationName="ParamConfigGeneral" isExported="true" title="Paramètres généraux" parentClass="gest.gen.EntiteParam">
+    <class source="gest.config.ParamConfigGeneral" destinationName="ParamConfigGeneral" isExported="true" title="Paramètres généraux" summary="Paramètres généraux" parentClass="gest.gen.EntiteParam">
         <field source="mAlerteOnJMSTrouble" destinationName="alerteOnJMSTrouble" isExported="true" skipWhen="NULL" type="boolean" title="Alerte on JMS trouble" />
         <field source="mFlagPossibleCorruptionBD" destinationName="flagPossibleCorruptionBD" isExported="true" skipWhen="NULL" type="boolean" title="Flag possible corruption BD" />
         <field source="mLastBakVerif" destinationName="lastBakVerif" isExported="true" skipWhen="NULL" type="date" title="Last bak verif" />
@@ -3174,7 +3174,7 @@
         <field source="mVectVilleDesservie" destinationName="listeVilleDesservie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.config.VilleGeo" title="Villes desservies" />
         <field source="mVectVilleEntraide" destinationName="listeVilleEntraide" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.config.VilleGeo" title="Villes d'entraide" />
     </class>
-    <class source="gest.config.ParamConfigSSI" destinationName="ParamConfigSSI" isExported="true" title="Paramètres SSI" parentClass="gest.gen.EntiteParam">
+    <class source="gest.config.ParamConfigSSI" destinationName="ParamConfigSSI" isExported="true" title="Paramètres SSI" summary="[ville.nom]" parentClass="gest.gen.EntiteParam">
         <field source="mCourrielExpirationEquipement" destinationName="courrielExpirationEquipement" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel expiration équipement" />
         <field source="mCourrielExpirationFichier" destinationName="courrielExpirationFichier" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel expiration fichier" />
         <field source="mCourrielExpirationFormationCertification" destinationName="courrielExpirationFormationCertification" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel expiration formation certification" />
@@ -3208,7 +3208,7 @@
         <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Logo" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.config.ParamSendMail" destinationName="ParamSendMail" isExported="true" title="Paramètres d'envoi de courriel" parentClass="gest.gen.EntiteParam">
+    <class source="gest.config.ParamSendMail" destinationName="ParamEnvoiCourriel" isExported="true" title="Paramètres d'envoi de courriel" summary="Serveur de courriel [hostSMTP]" parentClass="gest.gen.EntiteParam">
         <field source="mHostSMTP" destinationName="hostSMTP" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Host SMTP" />
         <field source="mPortSMTP" destinationName="portSMTP" isExported="true" skipWhen="NULL" type="int" title="Port SMTP" />
         <field source="mTypeEnvoi" destinationName="typeEnvoi" isExported="true" skipWhen="NULL" type="int" title="Type d'envoi" />
@@ -3390,7 +3390,7 @@
         <field source="mAireAuSol" destinationName="aireAuSol" isExported="true" skipWhen="ZERO,MINUS_ONE" type="int" title="Aire au sol" />
         <field source="mAnneeConstruction" destinationName="anneeConstruction" isExported="true" skipWhen="ZERO,MINUS_ONE" type="int" title="Année de construction" />
         <field source="mAnneeDernRenov" destinationName="anneeDerniereRenovation" isExported="true" skipWhen="ZERO,MINUS_ONE" type="int" title="Année de dernière rénovation" />
-        <field source="mAssoc" destinationName="associationBatiment" isExported="true" skipWhen="NULL" type="int" title="Association au bâtiment">
+        <field source="mAssoc" destinationName="associationBatiment" isExported="true" skipWhen="NULL" type="string" title="Association au bâtiment">
             <valueMap>
                 <mapping from="1" to="BATIMENT_PRINCIPAL" />
                 <mapping from="2" to="BATIMENT_ENFANT" />
@@ -3416,8 +3416,27 @@
         </field>
         <field source="mEtatCAUCA" destinationName="etatCAUCA" isExported="true" skipWhen="NULL" type="int" title="État CAUCA" />
         <field source="mExtFin" destinationName="extensionFin" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Extension fin" />
-        <field source="mGeoPosition" destinationName="geoPosition" isExported="true" skipWhen="NULL" type="int" title="Géo-position" />
-        <field source="mImport" destinationName="import" isExported="true" skipWhen="NULL" type="int" title="Import" />
+        <field source="mGeoPosition" destinationName="geoPosition" isExported="true" skipWhen="NULL" type="string" title="Géo-position">
+           <valueMap>
+                <mapping from="1" to="INCONNU" />
+                <mapping from="2" to="ETTRAN" />
+                <mapping from="3" to="ETC022" />
+                <mapping from="4" to="MAM" />
+                <mapping from="5" to="UNICITE" />
+                <mapping from="6" to="PGEVAL" />
+                <mapping from="7" to="SMI" />
+                <mapping from="8" to="CAUCA" />
+                <mapping from="9" to="CIB" />
+                <mapping from="10" to="XML" />
+            </valueMap>
+        </field>
+        <field source="mImport" destinationName="import" isExported="true" skipWhen="NULL" type="string" title="Import">
+            <valueMap>
+                <mapping from="1" to="ADRESSE" />
+                <mapping from="2" to="MANUELLE" />
+                <mapping from="3" to="MATRICULE" />
+            </valueMap>
+        </field>
         <field source="mLongLat" destinationName="longitudeLatitude" isExported="true" skipWhen="NULL" type="gest.gen.LongLat" embedContents="true" title="Longitude-latitude" />
         <field source="mMatricule" definition="mMatricule" />
         <field source="mNbPhotosParPagePourGraph" destinationName="nombrePhotosParPagePourGraph" isExported="true" skipWhen="NULL" type="int" title="Nombre de photos par page pour graph" />
@@ -3437,7 +3456,7 @@
         <field source="mSubdivision" destinationName="subdivision" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Subdivision" />
         <field source="mTransfertCAUCAFait" destinationName="transfertCAUCAFait" isExported="true" skipWhen="NULL" type="boolean" title="Transfert CAUCA fait" />
         <field source="mTypeConstrAutreDetail" destinationName="typeConstructionAutreDetail" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Type de construction autre détail" />
-        <field source="mUtilisePeriodicite" destinationName="utilisePeriodicite" isExported="true" skipWhen="NULL" type="int" title="Utilisé la périodicité">
+        <field source="mUtilisePeriodicite" destinationName="utilisePeriodicite" isExported="true" skipWhen="NULL" type="string" title="Utilise la périodicité">
             <valueMap>
                 <mapping from="-2" to="INEXISTANTE" />
                 <mapping from="-1" to="AUCUNE" />
@@ -3549,7 +3568,7 @@
         <reference class="gest.planInterv.PlanContact" field="mIDPersonneRess" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.dossPrev.ParamDossPrev" destinationName="ParamDossierAdresse" isExported="true" title="Paramètres de dossiers adresse" parentClass="gest.gen.EntiteParam">
+    <class source="gest.dossPrev.ParamDossPrev" destinationName="ParamDossierAdresse" isExported="true" title="Paramètres de dossiers adresse" summary="Paramètres de dossiers adresse" parentClass="gest.gen.EntiteParam">
         <field source="mActiverExport" destinationName="activerExport" isExported="true" skipWhen="NULL" type="boolean" title="Activer export" />
         <field source="mChercherMatriculeAnterieurDansVectOldMatricule" destinationName="chercherMatriculeAnterieurDansListeAncienMatricule" isExported="true" skipWhen="NULL" type="boolean" title="Chercher matricule antérieur dans les anciens matricules" />
         <field source="mConfigCompressionImages" destinationName="configurationCompressionImages" isExported="true" skipWhen="NULL" type="gest.config.ConfigCompressionImages" embedContents="true" title="Configuration de la compression des images" />
@@ -3579,7 +3598,15 @@
     <class source="gest.dossPrev.PeriodiciteDossPrev" destinationName="PeriodiciteDossierAdresse" isExported="true" title="Périodicité de dossier adresse" parentClass="gest.gen.Periodicite">
         <reference class="gest.dossPrev.DossPrev" field="mVectPeriodicites" />
         <field source="mDateDernPrev" destinationName="dateDernierePrevention" isExported="true" skipWhen="NULL" type="date" title="Date de dernière prévention" />
-        <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipWhen="NULL" type="int" title="Type de périodicité" />
+        <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipWhen="NULL" type="int" title="Type de périodicité">
+            <valueMap>
+                <mapping from="-2" to="INEXISTANTE" />
+                <mapping from="-1" to="AUCUNE" />
+                <mapping from="1" to="GENERAL" />
+                <mapping from="2" to="CLASSIFICATION" />
+                <mapping from="3" to="PERSONNALISEE" />
+            </valueMap>
+        </field>
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Responsable" />
         <field source="mIDTypePrevention" destinationName="idTypePrevention" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.typePrev.IDTypePrev" title="Type de prévention" />
     </class>
@@ -4025,7 +4052,7 @@
         <field source="mCalcProchPerSurDernMaint" destinationName="calculerProchainPeriodiqueSurDerniereMaintenance" isExported="true" skipWhen="NULL" type="boolean" title="Calculer prochain périodique sur dernière maintenance" />
         <field source="mDateDernMaint" destinationName="dateDerniereMaintenance" isExported="true" skipWhen="NULL" type="date" title="Date de dernière maintenance" />
     </class>
-    <class source="gest.feuilleTemps.ParamFeuilleTemps" destinationName="ParametreFeuilleTemps" isExported="true" title="Paramètres de la feuille de temps" parentClass="gest.gen.EntiteParam">
+    <class source="gest.feuilleTemps.ParamFeuilleTemps" destinationName="ParametreFeuilleTemps" isExported="true" title="Paramètres de la feuille de temps" summary="Paramètres de la feuille de temps" parentClass="gest.gen.EntiteParam">
         <field source="mActiver" destinationName="activer" isExported="true" skipWhen="NULL" type="boolean" title="Activer" />
         <field source="mAffectationTravail" destinationName="affectationTravail" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Affectation travail" />
         <field source="mDept" destinationName="departement" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Département" />
@@ -4330,7 +4357,17 @@
         <field source="mTelephone" destinationName="telephone" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléphone" />
         <field source="mTelephoneExt" destinationName="telephoneExtension" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléphone extension" />
         <field source="mTypeRue" destinationName="typeRue" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Type de rue" />
-        <field source="mTypeSuite" destinationName="typeSuite" isExported="true" skipWhen="NULL" type="int" title="Type de suite" />
+        <field source="mTypeSuite" destinationName="typeSuite" isExported="true" skipWhen="NULL" type="int" title="Type de suite">
+            <valueMap>  
+                <mapping from="1" to="AUCUN" />
+                <mapping from="2" to="APPARTEMENT" />
+                <mapping from="3" to="LOCAL" />
+                <mapping from="4" to="SUITE" />
+                <mapping from="5" to="CONDO" />
+                <mapping from="6" to="BUREAU" />
+                <mapping from="7" to="EMPLACEMENT" />
+            </valueMap>
+        </field>
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Ville" />
     </class>
     <class source="gest.gen.AutoIncrement" destinationName="AutoIncrement" isExported="true" title="Auto incrément" parentClass="gest.gen.EntiteParam">
@@ -4541,8 +4578,20 @@
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportActivite" isExported="true" skipWhen="NULL" type="boolean" title="Inclure dans rapport activité" />
         <field source="mNom" definition="mNom" />
-        <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="int" title="Photos par page" />
-        <field source="mPrintFormat" destinationName="formatImpression" isExported="true" skipWhen="NULL" type="int" title="Format impression" />
+        <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="string" title="Photos par page">
+            <valueMap>
+                <mapping from="0" to="1" />
+                <mapping from="1" to="2" />
+                <mapping from="2" to="4" />
+                <mapping from="3" to="6" />
+            </valueMap>
+        </field>
+        <field source="mPrintFormat" destinationName="formatImpression" isExported="true" skipWhen="NULL" type="string" title="Format impression">
+            <valueMap>
+                <mapping from="0" to="PORTRAIT" />
+                <mapping from="1" to="PAYSAGE" />
+            </valueMap>
+        </field>
         <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Fichier" />
         <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" title="Graph" />
     </class>
@@ -7028,6 +7077,7 @@
         <reference class="gest.formElec.ParamFigureSaisie" field="mIDTypeAnom" />
         <reference class="gest.formElec.Section" field="mVectIDTypeAnom" />
         <reference class="gest.typePrev.TypePrev" field="mVectIDTypeAnom" />
+        <reference class="gest.typePrev.TypePrev" field="mVectTypeAnom" />
         <field source="mID" definition="mID" />
     </class>
     <class source="gest.typeAnom.TypeAnom" destinationName="TypeAnomalie" isExported="true" title="Type d'anomalie" summary="[nom]" parentClass="gest.gen.EntiteContientID">

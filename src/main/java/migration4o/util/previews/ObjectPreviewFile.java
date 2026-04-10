@@ -4,11 +4,18 @@ import java.io.File;
 
 import migration4o.database.DODatabaseDelegate;
 import migration4o.util.DatabaseFileUtil;
+import migration4o.util.FileUtil;
 import migration4o.util.formatters.FormatterContext;
 
 public class ObjectPreviewFile implements ObjectPreview {
 
     public static final ObjectPreviewFile preview = new ObjectPreviewFile();
+
+    public static final String getPreviewFilePath(String originalFileName, String fileID) {
+        String extension = FileUtil.getExtension(originalFileName, "pdf");
+        String fileName = fileID;//+ "." + extension.toLowerCase();
+        return fileName;
+    }
 
     @Override
     public String generate(DODatabaseDelegate delegate, FormatterContext context, String value, String parameter) {

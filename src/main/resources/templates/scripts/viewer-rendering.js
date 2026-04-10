@@ -228,7 +228,15 @@ function renderCollectionTableBody(view) {
     pageRows.forEach((row) => {
         html += '<tr>';
         view.columns.forEach((col) => {
-            html += '<td>' + fmtValue(row[col] ?? '', col) + '</td>';
+            const _cellStr = String(row[col] ?? '');
+            const _refId = String(row[col + '._id'] ?? '').trim();
+            if (_refId && _refId !== '0' && _refId !== '-1') {
+                const _destName = pointsToByPath[normalizeSchemaPath(col)];
+                const _href = _destName ? navHrefByDestName[_destName] : null;
+                html += '<td>' + (_href && _cellStr ? refLinkBtn(_href + '?open=' + encodeURIComponent(_refId), _cellStr) : fmtValue(_cellStr, col)) + '</td>';
+            } else {
+                html += '<td>' + fmtValue(_cellStr, col) + '</td>';
+            }
         });
         html += '</tr>';
     });
@@ -477,6 +485,9 @@ function renderCollectionSection(label, items, ctx) {
 
     const collectionId = `c${collectionIdCounter++}`;
     const table = computeCollectionTable(items);
+    // Suppress internal sub-columns (_id, _summary, _preview) from display;
+    // they remain in the rows for link building via col + '._id' lookups.
+    table.columns = table.columns.filter((col) => !(col.split('.').pop() || '').startsWith('_'));
     const pageSize = 25;
     const totalPages = Math.max(1, Math.ceil(table.rows.length / pageSize));
 

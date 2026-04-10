@@ -232,7 +232,9 @@ function renderLayoutNode(data, node, ctx) {
                 return '<div class="field-row"><div class="field-label">' + esc(_nestedLabel)
                     + '</div><div class="field-value">' + _popupBtn(_hpIdx, _nestedLabel, _nestedSummary || _nestedLabel) + '</div></div>';
             }
-            if (collapsible && ctx !== 'detail') {
+            // A section with collapsible:true and no ref should always render as a <details>
+            // accordion, regardless of context. The ctx guard was incorrectly suppressing it.
+            if (collapsible) {
                 return '<details class="detail-section" open><summary><span class="layout-section-title"' + titleAttr + '>'
                     + esc(p.title || '') + '</span></summary><div class="section-body">'
                     + _sBody + '</div></details>';
@@ -283,7 +285,10 @@ function renderLayoutNode(data, node, ctx) {
                     + '</div><div class="field-value">' + _popupBtn(_embIdx, label, _embText) + '</div></div>';
             }
             if (Array.isArray(scalarVal)) {
-                return renderValue(label, scalarVal, 'embedded');
+                if (scalarVal.length === 0) return '';
+                var _inlineTable = renderPopupTable(scalarVal);
+                return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
+                    + '</div><div class="field-value">' + _inlineTable + '</div></div>';
             }
             var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
             return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
@@ -346,8 +351,12 @@ function renderLayoutNode(data, node, ctx) {
                     subCols: subKeys ? subKeys.map(function (sk) { return { key: sk, label: displayFieldLabel(sk) }; }) : null
                 };
             });
+            var _tableLabel = p.title || displayFieldLabel(p.ref);
             var thtml = bare
-                ? '<div style="padding:8px 12px;overflow-x:auto;"><span class="summary-meta" style="display:block;text-align:right;margin-bottom:4px;">' + items.length + ' ' + esc(t('elements')) + '</span><table class="collection-table"><thead>'
+                ? '<div class="detail-section"><div class="section-body">'
+                + '<div class="layout-section-title" style="padding:8px 12px;">' + esc(_tableLabel) + '</div>'
+                + '<div class="collection-toolbar"><span>' + items.length + ' ' + esc(t('elements')) + '</span><span class="collection-pager"></span></div>'
+                + '<div style="padding:0 12px 8px;overflow-x:auto;"><table class="collection-table"><thead>'
                 : '<details class="detail-section" open><summary' + (headerStyle ? ' style="' + headerStyle + '"' : '') + '><span class="summary-title">'
                 + esc(displayFieldLabel(p.ref)) + '</span><span class="summary-meta">' + items.length + ' ' + esc(t('elements'))
                 + '</span></summary><div class="section-body"><div style="padding:8px 12px;overflow-x:auto;"><table class="collection-table"><thead>';
@@ -395,6 +404,17 @@ function renderLayoutNode(data, node, ctx) {
                             : (item && typeof item === 'object') ? item[col] : item;
                         cellVal = unwrapClassWrapper(cellVal);
                         if (cellVal && typeof cellVal === 'object' && !Array.isArray(cellVal)) {
+                            if (cellVal._id !== undefined) {
+                                var _cellId = String(cellVal._id || '').trim();
+                                var _cellText = String(cellVal._label || cellVal._summary || _cellId || '').trim();
+                                var _cellPath = col.indexOf('.') < 0 ? p.ref + '.' + col : col;
+                                var _cellPtDestName = pointsToByPath[normalizeSchemaPath(_cellPath)];
+                                var _cellPtHref = _cellPtDestName ? navHrefByDestName[_cellPtDestName] : null;
+                                var _cellLink = (_cellPtHref && _cellId && _cellId !== '0' && _cellId !== '-1')
+                                    ? _cellPtHref + '?open=' + encodeURIComponent(_cellId) : null;
+                                thtml += '<td>' + (_cellText ? (_cellLink ? refLinkBtn(_cellLink, _cellText) : esc(_cellText)) : '') + '</td>';
+                                return;
+                            }
                             if (cellVal._label !== undefined) {
                                 cellVal = cellVal._label; // fall through to scalar render below
                             } else {
@@ -414,7 +434,7 @@ function renderLayoutNode(data, node, ctx) {
                 });
                 thtml += '</tr>';
             });
-            thtml += '</tbody></table>' + (bare ? '</div>' : '</div></div></details>');
+            thtml += '</tbody></table>' + (bare ? '</div></div></div>' : '</div></div></details>');
             return thtml;
         }
         case 'tabs': {

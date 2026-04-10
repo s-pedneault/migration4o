@@ -98,6 +98,36 @@ public final class JsViewerHtmlGenerator {
         }
     }
 
+    /**
+     * Writes a fully self-contained HTML viewer with all JSON payloads supplied directly
+     * by the caller — bypassing any DOSchemaClass or service-singleton lookups.
+     * <p>
+     * Intended for offline generation (e.g. the style-guide generator) where the
+     * application services are not initialised.
+     *
+     * @param outputPath       destination {@code .html} file
+     * @param title            browser tab title
+     * @param entityName       entity display name shown in the header
+     * @param navItemsJson     serialised NAV_ITEMS array (or {@code "[]"})
+     * @param baseHref         relative path back to the export root (e.g. {@code "./"})
+     * @param layoutJson       DETAIL_LAYOUT JSON array (or {@code "null"})
+     * @param classLayoutsJson CLASS_LAYOUTS JSON object (or {@code "{}"})
+     * @param schemaFieldsJson SCHEMA_FIELDS JSON array (or {@code "[]"})
+     * @param defaultColumnsJson DEFAULT_COLUMNS JSON (or {@code "null"})
+     * @param crossRefsJson    CROSS_REFS JSON object injected in place of the XREF placeholder
+     *                         in the template (or {@code null} to leave it as-is)
+     * @param dataScript       pre-built JS data script ({@code window.__m4o = {...};})
+     */
+    static Path writeRawViewer(Path outputPath, String title, String entityName, String navItemsJson, String baseHref, String layoutJson, String classLayoutsJson, String schemaFieldsJson, String defaultColumnsJson, String crossRefsJson, String dataScript) throws IOException {
+        if (outputPath == null)
+            throw new IllegalArgumentException("outputPath must not be null");
+        String embeddedJs = (dataScript != null ? dataScript : "").replaceAll("(?i)</script", "<\\/script");
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", baseHref != null ? baseHref : "./").replace("__NAV_ITEMS__", navItemsJson != null ? navItemsJson : "[]").replace("__DETAIL_LAYOUT__", layoutJson != null ? layoutJson : "null").replace("__CLASS_LAYOUTS__", classLayoutsJson != null ? classLayoutsJson : "{}").replace("__SCHEMA_FIELDS__", schemaFieldsJson != null ? schemaFieldsJson : "[]").replace("__DEFAULT_COLUMNS__", defaultColumnsJson != null ? defaultColumnsJson : "null").replace("__TITLE__", escapeHtml(title != null ? title : "")).replace("__ENTITY_NAME__", escapeHtml(entityName != null ? entityName : "")).replace("null/*XREF*/", (crossRefsJson != null ? crossRefsJson : "null") + "/*XREF*/").replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        Files.createDirectories(outputPath.getParent());
+        Files.write(outputPath, html.getBytes(StandardCharsets.UTF_8));
+        return outputPath;
+    }
+
     public static Path writeViewerForJs(Path jsPath, DOSchemaClass schemaClass) throws IOException {
         return writeViewerForJs(jsPath, schemaClass, "[]", "./", "null");
     }

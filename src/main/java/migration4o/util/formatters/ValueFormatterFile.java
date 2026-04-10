@@ -5,6 +5,7 @@ import java.io.File;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.util.DatabaseFileUtil;
 import migration4o.util.FileUtil;
+import migration4o.util.previews.ObjectPreviewFile;
 
 public class ValueFormatterFile implements ValueFormatter {
 
@@ -35,8 +36,7 @@ public class ValueFormatterFile implements ValueFormatter {
                 return null;
             }
         }
-        String fileName = value + "." + extension.toLowerCase();
-        // String filePath = "file/" + context.schemaClass.attributes.destinationName + "/" + fileName;
+        String fileName = ObjectPreviewFile.getPreviewFilePath(originalFileName, value);
         String filePath = "file/" + fileName;
 
         File destinationPath = new File(context.destinationFolder.toString(), filePath);

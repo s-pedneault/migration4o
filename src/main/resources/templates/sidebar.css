@@ -2053,13 +2053,23 @@ body {
     text-align: left;
     padding: 6px 10px;
     border-bottom: 1px solid var(--c-border);
+    border-right: 1px solid var(--c-border);
     color: var(--c-text-secondary);
+}
+
+.collection-table th:last-child {
+    border-right: none;
 }
 
 .collection-table td {
     padding: 5px 10px;
     border-bottom: 1px solid var(--c-border-light);
+    border-right: 1px solid var(--c-border-light);
     vertical-align: top;
+}
+
+.collection-table td:last-child {
+    border-right: none;
 }
 
 .collection-table tr:last-child td {
@@ -2586,6 +2596,7 @@ body {
     background: linear-gradient(to bottom, #ebeef5, #e2e7f0);
     padding: 8px 12px;
     border-bottom: 2px solid var(--c-border);
+    border-right: 1px solid var(--c-border);
     font-weight: 700;
     font-size: 11px;
     text-transform: uppercase;
@@ -2595,6 +2606,10 @@ body {
     user-select: none;
     position: relative;
     transition: background .15s;
+}
+
+.collection-table thead th:last-child {
+    border-right: none;
 }
 
 .collection-table thead th:hover {
@@ -2622,6 +2637,11 @@ body {
 .collection-table tbody td {
     padding: 6px 12px;
     border-bottom: 1px solid var(--c-border-light);
+    border-right: 1px solid var(--c-border-light);
+}
+
+.collection-table tbody td:last-child {
+    border-right: none;
 }
 
 .collection-table tbody tr:hover {

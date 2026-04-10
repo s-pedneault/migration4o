@@ -4,6 +4,7 @@ import java.io.File;
 
 import migration4o.database.DODatabaseDelegate;
 import migration4o.util.formatters.FormatterContext;
+import migration4o.util.previews.ObjectPreviewFile;
 
 public class DatabaseFileUtil {
 
@@ -27,8 +28,9 @@ public class DatabaseFileUtil {
         if (originalFileName == null) {
             return null;
         }
-        String extension = FileUtil.getExtension(originalFileName, "pdf");
-        String fileName = parameter + "." + extension.toLowerCase();
+        String fileName = ObjectPreviewFile.getPreviewFilePath(originalFileName, parameter);
+        //   String extension = FileUtil.getExtension(originalFileName, "pdf");
+        // String fileName = parameter;// + "." + extension.toLowerCase();
         // String filePath = "file/" + context.schemaClass.attributes.destinationName + "/" + fileName;
         String filePath = "file/" + fileName;
 
