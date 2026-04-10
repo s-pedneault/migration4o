@@ -5,7 +5,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
 import migration4o.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
@@ -141,6 +140,15 @@ public class ExportRequest {
         return maxObjectsPerClass != null ? "max" + maxObjectsPerClass : "all";
     }
 
+    // ── Organization export
+    // ──────────────────────────────────────────────────
+
+    /**
+     * When non-null, restricts the export to the organizations described by this
+     * config. Null means "no organization filtering" (export everything).
+     */
+    public OrganizationExportConfig organizationConfig;
+
     /**
      * Gets the base output directory for the current database, including the
      * max-objects sub-folder. Returns:
@@ -149,5 +157,44 @@ public class ExportRequest {
     public Path getBaseOutputPath(String baseOutputDir) {
         String branch = (outputBranch != null && !outputBranch.isBlank()) ? outputBranch : getMaxObjectsFolder();
         return Paths.get(baseOutputDir).resolve(getDatabaseFolderName()).resolve(branch);
+    }
+
+    /**
+     * Creates a copy of this request scoped to a single organization, for use
+     * during separate-per-organization export.
+     * <p>
+     * All fields are copied from the original. {@code organizationConfig} is
+     * replaced with a single-org {@link OrganizationExportMode#SINGLE_EXPORT}
+     * config, and {@code outputBranch} is set to the given value.
+     */
+    public ExportRequest withOrganizationScope(OrganizationInfo org, String perOrgOutputBranch, boolean includeGeneralData) {
+        ExportRequest copy = new ExportRequest();
+        copy.referenceSchema = this.referenceSchema;
+        copy.database = this.database;
+        copy.databaseSchema = this.databaseSchema;
+        copy.databasePath = this.databasePath;
+        copy.dbContext = this.dbContext;
+        copy.baseOutputPath = this.baseOutputPath;
+        copy.outputBranch = perOrgOutputBranch;
+        copy.monitor = this.monitor;
+        copy.outputOptions = new ArrayList<>(this.outputOptions);
+        copy.maxObjectsPerClass = this.maxObjectsPerClass;
+        copy.exportNativeIds = this.exportNativeIds;
+        copy.preselectedObjectIds = this.preselectedObjectIds;
+        copy.preselectedRequiredCounts = this.preselectedRequiredCounts;
+        copy.applyUserSelectedFieldExclusions = this.applyUserSelectedFieldExclusions;
+        copy.applySkipWhenConditions = this.applySkipWhenConditions;
+        copy.applyExportCriteriaFilters = this.applyExportCriteriaFilters;
+        copy.skipObjectsWithoutExportableFields = this.skipObjectsWithoutExportableFields;
+        copy.classNames = this.classNames;
+        copy.saveToHistory = this.saveToHistory;
+        copy.useSharedTracking = this.useSharedTracking;
+        copy.fullTracking = this.fullTracking;
+        copy.availableSkipUserOptions = this.availableSkipUserOptions;
+        copy.selectedSkipUserOptions = this.selectedSkipUserOptions != null ? new ArrayList<>(this.selectedSkipUserOptions) : null;
+        copy.seedQueries = this.seedQueries != null ? new ArrayList<>(this.seedQueries) : new ArrayList<>();
+        copy.exportLanguage = this.exportLanguage;
+        copy.organizationConfig = new OrganizationExportConfig(OrganizationExportMode.SINGLE_EXPORT, List.of(org), includeGeneralData);
+        return copy;
     }
 }

@@ -57,6 +57,7 @@ public class MigrationExportService {
         ctx.statistics.fullTracking = request.fullTracking;
         // Let HtmlFormatHandler.init() find module list for nav tree building
         ctx.exportModules = modules;
+        ctx.organizationFilter = request.organizationConfig != null ? new OrganizationFilter(request.organizationConfig) : null;
 
         Files.createDirectories(ctx.basePath);
         JsViewerHtmlGenerator.copyGlobalAssets(ctx.basePath);

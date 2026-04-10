@@ -37,6 +37,9 @@ import javax.swing.SwingUtilities;
 import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportConfigPersistence;
 import migration4o.migration.ExportOutputOption;
+import migration4o.migration.OrganizationDetectionService;
+import migration4o.migration.OrganizationExportConfig;
+import migration4o.migration.OrganizationInfo;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.ExportConfig;
 import migration4o.models.ui.ExportConfig.ExportMode;
@@ -610,10 +613,57 @@ public class DatabaseExportPanel extends JPanel {
         // truth
         ExportOptions exportOptions = ExportOptions.fromConfig(config);
 
+        // Detect organizations and ask user if there are multiple
+        if (!applyOrganizationConfig(exportOptions)) {
+            return; // User cancelled or detection error
+        }
+
         exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);
     }
 
     // ── UI helpers ──────────────────────────────────────────────────────────
+
+    /**
+     * Detects organizations in the database and applies the appropriate
+     * {@link OrganizationExportConfig} to {@code exportOptions}.
+     * <ul>
+     *   <li>No orgs found — config stays {@code null} (no org filtering); returns {@code true}</li>
+     *   <li>One org found — single-org config set automatically; returns {@code true}</li>
+     *   <li>Multiple orgs — {@link OrganizationExportDialog} shown; returns {@code true} on OK,
+     *       {@code false} if user cancels</li>
+     *   <li>Detection error — shows error dialog; returns {@code false}</li>
+     * </ul>
+     */
+    private boolean applyOrganizationConfig(ExportOptions exportOptions) {
+        List<OrganizationInfo> orgs;
+        try {
+            orgs = OrganizationDetectionService.detectOrganizations(dbContext.database);
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "Failed to detect organizations: " + e.getMessage(), "Detection Error", JOptionPane.ERROR_MESSAGE);
+            return false;
+        }
+
+        if (orgs.isEmpty()) {
+            // No org data in this database — proceed without org filtering
+            return true;
+        }
+
+        if (orgs.size() == 1) {
+            exportOptions.setOrganizationConfig(OrganizationExportConfig.singleOrganization(orgs.get(0)));
+            return true;
+        }
+
+        // Multiple orgs — ask the user what to do
+        java.awt.Window owner = SwingUtilities.getWindowAncestor(this);
+        OrganizationExportDialog dialog = new OrganizationExportDialog(owner, orgs);
+        dialog.setVisible(true);
+
+        if (!dialog.isConfirmed()) {
+            return false; // User cancelled
+        }
+        exportOptions.setOrganizationConfig(dialog.getConfig());
+        return true;
+    }
 
     private JPanel createCollapsibleSection(String title, JPanel contentPanel, boolean collapsedByDefault) {
         JPanel container = new JPanel();

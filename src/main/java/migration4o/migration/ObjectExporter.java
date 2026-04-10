@@ -92,7 +92,19 @@ public class ObjectExporter {
                 }
             }
 
-            // Mark as exported only after criteria pass
+            // Apply organization filter for root objects
+            if (!isEmbedded && ctx.organizationFilter != null) {
+                DOSchemaClass filterSchemaClass = SchemaElementMapper.getSchemaClass(className, ctx.request.referenceSchema);
+                if (!ctx.organizationFilter.shouldExport(filterSchemaClass, ctx.delegate, obj, true)) {
+                    ctx.delegate.deactivate(obj, 1);
+                    if (ctx.statistics != null) {
+                        ctx.statistics.incrementSkippedByOrganization();
+                    }
+                    return;
+                }
+            }
+
+            // Mark as exported only after criteria and org filter passes
             if (!isEmbedded)
                 handler.exportedIds.add(objectId);
 

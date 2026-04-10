@@ -14,6 +14,7 @@ import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.ExportRequest;
 import migration4o.migration.NavNode;
 import migration4o.migration.ObjectExporter;
+import migration4o.migration.OrganizationFilter;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.tasks.ModulePathUtil;
 import migration4o.models.schema.DOSchemaClass;
@@ -118,6 +119,14 @@ public class ExportCurrentState {
      * Maps a resolved target entity's DB4O object ID to its generated human-readable summary label. Populated lazily; avoids regenerating the same summary when the same entity is referenced from multiple records.
      */
     public Map<Long, String> idEntiteSummaryCache = new HashMap<>();
+
+    // ── Organization filtering ────────────────────────────────────────────────
+
+    /**
+     * Filters root objects by their {@code mIDSSI} value. Null means no
+     * organization filtering is active.
+     */
+    public OrganizationFilter organizationFilter;
 
     // ── Active ObjectExporter
     // ─────────────────────────────────────────────────

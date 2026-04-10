@@ -71,6 +71,25 @@ public class DOSchemaClass {
         return TypeUtil.isPrimitiveType(attributes.source);
     }
 
+    public DOSchemaField findFieldBySourceNameIncludingAncestors(String fieldName) {
+        DOSchemaField found = findFieldBySourceName(fieldName);
+        if (found != null) {
+            return found;
+        }
+        if (attributes.parentClassName == null || attributes.parentClassName.isEmpty() || schema == null) {
+            return null;
+        }
+        DOSchemaClass parent = schema.findClassByName(attributes.parentClassName);
+        if (parent == null) {
+            return null;
+        }
+        return parent.findFieldBySourceNameIncludingAncestors(fieldName);
+    }
+
+    public boolean isMultiOrganization() {
+        return findFieldBySourceNameIncludingAncestors("mIDSSI") != null;
+    }
+
     public boolean isCollection() {
         if (CollectionTypeUtil.isCollectionType(attributes.source)) {
             return true;

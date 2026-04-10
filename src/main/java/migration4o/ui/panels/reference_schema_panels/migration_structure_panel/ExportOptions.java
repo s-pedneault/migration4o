@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.migration.OrganizationExportConfig;
 import migration4o.migration.ExportOutputOption;
 import migration4o.migration.ExportRequest;
 import migration4o.models.schema.DOSchema;
@@ -37,6 +38,7 @@ public class ExportOptions {
     private final List<SeedQuery> seedQueries;
     private final String outputBranch;
     private final String exportLanguage;
+    private OrganizationExportConfig organizationConfig;
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
         this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true, null, null, "fr");
@@ -130,6 +132,14 @@ public class ExportOptions {
         return exportLanguage;
     }
 
+    public OrganizationExportConfig getOrganizationConfig() {
+        return organizationConfig;
+    }
+
+    public void setOrganizationConfig(OrganizationExportConfig organizationConfig) {
+        this.organizationConfig = organizationConfig;
+    }
+
     /**
      * Builds an {@code ExportOptions} from a persisted {@link ExportConfig}.
      * This is the single place that translates stored configuration into
@@ -190,6 +200,7 @@ public class ExportOptions {
             request.seedQueries = new ArrayList<>(seedQueries);
         }
         request.exportLanguage = exportLanguage;
+        request.organizationConfig = organizationConfig;
         return request;
     }
 }

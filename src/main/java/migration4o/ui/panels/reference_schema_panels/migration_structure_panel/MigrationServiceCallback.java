@@ -10,12 +10,16 @@ import javax.swing.SwingWorker;
 import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportRequest;
 import migration4o.migration.MigrationExportService;
+import migration4o.migration.OrganizationExportConfig;
+import migration4o.migration.OrganizationExportMode;
+import migration4o.migration.OrganizationInfo;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.ui.main.MainWindow;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanelUtil.ModuleExportInfo;
+import migration4o.util.FileUtil;
 
 /**
  * UI adapter that manages async export operations using SwingWorker. Handles progress dialogs and result displays for export operations. All business logic is delegated to MigrationExportService.
@@ -80,6 +84,12 @@ public class MigrationServiceCallback {
                 if (context == null)
                     throw new IllegalStateException("No database is open");
 
+                OrganizationExportConfig orgConfig = options.getOrganizationConfig();
+
+                if (orgConfig != null && orgConfig.getMode() == OrganizationExportMode.SEPARATE_PER_ORGANIZATION) {
+                    return exportPerOrganization(context, orgConfig, options, modules, monitor);
+                }
+
                 ExportRequest request = options.toExportRequest(context, monitor);
                 return exportService.exportModules(request, modules);
             }
@@ -99,6 +109,37 @@ public class MigrationServiceCallback {
     }
 
     // ==================== HELPER METHODS ====================
+
+    /**
+     * Runs one export per organization in SEPARATE_PER_ORGANIZATION mode.
+     * Fail-fast: stops immediately on the first error.
+     */
+    private ExportStatistics exportPerOrganization(DODatabaseContext context, OrganizationExportConfig orgConfig, ExportOptions options, List<DOSchemaModule> modules, DOExportMonitor monitor) throws Exception {
+
+        String baseBranch = options.getOutputBranch();
+        if (baseBranch == null || baseBranch.isBlank()) {
+            baseBranch = "all";
+        }
+
+        ExportStatistics combined = new ExportStatistics();
+
+        for (OrganizationInfo org : orgConfig.getSelectedOrganizations()) {
+            String folderName = FileUtil.sanitizeForPath(org.name()) + "_" + org.idSSI();
+            String perOrgBranch = baseBranch + "/" + folderName;
+
+            ExportRequest baseRequest = options.toExportRequest(context, monitor);
+            ExportRequest orgRequest = baseRequest.withOrganizationScope(org, perOrgBranch, orgConfig.isIncludeGeneralData());
+
+            try {
+                ExportStatistics orgStats = exportService.exportModules(orgRequest, modules);
+                combined.merge(orgStats);
+            } catch (Exception e) {
+                throw new RuntimeException("Export failed for organization '" + org.name() + "' (idSSI=" + org.idSSI() + "): " + e.getMessage(), e);
+            }
+        }
+
+        return combined;
+    }
 
     /**
      * Handles successful export completion.

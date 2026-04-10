@@ -48,6 +48,29 @@ public class FileUtil {
         return withoutAccents.replaceAll("[^a-zA-Z0-9_.'-]", "_");
     }
 
+    /**
+     * Sanitizes a name for use as a filesystem path component.
+     * Removes accents, strips characters invalid on any OS ({@code / \ : * ? " < > |}),
+     * collapses consecutive underscores, and trims leading/trailing underscores.
+     * Returns {@code "unnamed"} for null or blank input.
+     */
+    public static String sanitizeForPath(String name) {
+        if (name == null || name.isBlank()) {
+            return "unnamed";
+        }
+
+        String normalized = java.text.Normalizer.normalize(name, java.text.Normalizer.Form.NFD);
+        String withoutAccents = normalized.replaceAll("\\p{M}", "");
+
+        // Strip characters that are invalid in file/folder names on Windows, macOS, or Linux
+        String safe = withoutAccents.replaceAll("[/\\\\:*?\"<>|]", "_");
+
+        // Collapse consecutive underscores and trim
+        safe = safe.replaceAll("_+", "_").replaceAll("^_|_$", "");
+
+        return safe.isBlank() ? "unnamed" : safe;
+    }
+
     public static void createBackup(String filePath, String destinationFile) throws IOException {
         File originalFile = new File(filePath);
         if (!originalFile.exists()) {

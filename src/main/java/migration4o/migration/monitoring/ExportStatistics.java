@@ -55,6 +55,8 @@ public class ExportStatistics {
      */
     public int currentClassAttempted = 0;
 
+    public int objectsSkippedByOrganization = 0;
+
     public ExportStatistics() {
         this(null);
     }
@@ -114,6 +116,50 @@ public class ExportStatistics {
 
     public void incrementFiltered() {
         objectsFiltered++;
+    }
+
+    public void incrementSkippedByOrganization() {
+        objectsSkippedByOrganization++;
+    }
+
+    /**
+     * Merges statistics from another export run into this instance.
+     * Used to combine per-organization results into a single aggregate.
+     * Per-export state (outputPath, currentClass, etc.) and the monitor are not copied.
+     */
+    public void merge(ExportStatistics other) {
+        if (other == null)
+            return;
+        objectsAttempted += other.objectsAttempted;
+        objectsSucceeded += other.objectsSucceeded;
+        objectsFiltered += other.objectsFiltered;
+        objectsSkippedByOrganization += other.objectsSkippedByOrganization;
+
+        allExportedObjectIds.addAll(other.allExportedObjectIds);
+        errors.addAll(other.errors);
+        schemaWarnings.addAll(other.schemaWarnings);
+
+        for (Map.Entry<String, Integer> entry : other.exportedClassCounts.entrySet()) {
+            exportedClassCounts.merge(entry.getKey(), entry.getValue(), Integer::sum);
+        }
+        for (Map.Entry<String, List<Long>> entry : other.exportedObjectIds.entrySet()) {
+            exportedObjectIds.computeIfAbsent(entry.getKey(), k -> new ArrayList<>()).addAll(entry.getValue());
+        }
+        for (Map.Entry<String, Set<Long>> entry : other.exportedObjectIdsSet.entrySet()) {
+            exportedObjectIdsSet.computeIfAbsent(entry.getKey(), k -> new HashSet<>()).addAll(entry.getValue());
+        }
+        for (Map.Entry<Long, Set<String>> entry : other.objectDecisionNotes.entrySet()) {
+            objectDecisionNotes.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+        }
+        for (Map.Entry<String, Set<String>> entry : other.exportedRelationshipNotes.entrySet()) {
+            exportedRelationshipNotes.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+        }
+        for (Map.Entry<String, Set<String>> entry : other.skippedRelationshipNotes.entrySet()) {
+            skippedRelationshipNotes.computeIfAbsent(entry.getKey(), k -> new LinkedHashSet<>()).addAll(entry.getValue());
+        }
+        if (other.allValidationPassed != null) {
+            allValidationPassed = (allValidationPassed == null) ? other.allValidationPassed : (allValidationPassed && other.allValidationPassed);
+        }
     }
 
     public void recordObjectDecision(long objectId, String className, String decision) {
