@@ -49,6 +49,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
     private int exportedObjects = 0;
     private int warningCount = 0;
     private int errorCount = 0;
+    private boolean validationFailed = false;
 
     // Per-format progress tracking
     private final Map<String, FormatRow> formatRows = new LinkedHashMap<>();
@@ -232,6 +233,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         exportedObjects = 0;
         warningCount = 0;
         errorCount = 0;
+        validationFailed = false;
 
         logArea.setText("");
         titleLabel.setText("Ready to export");
@@ -281,34 +283,43 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
         appendLog(String.format("Total warnings: %,d\n", warnings));
         appendLog(String.format("Total errors: %,d\n", errorCount));
 
-        if (errorCount == 0) {
-            String statsText = String.format("%,d objects exported", objectsExported);
-            if (warnings > 0) {
-                statsText += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
-            }
-            // Validation hasn't run yet when this fires — default to green;
-            // onValidationComplete will update the colour once results arrive.
-            applySuccessPanelColor(true);
-            successLabel.setText(String.format("<html><center><b>Export successful!</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
-            ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
+        // validationFailed is set synchronously by onValidationComplete (same background
+        // thread) before this method is called, so reading it here is safe.
+        final boolean succeeded = (errorCount == 0) && !validationFailed;
+        final String title;
+        final String statsText;
+        if (succeeded) {
+            title = "Export successful!";
+            statsText = buildStatsText(objectsExported, warnings);
+        } else if (validationFailed) {
+            title = "Export complete — validation failed";
+            statsText = buildStatsText(objectsExported, warnings);
         } else {
-            String statsText = String.format("%,d objects exported, %,d error%s", objectsExported, errorCount, errorCount == 1 ? "" : "s");
-            if (warnings > 0) {
-                statsText += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
-            }
-            applySuccessPanelColor(false);
-            successLabel.setText(String.format("<html><center><b>Export complete with errors</b><br><span style='font-size:10px'>%s</span></center></html>", statsText));
-            ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
+            title = "Export complete with errors";
+            statsText = String.format("%,d objects, %,d error%s", objectsExported, errorCount, errorCount == 1 ? "" : "s");
         }
+
+        SwingUtilities.invokeLater(() -> {
+            applySuccessPanelColor(succeeded);
+            successLabel.setText(String.format("<html><center><b>%s</b><br><span style='font-size:10px'>%s</span></center></html>", title, statsText));
+            ((CardLayout) northContainer.getLayout()).show(northContainer, "success");
+        });
+    }
+
+    private String buildStatsText(int objectsExported, int warnings) {
+        String text = String.format("%,d objects exported", objectsExported);
+        if (warnings > 0) {
+            text += String.format(", %,d warning%s", warnings, warnings == 1 ? "" : "s");
+        }
+        return text;
     }
 
     @Override
     public void onValidationComplete(boolean allPassed) {
-        // Update the success panel colour once validation results are known.
-        // Only relevant when the success card is currently visible.
-        applySuccessPanelColor(allPassed);
+        // Called on the background thread before onExportComplete. Just record the
+        // result — onExportComplete reads it and sets the banner colour once.
         if (!allPassed) {
-            successLabel.setText("<html><center><b>Export complete — validation failed</b><br>" + "<span style='font-size:10px'>Some XML files did not pass XSD validation</span></center></html>");
+            validationFailed = true;
         }
     }
 
@@ -318,6 +329,7 @@ public class MigrationReportPanel extends JPanel implements DOExportMonitor {
             successPanel.setBackground(new Color(56, 142, 60)); // slightly dark green
         } else {
             successPanel.setBackground(new Color(183, 28, 28)); // slightly dark red
+            successPanel.repaint();
         }
     }
 

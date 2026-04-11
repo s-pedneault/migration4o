@@ -3,7 +3,7 @@
     <fields>
         <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="ID" />
         <field source="mIDSSI" destinationName="idSSI" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="ID SSI" />
-        <field source="mIDDBConso" destinationName="idDBConso" isExported="false" skipWhen="MINUS_ONE,NULL" type="int" title="BD Consolidée" />
+        <field source="mIDDBConso" destinationName="idDBConso" isExported="false" skipWhen="MINUS_ONE,NULL" type="int" title="Base de données consolidée" />
         <field source="mNom" destinationName="nom" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom" />
         <field source="mDescription" destinationName="description" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Description" />
         <field source="mNote" destinationName="note" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Note" />
@@ -24,6 +24,17 @@
         <field source="mCourriel" destinationName="courriel" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Courriel" />
         <field source="mIDTypeActivite" destinationName="idTypeActivite" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDTypeActivite" title="Type d'activité" />
         <field source="mIDDossPrev" destinationName="idDossierAdresse" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.dossPrev.IDDossPrev" title="Dossier adresse" />
+        <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipWhen="NULL" type="string" title="Type de périodicité">
+            <valueMap>
+                <mapping from="-3" to="AUTRE" />
+                <mapping from="-2" to="INEXISTANTE" />
+                <mapping from="-1" to="AUCUNE" />
+                <mapping from="1" to="GENERAL" />
+                <mapping from="2" to="CLASSIFICATION" />
+                <mapping from="3" to="PERSONNALISEE" />
+            </valueMap>
+        </field>
+
     </fields>
     <class source="java.lang.Class" destinationName="Classe" isExported="true" title="Classe">
         <reference class="gest.gen.IDEntiteDefaut" field="mClass" />
@@ -37,20 +48,20 @@
     </class>
     <class source="com.db4o.StaticClass" destinationName="StaticClass" isExported="false" title="Static class" schemaNotes="Internal DB4O class, excluded specifically">
         <field source="fields" destinationName="fields" isExported="true" skipWhen="NULL" type="com.db4o.StaticField" embedContents="true" title="Champs" />
-        <field source="name" destinationName="name" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Name" />
+        <field source="name" destinationName="name" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom" />
     </class>
     <class source="com.db4o.StaticField" destinationName="StaticField" isExported="false" title="Static field" schemaNotes="Internal DB4O class, excluded specifically">
         <reference class="com.db4o.StaticClass" field="fields" />
-        <field source="name" destinationName="name" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Name" />
-        <field source="value" destinationName="value" isExported="true" skipWhen="NULL" type="object" title="Value" />
+        <field source="name" destinationName="name" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom" />
+        <field source="value" destinationName="value" isExported="true" skipWhen="NULL" type="object" title="Valeur" />
     </class>
     <class source="com.db4o.config.Entry" destinationName="Entry" isExported="false" title="Entry" schemaNotes="Internal DB4O class, excluded specifically">
-        <field source="key" destinationName="key" isExported="true" skipWhen="NULL" type="object" title="Key" />
-        <field source="value" destinationName="value" isExported="true" skipWhen="NULL" type="object" title="Value" />
+        <field source="key" destinationName="key" isExported="true" skipWhen="NULL" type="object" title="Clé" />
+        <field source="value" destinationName="value" isExported="true" skipWhen="NULL" type="object" title="Valeur" />
     </class>
     <class source="com.db4o.ext.Db4oDatabase" destinationName="Db4oDatabase" isExported="false" title="DB 4 o database" schemaNotes="Internal DB4O class, excluded specifically">
-        <field source="i_signature" destinationName="i_signature" isExported="true" skipWhen="NULL" type="byte" title="I signature" />
-        <field source="i_uuid" destinationName="i_uuid" isExported="true" skipWhen="NULL" type="long" title="I UUID" />
+        <field source="i_signature" destinationName="i_signature" isExported="true" skipWhen="NULL" type="byte" title="Signature" />
+        <field source="i_uuid" destinationName="i_uuid" isExported="true" skipWhen="NULL" type="long" title="UUID" />
     </class>
     <class source="gen.requete.DynamicStaticDate" destinationName="DateStatiqueOuDynamique" isExported="false" title="Date statique ou dynamique" parentClass="gest.gen.Entite">
         <field source="mDynamicDate" destinationName="dateDynamique" isExported="true" skipWhen="NULL" type="int" title="Date dynamique">
@@ -3417,6 +3428,13 @@
         <field source="mEtatCAUCA" destinationName="etatCAUCA" isExported="true" skipWhen="NULL" type="int" title="État CAUCA" />
         <field source="mExtFin" destinationName="extensionFin" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Extension fin" />
         <field source="mGeoPosition" destinationName="geoPosition" isExported="true" skipWhen="NULL" type="string" title="Géo-position">
+            <valueMap>
+                <mapping from="1" to="ADRESSE" />
+                <mapping from="2" to="MANUELLE" />
+                <mapping from="3" to="MATRICULE" />
+            </valueMap>
+        </field>
+        <field source="mImport" destinationName="import" isExported="true" skipWhen="NULL" type="string" title="Import">
            <valueMap>
                 <mapping from="1" to="INCONNU" />
                 <mapping from="2" to="ETTRAN" />
@@ -3428,13 +3446,6 @@
                 <mapping from="8" to="CAUCA" />
                 <mapping from="9" to="CIB" />
                 <mapping from="10" to="XML" />
-            </valueMap>
-        </field>
-        <field source="mImport" destinationName="import" isExported="true" skipWhen="NULL" type="string" title="Import">
-            <valueMap>
-                <mapping from="1" to="ADRESSE" />
-                <mapping from="2" to="MANUELLE" />
-                <mapping from="3" to="MATRICULE" />
             </valueMap>
         </field>
         <field source="mLongLat" destinationName="longitudeLatitude" isExported="true" skipWhen="NULL" type="gest.gen.LongLat" embedContents="true" title="Longitude-latitude" />
@@ -3456,15 +3467,7 @@
         <field source="mSubdivision" destinationName="subdivision" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Subdivision" />
         <field source="mTransfertCAUCAFait" destinationName="transfertCAUCAFait" isExported="true" skipWhen="NULL" type="boolean" title="Transfert CAUCA fait" />
         <field source="mTypeConstrAutreDetail" destinationName="typeConstructionAutreDetail" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Type de construction autre détail" />
-        <field source="mUtilisePeriodicite" destinationName="utilisePeriodicite" isExported="true" skipWhen="NULL" type="string" title="Utilise la périodicité">
-            <valueMap>
-                <mapping from="-2" to="INEXISTANTE" />
-                <mapping from="-1" to="AUCUNE" />
-                <mapping from="1" to="GENERAL" />
-                <mapping from="2" to="CLASSIFICATION" />
-                <mapping from="3" to="PERSONNALISEE" />
-            </valueMap>
-        </field>
+        <field source="mUtilisePeriodicite" definition="mTypePeriodicite" />
         <field source="mValeur" destinationName="valeur" isExported="true" skipWhen="ZERO,NULL" type="double" title="Valeur" />
         <field source="mValeurImmeuble" destinationName="valeurImmeuble" isExported="true" skipWhen="ZERO,NULL" type="double" title="Valeur de l'immeuble" />
         <field source="mValeurTerrain" destinationName="valeurTerrain" isExported="true" skipWhen="ZERO,NULL" type="double" title="Valeur du terrain" />
@@ -3598,15 +3601,7 @@
     <class source="gest.dossPrev.PeriodiciteDossPrev" destinationName="PeriodiciteDossierAdresse" isExported="true" title="Périodicité de dossier adresse" parentClass="gest.gen.Periodicite">
         <reference class="gest.dossPrev.DossPrev" field="mVectPeriodicites" />
         <field source="mDateDernPrev" destinationName="dateDernierePrevention" isExported="true" skipWhen="NULL" type="date" title="Date de dernière prévention" />
-        <field source="mTypePeriodicite" destinationName="typePeriodicite" isExported="true" skipWhen="NULL" type="int" title="Type de périodicité">
-            <valueMap>
-                <mapping from="-2" to="INEXISTANTE" />
-                <mapping from="-1" to="AUCUNE" />
-                <mapping from="1" to="GENERAL" />
-                <mapping from="2" to="CLASSIFICATION" />
-                <mapping from="3" to="PERSONNALISEE" />
-            </valueMap>
-        </field>
+        <field source="mTypePeriodicite" definition="mTypePeriodicite" />
         <field source="mIDResponsable" destinationName="idResponsable" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.employe.IDEmploye" title="Responsable" />
         <field source="mIDTypePrevention" destinationName="idTypePrevention" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.typePrev.IDTypePrev" title="Type de prévention" />
     </class>
