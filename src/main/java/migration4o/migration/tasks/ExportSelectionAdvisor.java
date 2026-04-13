@@ -15,6 +15,7 @@ import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.recipes.ObjectActivator;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.schema.DOSchemaReference;
@@ -22,6 +23,7 @@ import migration4o.models.ui.ClassExportConfig;
 import migration4o.ui.common.DOExportMonitor;
 import migration4o.util.DatabaseUtil;
 import migration4o.util.ObjectResolverUtil;
+import migration4o.util.ReferenceUtil;
 import migration4o.util.TypeUtil;
 
 /**
@@ -635,7 +637,7 @@ public class ExportSelectionAdvisor {
                         continue;
                     // Read mID using the proven ancestor-walking pattern
                     // (mID is often declared on a parent class like Entite)
-                    Object midVal = DatabaseUtil.getStoredFieldValue(dbClass.delegate, activation.object, "mID");
+                    Object midVal = DatabaseUtil.getStoredFieldValue(dbClass.delegate, activation.object, DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME);
                     if (midVal instanceof Number) {
                         long mid = ((Number) midVal).longValue();
                         if (mid > 0)
@@ -708,7 +710,7 @@ public class ExportSelectionAdvisor {
                             // Activate the IDEntite wrapper, then read its mID
                             // using the same ancestor-walking pattern
                             ObjectResolverUtil.activateObjectShallow(srcDelegate, fv, null);
-                            Object midVal = DatabaseUtil.getStoredFieldValue(srcDelegate, fv, "mID");
+                            Object midVal = DatabaseUtil.getStoredFieldValue(srcDelegate, fv, DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME);
                             if (!(midVal instanceof Number))
                                 continue;
                             long mid = ((Number) midVal).longValue();

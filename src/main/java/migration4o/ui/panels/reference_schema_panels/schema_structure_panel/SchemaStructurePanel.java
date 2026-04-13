@@ -2,6 +2,7 @@ package migration4o.ui.panels.reference_schema_panels.schema_structure_panel;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaFieldReference;
 import migration4o.models.schema.DOSchemaModule;
@@ -775,9 +776,9 @@ public class SchemaStructurePanel extends JPanel {
      * Extracts expected EntiteContientID type from field name. Example: "mIDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"
      */
     private String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
-        // If field name starts with "mID", extract the part after it
-        if (fieldName.startsWith("mID")) {
-            return fieldName.substring(3); // Remove "mID" prefix
+        // If field name starts with mID, extract the part after it
+        if (fieldName.startsWith(DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME)) {
+            return fieldName.substring(DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.length()); // Remove mID prefix
         }
         // Otherwise try to extract from the ID class name
         // "IDTypeAssistanceParticuliere" -> "TypeAssistanceParticuliere"

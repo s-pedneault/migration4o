@@ -31,6 +31,7 @@ import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.recipes.RecipeCollectionItems;
 
@@ -407,7 +408,7 @@ public class ClassObjectsDialog extends JFrame {
                 StoredField[] fields = storedClass.getStoredFields();
                 if (fields != null) {
                     for (StoredField field : fields) {
-                        if ("mID".equals(field.getName())) {
+                        if (DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.equals(field.getName())) {
                             Object value = field.get(obj);
                             if (value instanceof Long)
                                 return (Long) value;
@@ -436,7 +437,7 @@ public class ClassObjectsDialog extends JFrame {
             } catch (Exception ignored) {
             }
 
-            String[] priorityFields = { "mNom", "iNom", "mLibelle", "iSommaire", "mCode", "iCode", "mID", "iIdentCol" };
+            String[] priorityFields = { "mNom", "iNom", "mLibelle", "iSommaire", "mCode", "iCode", DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME, "iIdentCol" };
             for (String fieldName : priorityFields) {
                 Object fieldValue = getFieldValueDirect(obj, fieldName);
                 if (fieldValue != null && !isEmptyValue(fieldValue)) {

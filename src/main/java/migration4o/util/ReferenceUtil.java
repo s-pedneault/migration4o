@@ -4,6 +4,7 @@ import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 
 /**
@@ -92,8 +93,8 @@ public class ReferenceUtil {
      * @return The expected type name, or null if cannot be extracted
      */
     public static String extractExpectedTypeFromFieldName(String fieldName, String idClassName) {
-        if (fieldName != null && fieldName.startsWith("mID")) {
-            return fieldName.substring(3);
+        if (fieldName != null && fieldName.startsWith(DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME)) {
+            return fieldName.substring(DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.length());
         }
         String simpleClassName = ClassUtil.getSimpleName(idClassName);
         if (simpleClassName.startsWith("ID")) {

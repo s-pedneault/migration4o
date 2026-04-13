@@ -2,6 +2,7 @@ package migration4o.migration;
 
 import migration4o.database.DODatabaseDelegate;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 
 /**
  * Filters database objects during export based on their {@code mIDSSI} value
@@ -34,7 +35,7 @@ public class OrganizationFilter {
         }
 
         if (schemaClass.isMultiOrganization()) {
-            Object idValue = delegate.getStoredFieldValue(obj, "mIDSSI");
+            Object idValue = delegate.getStoredFieldValue(obj, DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME);
             if (!(idValue instanceof Number)) {
                 return true;
             }

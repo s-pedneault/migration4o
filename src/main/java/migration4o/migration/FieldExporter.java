@@ -825,6 +825,34 @@ public class FieldExporter {
                 continue;
             }
 
+            // Value-alias field: @realField + valueMap, no criterias.
+            // Read the sibling real field, apply the map, write a scalar.
+            if (schemaField.isValueAliasField()) {
+                try {
+                    String realFieldName = schemaField.getVirtualFieldName();
+                    StoredClass storedClass = delegate.storedClass(obj);
+                    Object rawValue = null;
+                    if (storedClass != null) {
+                        for (StoredField sf : delegate.getAllFieldsIncludingAncestors(storedClass)) {
+                            if (realFieldName.equals(sf.getName())) {
+                                rawValue = sf.get(obj);
+                                break;
+                            }
+                        }
+                    }
+                    if (shouldSkipField(rawValue, schemaField, operation.referenceSchema)) {
+                        continue;
+                    }
+                    String stringValue = rawValue != null ? rawValue.toString() : null;
+                    stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
+                    xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(rawValue, schemaField, operation.referenceSchema), stringValue, true);
+                    fieldsWritten++;
+                } catch (Exception e) {
+                    System.err.println("[WARN] Value-alias field '" + schemaField.attributes.source + "': " + e.getMessage());
+                }
+                continue;
+            }
+
             // Skip if no criteria defined
             if (schemaField.attributes.criterias == null || schemaField.attributes.criterias.isEmpty()) {
                 continue;

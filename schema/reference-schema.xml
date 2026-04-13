@@ -64,7 +64,7 @@
         <field source="i_uuid" destinationName="i_uuid" isExported="true" skipWhen="NULL" type="long" title="UUID" />
     </class>
     <class source="gen.requete.DynamicStaticDate" destinationName="DateStatiqueOuDynamique" isExported="false" title="Date statique ou dynamique" parentClass="gest.gen.Entite">
-        <field source="mDynamicDate" destinationName="dateDynamique" isExported="true" skipWhen="NULL" type="int" title="Date dynamique">
+        <field source="mDynamicDate" destinationName="dateDynamique" isExported="true" skipWhen="NULL" type="string" title="Date dynamique">
             <valueMap>
                 <mapping from="1" to="1JOUR" />
                 <mapping from="2" to="1SEMAINE" />
@@ -187,7 +187,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003C1" destinationName="IDDsi2003C1" isExported="true" title="IDDsi2003 C1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=C1">
         <reference class="gest.intervention.Intervention" field="mTypeEvenement" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Limité à l'extérieur, sans pertes" />
                 <mapping from="12" to="Limité à l'extérieur, feu de véhicule" />
@@ -203,7 +203,7 @@
         <reference class="gest.intervention.ParamIntervDSI2003" field="mMoyenTrans" />
         <reference class="gest.intervention.ParamIntervention" field="mMoyenTrans" />
         <reference class="gest.intervention.IntervChronologie" field="mMoyenTrans" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Appel téléphonique transmis au service d'incendie par un central 9-1-1 ou une centrale d'alarme et de surveillance" />
                 <mapping from="2" to="Appel téléphonique d'un particulier au service d'incendie – incluant les services qui exploitent leur propre réseau 9-1-1." />
@@ -217,7 +217,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003D8" destinationName="IDDsi2003D8" isExported="true" title="IDDsi2003 D8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=D8">
         <reference class="gest.intervention.IntervChronologie" field="mRaisonDelai" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Température extrême" />
                 <mapping from="2" to="Densité de la circulation" />
@@ -232,7 +232,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003E12" destinationName="IDDsi2003E12" isExported="true" title="IDDsi2003 E12" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E12">
         <reference class="gest.intervention.IntervPerte" field="mIDAssurance" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Les biens endommagés sont complètement ou partiellement assurés" />
                 <mapping from="88" to="Les biens endommagés ne sont pas assurés" />
@@ -243,7 +243,7 @@
     <class source="gest.DSI2003.IDDsi2003E13" destinationName="IDDsi2003E13" isExported="true" title="IDDsi2003 E13" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E13">
         <reference class="gest.intervention.IntervVehFeu" field="mIDEvacuation" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDEvacuation" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Évacuation complète du bâtiment avant l'arrivée des pompiers" />
                 <mapping from="2" to="Évacuation complète du bâtiment assistée ou effectuée par les pompiers" />
@@ -257,7 +257,7 @@
     <class source="gest.DSI2003.IDDsi2003E14" destinationName="IDDsi2003E14" isExported="true" title="IDDsi2003 E14" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E14">
         <reference class="gest.intervention.IntervVehFeu" field="mIDSauvetage" />
         <reference class="gest.intervention.IntervSauvetage" field="mIDSauvetage" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Sauvetage effectué par les pompiers" />
                 <mapping from="2" to="Sauvetage effectué par d'autres intervenants que les pompiers" />
@@ -270,7 +270,7 @@
     <class source="gest.DSI2003.IDDsi2003E2" destinationName="IDDsi2003E2" isExported="true" title="IDDsi2003 E2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E2">
         <reference class="gest.dossPrev.DossPrev" field="mIDCategRisque" />
         <reference class="gest.planInterv.ConfigSectionEtatInitialPourPlan" field="mIDCategRisque" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Faible" />
                 <mapping from="2" to="Moyen" />
@@ -281,15 +281,15 @@
         </field>
     </class>
     <class source="gest.DSI2003.IDDsi2003E6" destinationName="IDDsi2003E6" isExported="true" title="IDDsi2003 E6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E6">
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
     <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" title="IDDsi2003 H3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=H3">
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
     <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E3">
         <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
         <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1000" to="Logement" />
                 <mapping from="1100" to="Chalet ou maison de villégiature" />
@@ -1639,7 +1639,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003E8" destinationName="IDDsi2003E8" isExported="true" title="IDDsi2003 E8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E8">
         <reference class="gest.dossPrev.DossPrev" field="mIDTypeConstruction" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Ossature de bois avec solives en bois solide" />
                 <mapping from="2" to="Ossature de bois avec solives préfabriquées" />
@@ -1657,7 +1657,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F1" destinationName="IDDsi2003F1" isExported="true" title="IDDsi2003 F1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F1">
         <reference class="gest.dossPrev.Protection" field="mIDAvertisseur" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Avertisseur de fumée avec signal local seulement" />
                 <mapping from="2" to="Avertisseur de fumée relié à un central de réponse" />
@@ -1668,7 +1668,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F2" destinationName="IDDsi2003F2" isExported="true" title="IDDsi2003 F2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F2">
         <reference class="gest.intervention.IntervProtection" field="mIDAvertFonctionne" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="L'avertisseur de fumée a fonctionné" />
                 <mapping from="21" to="Emplacement inapproprié" />
@@ -1686,7 +1686,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F3" destinationName="IDDsi2003F3" isExported="true" title="IDDsi2003 F3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F3">
         <reference class="gest.dossPrev.Protection" field="mIDSystAlarme" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Système d'alarme incendie avec signal local seulement" />
                 <mapping from="2" to="Système d'alarme incendie relié à un central de réponse" />
@@ -1698,7 +1698,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F4" destinationName="IDDsi2003F4" isExported="true" title="IDDsi2003 F4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F4">
         <reference class="gest.intervention.IntervProtection" field="mIDSystAlarmeFonctionne" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Le système d'alarme incendie a fonctionné" />
                 <mapping from="21" to="Emplacement inapproprié" />
@@ -1714,7 +1714,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F5" destinationName="IDDsi2003F5" isExported="true" title="IDDsi2003 F5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F5">
         <reference class="gest.dossPrev.Protection" field="mIDExtinction" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Système complet" />
                 <mapping from="2" to="Système partiel" />
@@ -1727,7 +1727,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003F6" destinationName="IDDsi2003F6" isExported="true" title="IDDsi2003 F6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=F6">
         <reference class="gest.intervention.IntervProtection" field="mIDExtinctionFonctionne" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Un gicleur a fonctionné" />
                 <mapping from="12" to="Deux gicleurs ont fonctionné" />
@@ -1748,7 +1748,7 @@
     <class source="gest.DSI2003.IDDsi2003G1" destinationName="IDDsi2003G1" isExported="true" title="IDDsi2003 G1" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G1">
         <reference class="gest.intervention.IntervCauseIncendie" field="mLieuOrigine" />
         <reference class="gest.rci.RciLieu" field="mIDLieuOrigine" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="10" to="Vestibule, corridor" />
                 <mapping from="20" to="Escalier extérieur, incluant rampe et escalier de secours" />
@@ -1858,7 +1858,7 @@
     <class source="gest.DSI2003.IDDsi2003G2" destinationName="IDDsi2003G2" isExported="true" title="IDDsi2003 G2" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G2">
         <reference class="gest.intervention.IntervCauseIncendie" field="mSourceChaleur" />
         <reference class="gest.rci.SourceChaleur" field="mSource" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="111" to="Élément d'un poêle, d'une cuisinière, d'une table de cuisson" />
                 <mapping from="112" to="Four du poêle ou de la cuisinière" />
@@ -1979,7 +1979,7 @@
     <class source="gest.DSI2003.IDDsi2003G3" destinationName="IDDsi2003G3" isExported="true" title="IDDsi2003 G3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G3">
         <reference class="gest.rci.Combustible" field="mCombus" />
         <reference class="gest.intervention.IntervCauseIncendie" field="mCombustible" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Combustible solide (charbon, bois, granules, carton, papier, déchets utilisés à des fins d'allumage ou de brûlage occasionnel)" />
                 <mapping from="12" to="Naphtalène" />
@@ -2000,7 +2000,7 @@
     <class source="gest.DSI2003.IDDsi2003G4" destinationName="IDDsi2003G4" isExported="true" title="IDDsi2003 G4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mCauseProbable" />
         <reference class="gest.rci.RciLieu" field="mIDCauseProbable" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="110" to="Dossier transmis pour enquête" />
                 <mapping from="210" to="Dégel de tuyau, fils chauffants" />
@@ -2055,7 +2055,7 @@
     <class source="gest.DSI2003.IDDsi2003G5" destinationName="IDDsi2003G5" isExported="true" title="IDDsi2003 G5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPremMatEnflamme" />
         <reference class="gest.rci.RciLieu" field="mIDPremMatEnflamme" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="111" to="Plancher, plafond, toit" />
                 <mapping from="112" to="Murs" />
@@ -2164,7 +2164,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003G6" destinationName="IDDsi2003G6" isExported="true" title="IDDsi2003 G6" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G6">
         <reference class="gest.intervention.IntervCauseIncendie" field="mAmpleurIncendie" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Limité à l'extérieur" />
                 <mapping from="12" to="Propagé à un bâtiment ou plus" />
@@ -2185,7 +2185,7 @@
     <class source="gest.DSI2003.IDDsi2003G7" destinationName="IDDsi2003G7" isExported="true" title="IDDsi2003 G7" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G7">
         <reference class="gest.intervention.IntervCauseIncendie" field="mPropagation" />
         <reference class="gest.rci.RciLieu" field="mIDPropagation" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Limité à l'extérieur" />
                 <mapping from="12" to="Propagé à un ou des bâtiments" />
@@ -2200,7 +2200,7 @@
     </class>
     <class source="gest.DSI2003.IDDsi2003G8" destinationName="IDDsi2003G8" isExported="true" title="IDDsi2003 G8" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=G8">
         <reference class="gest.intervention.IntervCauseIncendie" field="mDommage" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="11" to="Dommages limités à l'extérieur" />
                 <mapping from="12" to="Dommages étendus à un ou des bâtiments" />
@@ -2216,7 +2216,7 @@
     <class source="gest.DSI2003.IDDsi2003H5" destinationName="IDDsi2003H5" isExported="true" title="IDDsi2003 H5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=H5">
         <reference class="gest.intervention.IntervFeuExterieur" field="mIDAssurance" />
         <reference class="gest.intervention.IntervVehicule" field="mIDAssurance" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Les biens endommagés sont complètement ou partiellement assurés" />
                 <mapping from="88" to="Les biens endommagés ne sont pas assurés" />
@@ -2227,7 +2227,7 @@
     <class source="gest.DSI2003.IDDsi2003M4" destinationName="IDDsi2003M4" isExported="true" title="IDDsi2003 M4" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=M4">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDModeInflammation" />
         <reference class="gest.rci.RciLieu" field="mIDModeInflammation" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Auto-inflammation" />
                 <mapping from="2" to="Inflammation" />
@@ -2248,7 +2248,7 @@
     <class source="gest.DSI2003.IDDsi2003M5" destinationName="IDDsi2003M5" isExported="true" title="IDDsi2003 M5" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=M5">
         <reference class="gest.intervention.IntervCauseIncendie" field="mIDEnergie" />
         <reference class="gest.rci.RciLieu" field="mIDEnergie" />
-        <field source="mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur">
+        <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">
             <valueMap>
                 <mapping from="1" to="Électrique" />
                 <mapping from="2" to="Nucléaire" />
@@ -2367,7 +2367,7 @@
     <class source="gest.activite.ActionCondition" destinationName="ActionCondition" isExported="true" title="Action condition" parentClass="gest.gen.Entite">
         <reference class="gest.activite.TypeActivite" field="mVectActionCondition" />
         <reference class="gest.actionCondition.GroupeActionCondition" field="mVectActionCondition" />
-        <field source="mAction" destinationName="action" isExported="true" skipWhen="NULL" type="int" title="Action">
+        <field source="mAction" destinationName="action" isExported="true" skipWhen="NULL" type="string" title="Action">
             <valueMap>
                 <mapping from="1" to="TAUX_AUTRE_ACTIVITE" />
                 <mapping from="2" to="TEMPS_PAYE_MIN" />
@@ -2387,7 +2387,7 @@
                 <mapping from="17" to="AUTRE" />
             </valueMap>
         </field>
-        <field source="mCondition" destinationName="condition" isExported="true" skipWhen="NULL" type="int" title="Condition">
+        <field source="mCondition" destinationName="condition" isExported="true" skipWhen="NULL" type="string" title="Condition">
             <valueMap>
                 <mapping from="1" to="PAR_DEFAUT" />
                 <mapping from="2" to="PRESEANCE" />
@@ -2409,7 +2409,7 @@
         <field source="mTempsApresDuree" destinationName="tempsApresDuree" isExported="true" skipWhen="NULL" type="date" title="Temps après durée" />
         <field source="mTempsPayeBase" destinationName="tempsPayeBase" isExported="true" skipWhen="NULL" type="date" title="Temps payé de base" />
         <field source="mTempsPayeBloc" destinationName="tempsPayeBloc" isExported="true" skipWhen="NULL" type="date" title="Temps payé par bloc" />
-        <field source="mTempsPayeBlocArrondir" destinationName="tempsPayeBlocArrondir" isExported="true" skipWhen="NULL" type="int" title="Arrondissement du temps payé par bloc">
+        <field source="mTempsPayeBlocArrondir" destinationName="tempsPayeBlocArrondir" isExported="true" skipWhen="NULL" type="string" title="Arrondissement du temps payé par bloc">
             <valueMap>
                 <mapping from="1" to="TRONQUER" />
                 <mapping from="2" to="ARRONDIR" />
@@ -2499,7 +2499,7 @@
         <field source="mLibere" destinationName="libere" isExported="true" skipWhen="NULL" type="boolean" title="Libéré" />
         <field source="mMontantSupp" destinationName="montantSupplementaire" isExported="true" skipWhen="NULL" type="double" title="Montant supplémentaire" />
         <field source="mNote" definition="mNote" />
-        <field source="mPresence" destinationName="presence" isExported="true" skipWhen="NULL" type="int" title="Présence">
+        <field source="mPresence" destinationName="presence" isExported="true" skipWhen="NULL" type="string" title="Présence">
             <valueMap>
                 <mapping from="1" to="COMPLET" />
                 <mapping from="2" to="PARTIEL" />
@@ -2514,7 +2514,7 @@
             </valueMap>
         </field>
         <field source="mProtegerEdition" destinationName="protegerEdition" isExported="true" skipWhen="NULL" type="boolean" title="Protéger l'édition" />
-        <field source="mQuiPayerSiRemplace" destinationName="quiPayerSiRemplace" isExported="true" skipWhen="NULL" type="int" title="Qui payer si remplacé">
+        <field source="mQuiPayerSiRemplace" destinationName="quiPayerSiRemplace" isExported="true" skipWhen="NULL" type="string" title="Qui payer si remplacé">
             <valueMap>
                 <mapping from="0" to="NON_SPECIFIE" />
                 <mapping from="1" to="REMPLACE" />
@@ -2550,7 +2550,7 @@
     </class>
     <class source="gest.activite.TypeActivQuart" destinationName="TypeActiviteQuart" isExported="true" title="Type d'activité quart" summary="[codeActivite] - [nom]" parentClass="gest.activite.TypeActivite">
         <field source="mEquipe" destinationName="equipe" isExported="true" skipWhen="NULL" type="boolean" title="Équipe" />
-        <field source="mForme" destinationName="forme" isExported="true" skipWhen="NULL" type="int" title="Forme">
+        <field source="mForme" destinationName="forme" isExported="true" skipWhen="NULL" type="string" title="Forme">
             <valueMap>
                 <mapping from="1" to="LIGNE" />
                 <mapping from="2" to="BOITE" />
@@ -2610,7 +2610,7 @@
         <field source="mAccessibleHiver" destinationName="accessibleHiver" isExported="true" skipWhen="NULL" type="boolean" title="Accessible l'hiver" />
         <field source="mDateFinGarantie" destinationName="dateFinGarantie" isExported="true" skipWhen="NULL" type="date" title="Date de fin de garantie" />
         <field source="mDateInstallation" destinationName="dateInstallation" isExported="true" skipWhen="NULL" type="date" title="Date de l'installation" />
-        <field source="mEtat" destinationName="etat" isExported="true" skipWhen="NULL" type="int" title="État">
+        <field source="mEtat" destinationName="etat" isExported="true" skipWhen="NULL" type="string" title="État">
             <valueMap>
                 <mapping from="1" to="EN_SERVICE" />
                 <mapping from="2" to="HORS_SERVICE" />
@@ -2626,7 +2626,7 @@
         <field source="mNumerotation" destinationName="numerotation" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Numérotation" />
         <field source="mPanneauIdent" destinationName="panneauIdentification" isExported="true" skipWhen="NULL" type="boolean" title="Panneau d'identification" />
         <field source="mPrecEmpl" destinationName="precisionEmplacement" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Précision de l'emplacement" />
-        <field source="mTypeProprietaire" destinationName="typeProprietaire" isExported="true" skipWhen="NULL" type="int" title="Type de propriétaire">
+        <field source="mTypeProprietaire" destinationName="typeProprietaire" isExported="true" skipWhen="NULL" type="string" title="Type de propriétaire">
             <valueMap>
                 <mapping from="1" to="MUNICIPALITE" />
                 <mapping from="2" to="AUTRE" />
@@ -2673,7 +2673,7 @@
         <field source="mTuyauDiam" destinationName="tuyauDiametre" isExported="true" skipWhen="NULL" type="gest.gen.Qte" embedContents="true" title="Diamètre du tuyau" />
         <field source="mTuyauHautAspir" destinationName="tuyauHauteurAspiration" isExported="true" skipWhen="NULL" type="gest.gen.Qte" embedContents="true" title="Hauteur d'aspiration du tuyau" />
         <field source="mTuyauLong" destinationName="tuyauLongueur" isExported="true" skipWhen="NULL" type="gest.gen.Qte" embedContents="true" title="Longueur du tuyau" />
-        <field source="mTuyauTypeCoude" destinationName="tuyauTypeCoude" isExported="true" skipWhen="NULL" type="int" title="Type de coude du tuyau">
+        <field source="mTuyauTypeCoude" destinationName="tuyauTypeCoude" isExported="true" skipWhen="NULL" type="string" title="Type de coude du tuyau">
             <valueMap>
                 <mapping from="1" to="45" />
                 <mapping from="2" to="90" />
@@ -2780,7 +2780,7 @@
         <field source="mMarque" destinationName="marque" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Marque" />
         <field source="mModele" destinationName="modele" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Modèle" />
         <field source="mNote" definition="mNote" />
-        <field source="mType" destinationName="type" isExported="true" skipWhen="NULL" type="int" title="Type">
+        <field source="mType" destinationName="type" isExported="true" skipWhen="NULL" type="string" title="Type">
             <valueMap>
                 <mapping from="1" to="JOINT_ARTICULE" />
                 <mapping from="2" to="COMPRESSION" />
@@ -2936,7 +2936,7 @@
     <class source="gest.cauca.ParamCauca" destinationName="ParamCauca" isExported="true" title="Paramètres CAUCA" summary="Connexion à CAUCA via [adresseServ]:[portServ]" parentClass="gest.gen.EntiteParam">
         <field source="mAdresseServ" destinationName="adresseServ" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Adresse du serveur" />
         <field source="mPortServ" destinationName="portServ" isExported="true" skipWhen="NULL" type="int" title="Port du serveur" />
-        <field source="mSens" destinationName="sens" isExported="true" skipWhen="NULL" type="int" title="Sens">
+        <field source="mSens" destinationName="sens" isExported="true" skipWhen="NULL" type="string" title="Sens">
             <valueMap>
                 <mapping from="2" to="CAUCA_VERS_PL" />
                 <mapping from="3" to="PL_VERS_CAUCA" />
@@ -2960,13 +2960,13 @@
         <field source="mDateFin" definition="mDateFin" />
         <field source="mDescription" definition="mDescription" />
         <field source="mNom" definition="mNom" />
-        <field source="mPeriodes" destinationName="periodes" isExported="true" skipWhen="NULL" type="int" title="Périodes">
+        <field source="mPeriodes" destinationName="periodes" isExported="true" skipWhen="NULL" type="string" title="Périodes">
             <valueMap>
                 <mapping from="0" to="ANNEES" />
                 <mapping from="1" to="MOIS" />
             </valueMap>
         </field>
-        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut">
+        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="string" title="Statut">
             <valueMap>
                 <mapping from="0" to="ACTIF" />
                 <mapping from="1" to="MODELE" />
@@ -2979,14 +2979,14 @@
     <class source="gest.centreDesRapports.SectionRapportCentral" destinationName="SectionRapportCentral" isExported="true" title="Section de rapport" parentClass="gest.gen.Entite">
         <reference class="gest.centreDesRapports.RapportCentral" field="mVectSection" />
         <field source="mFiltresRequete" destinationName="filtresRequete" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Filtres requête" />
-        <field source="mFormatPapier" destinationName="formatPapier" isExported="true" skipWhen="NULL" type="int" title="Format de papier">
+        <field source="mFormatPapier" destinationName="formatPapier" isExported="true" skipWhen="NULL" type="string" title="Format de papier">
             <valueMap>
                 <mapping from="1" to="LETTRE" />
                 <mapping from="2" to="LEGAL" />
             </valueMap>
         </field>
         <field source="mIdentHJTable" destinationName="identHJTable" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Identification HJ table" />
-        <field source="mModeRapport" destinationName="modeRapport" isExported="true" skipWhen="NULL" type="int" title="Mode de rapport">
+        <field source="mModeRapport" destinationName="modeRapport" isExported="true" skipWhen="NULL" type="string" title="Mode de rapport">
             <valueMap>
                 <mapping from="1" to="SIMPLIFIE" />
                 <mapping from="2" to="EXPERT" />
@@ -2994,7 +2994,7 @@
         </field>
         <field source="mNom" definition="mNom" />
         <field source="mNomOngletXLS" destinationName="nomOngletXLS" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom d'onglet XLS" />
-        <field source="mOrientation" destinationName="orientation" isExported="true" skipWhen="NULL" type="int" title="Orientation">
+        <field source="mOrientation" destinationName="orientation" isExported="true" skipWhen="NULL" type="string" title="Orientation">
             <valueMap>
                 <mapping from="1" to="PORTRAIT" />
                 <mapping from="2" to="PAYSAGE" />
@@ -3157,7 +3157,7 @@
         <field source="mActivitesSimultaneesLayout" destinationName="activitesSimultaneesLayout" isExported="true" skipWhen="NULL" type="int" title="Activités simultanées layout" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.config.ParamConfig" destinationName="ParamConfig" isExported="true" title="Paramètre config" parentClass="gest.config.ParamConfigSSI">
+    <class source="gest.config.ParamConfig" destinationName="AncienParamConfig" isExported="true" title="Paramètre config" parentClass="gest.gen.EntiteParam" notes="Ancienne classe de paramètres généraux, à ne pas confondre avec ParamConfigSSI qui lui a succédé.">
         <field source="mIdentVilleDansNumActiv" destinationName="identVilleDansNumActiv" isExported="true" skipWhen="MINUS_ONE,NULL" type="boolean" title="Identification ville dans num activ" />
         <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Logo" />
         <field source="mNbrChiffreSequence" destinationName="nbrChiffreSequence" isExported="true" skipWhen="NULL" type="int" title="Nombre de chiffres dans la séquence" />
@@ -3274,7 +3274,7 @@
         <field source="mInclurePJ" destinationName="inclurePJ" isExported="true" skipWhen="NULL" type="boolean" title="Inclure les pièces jointes" />
         <field source="mNotifReplicReussie" destinationName="notifReplicReussie" isExported="true" skipWhen="NULL" type="boolean" title="Notifier aussi en cas de réussite" />
         <field source="mPeriodicite" destinationName="periodicite" isExported="true" skipWhen="NULL" type="gest.gen.Periodicite" embedContents="true" title="Périodicité" />
-        <field source="mTypeSync" destinationName="typeSync" isExported="true" skipWhen="NULL" type="int" title="Type d'échange">
+        <field source="mTypeSync" destinationName="typeSync" isExported="true" skipWhen="NULL" type="string" title="Type d'échange">
             <valueMap>
                 <mapping from="1" to="LECTURE_SEULEMENT" />
                 <mapping from="2" to="MODIFIABLE" />
@@ -3419,7 +3419,7 @@
         <field source="mDescUtilisation" destinationName="descriptionUtilisation" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Description d'utilisation" />
         <field source="mDossierPapier" destinationName="dossierPapier" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Dossier papier" />
         <field source="mEnergie" destinationName="energie" isExported="true" skipWhen="NULL" type="gest.dossPrev.Energie" embedContents="true" title="Énergie" />
-        <field source="mEtat" destinationName="etat" isExported="true" skipWhen="NULL" type="int" title="État">
+        <field source="mEtat" destinationName="etat" isExported="true" skipWhen="NULL" type="string" title="État">
             <valueMap>
                 <mapping from="1" to="ACTIF" />
                 <mapping from="2" to="INACTIF" />
@@ -3536,7 +3536,7 @@
         <field source="mPropQuant" destinationName="propaneQuantite" isExported="true" skipWhen="NULL" type="gest.gen.Qte" embedContents="true" title="Quantité de propane" />
     </class>
     <class source="gest.dossPrev.HistoImportDossPrev" destinationName="HistoImportDossierAdresse" isExported="true" title="Historique d'import de dossiers adresse" summary="[nomFichier] ([dateImport])" parentClass="gest.gen.EntiteContientID">
-        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="ID" />
+        <field source="mID" definition="mID" />
         <field source="mIDSSI" definition="mIDSSI" />
         <field source="mDateImport" destinationName="dateImport" isExported="true" skipWhen="NULL" type="date" title="Date de l'import" />
         <field source="mFilename" destinationName="nomFichier" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom de fichier" />
@@ -3628,7 +3628,7 @@
         <field source="mRaisonSociale" destinationName="raisonSociale" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Raison sociale" />
         <field source="mSalutation" destinationName="salutation" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Salutation" />
         <field source="mSiteWeb" destinationName="siteWeb" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Site web" />
-        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut">
+        <field source="mStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="string" title="Statut">
             <valueMap>
                 <mapping from="1" to="PROPRIETAIRE" />
                 <mapping from="2" to="LOCATAIRE" />
@@ -3796,7 +3796,7 @@
         <field source="iNbrMillisNonDispo" destinationName="nombreMillisecondeNonDisponible" isExported="true" skipWhen="NULL" type="long" title="Nombre milliseconde non disponible" />
         <field source="iPeriodicite" destinationName="periodicite" isExported="true" skipWhen="NULL" type="gest.gen.Periodicite" embedContents="true" title="Périodicité" />
         <field source="iRaison" destinationName="raison" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Raison" />
-        <field source="iTypeNonDispo" destinationName="typeNonDisponibilite" isExported="true" skipWhen="NULL" type="int" title="Type de non disponibilité">
+        <field source="iTypeNonDispo" destinationName="typeNonDisponibilite" isExported="true" skipWhen="NULL" type="string" title="Type de non disponibilité">
             <valueMap>
                 <mapping from="1" to="DATE" />
                 <mapping from="2" to="PERIODICITE" />
@@ -4134,7 +4134,7 @@
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisLieu" />
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
         <reference class="gest.secCiv.Mission" field="mIDFichier" />
-        <field source="mID" destinationName="id" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" format="file(file/[ID])" title="ID" />
+        <field source="@mID" destinationName="chemin" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" format="file(file/[ID])" title="Chemin" />
         <field source="mData" destinationName="donnees" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="byte[]" title="Données" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="NULL" type="date" title="Date de l'ajout" />
         <field source="mDateDernModif" destinationName="dateDerniereModification" isExported="true" skipWhen="NULL" type="date" title="Date de dernière modification" />
@@ -4352,7 +4352,7 @@
         <field source="mTelephone" destinationName="telephone" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléphone" />
         <field source="mTelephoneExt" destinationName="telephoneExtension" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléphone extension" />
         <field source="mTypeRue" destinationName="typeRue" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Type de rue" />
-        <field source="mTypeSuite" destinationName="typeSuite" isExported="true" skipWhen="NULL" type="int" title="Type de suite">
+        <field source="mTypeSuite" destinationName="typeSuite" isExported="true" skipWhen="NULL" type="string" title="Type de suite">
             <valueMap>  
                 <mapping from="1" to="AUCUN" />
                 <mapping from="2" to="APPARTEMENT" />
@@ -4643,7 +4643,7 @@
         <reference class="gest.planInterv.AlimDisp" field="mVitesseMoyenne" />
         <reference class="gest.planInterv.Exposition" field="mEspacement" />
         <reference class="gest.borne.Bouchon" field="mDiam" />
-        <field source="mMes" destinationName="mesure" isExported="true" skipWhen="NULL" type="int" title="Mesure">
+        <field source="mMes" destinationName="mesure" isExported="true" skipWhen="NULL" type="string" title="Mesure">
             <valueMap>
                 <mapping from="1" to="VOLUME_GALLON_IMPERIAL" />
                 <mapping from="2" to="VOLUME_GALLON" />
@@ -4689,7 +4689,7 @@
                 <mapping from="807" to="DUREE_ANNEES" />
             </valueMap>
         </field>
-        <field source="mTypeQte" destinationName="typeQuantite" isExported="true" skipWhen="NULL" type="int" title="Type de quantité">
+        <field source="mTypeQte" destinationName="typeQuantite" isExported="true" skipWhen="NULL" type="string" title="Type de quantité">
             <valueMap bitmask="true">
                 <mapping from="1" to="VOLUME" />
                 <mapping from="2" to="DIMENSION" />
@@ -4709,7 +4709,7 @@
         <reference class="gest.centreDesRapports.SectionRapportCentral" field="mVectRequete" />
         <reference class="gest.utilGroupe.DroitAcces" field="mFiltreDossPrev" />
         <field source="mChamp" destinationName="champ" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Champ" />
-        <field source="mOperateur" destinationName="operateur" isExported="true" skipWhen="NULL" type="int" title="Opérateur">
+        <field source="mOperateur" destinationName="operateur" isExported="true" skipWhen="NULL" type="string" title="Opérateur">
             <valueMap>
                 <mapping from="1" to="CONTIENT" />
                 <mapping from="2" to="COMMENCE" />
@@ -4737,7 +4737,7 @@
     <class source="gest.gen.Requete$NComplexeComparaison" destinationName="ComplexeComparaison" isExported="true" title="Comparaison complexe" parentClass="gest.gen.Entite">
         <reference class="gest.gen.Requete" field="mNComplexeComparaison" />
         <field source="iHashCritere" destinationName="iHashCritere" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Hashtable" embedContents="true" title="I hash critère" />
-        <field source="iType" destinationName="type" isExported="true" skipWhen="NULL" type="int" title="Type">
+        <field source="iType" destinationName="type" isExported="true" skipWhen="NULL" type="string" title="Type">
             <valueMap>
                 <mapping from="1" to="CHAMP_PERSO" />
             </valueMap>
@@ -5653,7 +5653,7 @@
         <reference class="gest.maintenance.TypeMaint" field="mNouvEtatParDefaut" />
         <reference class="gest.equipement.AnnexeMaintenance" field="mIDEtatEquipement" />
         <field source="mID" definition="mID" />
-        <field source="mComport" destinationName="comportement" isExported="true" skipWhen="NULL" type="int" title="Comportement">
+        <field source="mComport" destinationName="comportement" isExported="true" skipWhen="NULL" type="string" title="Comportement">
             <valueMap>
                 <mapping from="1" to="EN_SERVICE" />
                 <mapping from="2" to="HORS_SERVICE" />
@@ -6741,7 +6741,7 @@
     </class>
     <class source="gest.rci.RciDescBatiment$NElementPanneauElectrique" destinationName="ElementPanneauElectrique" isExported="true" title="Élément panneau électrique" parentClass="gest.gen.Entite">
         <field source="iNom" destinationName="nom" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom" />
-        <field source="iStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="int" title="Statut">
+        <field source="iStatut" destinationName="statut" isExported="true" skipWhen="NULL" type="string" title="Statut">
             <valueMap>
                 <mapping from="1" to="OUVERT" />
                 <mapping from="2" to="FERME" />
@@ -6753,7 +6753,7 @@
     </class>
     <class source="gest.rci.RciDescBatiment$NFusible" destinationName="NFusible" isExported="true" title="Fusible" parentClass="gest.rci.RciDescBatiment$NElementPanneauElectrique">
         <reference class="gest.rci.RciDescBatiment" field="mVectFusibles" />
-        <field source="iType" destinationName="type" isExported="true" skipWhen="NULL" type="int" title="Type">
+        <field source="iType" destinationName="type" isExported="true" skipWhen="NULL" type="string" title="Type">
             <valueMap>
                 <mapping from="1" to="STD" />
                 <mapping from="2" to="D" />

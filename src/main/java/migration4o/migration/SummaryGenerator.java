@@ -7,11 +7,15 @@ import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import com.db4o.ext.StoredClass;
+import com.db4o.ext.StoredField;
+
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.recipes.IDEntityHandler;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ClassUtil;
 import migration4o.util.DatabaseUtil;
@@ -359,7 +363,7 @@ public class SummaryGenerator {
             return null;
         String mIdStr = String.valueOf(mID);
         for (DOSchemaField field : idEntiteClass.fields) {
-            if ("mID".equals(field.attributes.source) && field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
+            if (DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.equals(field.attributes.source) && field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
                 String mapped = field.attributes.valueMap.getMappedValue(mIdStr);
                 return mapped.equals(mIdStr) ? null : mapped;
             }

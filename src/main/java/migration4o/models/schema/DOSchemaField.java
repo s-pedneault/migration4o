@@ -30,6 +30,17 @@ public class DOSchemaField {
     }
 
     /**
+     * Returns true if this is a value-alias field: a virtual field (source starts with @) that has a valueMap but no criterias. Instead of querying the database, it reads the real sibling field named by {@link #getVirtualFieldName()}, applies the valueMap, and writes the result under {@link #attributes}.destinationName.
+     */
+    public boolean isValueAliasField() {
+        if (!isVirtualField())
+            return false;
+        if (attributes.valueMap == null || attributes.valueMap.isEmpty())
+            return false;
+        return attributes.criterias == null || attributes.criterias.isEmpty();
+    }
+
+    /**
      * Gets the actual field name for a virtual field (removes the @ prefix).
      */
     public String getVirtualFieldName() {

@@ -10,6 +10,9 @@ import org.apache.logging.log4j.Logger;
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseDelegate;
+import migration4o.migration.recipes.ObjectActivator;
+import migration4o.models.schema.DOSchemaConstants;
+import migration4o.util.ObjectResolverUtil;
 
 /**
  * Detects the partner organizations present in a database by querying all
@@ -20,8 +23,6 @@ public class OrganizationDetectionService {
 
     private static final Logger log = LogManager.getLogger(OrganizationDetectionService.class);
 
-    private static final String PARAM_CONFIG_SSI_CLASS = "gest.config.ParamConfigSSI";
-    private static final String FIELD_ID_SSI = "mIDSSI";
     private static final String FIELD_VILLE = "mVille";
     private static final String FIELD_NOM = "mNom";
 
@@ -38,7 +39,7 @@ public class OrganizationDetectionService {
             return List.of();
         }
 
-        DODatabaseClass dbClass = database.findClassByName(PARAM_CONFIG_SSI_CLASS);
+        DODatabaseClass dbClass = database.findClassByName(DOSchemaConstants.ORGANIZATION_CLASS_NAME);
         if (dbClass == null || dbClass.objects == null || dbClass.objects.objectIds == null || dbClass.objects.objectIds.length == 0) {
             return List.of();
         }
@@ -58,15 +59,15 @@ public class OrganizationDetectionService {
     }
 
     private static OrganizationInfo readOrganization(DODatabaseDelegate delegate, long objectId) {
-        Object obj = delegate.getByID(objectId);
-        if (obj == null) {
+        ObjectActivator.ActivationResult activation = ObjectActivator.getAndActivate(delegate, objectId);
+        if (activation == null) {
             return null;
         }
 
         try {
-            delegate.activate(obj, 3);
+            Object obj = activation.object;
 
-            Object idValue = delegate.getStoredFieldValue(obj, FIELD_ID_SSI);
+            Object idValue = delegate.getStoredFieldValue(obj, DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME);
             if (!(idValue instanceof Number)) {
                 return null;
             }
@@ -80,7 +81,7 @@ public class OrganizationDetectionService {
                 log.warn("ParamConfigSSI id={} has no mVille — skipping", idSSI);
                 return null;
             }
-            delegate.activate(villeObj, 1);
+            ObjectResolverUtil.activateObjectShallow(delegate, villeObj, null);
 
             Object nomValue = delegate.getStoredFieldValue(villeObj, FIELD_NOM);
             if (!(nomValue instanceof String) || ((String) nomValue).isBlank()) {
@@ -93,8 +94,6 @@ public class OrganizationDetectionService {
         } catch (Exception e) {
             log.warn("Failed to read ParamConfigSSI object id={}: {}", objectId, e.getMessage());
             return null;
-        } finally {
-            delegate.deactivate(obj, 3);
         }
     }
 }

@@ -27,6 +27,23 @@ public class DOSchema implements DOReferenceSchema {
         return schemaClass.isDescendantOf(ancestorClassName);
     }
 
+    /**
+     * Returns true if no other class in this schema declares {@code sc} as its parentClass.
+     * A leaf class has no subclasses and should be the only one instantiated directly.
+     */
+    public boolean isLeafClass(DOSchemaClass sc) {
+        if (sc == null || classes == null) {
+            return true;
+        }
+        String sourceName = sc.attributes.source;
+        for (DOSchemaClass other : classes) {
+            if (sourceName.equals(other.attributes.parentClassName)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public DOSchemaClass findClassByName(String className) {
         if (className == null || classes == null) {
             return null;

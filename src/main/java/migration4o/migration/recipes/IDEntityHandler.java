@@ -5,6 +5,7 @@ import com.db4o.ext.StoredField;
 import com.db4o.reflect.generic.GenericObject;
 
 import migration4o.database.DODatabaseDelegate;
+import migration4o.models.schema.DOSchemaConstants;
 
 /**
  * Handles IDEntite-specific operations. IDEntite objects are DB4O reference objects that contain an mID field.
@@ -57,7 +58,7 @@ public class IDEntityHandler {
         // not on concrete subclasses like IDCategRisque or IDUsagePrincipal.
         StoredField[] fields = delegate.getAllFieldsIncludingAncestors(storedClass);
         for (StoredField field : fields) {
-            if ("mID".equals(field.getName())) {
+            if (DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.equals(field.getName())) {
                 try {
                     Object value = field.get(genericObj);
                     if (value instanceof Number) {

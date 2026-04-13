@@ -5,6 +5,7 @@ import java.io.IOException;
 import migration4o.database.DODatabaseDelegate;
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaField;
 import migration4o.util.ValueUtil;
 import migration4o.util.formatters.FormatterContext;
@@ -44,7 +45,7 @@ public class IDReferenceExporter {
         // Find the mID field in the ID class schema
         DOSchemaField idField = null;
         for (DOSchemaField field : idClass.fields) {
-            if ("mID".equals(field.attributes.source)) {
+            if (DOSchemaConstants.OBJECT_BUSINESS_ID_FIELD_NAME.equals(field.attributes.source)) {
                 idField = field;
                 break;
             }

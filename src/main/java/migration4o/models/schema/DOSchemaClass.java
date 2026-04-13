@@ -87,29 +87,32 @@ public class DOSchemaClass {
     }
 
     public boolean isMultiOrganization() {
-        return findFieldBySourceNameIncludingAncestors("mIDSSI") != null;
+        return findFieldBySourceNameIncludingAncestors(DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME) != null;
     }
 
     public boolean isCollection() {
-        if (CollectionTypeUtil.isCollectionType(attributes.source)) {
-            return true;
-        }
-        for (String base : DOSchemaConstants.COLLECTION_BASE_CLASSES) {
-            if (isDescendantOf(base)) {
+        String current = attributes.source;
+        while (current != null && !current.isEmpty()) {
+            if (CollectionTypeUtil.isCollectionType(current)) {
                 return true;
             }
+            DOSchemaClass parent = schema != null ? schema.findClassByName(current) : null;
+            String next = (parent != null) ? parent.attributes.parentClassName : null;
+            // Only advance if we're not stuck on the same name
+            current = (next != null && !next.equals(current)) ? next : null;
         }
         return false;
     }
 
     public boolean isMap() {
-        if (CollectionTypeUtil.isMapType(attributes.source)) {
-            return true;
-        }
-        for (String base : DOSchemaConstants.MAP_BASE_CLASSES) {
-            if (isDescendantOf(base)) {
+        String current = attributes.source;
+        while (current != null && !current.isEmpty()) {
+            if (CollectionTypeUtil.isMapType(current)) {
                 return true;
             }
+            DOSchemaClass parent = schema != null ? schema.findClassByName(current) : null;
+            String next = (parent != null) ? parent.attributes.parentClassName : null;
+            current = (next != null && !next.equals(current)) ? next : null;
         }
         return false;
     }
