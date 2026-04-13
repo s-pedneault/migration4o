@@ -37,6 +37,12 @@ public class DemoObjectFactory {
     /** Total objects stored. */
     private int totalObjectCount = 0;
 
+    /** Summary lines for each created organization (ParamConfigSSI). */
+    private final List<String> createdOrgSummaries = new ArrayList<>();
+
+    /** When true, suppresses the shouldBeNull roll — used for org objects that must be fully defined. */
+    private boolean currentClassSkipNulls = false;
+
     /** Index of the object currently being created within its class, used for sequential field assignment. */
     private int currentClassObjectIndex = 0;
 
@@ -112,6 +118,42 @@ public class DemoObjectFactory {
         return totalObjectCount;
     }
 
+    public List<String> getCreatedOrgSummaries() {
+        return createdOrgSummaries;
+    }
+
+    // ── Org tracking ─────────────────────────────────────────────────────────
+
+    private void recordOrgCreated(GenericObject obj, GenericClass gc) {
+        try {
+            GenericField idSSIField = findInheritedField(gc, DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME);
+            int idSSI = (idSSIField != null) ? (Integer) idSSIField.get(obj) : -1;
+
+            String cityName = null;
+            GenericField villeField = findInheritedField(gc, "mVille");
+            if (villeField != null) {
+                Object ville = villeField.get(obj);
+                if (ville instanceof GenericObject) {
+                    GenericClass villeGc = registrar.getGenericClass("gest.config.VilleGeo");
+                    if (villeGc != null) {
+                        GenericField nomField = findInheritedField(villeGc, "mNom");
+                        if (nomField != null) {
+                            Object nom = nomField.get(ville);
+                            if (nom != null) {
+                                cityName = nom.toString();
+                            }
+                        }
+                    }
+                }
+            }
+
+            String line = (cityName != null ? cityName : "(unknown)") + " (IDSSI=" + idSSI + ")";
+            createdOrgSummaries.add(line);
+        } catch (Exception e) {
+            createdOrgSummaries.add("(error reading org: " + e.getMessage() + ")");
+        }
+    }
+
     // ── Pass 1: Entity object creation ───────────────────────────────────────
 
     private void createObjectsForClass(DOSchemaClass sc, boolean isParam) {
@@ -122,6 +164,8 @@ public class DemoObjectFactory {
 
         int count = dataGen.getObjectCount(sc.attributes.source, isParam, sc.attributes.isStatic, sc.attributes.alwaysExportAll);
         List<Integer> ids = new ArrayList<>();
+
+        currentClassSkipNulls = DOSchemaConstants.ORGANIZATION_CLASS_NAME.equals(className);
 
         for (int i = 0; i < count; i++) {
             currentClassObjectIndex = i;
@@ -139,6 +183,9 @@ public class DemoObjectFactory {
                 continue; // Skip this object, don't abort the whole generation
             }
             totalObjectCount++;
+            if (DOSchemaConstants.ORGANIZATION_CLASS_NAME.equals(className)) {
+                recordOrgCreated(obj, gc);
+            }
         }
 
         createdIds.put(className, ids);
@@ -189,13 +236,13 @@ public class DemoObjectFactory {
 
             // Special handling for mIDSSI — assign sequential org ID so detection always works
             if (DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME.equals(sf.attributes.source)) {
-                int idSSI = (currentClassObjectCount == DataGenerator.FIRE_DEPT_COUNT) ? (currentClassObjectIndex + 1) : (1 + dataGen.getRng().nextInt(DataGenerator.FIRE_DEPT_COUNT));
+                int idSSI = assignIdSSI();
                 gf.set(obj, idSSI);
                 continue;
             }
 
             // Should this value be null sometimes?
-            if (dataGen.shouldBeNull(sf)) {
+            if (!currentClassSkipNulls && dataGen.shouldBeNull(sf)) {
                 continue; // Leave as default (null/0/false)
             }
 
@@ -258,13 +305,11 @@ public class DemoObjectFactory {
                     }
 
                     if (DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME.equals(sf.attributes.source)) {
-                        // Sequential IDs when this class has exactly one instance per fire dept; random otherwise
-                        int idSSI = (currentClassObjectCount == DataGenerator.FIRE_DEPT_COUNT) ? (currentClassObjectIndex + 1) : (1 + dataGen.getRng().nextInt(DataGenerator.FIRE_DEPT_COUNT));
-                        gf.set(obj, idSSI);
+                        gf.set(obj, assignIdSSI());
                         continue;
                     }
 
-                    if (dataGen.shouldBeNull(sf))
+                    if (!currentClassSkipNulls && dataGen.shouldBeNull(sf))
                         continue;
 
                     Object value = generateFieldValue(sf);
@@ -282,6 +327,24 @@ public class DemoObjectFactory {
                 break;
             parent = schema.findClassByName(parent.attributes.parentClassName);
         }
+    }
+
+    /**
+     * Assigns an mIDSSI value for the current object.
+     * ParamConfigSSI objects are the organizations themselves — they always receive
+     * a sequential org ID (1..FIRE_DEPT_COUNT), never -1.
+     * All other objects receive -1 (no org) with {@link DataGenerator#NO_ORG_PERCENT}%
+     * probability, otherwise a random org ID.
+     */
+    private int assignIdSSI() {
+        // ParamConfigSSI: exactly one object per fire dept — sequential, never unassigned
+        if (currentClassObjectCount == DataGenerator.FIRE_DEPT_COUNT) {
+            return currentClassObjectIndex + 1;
+        }
+        if (dataGen.getRng().nextInt(100) < DataGenerator.NO_ORG_PERCENT) {
+            return -1;
+        }
+        return 1 + dataGen.getRng().nextInt(DataGenerator.FIRE_DEPT_COUNT);
     }
 
     /**

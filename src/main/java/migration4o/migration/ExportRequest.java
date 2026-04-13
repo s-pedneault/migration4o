@@ -5,6 +5,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import migration4o.database.DODatabase;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaField;
@@ -87,6 +88,21 @@ public class ExportRequest {
      * relationship notes are not collected, speeding up large exports.
      */
     public boolean fullTracking = true;
+    /**
+     * {@code true} when this request is one sub-export in a
+     * {@link OrganizationExportMode#SEPARATE_PER_ORGANIZATION} run.
+     * Used by format handlers to vary presentation (e.g. org tile colour).
+     */
+    public boolean separatePerOrgSubExport = false;
+
+    /**
+     * When {@code true}, {@link migration4o.migration.format.XmlFormatHandler} skips
+     * the Extra.xml unreached-objects pass in its {@code done()} hook.
+     * Set on per-org requests in SEPARATE_PER_ORGANIZATION mode so that
+     * Extra.xml is generated only once — after all org exports — via
+     * {@link migration4o.migration.MigrationExportService#exportExtraXml}.
+     */
+    public boolean skipExtraXml = false;
 
     // ── Skip options
     // ──────────────────────────────────────────────────────────
@@ -195,6 +211,8 @@ public class ExportRequest {
         copy.seedQueries = this.seedQueries != null ? new ArrayList<>(this.seedQueries) : new ArrayList<>();
         copy.exportLanguage = this.exportLanguage;
         copy.organizationConfig = new OrganizationExportConfig(OrganizationExportMode.SINGLE_EXPORT, List.of(org), includeGeneralData);
+        copy.separatePerOrgSubExport = true;
+        copy.skipExtraXml = this.skipExtraXml;
         return copy;
     }
 }

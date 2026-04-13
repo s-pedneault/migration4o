@@ -16,9 +16,27 @@ import migration4o.models.schema.DOSchemaConstants;
 public class OrganizationFilter {
 
     private final OrganizationExportConfig config;
+    /**
+     * When {@code true}, all multi-organization objects with a valid (≥ 0) IDSSI are
+     * unconditionally excluded. Used for the combined Extra.xml pass in
+     * SEPARATE_PER_ORGANIZATION mode: org-specific objects belong in their org's export,
+     * never in Extra.xml regardless of whether they were reached.
+     */
+    private boolean rejectAllOrgSpecific = false;
 
     public OrganizationFilter(OrganizationExportConfig config) {
         this.config = config;
+    }
+
+    /**
+     * Returns a filter that accepts only general data (IDSSI &lt; 0 or non-org classes).
+     * Any multi-org object with a valid IDSSI is unconditionally rejected.
+     * Used for the Extra.xml pass when exporting separate-per-organization.
+     */
+    public static OrganizationFilter forExtraXml(OrganizationExportConfig config) {
+        OrganizationFilter f = new OrganizationFilter(config);
+        f.rejectAllOrgSpecific = true;
+        return f;
     }
 
     /**
@@ -40,9 +58,13 @@ public class OrganizationFilter {
                 return true;
             }
             int idSSI = ((Number) idValue).intValue();
-            if (idSSI <= 0) {
-                // No valid org assignment — treat as general data, always include
-                return true;
+            if (idSSI < 0) {
+                // No valid org assignment — this is general data
+                return config.isIncludeGeneralData();
+            }
+            if (rejectAllOrgSpecific) {
+                // Extra.xml mode: org-specific objects belong in their org's export only
+                return false;
             }
             return config.getSelectedIdSSIs().contains(idSSI);
         } else {

@@ -11,6 +11,7 @@ import migration4o.models.schema.DOSchema;
 import migration4o.schema.DOSchemaService;
 
 import java.io.File;
+import java.util.List;
 
 /**
  * CLI entry point for generating a demo DB4O database.
@@ -154,6 +155,11 @@ public class DemoGeneratorCLI {
             System.out.println("  Objects:  " + objectCount);
             System.out.println("  File:     " + outputPath + " (" + formatFileSize(fileSize) + ")");
             System.out.println("  Time:     " + elapsed + " ms");
+            List<String> orgs = factory.getCreatedOrgSummaries();
+            System.out.println("  Organizations (" + orgs.size() + "):");
+            for (String org : orgs) {
+                System.out.println("    - " + org);
+            }
             System.out.println();
 
         } finally {

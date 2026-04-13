@@ -850,6 +850,24 @@ public class MainWindow extends JFrame {
     }
 
     /**
+     * Opens a new Results tab in the Export section for a per-organization export and switches to it.
+     * Must be called on the EDT.
+     *
+     * @param tabTitle tab label, e.g. "R\u00e9sultats \u2013 OrgName"
+     * @return the new panel as a {@link migration4o.ui.common.DOExportMonitor}
+     */
+    public migration4o.ui.common.DOExportMonitor openNewResultsTab(String tabTitle) {
+        if (exportTabPane == null || databaseTabContainer == null)
+            return null;
+        migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel panel = new migration4o.ui.panels.database_panels.migration_report_panel.MigrationReportPanel();
+        exportTabPane.addTab(tabTitle, panel);
+        tabbedPane.setSelectedComponent(databaseTabContainer);
+        databaseTabPane.setSelectedComponent(exportTabPane);
+        exportTabPane.setSelectedComponent(panel);
+        return panel;
+    }
+
+    /**
      * Switches to the Export tab in the active database session.
      */
     public void navigateToExportTab() {

@@ -25,6 +25,7 @@ public class OrganizationDetectionService {
 
     private static final String FIELD_VILLE = "mVille";
     private static final String FIELD_NOM = "mNom";
+    private static final String FIELD_CODE_RAO = "mCodeRAO";
 
     /**
      * Queries all {@code ParamConfigSSI} objects from the database and returns one
@@ -72,7 +73,7 @@ public class OrganizationDetectionService {
                 return null;
             }
             int idSSI = ((Number) idValue).intValue();
-            if (idSSI <= 0) {
+            if (idSSI < 0) {
                 return null;
             }
 
@@ -89,7 +90,10 @@ public class OrganizationDetectionService {
                 return null;
             }
 
-            return new OrganizationInfo(idSSI, (String) nomValue);
+            Object codeRaoValue = delegate.getStoredFieldValue(villeObj, FIELD_CODE_RAO);
+            String codeRao = (codeRaoValue instanceof String && !((String) codeRaoValue).isBlank()) ? (String) codeRaoValue : null;
+
+            return new OrganizationInfo(idSSI, (String) nomValue, codeRao);
 
         } catch (Exception e) {
             log.warn("Failed to read ParamConfigSSI object id={}: {}", objectId, e.getMessage());

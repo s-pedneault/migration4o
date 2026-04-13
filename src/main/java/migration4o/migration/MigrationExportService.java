@@ -1,10 +1,13 @@
 package migration4o.migration;
 
 import java.nio.file.Files;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import migration4o.migration.format.ExportCurrentState;
 import migration4o.migration.format.FormatHandler;
+import migration4o.migration.format.XmlFormatHandler;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.migration.tasks.ExportModuleLoop;
@@ -58,6 +61,9 @@ public class MigrationExportService {
         // Let HtmlFormatHandler.init() find module list for nav tree building
         ctx.exportModules = modules;
         ctx.organizationFilter = request.organizationConfig != null ? new OrganizationFilter(request.organizationConfig) : null;
+        if (request.organizationConfig != null && request.organizationConfig.getSelectedOrganizations().size() == 1) {
+            ctx.currentOrganization = request.organizationConfig.getSelectedOrganizations().get(0);
+        }
 
         Files.createDirectories(ctx.basePath);
         JsViewerHtmlGenerator.copyGlobalAssets(ctx.basePath);
@@ -107,6 +113,45 @@ public class MigrationExportService {
         if (exportError != null)
             throw (Exception) exportError;
         return ctx.statistics;
+    }
+
+    /**
+     * Generates a single {@code Extra.xml} file covering all objects not reached
+     * by any of the per-org exports in a SEPARATE_PER_ORGANIZATION run.
+     * <p>
+     * {@code allReachedIds} is the union of every object ID exported across all
+     * organizations. Only objects that are (a) not in that union AND (b) pass the
+     * {@link OrganizationFilter} derived from {@code request.organizationConfig}
+     * are written to {@code _Migration/Extra.xml}.
+     *
+     * @param request      base export request (must have database, referenceSchema,
+     *                     baseOutputPath, and outputBranch pointing to the shared
+     *                     output directory — not a per-org sub-folder)
+     * @param allReachedIds union of every object ID exported by all org runs
+     */
+    public void exportExtraXml(ExportRequest request, Set<Long> allReachedIds) throws Exception {
+        if (request.database == null) {
+            throw new IllegalStateException("No database is open.");
+        }
+
+        ExportCurrentState ctx = new ExportCurrentState(request);
+        ctx.basePath = request.getBaseOutputPath(request.baseOutputPath);
+        ctx.statistics = new ExportStatistics(request.monitor);
+        // Pre-populate statistics so that XmlFormatHandler.collectReachedIds()
+        // treats every ID exported by any org as already reached.
+        ctx.statistics.exportedObjectIdsSet.put("__combined__", new HashSet<>(allReachedIds));
+        ctx.organizationFilter = request.organizationConfig != null ? OrganizationFilter.forExtraXml(request.organizationConfig) : null;
+        // delegate is normally set per-class by ObjectExportLoop; here we set it
+        // once for the unreached-objects pass which has no module loop.
+        ctx.delegate = request.database.getUserDelegate();
+
+        Files.createDirectories(ctx.basePath);
+
+        // No XSD generation or validation for this pass — those already ran
+        // for each per-org export.
+        XmlFormatHandler handler = new XmlFormatHandler(false);
+        handler.init(ctx);
+        handler.done(ctx);
     }
 
 }

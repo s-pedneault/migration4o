@@ -94,7 +94,9 @@ public class XmlFormatHandler extends FormatHandler {
         // reachability data is incomplete so the Extra file would be
         // misleading.
         if (ctx.request.maxObjectsPerClass == null) {
-            exportUnreachedObjects(ctx);
+            if (!ctx.request.skipExtraXml) {
+                exportUnreachedObjects(ctx);
+            }
         }
 
         if (generateXsd && liveXsdBuilder != null) {

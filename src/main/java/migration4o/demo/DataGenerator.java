@@ -29,6 +29,12 @@ public class DataGenerator {
     /** Number of fire departments in a demo multi-SSI database. */
     static final int FIRE_DEPT_COUNT = 3;
 
+    /**
+     * Probability (0..100) that a record is not tied to any organization (mIDSSI = -1).
+     * Mirrors real databases where some records predate org assignment.
+     */
+    static final int NO_ORG_PERCENT = 20;
+
     /** DossierAdresse is a prime object referenced by many classes — always generate plenty. */
     private static final String DOSSIER_ADRESSE_CLASS = "gest.dossPrev.DossPrev";
 

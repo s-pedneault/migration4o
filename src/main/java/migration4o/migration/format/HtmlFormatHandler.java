@@ -1,6 +1,7 @@
 package migration4o.migration.format;
 
 import java.io.IOException;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 import migration4o.migration.ExportFormat;
+import migration4o.migration.OrganizationInfo;
 import migration4o.migration.SummaryGenerator;
 import migration4o.migration.SummaryGenerator.IDEntiteResult;
 import migration4o.migration.tasks.NavTreeBuilder;
@@ -21,8 +23,8 @@ import migration4o.schema.modules.DOModuleService;
 import migration4o.util.ClassUtil;
 import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.MunicipalityCsvReader;
-import migration4o.util.MunicipalityInfo;
 import migration4o.util.ResolvedReference;
+import migration4o.util.WelcomePageParams;
 import migration4o.util.SchemaUtil;
 import migration4o.util.formatters.FormatterContext;
 import migration4o.util.previews.ObjectPreview;
@@ -143,6 +145,7 @@ public class HtmlFormatHandler extends FormatHandler {
             htmlBasePath = htmlBase.toAbsolutePath().normalize();
             new NavTreeBuilder(ctx).build(ctx.exportModules, htmlBase);
             cachedNavJson = ctx.cachedNavJson;
+            ctx.municipality = MunicipalityCsvReader.lookup(ctx.request.getDatabaseFolderName());
         }
     }
 
@@ -471,6 +474,24 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
+     * Builds the ordered list of organizations to display as tiles on the welcome page.
+     * <ul>
+     *   <li>Separate-per-org sub-export → one tile for {@code ctx.currentOrganization}.</li>
+     *   <li>Single export with org config → one tile per selected organization.</li>
+     *   <li>No org config → empty list (no tiles).</li>
+     * </ul>
+     */
+    private static List<OrganizationInfo> buildOrgTileList(ExportCurrentState ctx) {
+        if (ctx.request.separatePerOrgSubExport && ctx.currentOrganization != null) {
+            return List.of(ctx.currentOrganization);
+        }
+        if (ctx.request.organizationConfig != null) {
+            return ctx.request.organizationConfig.getSelectedOrganizations();
+        }
+        return List.of();
+    }
+
+    /**
      * After all classes (including referenced ones) are exported, regenerates the welcome page so it can report the definitive exported-object count.
      */
     @Override
@@ -478,11 +499,11 @@ public class HtmlFormatHandler extends FormatHandler {
         if (!ctx.generateHtmlViewer)
             return;
         try {
-            java.nio.file.Path base = ctx.request.getBaseOutputPath(ctx.request.baseOutputPath).resolve(folderName());
-            String dbName = ctx.request.getDatabaseFolderName();
+            String displayName = ctx.currentOrganization != null ? ctx.currentOrganization.name() : ctx.request.getDatabaseFolderName();
             int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
-            MunicipalityInfo municipality = MunicipalityCsvReader.lookup(dbName);
-            JsViewerHtmlGenerator.writeWelcomePage(base, dbName, cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount, municipality);
+            List<OrganizationInfo> orgTiles = buildOrgTileList(ctx);
+            WelcomePageParams params = new WelcomePageParams(htmlBasePath, displayName, ctx.cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount, ctx.municipality, orgTiles);
+            JsViewerHtmlGenerator.writeWelcomePage(params);
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());
         }

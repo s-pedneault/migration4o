@@ -15,6 +15,8 @@ import migration4o.migration.ExportRequest;
 import migration4o.migration.NavNode;
 import migration4o.migration.ObjectExporter;
 import migration4o.migration.OrganizationFilter;
+import migration4o.migration.OrganizationInfo;
+import migration4o.util.MunicipalityInfo;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.tasks.ModulePathUtil;
 import migration4o.models.schema.DOSchemaClass;
@@ -127,6 +129,19 @@ public class ExportCurrentState {
      * organization filtering is active.
      */
     public OrganizationFilter organizationFilter;
+
+    /**
+     * The organization currently being exported. Non-null only in a
+     * {@link migration4o.migration.OrganizationExportMode#SINGLE_EXPORT}
+     * per-organization run; null for combined or unfiltered exports.
+     */
+    public OrganizationInfo currentOrganization;
+
+    /**
+     * Municipality info resolved from {@code municipalities.csv} during HTML
+     * format init. Null if no matching entry is found or the CSV is unavailable.
+     */
+    public MunicipalityInfo municipality;
 
     // ── Active ObjectExporter
     // ─────────────────────────────────────────────────

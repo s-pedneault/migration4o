@@ -2,7 +2,9 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
 import java.awt.Component;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -112,33 +114,77 @@ public class MigrationServiceCallback {
 
     /**
      * Runs one export per organization in SEPARATE_PER_ORGANIZATION mode.
+     * Each organization gets its own Results tab in the Export section.
      * Fail-fast: stops immediately on the first error.
      */
-    private ExportStatistics exportPerOrganization(DODatabaseContext context, OrganizationExportConfig orgConfig, ExportOptions options, List<DOSchemaModule> modules, DOExportMonitor monitor) throws Exception {
+    private ExportStatistics exportPerOrganization(DODatabaseContext context, OrganizationExportConfig orgConfig, ExportOptions options, List<DOSchemaModule> modules, DOExportMonitor fallbackMonitor) throws Exception {
 
         String baseBranch = options.getOutputBranch();
         if (baseBranch == null || baseBranch.isBlank()) {
             baseBranch = "all";
         }
 
+        MainWindow mainWindow = getMainWindow();
         ExportStatistics combined = new ExportStatistics();
+        Set<Long> allOrgReachedIds = new HashSet<>();
 
         for (OrganizationInfo org : orgConfig.getSelectedOrganizations()) {
             String folderName = FileUtil.sanitizeForPath(org.name()) + "_" + org.idSSI();
             String perOrgBranch = baseBranch + "/" + folderName;
 
-            ExportRequest baseRequest = options.toExportRequest(context, monitor);
+            // Open a dedicated Results tab for this org on the EDT, then use it as the monitor.
+            DOExportMonitor orgMonitor;
+            if (mainWindow != null) {
+                final String tabTitle = "R\u00e9sultats \u2013 " + org.name();
+                DOExportMonitor[] holder = new DOExportMonitor[1];
+                SwingUtilities.invokeAndWait(() -> holder[0] = mainWindow.openNewResultsTab(tabTitle));
+                orgMonitor = holder[0] != null ? holder[0] : fallbackMonitor;
+            } else {
+                orgMonitor = fallbackMonitor;
+            }
+
+            ExportRequest baseRequest = options.toExportRequest(context, orgMonitor);
             ExportRequest orgRequest = baseRequest.withOrganizationScope(org, perOrgBranch, orgConfig.isIncludeGeneralData());
+            // Suppress per-org Extra.xml — generated once after all orgs are done.
+            orgRequest.skipExtraXml = true;
 
             try {
                 ExportStatistics orgStats = exportService.exportModules(orgRequest, modules);
                 combined.merge(orgStats);
+                // Accumulate all reached IDs for the combined Extra.xml pass.
+                for (Set<Long> ids : orgStats.exportedObjectIdsSet.values()) {
+                    allOrgReachedIds.addAll(ids);
+                }
             } catch (Exception e) {
                 throw new RuntimeException("Export failed for organization '" + org.name() + "' (idSSI=" + org.idSSI() + "): " + e.getMessage(), e);
             }
         }
 
+        // Generate Extra.xml once, using the union of all orgs' reached IDs.
+        // This prevents objects from other orgs appearing as "unreached" in each
+        // org's individual Extra.xml.
+        ExportRequest extraRequest = options.toExportRequest(context, fallbackMonitor);
+        extraRequest.organizationConfig = new OrganizationExportConfig(OrganizationExportMode.SINGLE_EXPORT, orgConfig.getSelectedOrganizations(), orgConfig.isIncludeGeneralData());
+        try {
+            exportService.exportExtraXml(extraRequest, allOrgReachedIds);
+        } catch (Exception e) {
+            System.err.println("[exportPerOrganization] Failed to generate combined Extra.xml: " + e.getMessage());
+        }
+
         return combined;
+    }
+
+    /**
+     * Returns the MainWindow ancestor of the parent component, or {@code null}.
+     */
+    private MainWindow getMainWindow() {
+        if (parentComponent != null) {
+            java.awt.Window window = SwingUtilities.getWindowAncestor(parentComponent);
+            if (window instanceof MainWindow) {
+                return (MainWindow) window;
+            }
+        }
+        return null;
     }
 
     /**

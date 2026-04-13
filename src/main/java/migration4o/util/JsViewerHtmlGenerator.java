@@ -16,6 +16,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import migration4o.migration.OrganizationInfo;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -210,25 +211,18 @@ public final class JsViewerHtmlGenerator {
     }
 
     /**
-     * Writes an index.html welcome page at the given database output root.
+     * Writes an {@code index.html} welcome page at the destination specified by {@code params.dbRoot()}.
      *
-     * @param dbRoot The database root folder (e.g. output/54060/)
-     * @param dbName Human-readable database name shown in the page header
-     * @param navItemsJson Serialised NAV_ITEMS JSON array
-     * @param moduleCount Total number of exported modules (including sub-modules)
-     * @param classCount Number of exported class data files
-     * @param objectCount Total number of exported objects; 0 hides the bubble
-     * @param municipality Optional client municipality info; may be {@code null}
+     * @param params All data needed to populate the welcome page template.
+     * @return Path to the written {@code index.html}.
      */
-    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount, MunicipalityInfo municipality) throws IOException {
-        if (dbRoot == null) {
-            throw new IllegalArgumentException("dbRoot must not be null");
-        }
+    public static Path writeWelcomePage(WelcomePageParams params) throws IOException {
+        MunicipalityInfo municipality = params.municipality();
 
-        String nav = (navItemsJson != null && !navItemsJson.isBlank()) ? navItemsJson : "[]";
-        String name = (dbName != null && !dbName.isBlank()) ? dbName : "Export";
+        String nav = (params.navItemsJson() != null && !params.navItemsJson().isBlank()) ? params.navItemsJson() : "[]";
+        String name = (params.dbName() != null && !params.dbName().isBlank()) ? params.dbName() : "Export";
         String date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-        String objects = objectCount > 0 ? String.format("%,d", objectCount).replace(',', '\u00a0') : "\u2014";
+        String objects = params.objectCount() > 0 ? String.format("%,d", params.objectCount()).replace(',', '\u00a0') : "\u2014";
 
         // Client municipality placeholders
         String clientName = municipality != null && municipality.name != null ? escapeHtml(municipality.name) : "";
@@ -239,20 +233,41 @@ public final class JsViewerHtmlGenerator {
         String clientWeb = municipality != null && municipality.website != null ? escapeHtml(municipality.website) : "";
         String clientPop = municipality != null && municipality.population != null ? escapeHtml(municipality.population) : "";
 
-        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(moduleCount)).replace("__CLASS_COUNT__", String.valueOf(classCount)).replace("__OBJECT_COUNT__", objects).replace("__CLIENT_NAME__", clientName).replace("__CLIENT_MRC__", clientMrc).replace("__CLIENT_REGION__", clientRegion).replace("__CLIENT_ADDR__", clientAddr).replace("__CLIENT_EMAIL__", clientEmail).replace("__CLIENT_WEB__", clientWeb).replace("__CLIENT_POP__", clientPop);
+        String orgTilesHtml = buildOrgTilesHtml(params.organizations());
 
-        Files.createDirectories(dbRoot);
-        Path welcomePath = dbRoot.resolve("index.html");
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(params.moduleCount())).replace("__CLASS_COUNT__", String.valueOf(params.classCount())).replace("__OBJECT_COUNT__", objects).replace("__CLIENT_NAME__", clientName).replace("__CLIENT_MRC__", clientMrc).replace("__CLIENT_REGION__", clientRegion).replace("__CLIENT_ADDR__", clientAddr).replace("__CLIENT_EMAIL__", clientEmail).replace("__CLIENT_WEB__", clientWeb).replace("__CLIENT_POP__", clientPop).replace("__ORG_TILES__", orgTilesHtml);
+
+        Files.createDirectories(params.dbRoot());
+        Path welcomePath = params.dbRoot().resolve("index.html");
         Files.write(welcomePath, html.getBytes(StandardCharsets.UTF_8));
-        copyHtmlAssets(dbRoot);
+        copyHtmlAssets(params.dbRoot());
         return welcomePath;
     }
 
-    /**
-     * Backwards-compatible overload — no municipality info.
-     */
-    public static Path writeWelcomePage(Path dbRoot, String dbName, String navItemsJson, int moduleCount, int classCount, int objectCount) throws IOException {
-        return writeWelcomePage(dbRoot, dbName, navItemsJson, moduleCount, classCount, objectCount, null);
+    private static String buildOrgTilesHtml(List<OrganizationInfo> organizations) {
+        if (organizations.isEmpty()) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (OrganizationInfo org : organizations) {
+            sb.append("                <div class=\"glass-card glass-card--org-green\">\n");
+            sb.append("                    <p class=\"glass-card-title\">Organisation</p>\n");
+            sb.append("                    <div class=\"client-grid\">\n");
+            sb.append("                        <div class=\"client-name\">").append(escapeHtml(org.name())).append("</div>\n");
+            sb.append("                        <div class=\"client-field\">\n");
+            sb.append("                            <div class=\"client-field-label\">IDSSI</div>\n");
+            sb.append("                            <div class=\"client-field-value\">").append(org.idSSI()).append("</div>\n");
+            sb.append("                        </div>\n");
+            if (org.codeRao() != null) {
+                sb.append("                        <div class=\"client-field\">\n");
+                sb.append("                            <div class=\"client-field-label\">Code RAO</div>\n");
+                sb.append("                            <div class=\"client-field-value\">").append(escapeHtml(org.codeRao())).append("</div>\n");
+                sb.append("                        </div>\n");
+            }
+            sb.append("                    </div>\n");
+            sb.append("                </div>\n");
+        }
+        return sb.toString();
     }
 
     /**

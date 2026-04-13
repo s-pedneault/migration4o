@@ -33,7 +33,6 @@
                     <classRef sourceName="gest.rci.ParamRci"/>
                     <classRef sourceName="gest.schema.ParamSchema"/>
                     <classRef sourceName="gest.secCiv.ParamSecCiv"/>
-                    <classRef sourceName="gest.config.ParamConfig"/>
                 </module>
                 <module name="Listes" id="Listes">
                     <classRef sourceName="gest.activite.Acte"/>
