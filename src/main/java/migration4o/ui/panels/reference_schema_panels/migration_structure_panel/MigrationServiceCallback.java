@@ -2,9 +2,7 @@ package migration4o.ui.panels.reference_schema_panels.migration_structure_panel;
 
 import java.awt.Component;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import javax.swing.SwingUtilities;
 import javax.swing.SwingWorker;
@@ -126,7 +124,6 @@ public class MigrationServiceCallback {
 
         MainWindow mainWindow = getMainWindow();
         ExportStatistics combined = new ExportStatistics();
-        Set<Long> allOrgReachedIds = new HashSet<>();
 
         for (OrganizationInfo org : orgConfig.getSelectedOrganizations()) {
             String folderName = FileUtil.sanitizeForPath(org.name()) + "_" + org.idSSI();
@@ -150,23 +147,22 @@ public class MigrationServiceCallback {
 
             try {
                 ExportStatistics orgStats = exportService.exportModules(orgRequest, modules);
+                // Merge into combined so that exportExtraXml sees all reached IDs
+                // from every org run, keyed by class name.
                 combined.merge(orgStats);
-                // Accumulate all reached IDs for the combined Extra.xml pass.
-                for (Set<Long> ids : orgStats.exportedObjectIdsSet.values()) {
-                    allOrgReachedIds.addAll(ids);
-                }
+                System.out.println("[Extra.xml] After org '" + org.name() + "': combined tracks " + combined.exportedObjectIdsSet.values().stream().mapToInt(java.util.Set::size).sum() + " reached IDs across " + combined.exportedObjectIdsSet.size() + " classes.");
             } catch (Exception e) {
                 throw new RuntimeException("Export failed for organization '" + org.name() + "' (idSSI=" + org.idSSI() + "): " + e.getMessage(), e);
             }
         }
 
-        // Generate Extra.xml once, using the union of all orgs' reached IDs.
-        // This prevents objects from other orgs appearing as "unreached" in each
-        // org's individual Extra.xml.
+        // Generate Extra.xml once, using the merged statistics from all org runs.
+        // combined.exportedObjectIdsSet contains every object ID exported by any
+        // org, keyed by class name — giving collectReachedIds() the full picture.
         ExportRequest extraRequest = options.toExportRequest(context, fallbackMonitor);
         extraRequest.organizationConfig = new OrganizationExportConfig(OrganizationExportMode.SINGLE_EXPORT, orgConfig.getSelectedOrganizations(), orgConfig.isIncludeGeneralData());
         try {
-            exportService.exportExtraXml(extraRequest, allOrgReachedIds);
+            exportService.exportExtraXml(extraRequest, combined);
         } catch (Exception e) {
             System.err.println("[exportPerOrganization] Failed to generate combined Extra.xml: " + e.getMessage());
         }

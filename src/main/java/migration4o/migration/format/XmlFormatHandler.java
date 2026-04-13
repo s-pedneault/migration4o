@@ -136,6 +136,7 @@ public class XmlFormatHandler extends FormatHandler {
     private void exportUnreachedObjects(ExportCurrentState ctx) throws Exception {
         Set<Long> reachedIds = collectReachedIds(ctx);
         Set<Long> unreachedIds = collectUnreachedIds(ctx, reachedIds);
+        System.out.println("[Extra.xml] reachedIds=" + reachedIds.size() + ", unreachedIds=" + unreachedIds.size() + " (before org filter)");
         if (unreachedIds.isEmpty()) {
             if (ctx.request.monitor != null) {
                 ctx.request.monitor.onStatusMessage("No unreached objects detected.");

@@ -3,6 +3,7 @@ package migration4o.migration;
 import java.nio.file.Files;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import migration4o.migration.format.ExportCurrentState;
@@ -119,17 +120,17 @@ public class MigrationExportService {
      * Generates a single {@code Extra.xml} file covering all objects not reached
      * by any of the per-org exports in a SEPARATE_PER_ORGANIZATION run.
      * <p>
-     * {@code allReachedIds} is the union of every object ID exported across all
-     * organizations. Only objects that are (a) not in that union AND (b) pass the
-     * {@link OrganizationFilter} derived from {@code request.organizationConfig}
-     * are written to {@code _Migration/Extra.xml}.
+     * {@code combinedStats} is the merged {@link ExportStatistics} from all
+     * organization runs. Its {@code exportedObjectIdsSet} (class-name → IDs)
+     * is copied into the Extra.xml pass so that {@link XmlFormatHandler}
+     * correctly treats every ID exported by any org as already reached.
      *
-     * @param request      base export request (must have database, referenceSchema,
-     *                     baseOutputPath, and outputBranch pointing to the shared
-     *                     output directory — not a per-org sub-folder)
-     * @param allReachedIds union of every object ID exported by all org runs
+     * @param request       base export request (must have database, referenceSchema,
+     *                      baseOutputPath, and outputBranch pointing to the shared
+     *                      output directory — not a per-org sub-folder)
+     * @param combinedStats merged statistics covering all org exports
      */
-    public void exportExtraXml(ExportRequest request, Set<Long> allReachedIds) throws Exception {
+    public void exportExtraXml(ExportRequest request, ExportStatistics combinedStats) throws Exception {
         if (request.database == null) {
             throw new IllegalStateException("No database is open.");
         }
@@ -137,9 +138,22 @@ public class MigrationExportService {
         ExportCurrentState ctx = new ExportCurrentState(request);
         ctx.basePath = request.getBaseOutputPath(request.baseOutputPath);
         ctx.statistics = new ExportStatistics(request.monitor);
-        // Pre-populate statistics so that XmlFormatHandler.collectReachedIds()
-        // treats every ID exported by any org as already reached.
-        ctx.statistics.exportedObjectIdsSet.put("__combined__", new HashSet<>(allReachedIds));
+
+        // Copy the class-keyed reached-IDs map from all org runs into this
+        // context's statistics so that XmlFormatHandler.collectReachedIds()
+        // treats every already-exported object as reached, regardless of which
+        // organization exported it.
+        int totalReachedIds = 0;
+        if (combinedStats != null) {
+            for (Map.Entry<String, Set<Long>> entry : combinedStats.exportedObjectIdsSet.entrySet()) {
+                if (entry.getValue() != null && !entry.getValue().isEmpty()) {
+                    ctx.statistics.exportedObjectIdsSet.put(entry.getKey(), new HashSet<>(entry.getValue()));
+                    totalReachedIds += entry.getValue().size();
+                }
+            }
+        }
+        System.out.println("[Extra.xml] Cross-org reached IDs loaded: " + totalReachedIds + " entries across " + ctx.statistics.exportedObjectIdsSet.size() + " classes.");
+
         ctx.organizationFilter = request.organizationConfig != null ? OrganizationFilter.forExtraXml(request.organizationConfig) : null;
         // delegate is normally set per-class by ObjectExportLoop; here we set it
         // once for the unreached-objects pass which has no module loop.
