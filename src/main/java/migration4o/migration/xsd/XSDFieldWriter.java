@@ -33,9 +33,9 @@ class XSDFieldWriter {
         String fieldType = field.attributes.type;
         boolean isCollection = field.attributes.isCollection;
 
-        // Value-alias field (@realField + valueMap, no criterias): always a
+        // Scalar virtual field (@realField + valueMap/format, no criterias): always a
         // plain xs:string scalar regardless of the real field's type.
-        if (field.isValueAliasField()) {
+        if (field.isScalarVirtualField()) {
             writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             return;
         }

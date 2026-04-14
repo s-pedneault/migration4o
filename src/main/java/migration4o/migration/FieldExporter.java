@@ -11,6 +11,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import com.db4o.ext.StoredClass;
 import com.db4o.ext.StoredField;
@@ -199,6 +200,31 @@ public class FieldExporter {
             // Sort fields by schema destination name for deterministic,
             // alphabetical output (enables xs:sequence)
             fields = sortFieldsByDestinationName(fields, parentClass, operation.referenceSchema);
+            // Collect scalar virtual fields sorted by destination name so they
+            // can be interleaved at their correct alphabetical position.
+            List<DOSchemaField> pendingScalarVirtuals = new ArrayList<>();
+            if (parentClass != null && parentClass.fields != null) {
+                for (DOSchemaField svf : parentClass.fields) {
+                    if (svf != null && svf.attributes.isExported && svf.isScalarVirtualField()) {
+                        pendingScalarVirtuals.add(svf);
+                    }
+                }
+                pendingScalarVirtuals.sort((a, b) -> a.attributes.destinationName.compareTo(b.attributes.destinationName));
+            }
+            // For xs:extension classes (depth-sorted), scalar virtuals are own-class
+            // fields and must NOT be written before ancestor-depth stored fields —
+            // the XSD base-type sequence must be satisfied first. Build the set of
+            // own-class source names so the flush is gated accordingly.
+            boolean ownClassOnly = hasExportedDirectParent(parentClass, operation.referenceSchema);
+            Set<String> ownSourceNames = java.util.Collections.emptySet();
+            if (ownClassOnly && parentClass != null && parentClass.fields != null) {
+                ownSourceNames = new java.util.HashSet<>();
+                for (DOSchemaField f : parentClass.fields) {
+                    if (f != null && f.attributes.source != null && !f.isVirtualField() && !f.isMethodCallField()) {
+                        ownSourceNames.add(f.attributes.source);
+                    }
+                }
+            }
             for (StoredField field : fields) {
                 Object fieldValue = null;
                 try {
@@ -248,6 +274,25 @@ public class FieldExporter {
                                 ctxRef.previousWarnings.add(warningKey);
                             }
                             continue;
+                        }
+                    }
+
+                    // Flush scalar virtual fields whose destination name sorts
+                    // before the current stored field, keeping the XML output
+                    // in the same alphabetical order as the XSD xs:sequence.
+                    // For xs:extension classes, only flush when we reach an
+                    // own-class stored field — ancestor fields must be written
+                    // first to satisfy the base-type sequence.
+                    if (!ownClassOnly || ownSourceNames.contains(sourceFieldName)) {
+                        java.util.Iterator<DOSchemaField> svIt = pendingScalarVirtuals.iterator();
+                        while (svIt.hasNext()) {
+                            DOSchemaField sv = svIt.next();
+                            if (sv.attributes.destinationName.compareTo(fieldName) < 0) {
+                                fieldsWritten += writeOneScalarVirtualField(delegate, obj, sv, indentLevel);
+                                svIt.remove();
+                            } else {
+                                break;
+                            }
                         }
                     }
 
@@ -346,6 +391,11 @@ public class FieldExporter {
                         }
                     }
                 }
+            }
+
+            // Flush any scalar virtual fields that sort after all stored fields.
+            for (DOSchemaField sv : pendingScalarVirtuals) {
+                fieldsWritten += writeOneScalarVirtualField(delegate, obj, sv, indentLevel);
             }
 
             // VIRTUAL FIELDS: Export schema-defined virtual fields that don't
@@ -837,31 +887,9 @@ public class FieldExporter {
                 continue;
             }
 
-            // Value-alias field: @realField + valueMap, no criterias.
-            // Read the sibling real field, apply the map, write a scalar.
-            if (schemaField.isValueAliasField()) {
-                try {
-                    String realFieldName = schemaField.getVirtualFieldName();
-                    StoredClass storedClass = delegate.storedClass(obj);
-                    Object rawValue = null;
-                    if (storedClass != null) {
-                        for (StoredField sf : delegate.getAllFieldsIncludingAncestors(storedClass)) {
-                            if (realFieldName.equals(sf.getName())) {
-                                rawValue = sf.get(obj);
-                                break;
-                            }
-                        }
-                    }
-                    if (shouldSkipField(rawValue, schemaField, operation.referenceSchema)) {
-                        continue;
-                    }
-                    String stringValue = rawValue != null ? rawValue.toString() : null;
-                    stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
-                    xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(rawValue, schemaField, operation.referenceSchema), stringValue, true);
-                    fieldsWritten++;
-                } catch (Exception e) {
-                    System.err.println("[WARN] Value-alias field '" + schemaField.attributes.source + "': " + e.getMessage());
-                }
+            // Scalar virtual field: handled earlier by writeOneScalarVirtualField(),
+            // interleaved at its correct alphabetical position inside exportAllFields().
+            if (schemaField.isScalarVirtualField()) {
                 continue;
             }
 
@@ -889,6 +917,36 @@ public class FieldExporter {
         }
 
         return fieldsWritten;
+    }
+
+    /**
+     * Writes a single scalar virtual field (source="@realField" with valueMap and/or format, no criteria) at the current XML position. Returns 1 if written, 0 if skipped.
+     */
+    private int writeOneScalarVirtualField(DODatabaseDelegate delegate, GenericObject obj, DOSchemaField schemaField, int indentLevel) {
+        try {
+            String realFieldName = schemaField.getVirtualFieldName();
+            StoredClass storedClass = delegate.storedClass(obj);
+            Object rawValue = null;
+            if (storedClass != null) {
+                for (StoredField sf : delegate.getAllFieldsIncludingAncestors(storedClass)) {
+                    if (realFieldName.equals(sf.getName())) {
+                        rawValue = sf.get(obj);
+                        break;
+                    }
+                }
+            }
+            if (shouldSkipField(rawValue, schemaField, operation.referenceSchema)) {
+                return 0;
+            }
+            String stringValue = rawValue != null ? rawValue.toString() : null;
+            stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
+            stringValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, obj), stringValue, schemaField);
+            xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(rawValue, schemaField, operation.referenceSchema), stringValue, true);
+            return 1;
+        } catch (Exception e) {
+            System.err.println("[WARN] Scalar virtual field '" + schemaField.attributes.source + "': " + e.getMessage());
+            return 0;
+        }
     }
 
     /**

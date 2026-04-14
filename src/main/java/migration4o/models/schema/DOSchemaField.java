@@ -41,6 +41,19 @@ public class DOSchemaField {
     }
 
     /**
+     * Returns true if this is a scalar virtual field: a virtual field (source starts with @) with no criterias that reads the real sibling field and writes a transformed scalar value. Covers both value-alias fields (valueMap) and format-only fields (format), as well as fields that combine both.
+     */
+    public boolean isScalarVirtualField() {
+        if (!isVirtualField())
+            return false;
+        if (attributes.criterias != null && !attributes.criterias.isEmpty())
+            return false;
+        boolean hasValueMap = attributes.valueMap != null && !attributes.valueMap.isEmpty();
+        boolean hasFormat = attributes.format != null && !attributes.format.trim().isEmpty();
+        return hasValueMap || hasFormat;
+    }
+
+    /**
      * Gets the actual field name for a virtual field (removes the @ prefix).
      */
     public String getVirtualFieldName() {
