@@ -10,12 +10,9 @@ import com.db4o.reflect.generic.GenericObject;
 /**
  * Wraps a single DB4O {@link ExtObjectContainer} and its loaded classes.
  * <p>
- * All DB4O operations throughout the application go through a delegate.
- * A {@link DODatabase} aggregates one or more delegates (e.g. user data
- * and static/lookup data) and presents a unified view.
+ * All DB4O operations throughout the application go through a delegate. A {@link DODatabase} aggregates one or more delegates (e.g. user data and static/lookup data) and presents a unified view.
  * <p>
- * Each {@link DODatabaseClass} knows which delegate it belongs to, so
- * object retrieval always routes to the correct container.
+ * Each {@link DODatabaseClass} knows which delegate it belongs to, so object retrieval always routes to the correct container.
  */
 public class DODatabaseDelegate {
 
@@ -32,8 +29,7 @@ public class DODatabaseDelegate {
     // ── Exception logging ───────────────────────────────────────────────
 
     /**
-     * Logs a DB4O operation failure with full stack trace, then returns
-     * the exception so callers can {@code throw logDb4oException(...)}.
+     * Logs a DB4O operation failure with full stack trace, then returns the exception so callers can {@code throw logDb4oException(...)}.
      */
     private RuntimeException logDb4oException(String operation, RuntimeException e) {
         System.err.println("[DB4O] " + operation + ": " + e.getClass().getName() + " - " + e.getMessage());
@@ -59,6 +55,14 @@ public class DODatabaseDelegate {
             // Corrupt slot or wrong-container ID — return null so callers skip gracefully
             return null;
         } catch (RuntimeException e) {
+            // DB4O 7.4 throws NotImplementedException from PrimitiveHandler.read() when
+            // it encounters a primitive type it cannot deserialise in generic mode (e.g.
+            // internal metadata objects). Return null so callers skip gracefully and the
+            // exception does not corrupt DB4O's internal file-pointer state for subsequent
+            // reads.
+            if ("NotImplementedException".equals(e.getClass().getSimpleName())) {
+                return null;
+            }
             throw logDb4oException("getByID(objectId=" + objectId + ")", e);
         }
     }
@@ -87,26 +91,34 @@ public class DODatabaseDelegate {
             if ("com.db4o.internal.ReflectException".equals(e.getClass().getName())) {
                 return;
             }
+            // DB4O 7.4 also throws ArrayIndexOutOfBoundsException (and
+            // similar index errors) when the on-disk slot for an object
+            // contains corrupt or primitive data that cannot be read in
+            // generic mode (e.g. internal metadata records whose type has
+            // no GenericObject representation). Treat these as harmless —
+            // the object remains hollow and the caller will skip it.
+            if (e instanceof IndexOutOfBoundsException || e instanceof NegativeArraySizeException) {
+                logDb4oException("activate(depth=" + depth + ")", e);
+                return;
+            }
             throw logDb4oException("activate(depth=" + depth + ")", e);
         }
     }
 
     /**
-     * Releases the cached field values for {@code obj} up to {@code depth}
-     * levels deep, freeing memory in DB4O's reference cache.
+     * Releases the cached field values for {@code obj} up to {@code depth} levels deep, freeing memory in DB4O's reference cache.
      * <p>
-     * Must be called after an object has been fully exported/read to prevent
-     * unbounded memory growth during large exports.
+     * Must be called after an object has been fully exported/read to prevent unbounded memory growth during large exports.
      * <p>
-     * Silently catches exceptions because DB4O 7.4 throws
-     * {@code ReflectException} / {@code ClassCastException} when deactivating
-     * objects whose fields use translated aspects (e.g. Date, Hashtable).
+     * Silently catches exceptions because DB4O 7.4 throws {@code ReflectException} / {@code ClassCastException} when deactivating objects whose fields use translated aspects (e.g. Date, Hashtable).
      */
     public void deactivate(Object obj, int depth) {
         try {
             container.deactivate(obj, depth);
         } catch (DatabaseClosedException e) {
-            throw logDb4oException("deactivate", e);
+            // Container already closed — deactivation is a no-op, ignore silently.
+            // This can happen when a previous corrupt-data read triggered DB4O's
+            // internal self-close mechanism; there is nothing to deactivate.
         } catch (Exception e) {
             // DB4O 7.4 throws ReflectException / ClassCastException when
             // deactivating objects with translated aspects (Date, Hashtable).
@@ -143,9 +155,7 @@ public class DODatabaseDelegate {
     // ── Field access ────────────────────────────────────────────────────
 
     /**
-     * Returns all stored fields for the given object, including fields
-     * from all ancestor classes. Deduplicates by field name (most-derived
-     * version wins).
+     * Returns all stored fields for the given object, including fields from all ancestor classes. Deduplicates by field name (most-derived version wins).
      */
     public StoredField[] getAllFieldsIncludingAncestors(Object obj) {
         StoredClass sc = storedClass(obj);
@@ -155,9 +165,7 @@ public class DODatabaseDelegate {
     }
 
     /**
-     * Returns all stored fields for the given StoredClass, including fields
-     * from all ancestor classes. Deduplicates by field name (most-derived
-     * version wins).
+     * Returns all stored fields for the given StoredClass, including fields from all ancestor classes. Deduplicates by field name (most-derived version wins).
      */
     public StoredField[] getAllFieldsIncludingAncestors(StoredClass storedClass) {
         try {
@@ -182,9 +190,7 @@ public class DODatabaseDelegate {
     }
 
     /**
-     * Reads a single stored field value from a DB4O object by source field
-     * name. Walks up the stored class hierarchy so fields declared on a
-     * parent class are found. Returns {@code null} if not found.
+     * Reads a single stored field value from a DB4O object by source field name. Walks up the stored class hierarchy so fields declared on a parent class are found. Returns {@code null} if not found.
      */
     public Object getStoredFieldValue(Object obj, String fieldName) {
         if (!(obj instanceof GenericObject))
@@ -205,8 +211,7 @@ public class DODatabaseDelegate {
     }
 
     /**
-     * Traverses a dotted source field path (e.g. {@code "mAdresse.mRue"})
-     * through a chain of DB4O objects and returns the leaf value.
+     * Traverses a dotted source field path (e.g. {@code "mAdresse.mRue"}) through a chain of DB4O objects and returns the leaf value.
      */
     public Object getFieldValueByPath(Object obj, String fieldPath) {
         if (obj == null || fieldPath == null || fieldPath.isEmpty())

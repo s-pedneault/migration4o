@@ -81,8 +81,15 @@ public class FieldExporter {
             fields = sortFieldsByDestinationName(fields, parentClass, schema);
             for (StoredField field : fields) {
                 try {
-                    Object fieldValue = field.get(obj);
                     String sourceFieldName = field.getName();
+                    String countCtx = (parentClass != null ? parentClass.attributes.source : "?") + "#" + sourceFieldName;
+                    migration4o.database.Db4oReadContext.set(countCtx + " [count-check]");
+                    Object fieldValue;
+                    try {
+                        fieldValue = field.get(obj);
+                    } finally {
+                        migration4o.database.Db4oReadContext.clear();
+                    }
 
                     // CRITICAL: Get schema field from current class AND
                     // ancestors
@@ -195,8 +202,13 @@ public class FieldExporter {
             for (StoredField field : fields) {
                 Object fieldValue = null;
                 try {
-                    fieldValue = field.get(obj);
                     String sourceFieldName = field.getName();
+                    migration4o.database.Db4oReadContext.set(sourceClassName + "#" + sourceFieldName + " [objectId=" + parentObjectId + "]");
+                    try {
+                        fieldValue = field.get(obj);
+                    } finally {
+                        migration4o.database.Db4oReadContext.clear();
+                    }
 
                     // CRITICAL: Get destination field name from schema (search
                     // ancestors too)

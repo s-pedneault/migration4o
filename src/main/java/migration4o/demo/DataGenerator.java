@@ -10,9 +10,7 @@ import java.util.GregorianCalendar;
 import java.util.Random;
 
 /**
- * Deterministic seeded data generator that produces believable field values.
- * Uses field-name heuristics to choose contextually appropriate data
- * (e.g., mNom → last name, mTelephone → phone number).
+ * Deterministic seeded data generator that produces believable field values. Uses field-name heuristics to choose contextually appropriate data (e.g., mNom → last name, mTelephone → phone number).
  */
 public class DataGenerator {
 
@@ -30,8 +28,7 @@ public class DataGenerator {
     static final int FIRE_DEPT_COUNT = 3;
 
     /**
-     * Probability (0..100) that a record is not tied to any organization (mIDSSI = -1).
-     * Mirrors real databases where some records predate org assignment.
+     * Probability (0..100) that a record is not tied to any organization (mIDSSI = -1). Mirrors real databases where some records predate org assignment.
      */
     static final int NO_ORG_PERCENT = 20;
 
@@ -52,8 +49,7 @@ public class DataGenerator {
     }
 
     /**
-     * Returns how many objects to create for the given class.
-     * Applies per-class overrides before falling back to scale defaults.
+     * Returns how many objects to create for the given class. Applies per-class overrides before falling back to scale defaults.
      */
     public int getObjectCount(String className, boolean isParam, boolean isStatic, boolean alwaysExportAll) {
         // DossierAdresse is a prime object — MANY classes point to it; always generate plenty
@@ -78,8 +74,7 @@ public class DataGenerator {
     }
 
     /**
-     * Generates a value appropriate for the given schema field.
-     * Uses field name heuristics and type to produce believable data.
+     * Generates a value appropriate for the given schema field. Uses field name heuristics and type to produce believable data.
      */
     public Object generateValue(DOSchemaField field) {
         String type = field.attributes.type;
@@ -113,8 +108,7 @@ public class DataGenerator {
     }
 
     /**
-     * Generates a primitive value by type name and field name, without requiring a DOSchemaField.
-     * Used for collection elements and other contexts where no schema field is available.
+     * Generates a primitive value by type name and field name, without requiring a DOSchemaField. Used for collection elements and other contexts where no schema field is available.
      */
     public Object generatePrimitiveValue(String type, String fieldName) {
         if (type == null)
@@ -155,10 +149,13 @@ public class DataGenerator {
     }
 
     /**
-     * Should this field value occasionally be null/empty?
-     * Uses skipWhen hints from the schema.
+     * Should this field value occasionally be null/empty? Uses skipWhen hints from the schema.
      */
     public boolean shouldBeNull(DOSchemaField field) {
+        // Fields with a valueMap have enumeration constraints in the XSD — never leave them empty.
+        if (field.attributes.valueMap != null) {
+            return false;
+        }
         // ~15% chance of null for nullable fields
         if (field.attributes.skipWhen != null && field.attributes.skipWhen.contains("NULL")) {
             return rng.nextInt(100) < 15;
@@ -189,8 +186,7 @@ public class DataGenerator {
     // ── String generation by field name heuristic ────────────────────────────
 
     /**
-     * Generates a string value with class-context awareness.
-     * Used when a DOSchemaField is available via generateValue().
+     * Generates a string value with class-context awareness. Used when a DOSchemaField is available via generateValue().
      */
     private String generateString(String fieldName, String parentClassName) {
         // VilleGeo.mNom should be a municipality name, not a person's last name

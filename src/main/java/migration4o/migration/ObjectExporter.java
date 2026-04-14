@@ -112,6 +112,9 @@ public class ObjectExporter {
 
             // Skip objects whose schema class is excluded from export
             if (schemaClass != null && !schemaClass.attributes.migrate) {
+                if (ctx.statistics != null) {
+                    ctx.statistics.recordReachedOnly(schemaClass, objectId, ctx.request.referenceSchema);
+                }
                 ctx.delegate.deactivate(obj, 1);
                 return;
             }
@@ -128,6 +131,9 @@ public class ObjectExporter {
                 if (obj instanceof GenericObject && schemaClass != null && !schemaClass.isCollectionOrMap()) {
                     int preCount = GenericObjectExporter.countFieldsToExport(ctx.delegate, (GenericObject) obj, schemaClass, objectId, fieldExporter, ctx.request.referenceSchema);
                     if (preCount == 0) {
+                        if (ctx.statistics != null) {
+                            ctx.statistics.recordReachedOnly(schemaClass, objectId, ctx.request.referenceSchema);
+                        }
                         return;
                     }
                 }
@@ -137,6 +143,9 @@ public class ObjectExporter {
                 // Examples: java.lang.Class → "Classe" has no fields at all.
                 if (!(obj instanceof GenericObject) && schemaClass != null && !schemaClass.isCollectionOrMap()) {
                     if (countExportedFields(schemaClass) == 0) {
+                        if (ctx.statistics != null) {
+                            ctx.statistics.recordReachedOnly(schemaClass, objectId, ctx.request.referenceSchema);
+                        }
                         return;
                     }
                 }
@@ -153,6 +162,9 @@ public class ObjectExporter {
                         collectionEmpty = ((java.util.Collection<?>) obj).isEmpty();
                     }
                     if (collectionEmpty && !hasMethodCallFields(schemaClass)) {
+                        if (ctx.statistics != null) {
+                            ctx.statistics.recordReachedOnly(schemaClass, objectId, ctx.request.referenceSchema);
+                        }
                         return;
                     }
                 }

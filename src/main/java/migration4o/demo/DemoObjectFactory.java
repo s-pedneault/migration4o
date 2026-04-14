@@ -14,15 +14,18 @@ import migration4o.util.CollectionTypeUtil;
 import java.util.*;
 
 /**
- * Creates GenericObject instances for all exported schema classes and stores them
- * in the DB4O container. Uses a two-pass strategy:
+ * Creates GenericObject instances for all exported schema classes and stores them in the DB4O container.
  *
- * Pass 1: Create all entity objects (EntiteContientID, EntiteParam) with unique mIDs.
- *         Track created IDs per class for cross-referencing.
- * Pass 2: Wire IDEntite reference objects — use pointsTo to pick valid target IDs.
+ * <p>
+ * Generation strategy:
+ * <ol>
+ * <li>Pass 1a — Param (lookup-table) classes: all params, standalone. They are needed as IDEntite resolution targets for entity fields.</li>
+ * <li>Pass 1b — Entite (module-root) classes: entities listed in migration-format.xml module class configs, standalone. These are the root objects iterated by the export engine.</li>
+ * <li>Pass 1c — Other module-root classes (non-Entite, non-Param, non-IDEntite) that appear in migration-format.xml: standalone.</li>
+ * </ol>
  *
- * Embedded objects (embedContents=true) are created inline during Pass 1.
- * Collections are populated with the appropriate number of child objects.
+ * <p>
+ * Classes that are NOT module roots (embedded value types, inner classes, IDEntite wrappers) are created INLINE only — when populating the fields of their parent entity objects — and are never stored as standalone objects. This ensures every object in the database is reachable from an export root, matching the structure of a real DB4O database.
  */
 public class DemoObjectFactory {
 
@@ -31,8 +34,18 @@ public class DemoObjectFactory {
     private final SchemaClassRegistrar registrar;
     private final DataGenerator dataGen;
 
+    /**
+     * Source class names of all classes that appear in any module's classConfigs. Only classes present here (plus all param classes) are created as standalone root objects. All other schema classes are created inline during field population and never stored directly.
+     */
+    private final Set<String> moduleRootClassNames;
+
     /** Tracks created mID values per class name, for cross-referencing in Pass 2. */
     private final Map<String, List<Integer>> createdIds = new HashMap<>();
+
+    /**
+     * All standalone GenericObjects stored during Pass 1, keyed by schema source class name. Used in Pass 2 to wire IDEntite reference fields once all createdIds are known.
+     */
+    private final Map<String, List<GenericObject>> storedObjectsByClass = new LinkedHashMap<>();
 
     /** Total objects stored. */
     private int totalObjectCount = 0;
@@ -49,11 +62,24 @@ public class DemoObjectFactory {
     /** Total number of objects being created for the current class. */
     private int currentClassObjectCount = 0;
 
-    public DemoObjectFactory(ObjectContainer container, DOSchema schema, SchemaClassRegistrar registrar, DataGenerator dataGen) {
+    /**
+     * Constructor with explicit module root class names.
+     *
+     * @param moduleRootClassNames source class names of all module-listed root classes
+     */
+    public DemoObjectFactory(ObjectContainer container, DOSchema schema, SchemaClassRegistrar registrar, DataGenerator dataGen, Set<String> moduleRootClassNames) {
         this.container = container;
         this.schema = schema;
         this.registrar = registrar;
         this.dataGen = dataGen;
+        this.moduleRootClassNames = moduleRootClassNames != null ? moduleRootClassNames : Collections.emptySet();
+    }
+
+    /**
+     * Legacy constructor (no module root filtering — all leaf classes become standalone). Kept for backward compatibility with existing tests.
+     */
+    public DemoObjectFactory(ObjectContainer container, DOSchema schema, SchemaClassRegistrar registrar, DataGenerator dataGen) {
+        this(container, schema, registrar, dataGen, null);
     }
 
     /**
@@ -77,37 +103,65 @@ public class DemoObjectFactory {
             if (sc.isIDEntite()) {
                 idEntiteClasses.add(sc);
             } else if (sc.isParam()) {
-                paramClasses.add(sc);
+                // Only create standalone param objects for classes that the export
+                // engine will also iterate as root objects (i.e. those listed in
+                // migration-format.xml). For non-module param classes, IDEntite
+                // fields write the mID as a plain scalar (embedContents=false), so
+                // no param object is ever traversed → any standalone object would
+                // be permanently unreached and end up in Extra.xml.
+                if (moduleRootClassNames.isEmpty() || moduleRootClassNames.contains(className)) {
+                    paramClasses.add(sc);
+                }
             } else if (sc.isEntite()) {
-                entiteClasses.add(sc);
+                // Entite classes (EntiteContientID descendants) — only if they
+                // appear in a module's class list. Non-module entities are
+                // embedded value types and must NOT be created standalone.
+                if (moduleRootClassNames.isEmpty() || moduleRootClassNames.contains(className)) {
+                    entiteClasses.add(sc);
+                }
             } else {
-                otherClasses.add(sc);
+                // Other classes (e.g. direct Entite subclasses, utility types)
+                // — only if they are in a module's class list.
+                if (moduleRootClassNames.isEmpty() || moduleRootClassNames.contains(className)) {
+                    otherClasses.add(sc);
+                }
             }
         }
 
-        // Pass 1: Create params first (they're referenced by entities)
+        // Pass 1a: Create params first (they're referenced by entities via IDEntite)
         System.out.println("[factory] Pass 1a: Creating " + paramClasses.size() + " EntiteParam classes...");
         for (DOSchemaClass sc : paramClasses) {
             createObjectsForClass(sc, true);
         }
 
-        // Pass 1b: Create entities
-        System.out.println("[factory] Pass 1b: Creating " + entiteClasses.size() + " Entite classes...");
+        // Pass 1b: Create module-root Entite classes
+        System.out.println("[factory] Pass 1b: Creating " + entiteClasses.size() + " module-root Entite classes...");
         for (DOSchemaClass sc : entiteClasses) {
             createObjectsForClass(sc, false);
         }
 
-        // Pass 1c: Other non-IDEntite classes
-        System.out.println("[factory] Pass 1c: Creating " + otherClasses.size() + " other classes...");
+        // Pass 1c: Other module-root classes (non-Entite, non-Param, non-IDEntite)
+        // Non-module classes are not created standalone — they are created inline
+        // by generateEmbeddedObject() / generateCollection() during Pass 1a/1b.
+        System.out.println("[factory] Pass 1c: Creating " + otherClasses.size() + " other module-root classes...");
         for (DOSchemaClass sc : otherClasses) {
             createObjectsForClass(sc, false);
         }
 
-        // Pass 2: Create IDEntite reference wrapper objects
-        System.out.println("[factory] Pass 2: Creating " + idEntiteClasses.size() + " IDEntite classes...");
-        for (DOSchemaClass sc : idEntiteClasses) {
-            createIdEntiteObjects(sc);
-        }
+        // NOTE: IDEntite objects are NOT stored standalone. They live exclusively
+        // as inline field values embedded in their parent entity objects.
+        // createIdEntiteObjects() was removed because standalone IDEntite objects
+        // have no parent entity — they are unreachable during export and pollute
+        // Extra.xml. Inline IDEntite values are created by generateIdEntiteInline()
+        // during Pass 1 entity population.
+
+        // Pass 2: wire IDEntite reference fields now that all createdIds are fully populated.
+        // This fixes two issues from Pass 1:
+        // 1. Forward-reference ordering: target class (e.g. TypeBatiment) may not have been
+        // created yet when the referencing class (e.g. DossPrev) was processed.
+        // 2. Self-references: a class's own createdIds is null during its own Pass 1 processing.
+        System.out.println("[factory] Pass 2: wiring IDEntite references...");
+        fixAllIdEntiteReferences();
 
         container.commit();
         System.out.println("[factory] Committed " + totalObjectCount + " objects total.");
@@ -182,6 +236,7 @@ public class DemoObjectFactory {
                 System.err.println("[factory] ERROR storing " + className + " #" + i + ": " + e.getMessage());
                 continue; // Skip this object, don't abort the whole generation
             }
+            storedObjectsByClass.computeIfAbsent(className, k -> new ArrayList<>()).add(obj);
             totalObjectCount++;
             if (DOSchemaConstants.ORGANIZATION_CLASS_NAME.equals(className)) {
                 recordOrgCreated(obj, gc);
@@ -192,8 +247,7 @@ public class DemoObjectFactory {
     }
 
     /**
-     * Populates all fields on a GenericObject from its schema definition.
-     * Returns the mID value if one was assigned, or -1.
+     * Populates all fields on a GenericObject from its schema definition. Returns the mID value if one was assigned, or -1.
      */
     private int populateFields(GenericObject obj, DOSchemaClass sc, GenericClass gc) {
         GenericField[] gFields = registrar.getFields(sc.attributes.source);
@@ -238,6 +292,30 @@ public class DemoObjectFactory {
             if (DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME.equals(sf.attributes.source)) {
                 int idSSI = assignIdSSI();
                 gf.set(obj, idSSI);
+                continue;
+            }
+
+            // Skip non-exported fields to avoid cascade-storing orphan objects.
+            // Exception: collection and map fields must receive an empty container
+            // (Vector / Hashtable) rather than being left null. DB4O 7.4 writes the
+            // "indirection buffer address" for variable-length fields inline in the
+            // object slot. A null reference leaves those bytes uninitialized, which
+            // produces negative/huge file offsets and IncompatibleFileFormatException
+            // when the object is read back.
+            if (!sf.attributes.isExported) {
+                String ftype = sf.attributes.type;
+                if (ftype != null && (sf.attributes.isCollection || CollectionTypeUtil.isCollectionType(ftype))) {
+                    gf.set(obj, new java.util.Vector<>());
+                } else if (ftype != null && CollectionTypeUtil.isMapType(ftype)) {
+                    gf.set(obj, new java.util.Hashtable<>());
+                }
+                continue;
+            }
+
+            // IDEntite reference fields are deferred to Pass 2 (fixAllIdEntiteReferences),
+            // when all createdIds are fully populated. Setting them now would either use an
+            // incomplete createdIds pool (wrong IDs) or the shouldBeNull fallback (zero IDs).
+            if (isIdEntiteField(sf)) {
                 continue;
             }
 
@@ -309,6 +387,24 @@ public class DemoObjectFactory {
                         continue;
                     }
 
+                    // Same guard as in populateFields — skip non-exported fields,
+                    // but store empty Vector/Hashtable for collection/map types to
+                    // prevent null indirection-buffer corruption in DB4O 7.4.
+                    if (!sf.attributes.isExported) {
+                        String ftype = sf.attributes.type;
+                        if (ftype != null && (sf.attributes.isCollection || CollectionTypeUtil.isCollectionType(ftype))) {
+                            gf.set(obj, new java.util.Vector<>());
+                        } else if (ftype != null && CollectionTypeUtil.isMapType(ftype)) {
+                            gf.set(obj, new java.util.Hashtable<>());
+                        }
+                        continue;
+                    }
+
+                    // Defer IDEntite fields to Pass 2
+                    if (isIdEntiteField(sf)) {
+                        continue;
+                    }
+
                     if (!currentClassSkipNulls && dataGen.shouldBeNull(sf))
                         continue;
 
@@ -330,11 +426,7 @@ public class DemoObjectFactory {
     }
 
     /**
-     * Assigns an mIDSSI value for the current object.
-     * ParamConfigSSI objects are the organizations themselves — they always receive
-     * a sequential org ID (1..FIRE_DEPT_COUNT), never -1.
-     * All other objects receive -1 (no org) with {@link DataGenerator#NO_ORG_PERCENT}%
-     * probability, otherwise a random org ID.
+     * Assigns an mIDSSI value for the current object. ParamConfigSSI objects are the organizations themselves — they always receive a sequential org ID (1..FIRE_DEPT_COUNT), never -1. All other objects receive -1 (no org) with {@link DataGenerator#NO_ORG_PERCENT}% probability, otherwise a random org ID.
      */
     private int assignIdSSI() {
         // ParamConfigSSI: exactly one object per fire dept — sequential, never unassigned
@@ -348,12 +440,95 @@ public class DemoObjectFactory {
     }
 
     /**
+     * Returns true if the field's type is an IDEntite class (a reference wrapper). These fields are deferred to Pass 2 so that createdIds for all classes is fully populated before wiring.
+     */
+    private boolean isIdEntiteField(DOSchemaField sf) {
+        String type = sf.attributes.type;
+        if (type == null || type.isEmpty())
+            return false;
+        DOSchemaClass fc = schema.findClassByName(type);
+        return fc != null && fc.isIDEntite();
+    }
+
+    // ── Pass 2: IDEntite reference wiring ─────────────────────────────────────
+
+    /**
+     * After all standalone objects have been created and createdIds is fully populated, iterate every stored object and wire its IDEntite reference fields to a valid target ID. Re-stores each object so DB4O persists the update.
+     */
+    private void fixAllIdEntiteReferences() {
+        int fixCount = 0;
+        for (Map.Entry<String, List<GenericObject>> entry : storedObjectsByClass.entrySet()) {
+            String className = entry.getKey();
+            DOSchemaClass sc = schema.findClassByName(className);
+            if (sc == null)
+                continue;
+            GenericClass gc = registrar.getGenericClass(className);
+            if (gc == null)
+                continue;
+
+            for (GenericObject obj : entry.getValue()) {
+                if (fixIdEntiteFieldsOn(obj, sc, gc)) {
+                    container.store(obj);
+                    fixCount++;
+                }
+            }
+        }
+        System.out.println("[factory] Pass 2: wired IDEntite references on " + fixCount + " objects.");
+    }
+
+    /**
+     * Sets all IDEntite reference fields on the given object (direct + inherited). Returns true if any field was updated.
+     */
+    private boolean fixIdEntiteFieldsOn(GenericObject obj, DOSchemaClass sc, GenericClass gc) {
+        boolean updated = false;
+        Set<String> handled = new HashSet<>();
+
+        // Walk the class chain — own fields first, then parent fields
+        DOSchemaClass current = sc;
+        while (current != null) {
+            if (current.fields != null) {
+                for (DOSchemaField sf : current.fields) {
+                    if (sf.isVirtualField() || sf.isMethodCallField())
+                        continue;
+                    if (!sf.attributes.isExported)
+                        continue;
+                    if (!isIdEntiteField(sf))
+                        continue;
+                    if (!handled.add(sf.attributes.source))
+                        continue; // child already defined this field
+
+                    GenericField gf = findInheritedField(gc, sf.attributes.source);
+                    if (gf == null)
+                        continue;
+
+                    Object value = generateFieldValue(sf);
+                    if (value != null) {
+                        try {
+                            gf.set(obj, value);
+                            updated = true;
+                        } catch (Exception e) {
+                            // field type mismatch — skip silently
+                        }
+                    }
+                }
+            }
+            if (current.attributes.parentClassName == null)
+                break;
+            current = schema.findClassByName(current.attributes.parentClassName);
+        }
+        return updated;
+    }
+
+    /**
      * Generates a value for a field, handling embedded objects and collections.
      */
     private Object generateFieldValue(DOSchemaField sf) {
         String type = sf.attributes.type;
         if (type == null)
-            return null;
+            // DataGenerator.generateValue() defaults null type to "string" and checks
+            // valueMap first — so fields with no explicit type but a valueMap still get
+            // a valid enum value instead of staying at the "" initialised by initializePrimitiveDefaults.
+            return dataGen.generateValue(sf);
 
         // Collection fields
         if (sf.attributes.isCollection || CollectionTypeUtil.isCollectionType(type)) {
@@ -498,47 +673,11 @@ public class DemoObjectFactory {
     // ── Pass 2: IDEntite reference objects ────────────────────────────────────
 
     /**
-     * Creates IDEntite wrapper objects. These are lightweight objects with
-     * an mID field that references an existing entity's ID (via pointsTo).
+     * Previously created standalone IDEntite wrapper objects and stored them in the container for introspection purposes. Removed: standalone IDEntite objects are never referenced by any entity, making them permanently unreachable during export and causing them to appear in Extra.xml. IDEntite objects now live exclusively as inline field values created by generateIdEntiteInline() during Pass 1.
      */
+    @SuppressWarnings("unused")
     private void createIdEntiteObjects(DOSchemaClass sc) {
-        String className = sc.attributes.source;
-        GenericClass gc = registrar.getGenericClass(className);
-        if (gc == null)
-            return;
-
-        // Find the target class this IDEntite points to
-        String targetClassName = sc.attributes.pointsTo;
-        List<Integer> targetIds = null;
-        if (targetClassName != null) {
-            targetIds = createdIds.get(targetClassName);
-        }
-
-        // IDEntite objects are not created standalone — they exist as field values
-        // within parent entities. We still register a small set so storedClasses()
-        // shows them.
-        int count = Math.min(dataGen.getScale().objectsPerClass, 10);
-        List<Integer> ids = new ArrayList<>();
-
-        for (int i = 0; i < count; i++) {
-            GenericObject obj = (GenericObject) gc.newInstance();
-            registrar.initializePrimitiveDefaults(obj, gc);
-            int refId = populateIdEntiteFields(obj, className, targetIds);
-            ids.add(refId);
-
-            GenericField[] gFields = registrar.getFields(className);
-            if (gFields != null) {
-                for (GenericField gf : gFields) {
-                    if ("mContrainte".equals(gf.getName())) {
-                        gf.set(obj, dataGen.getRng().nextInt(3));
-                    }
-                }
-            }
-
-            container.store(obj);
-            totalObjectCount++;
-        }
-        createdIds.put(className, ids);
+        // Intentionally empty — see method Javadoc.
     }
 
     /**
@@ -559,8 +698,7 @@ public class DemoObjectFactory {
     }
 
     /**
-     * Sets mID on an IDEntite GenericObject to reference a valid target entity.
-     * Returns the ID that was assigned.
+     * Sets mID on an IDEntite GenericObject to reference a valid target entity. Returns the ID that was assigned.
      */
     private int populateIdEntiteFields(GenericObject obj, String className, List<Integer> targetIds) {
         GenericField[] gFields = registrar.getFields(className);

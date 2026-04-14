@@ -15,12 +15,9 @@ import migration4o.util.CollectionTypeUtil;
 import java.util.*;
 
 /**
- * Registers all exported schema classes as GenericClass definitions in a DB4O container.
- * Must be called after the container is opened but before any objects are created.
+ * Registers all exported schema classes as GenericClass definitions in a DB4O container. Must be called after the container is opened but before any objects are created.
  *
- * Classes are registered in topological order (parents before children) to ensure
- * that DB4O's field index offset mechanism works correctly: child fields are offset
- * by superclass.getFieldCount().
+ * Classes are registered in topological order (parents before children) to ensure that DB4O's field index offset mechanism works correctly: child fields are offset by superclass.getFieldCount().
  */
 public class SchemaClassRegistrar {
 
@@ -41,8 +38,7 @@ public class SchemaClassRegistrar {
     }
 
     /**
-     * Registers all exported classes from the schema in topological order.
-     * Returns the number of classes registered.
+     * Registers all exported classes from the schema in topological order. Returns the number of classes registered.
      */
     public int registerAll() {
         List<DOSchemaClass> sorted = topologicalSort();
@@ -65,8 +61,7 @@ public class SchemaClassRegistrar {
     }
 
     /**
-     * Returns the GenericField array for the given fully-qualified class name.
-     * These are only the fields declared on this class (not inherited).
+     * Returns the GenericField array for the given fully-qualified class name. These are only the fields declared on this class (not inherited).
      */
     public GenericField[] getFields(String className) {
         return classFields.get(className);
@@ -80,9 +75,7 @@ public class SchemaClassRegistrar {
     }
 
     /**
-     * Initializes all primitive fields (own + inherited) on a GenericObject to their
-     * default values (0, 0.0, false). This prevents DB4O from encountering null in
-     * primitive field slots during store().
+     * Initializes all primitive fields (own + inherited) on a GenericObject to their default values (0, 0.0, false). This prevents DB4O from encountering null in primitive field slots during store().
      */
     public void initializePrimitiveDefaults(GenericObject obj, GenericClass gc) {
         GenericClass current = gc;
@@ -90,8 +83,18 @@ public class SchemaClassRegistrar {
             GenericField[] fields = classFields.get(current.getName());
             if (fields != null) {
                 for (GenericField gf : fields) {
-                    if (gf.isPrimitive()) {
-                        String typeName = gf.getFieldType() != null ? gf.getFieldType().getName() : "";
+                    String typeName = gf.getFieldType() != null ? gf.getFieldType().getName() : "";
+                    String typeLower = typeName.toLowerCase();
+                    // String fields: DB4O's isPrimitive() returns false for String, so they would
+                    // be skipped and left null. A null String causes DB4O 7.4's StringHandler0 to
+                    // write an uninitialized indirection pointer → IncompatibleFileFormatException.
+                    if ("java.lang.string".equals(typeLower)) {
+                        try {
+                            gf.set(obj, "");
+                        } catch (Exception e) {
+                            System.err.println("[registrar] WARN: string default for " + gf.getName() + ": " + e.getMessage());
+                        }
+                    } else if (gf.isPrimitive()) {
                         Object defaultVal = primitiveDefault(typeName);
                         if (defaultVal != null) {
                             try {
@@ -291,8 +294,7 @@ public class SchemaClassRegistrar {
     // ── Topological sort ─────────────────────────────────────────────────────
 
     /**
-     * Returns schema classes in topological order: parents before children.
-     * Only includes classes that should appear in the demo database.
+     * Returns schema classes in topological order: parents before children. Only includes classes that should appear in the demo database.
      */
     private List<DOSchemaClass> topologicalSort() {
         // Build the full set of classes to register. Start with exported classes,
@@ -352,8 +354,7 @@ public class SchemaClassRegistrar {
     }
 
     /**
-     * Determines whether a schema class should be registered in the demo DB.
-     * Includes exported classes and their ancestor chain.
+     * Determines whether a schema class should be registered in the demo DB. Includes exported classes and their ancestor chain.
      */
     private boolean shouldRegister(DOSchemaClass sc) {
         // Skip collection wrapper types and primitives

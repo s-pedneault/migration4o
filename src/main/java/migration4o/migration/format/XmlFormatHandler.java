@@ -7,7 +7,9 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import migration4o.database.DODatabase;
@@ -135,7 +137,8 @@ public class XmlFormatHandler extends FormatHandler {
 
     private void exportUnreachedObjects(ExportCurrentState ctx) throws Exception {
         Set<Long> reachedIds = collectReachedIds(ctx);
-        Set<Long> unreachedIds = collectUnreachedIds(ctx, reachedIds);
+        Map<Long, String> unreachedIdToClass = collectUnreachedIds(ctx, reachedIds);
+        Set<Long> unreachedIds = unreachedIdToClass.keySet();
         System.out.println("[Extra.xml] reachedIds=" + reachedIds.size() + ", unreachedIds=" + unreachedIds.size() + " (before org filter)");
         if (unreachedIds.isEmpty()) {
             if (ctx.request.monitor != null) {
@@ -188,6 +191,10 @@ public class XmlFormatHandler extends FormatHandler {
 
             ObjectExporter objectExporter = new ObjectExporter(ctx, this);
             int extraExported = 0;
+            // Classes for which a SafeIO error has been seen — all remaining objects
+            // of that class are skipped to prevent DB4O from accumulating internal
+            // state corruption and closing itself mid-export.
+            Set<String> corruptClasses = new HashSet<>();
             for (Long objectId : sortedIds) {
                 if (objectId == null || objectId <= 0)
                     continue;
@@ -201,7 +208,33 @@ public class XmlFormatHandler extends FormatHandler {
                     System.err.println("[Extra export] DB4O container is no longer usable — stopping unreached-object export after " + extraExported + " of " + extraCount + " objects.");
                     break;
                 }
-                objectExporter.exportObject(objectId, false);
+                String objectClass = unreachedIdToClass.getOrDefault(objectId, "?");
+                // Skip classes that have already produced SafeIO errors — all their
+                // objects likely have the same corruption and repeated attempts would
+                // push DB4O closer to self-closing.
+                if (corruptClasses.contains(objectClass)) {
+                    continue;
+                }
+                migration4o.database.Db4oReadContext.set("getByID objectId=" + objectId + " (" + objectClass + ")");
+                migration4o.database.Db4oReadContext.clearError();
+                try {
+                    objectExporter.exportObject(objectId, false);
+                } catch (com.db4o.ext.DatabaseClosedException e) {
+                    System.err.println("[Extra export] DB4O container closed during export at object " + objectId + " (" + objectClass + ") — stopping after " + extraExported + " of " + extraCount + " objects.");
+                    break;
+                } catch (Exception e) {
+                    // Skip individual objects that cannot be exported due to
+                    // corrupt or unreadable data; continue with remaining objects.
+                    System.err.println("[Extra export] Skipping object " + objectId + " (" + objectClass + ") due to error: " + e.getClass().getSimpleName() + " — " + e.getMessage());
+                } finally {
+                    if (migration4o.database.Db4oReadContext.hadError()) {
+                        if (corruptClasses.add(objectClass)) {
+                            System.err.println("[Extra export] SafeIO error detected for " + objectClass + " — skipping all remaining objects of this class.");
+                        }
+                    }
+                    migration4o.database.Db4oReadContext.clear();
+                    migration4o.database.Db4oReadContext.clearError();
+                }
                 extraExported++;
                 if (ctx.request.monitor != null && extraExported % 100 == 0 && extraCount > 0) {
                     ctx.request.monitor.onObjectProgress("Extra", "Extra", extraExported, extraCount, displayName());
@@ -237,16 +270,20 @@ public class XmlFormatHandler extends FormatHandler {
         return reached;
     }
 
-    private Set<Long> collectUnreachedIds(ExportCurrentState ctx, Set<Long> reachedIds) {
-        Set<Long> all = new HashSet<>();
+    private Map<Long, String> collectUnreachedIds(ExportCurrentState ctx, Set<Long> reachedIds) {
+        Map<Long, String> all = new java.util.LinkedHashMap<>();
         if (ctx.request.database == null)
             return all;
         Integer limit = ctx.request.maxObjectsPerClass;
         for (DODatabaseClass dbClass : ctx.request.database.getClasses()) {
-            // Skip classes marked isExported="false" in the reference schema
+            // Only include classes that are defined in the reference schema with migrate=true.
+            // Classes absent from the reference schema (DB4O internals, java.* types, etc.)
+            // are not migration data — including their IDs in Extra.xml causes
+            // PrimitiveHandler.read() NotImplementedException when DB4O tries to
+            // deserialise objects it cannot handle in generic mode.
             if (ctx.request.referenceSchema != null) {
                 DOSchemaClass schemaClass = ctx.request.referenceSchema.findClassByName(dbClass.attributes.source);
-                if (schemaClass != null && !schemaClass.attributes.migrate) {
+                if (schemaClass == null || !schemaClass.attributes.migrate) {
                     continue;
                 }
             }
@@ -259,8 +296,11 @@ public class XmlFormatHandler extends FormatHandler {
                     continue;
                 if (limit != null && classCount >= limit)
                     break;
-                all.add(id);
+                all.put(id, dbClass.attributes.source);
                 classCount++;
+            }
+            if (classCount > 0) {
+                System.out.println("[Extra.xml] Unreached: " + dbClass.attributes.source + " → " + classCount + " object(s)");
             }
         }
         return all;

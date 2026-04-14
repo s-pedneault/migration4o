@@ -8,22 +8,21 @@ import com.db4o.ext.StoredClass;
 import com.db4o.reflect.jdk.JdkReflector;
 
 import migration4o.models.schema.DOSchema;
+import migration4o.models.schema.DOSchemaModule;
 import migration4o.schema.DOSchemaService;
+import migration4o.schema.modules.DOModuleService;
 
 import java.io.File;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * CLI entry point for generating a demo DB4O database.
  *
- * Usage:
- *   java migration4o.demo.DemoGeneratorCLI [options]
+ * Usage: java migration4o.demo.DemoGeneratorCLI [options]
  *
- * Options:
- *   --output <path>         Output database file (default: local/55555/demo.dat)
- *   --scale  <small|medium|large>  Number of objects per class (default: medium)
- *   --seed   <number>       Random seed for deterministic output (default: 42)
- *   --verify                Reopen and verify the generated database
+ * Options: --output <path> Output database file (default: local/55555/demo.dat) --scale <small|medium|large> Number of objects per class (default: medium) --seed <number> Random seed for deterministic output (default: 42) --verify Reopen and verify the generated database
  */
 public class DemoGeneratorCLI {
 
@@ -124,7 +123,14 @@ public class DemoGeneratorCLI {
         DOSchema schema = DOSchemaService.getInstance().loadReferenceSchema();
         System.out.println("[gen] Schema loaded: " + schema.getClasses().length + " classes.");
 
-        // 2. Open empty DB4O container
+        // 2. Load module structure and collect root class names
+        System.out.println("[gen] Loading module structure...");
+        List<DOSchemaModule> modules = DOModuleService.getInstance().loadModuleStructure();
+        Set<String> moduleRootClassNames = new HashSet<>();
+        collectModuleClassNames(modules, moduleRootClassNames);
+        System.out.println("[gen] Module root classes: " + moduleRootClassNames.size() + " across " + modules.size() + " modules.");
+
+        // 3. Open empty DB4O container
         System.out.println("[gen] Opening new DB4O container...");
         Configuration config = Db4o.newConfiguration();
         config.activationDepth(0);
@@ -143,7 +149,7 @@ public class DemoGeneratorCLI {
             // 4. Generate objects
             System.out.println("[gen] Generating objects (scale=" + scale + ", seed=" + seed + ")...");
             DataGenerator dataGen = new DataGenerator(seed, scale);
-            DemoObjectFactory factory = new DemoObjectFactory(container, schema, registrar, dataGen);
+            DemoObjectFactory factory = new DemoObjectFactory(container, schema, registrar, dataGen, moduleRootClassNames);
             int objectCount = factory.generateAll();
 
             long elapsed = System.currentTimeMillis() - startTime;
@@ -237,6 +243,22 @@ public class DemoGeneratorCLI {
                 count++;
         }
         return count;
+    }
+
+    /**
+     * Recursively collects the source class names of all ClassExportConfigs from the given modules and their children into the provided set.
+     */
+    private static void collectModuleClassNames(List<DOSchemaModule> modules, Set<String> target) {
+        for (DOSchemaModule module : modules) {
+            for (migration4o.models.ui.ClassExportConfig config : module.classConfigs) {
+                if (config.getClassName() != null) {
+                    target.add(config.getClassName());
+                }
+            }
+            if (module.children != null && !module.children.isEmpty()) {
+                collectModuleClassNames(module.children, target);
+            }
+        }
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────

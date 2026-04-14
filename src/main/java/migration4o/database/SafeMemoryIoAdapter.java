@@ -7,15 +7,9 @@ import com.db4o.io.MemoryIoAdapter;
 /**
  * Wraps a {@link MemoryIoAdapter} to guard against invalid seek positions.
  * <p>
- * DB4O can compute negative or out-of-range slot offsets for certain corrupt
- * object references. The standard {@code MemoryIoAdapter} passes these
- * directly to {@code System.arraycopy}, which throws
- * {@code ArrayIndexOutOfBoundsException} and leaves the container in a
- * broken state (subsequent calls throw {@code DatabaseClosedException}).
+ * DB4O can compute negative or out-of-range slot offsets for certain corrupt object references. The standard {@code MemoryIoAdapter} passes these directly to {@code System.arraycopy}, which throws {@code ArrayIndexOutOfBoundsException} and leaves the container in a broken state (subsequent calls throw {@code DatabaseClosedException}).
  * <p>
- * This wrapper validates the seek position before every read and returns
- * zero bytes for invalid positions, allowing DB4O to treat the object as
- * unreadable without crashing the entire container.
+ * This wrapper validates the seek position before every read and returns zero bytes for invalid positions, allowing DB4O to treat the object as unreadable without crashing the entire container.
  */
 public class SafeMemoryIoAdapter extends IoAdapter {
 
@@ -23,9 +17,7 @@ public class SafeMemoryIoAdapter extends IoAdapter {
     private long currentSeekPos;
 
     /**
-     * Creates the template instance used for DB4O configuration.
-     * Call {@link #put(String, byte[])} on this to load file data,
-     * then pass to {@code config.io(adapter)}.
+     * Creates the template instance used for DB4O configuration. Call {@link #put(String, byte[])} on this to load file data, then pass to {@code config.io(adapter)}.
      */
     public SafeMemoryIoAdapter() {
         this.delegate = new MemoryIoAdapter();
@@ -55,7 +47,10 @@ public class SafeMemoryIoAdapter extends IoAdapter {
     public int read(byte[] buffer, int length) throws Db4oIOException {
         long dataLength = delegate.getLength();
         if (currentSeekPos < 0 || currentSeekPos >= dataLength) {
-            System.err.println("[DB4O SafeIO] invalid read at offset " + currentSeekPos + " (dataLength=" + dataLength + ", requested=" + length + ") — returning zero bytes");
+            String ctx = Db4oReadContext.get();
+            String ctxSuffix = (ctx != null) ? " [while reading: " + ctx + "]" : "";
+            System.err.println("[DB4O SafeIO] invalid read at offset " + currentSeekPos + " (dataLength=" + dataLength + ", requested=" + length + ") — returning zero bytes" + ctxSuffix);
+            Db4oReadContext.markError();
             return 0;
         }
         return delegate.read(buffer, length);
