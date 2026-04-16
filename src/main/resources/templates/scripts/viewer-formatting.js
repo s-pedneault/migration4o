@@ -196,6 +196,25 @@ function refLinkBtn(href, text) {
     return '<a class="ref-id-link" href="' + esc(href) + '">' + esc(text) + REF_ARROW_SVG + '</a>';
 }
 
+/** Maps image file extensions to their MIME type for inline data-URL fallback. */
+var IMAGE_MIME_TYPES = {
+    'jpg': 'image/jpeg', 'jpeg': 'image/jpeg',
+    'png': 'image/png', 'gif': 'image/gif',
+    'bmp': 'image/bmp', 'webp': 'image/webp',
+    'svg': 'image/svg+xml'
+};
+
+/**
+ * Returns the image MIME type for a given filename, or null if not an image extension.
+ * @param {string} filename - e.g. "photo.jpg"
+ * @returns {string|null}
+ */
+function imageExtMime(filename) {
+    if (!filename) return null;
+    var ext = String(filename).split('.').pop().toLowerCase();
+    return IMAGE_MIME_TYPES[ext] || null;
+}
+
 /**
  * Extracts the image src URL from a raw _preview HTML string.
  * @param {string} preview - raw _preview value (contains an <img> tag with src)
@@ -214,22 +233,37 @@ function extractPreviewSrc(preview) {
  * @param {object} [opts] - rendering options
  * @param {string} [opts.size] - 'hero' (default), 'thumb-sm', 'thumb-md', or 'inline'
  * @param {string} [opts.title] - title attribute on the link (hero/inline only)
+ * @param {object} [obj] - the full data object; when provided and it has a Base64 `contenu`
+ *                         field with an image-typed `nom`, an onerror data-URL fallback is
+ *                         added so the image still displays if the file/ copy is missing.
  * @returns {string} HTML string or empty string if no valid src found
  */
-function renderPreview(preview, opts) {
+function renderPreview(preview, opts, obj) {
     var src = extractPreviewSrc(preview);
     if (!src) return '';
     var size = (opts && opts.size) || 'hero';
     var titleAttr = (opts && opts.title) ? ' title="' + esc(opts.title) + '"' : '';
+
+    // Build an onerror handler that falls back to an inline data-URL when
+    // the file/ copy cannot be loaded but the raw bytes are in contenu.
+    var fallbackAttr = '';
+    if (obj && typeof obj.contenu === 'string' && obj.contenu.length > 0) {
+        var _mime = imageExtMime(String(obj.nom || obj._summary || ''));
+        if (_mime) {
+            // Base64 alphabet is HTML-safe — no escaping needed for contenu.
+            fallbackAttr = ' onerror="if(!this._fb){this._fb=1;this.src=\'data:' + _mime + ';base64,' + obj.contenu + '\';}"';
+        }
+    }
+
     if (size === 'thumb-sm') {
-        return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-sm" />';
+        return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-sm"' + fallbackAttr + ' />';
     }
     if (size === 'thumb-md') {
-        return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-md" />';
+        return '<img src="' + esc(src) + '" class="preview-thumb preview-thumb-md"' + fallbackAttr + ' />';
     }
     if (size === 'inline') {
-        return '<div class="preview-inline"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '" /></a></div>';
+        return '<div class="preview-inline"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '"' + fallbackAttr + ' /></a></div>';
     }
-    return '<div class="detail-hero-preview"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '" /></a></div>';
+    return '<div class="detail-hero-preview"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '"' + fallbackAttr + ' /></a></div>';
 }
 

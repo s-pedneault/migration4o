@@ -85,7 +85,8 @@ public class ExportConfigPersistence {
         sb.append("  \"seeds\": ").append(seedsToJson(c.getSeeds())).append(",\n");
         sb.append("  \"seedMaxPerClass\": ").append(c.getSeedMaxPerClass()).append(",\n");
         sb.append("  \"outputBranch\": ").append(JsonUtil.jsonString(c.getOutputBranch())).append(",\n");
-        sb.append("  \"exportLanguage\": ").append(JsonUtil.jsonString(c.getExportLanguage())).append("\n");
+        sb.append("  \"exportLanguage\": ").append(JsonUtil.jsonString(c.getExportLanguage())).append(",\n");
+        sb.append("  \"filesDestination\": ").append(JsonUtil.jsonString(c.getFilesDestination().name())).append("\n");
         sb.append("}");
         return sb.toString();
     }
@@ -145,6 +146,7 @@ public class ExportConfigPersistence {
         if (lang != null && !lang.isBlank()) {
             c.setExportLanguage(lang);
         }
+        c.setFilesDestination(JsonUtil.readEnum(json, "filesDestination", FilesDestination.class, FilesDestination.FOLDER));
         return c;
     }
 

@@ -3,6 +3,7 @@ package migration4o.util.formatters;
 import java.io.File;
 
 import migration4o.database.DODatabaseDelegate;
+import migration4o.migration.FilesDestination;
 import migration4o.util.DatabaseFileUtil;
 import migration4o.util.FileUtil;
 import migration4o.util.previews.ObjectPreviewFile;
@@ -20,28 +21,30 @@ public class ValueFormatterFile implements ValueFormatter {
             return null;
         }
 
-        String sourcePath = new File(new File(delegate.getFilePath()).getParent(), parameter).getPath();
-        sourcePath = sourcePath.replace("[ID]", value);
-        File sourceFile = new File(sourcePath);
-        // System.out.println("Processing file for value " + value + " with source path: " + sourcePath + " (exists: " + sourceFile.exists() + ", isFile: " + sourceFile.isFile() + ")");
+        // When embedding files inline, skip the disk copy entirely.
+        // The contenu (@contents) virtual field carries the Base64 bytes instead.
+        if (context.filesDestination == FilesDestination.EMBED) {
+            return null;
+        }
 
         String originalFileName = DatabaseFileUtil.getOriginalFileName(delegate, context.currentObject);
         String extension = FileUtil.getExtension(originalFileName, "pdf");
-
-        if (!sourceFile.exists() || !sourceFile.isFile()) {
-            sourceFile = new File(getClass().getResource("/assets/demo." + extension).getFile());
-            if (!sourceFile.exists() || !sourceFile.isFile()) {
-                sourceFile = new File(getClass().getResource("/assets/demo.pdf").getFile());
-                System.err.println("Unable to use default demo asset for " + value + " with extension " + extension);
-                return null;
-            }
-        }
         String fileName = ObjectPreviewFile.getPreviewFilePath(originalFileName, value);
         String filePath = "file/" + fileName;
-
         File destinationPath = new File(context.destinationFolder.toString(), filePath);
 
-        FileUtil.copyFile(sourceFile, destinationPath);
+        File sourceFile = DatabaseFileUtil.resolveSourceFile(delegate.getFilePath(), parameter, value);
+
+        if (sourceFile.exists() && sourceFile.isFile()) {
+            FileUtil.copyFile(sourceFile, destinationPath);
+        } else {
+            byte[] demoBytes = DatabaseFileUtil.loadDemoAssetBytes(extension);
+            if (demoBytes == null) {
+                System.err.println("[ValueFormatterFile] No demo asset found for extension '" + extension + "' (value=" + value + ")");
+                return null;
+            }
+            FileUtil.writeBytes(demoBytes, destinationPath);
+        }
 
         return filePath;
     }

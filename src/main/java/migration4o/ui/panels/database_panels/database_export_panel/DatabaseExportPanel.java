@@ -37,6 +37,7 @@ import javax.swing.SwingUtilities;
 import migration4o.database.DODatabaseContext;
 import migration4o.migration.ExportConfigPersistence;
 import migration4o.migration.ExportOutputOption;
+import migration4o.migration.FilesDestination;
 import migration4o.migration.OrganizationDetectionService;
 import migration4o.migration.OrganizationExportConfig;
 import migration4o.migration.OrganizationInfo;
@@ -81,6 +82,7 @@ public class DatabaseExportPanel extends JPanel {
     private JCheckBox exportNativeIdsCheckbox;
     private JCheckBox fullTrackingCheckbox;
     private JComboBox<String> languageCombo;
+    private JComboBox<String> filesDestinationCombo;
     private JCheckBox applyUserSelectedFieldExclusionsCheckbox;
     private JCheckBox applySkipWhenConditionsCheckbox;
     private JCheckBox applyExportCriteriaFiltersCheckbox;
@@ -327,6 +329,18 @@ public class DatabaseExportPanel extends JPanel {
 
         panel.add(Box.createVerticalStrut(8));
 
+        // Files destination
+        JPanel destPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
+        destPanel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        destPanel.add(new JLabel("Files destination: "));
+        filesDestinationCombo = new JComboBox<>(new String[] { "Folder", "Embed" });
+        filesDestinationCombo.setSelectedIndex(0);
+        filesDestinationCombo.setPreferredSize(new Dimension(120, 25));
+        destPanel.add(filesDestinationCombo);
+        panel.add(destPanel);
+
+        panel.add(Box.createVerticalStrut(8));
+
         exportNativeIdsCheckbox = new JCheckBox("Export native object IDs (adds DB4O id attribute to XML)");
         exportNativeIdsCheckbox.setSelected(false);
         exportNativeIdsCheckbox.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -510,6 +524,9 @@ public class DatabaseExportPanel extends JPanel {
         // Export language
         config.setExportLanguage(languageCombo.getSelectedIndex() == 1 ? "en" : "fr");
 
+        // Files destination
+        config.setFilesDestination(filesDestinationCombo.getSelectedIndex() == 1 ? FilesDestination.EMBED : FilesDestination.FOLDER);
+
         // Seeds
         List<SeedQuery> seeds = new ArrayList<>();
         for (int i = 0; i < seedListModel.size(); i++) {
@@ -551,6 +568,9 @@ public class DatabaseExportPanel extends JPanel {
 
         // Export language
         languageCombo.setSelectedIndex("en".equals(config.getExportLanguage()) ? 1 : 0);
+
+        // Files destination
+        filesDestinationCombo.setSelectedIndex(config.getFilesDestination() == FilesDestination.EMBED ? 1 : 0);
 
         // Output options
         for (Map.Entry<String, JCheckBox> entry : outputOptionCheckboxes.entrySet()) {

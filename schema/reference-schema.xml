@@ -34,7 +34,7 @@
                 <mapping from="3" to="PERSONNALISEE" />
             </valueMap>
         </field>
-
+        <field source="mIDFichier" destinationName="fichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true"  title="Fichier" />
     </fields>
     <class source="java.lang.Class" destinationName="Classe" isExported="true" title="Classe">
         <reference class="gest.gen.IDEntiteDefaut" field="mClass" />
@@ -2789,7 +2789,7 @@
         <field source="mVectBornePer" destinationName="listeBornePeriodique" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.borne.BornePer" title="Périodiques de borne" />
         <field source="mVectBornePiece" destinationName="listeBornePiece" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.borne.BornePiece" title="Pièces de borne" />
         <field source="mVectBouchon" destinationName="listeBouchon" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.borne.Bouchon" title="Bouchons" />
-        <field source="mIDCroquis" destinationName="idCroquis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Croquis" />
+        <field source="mIDCroquis" definition="croquis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Croquis" />
         <field source="mIDFournisseur" destinationName="idFournisseur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" title="Fournisseur" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -2972,7 +2972,7 @@
                 <mapping from="1" to="MODELE" />
             </valueMap>
         </field>
-        <field source="mTemplate" destinationName="template" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.fichier.IDFichier" title="Gabarit" />
+        <field source="mTemplate" destinationName="template" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.fichier.IDFichier" embedContents="true" title="Gabarit" />
         <field source="mVectSection" destinationName="listeSection" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.centreDesRapports.SectionRapportCentral" title="Sections" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
@@ -3159,7 +3159,7 @@
     </class>
     <class source="gest.config.ParamConfig" destinationName="AncienParamConfig" isExported="true" title="Paramètre config" parentClass="gest.gen.EntiteParam" notes="Ancienne classe de paramètres généraux, à ne pas confondre avec ParamConfigSSI qui lui a succédé.">
         <field source="mIdentVilleDansNumActiv" destinationName="identVilleDansNumActiv" isExported="true" skipWhen="MINUS_ONE,NULL" type="boolean" title="Identification ville dans num activ" />
-        <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Logo" />
+        <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Logo" />
         <field source="mNbrChiffreSequence" destinationName="nbrChiffreSequence" isExported="true" skipWhen="NULL" type="int" title="Nombre de chiffres dans la séquence" />
         <field source="mNbrEnregMaxRequete" destinationName="nbrEnregMaxRequete" isExported="true" skipWhen="NULL" type="int" title="Nombre d'enregistrements maximum par requête" />
         <field source="mParamBackup" destinationName="paramBackup" isExported="true" skipWhen="NULL" type="gest.config.ParamBackup" embedContents="true" title="Paramètres de sauvegarde" />
@@ -3216,7 +3216,7 @@
         <field source="mTypeSequence" destinationName="typeSequence" isExported="true" skipWhen="NULL" type="int" title="Type de séquence" />
         <field source="mVectSpecialite" destinationName="listeSpecialite" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.specialite.IDSpecialite" title="Spécialités" />
         <field source="mVille" destinationName="ville" isExported="true" skipWhen="NULL" type="gest.config.VilleGeo" embedContents="true" title="Ville" />
-        <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Logo" />
+        <field source="mIDLogo" destinationName="idLogo" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Logo" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.config.ParamSendMail" destinationName="ParamEnvoiCourriel" isExported="true" title="Paramètres d'envoi de courriel" summary="Serveur de courriel [hostSMTP]" parentClass="gest.gen.EntiteParam">
@@ -4109,7 +4109,7 @@
         <field source="mIDInfoEmploye" destinationName="idInfoEmploye" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDInfoEmploye" embedContents="true" title="Information d'employé" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile" preview="file(mID)">
+    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile" preview="file(mID)" postProcessor="file(path=file/[ID])">
         <reference class="gest.borne.ModeleBorne" field="mIDCroquis" />
         <reference class="gest.centreDesRapports.RapportCentral" field="mTemplate" />
         <reference class="gest.classif.Classif" field="mIDFormulaire" />
@@ -4135,6 +4135,7 @@
         <reference class="gest.rci.RciLieu" field="mIDFichCroquisPoint" />
         <reference class="gest.secCiv.Mission" field="mIDFichier" />
         <field source="@mID" destinationName="chemin" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" format="file(file/[ID])" title="Chemin" />
+        <field source="@contents" destinationName="contenu" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="byte[]" title="Contenu" />
         <field source="mData" destinationName="donnees" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="byte[]" title="Données" />
         <field source="mDateAjout" destinationName="dateAjout" isExported="true" skipWhen="NULL" type="date" title="Date de l'ajout" />
         <field source="mDateDernModif" destinationName="dateDerniereModification" isExported="true" skipWhen="NULL" type="date" title="Date de dernière modification" />
@@ -4219,7 +4220,7 @@
         <field source="mTousAnom" destinationName="tousAnomalie" isExported="true" skipWhen="NULL" type="boolean" title="Tous anomalie" />
         <field source="mVectIDTypeAnom" destinationName="listeIDTypeAnomalie" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.typeAnom.IDTypeAnom" title="Types d'anomalie" />
         <field source="mVectParam" destinationName="listeParametre" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.formElec.ParamFigureSaisie" title="Paramètres" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Fichier" />
+        <field source="mIDFichier" definition="mIDFichier" />
     </class>
     <class source="gest.formation.CoursAvantEmbauche" destinationName="CoursAvantEmbauche" isExported="true" title="Cours avant embauche" parentClass="gest.gen.Entite">
         <reference class="gest.employe.Employe" field="mVectCoursAvantEmbauche" />
@@ -4573,7 +4574,7 @@
         <field source="mDateCreation" definition="mDateCreation" />
         <field source="mInclureDansRapportAct" destinationName="inclureDansRapportActivite" isExported="true" skipWhen="NULL" type="boolean" title="Inclure dans rapport activité" />
         <field source="mNom" definition="mNom" />
-        <field source="mPhotoParPage" destinationName="photoParPage" isExported="true" skipWhen="NULL" type="string" title="Photos par page">
+        <field source="mPhotoParPage" destinationName="photosParPage" isExported="true" skipWhen="NULL" type="string" title="Photos par page">
             <valueMap>
                 <mapping from="0" to="1" />
                 <mapping from="1" to="2" />
@@ -4587,8 +4588,8 @@
                 <mapping from="1" to="PAYSAGE" />
             </valueMap>
         </field>
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Fichier" />
-        <field source="mIDGraph" destinationName="idGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" title="Graph" />
+        <field source="mIDFichier" definition="mIDFichier" />
+        <field source="mIDGraph" destinationName="graph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDGraph" embedContents="true" title="Graph" />
     </class>
     <class source="gest.gen.Qte" destinationName="Quantite" isExported="true" title="Quantité" parentClass="gest.gen.Entite">
         <reference class="gest.vehicule.Vehicule" field="mQteReservoir" />
@@ -4814,7 +4815,7 @@
         <field source="mNom" definition="mNom" />
         <field source="mNomFichierDefaut" destinationName="nomFichierDefaut" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Nom de fichier défaut" />
         <field source="mVisible" destinationName="visible" isExported="true" skipWhen="NULL" type="boolean" title="Visible" />
-        <field source="mIDFichierSVG" destinationName="idFichierSVG" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Fichier SVG" />
+        <field source="mIDFichierSVG" definition="mIDFichier" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
     <class source="gest.graph.IDGraph" destinationName="IDGraph" isExported="true" title="Graph" parentClass="gest.gen.IDEntite" pointsTo="gest.graph.Graph">
@@ -5132,7 +5133,7 @@
     <class source="gest.intervention.IntervCroquis" destinationName="InterventionCroquis" isExported="true" title="Croquis" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mCroquis" />
         <field source="mVectPhotoFich" definition="mVectPhotoFich" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Fichier" />
+        <field source="mIDFichier" definition="mIDFichier" />
     </class>
     <class source="gest.intervention.IntervDescBatiment" destinationName="InterventionDescriptionBatiment" isExported="true" title="Description bâtiment" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mDescBatiment" />
@@ -5254,7 +5255,7 @@
         <reference class="gest.intervention.Intervention" field="mRemiseProp" />
         <field source="mDateLibere" destinationName="dateLibere" isExported="true" skipWhen="NULL" type="date" title="Date de libéré" />
         <field source="mRemisA" destinationName="remisA" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Remis À" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" title="Fichier" />
+        <field source="mIDFichier" definition="mIDFichier" />
     </class>
     <class source="gest.intervention.IntervRepondant" destinationName="InterventionRepondant" isExported="true" title="Intervention répondant" parentClass="gest.gen.Entite">
         <reference class="gest.intervention.Intervention" field="mRepondant" />
@@ -6174,7 +6175,7 @@
         <reference class="gest.planInterv.PlanRepartiteur" field="mVectRepartDirective" />
         <field source="mVectDirective" destinationName="listeDirective" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.planInterv.Directive" title="Directives" />
         <field source="mVectPlageHoraire" destinationName="listePlageHoraire" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.plageHoraire.PlageHoraire" title="Plages horaire" />
-        <field source="mVectIDCodeAppel" destinationName="listeIDCodeAppel" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.codeAppel.IDCodeAppel" title="Codes d'appel" />
+        <field source="mVectIDCodeAppel" destinationName="listeIDCodeAppel" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="false" childrenType="gest.codeAppel.IDCodeAppel" title="Codes d'appel" />
     </class>
     <class source="gest.secCiv.DroitAccesRessSecCiv" destinationName="DroitAccesResssourceSecuriteCivile" isExported="true" title="Droit accès resssource sécurité civile" parentClass="gest.gen.Entite">
         <reference class="gest.docum.Docum" field="mVectDroitAccesRessSecCiv" />
@@ -7925,7 +7926,7 @@
         <field source="mVectObjectif" destinationName="listeObjectif" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.secCiv.Objectif" title="Objectifs" />
         <field source="mIDRubrique" destinationName="idRubrique" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.secCiv.IDMissionRubrique" title="Rubrique de mission" />
         <field source="mIDGraph" destinationName="idGraphique" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.graph.IDGraph" title="Graphique" />
-        <field source="mIDFichier" destinationName="idFichier" isExported="true" skipWhen="NULL,MINUS_ONE" type="gest.fichier.IDFichier" title="Fichier" />
+        <field source="mIDFichier" definition="mIDFichier" />
         <field source="mColor" destinationName="color" isExported="true" skipWhen="NULL" type="java.awt.Color" embedContents="true" title="Color" />
         <field source="mEtatDoc" destinationName="etatDocument" isExported="true" skipWhen="NULL" type="gest.docum.EtatDoc" embedContents="true" title="État document" />
         <field source="mVectOutilExterne" destinationName="listeOutilExterne" isExported="true" skipWhen="NULL,EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.secCiv.OutilExterne" title="Outils externes" />

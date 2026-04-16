@@ -50,7 +50,8 @@ public class DOSchemaField {
             return false;
         boolean hasValueMap = attributes.valueMap != null && !attributes.valueMap.isEmpty();
         boolean hasFormat = attributes.format != null && !attributes.format.trim().isEmpty();
-        return hasValueMap || hasFormat;
+        boolean isByteArray = "byte[]".equals(attributes.type);
+        return hasValueMap || hasFormat || isByteArray;
     }
 
     /**

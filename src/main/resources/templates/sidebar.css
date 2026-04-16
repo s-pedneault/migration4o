@@ -2179,6 +2179,18 @@ body {
     margin: 0;
 }
 
+/* List of cross-page reference link buttons inside a popup */
+.popup-ref-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px 4px;
+}
+
+.popup-ref-list>div {
+    display: flex;
+}
+
 /* Key-value table for single-item popups */
 .popup-kv-table {
     width: 100%;

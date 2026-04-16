@@ -76,6 +76,13 @@ public class StructuredWriterJS implements StructuredWriterAPI {
         if (hasAttributes(element)) {
             writeKey(element, out);
             out.append('{');
+            if (isParentArray(element)) {
+                // Inside an array: emit _class discriminator (mirrors openStructure)
+                appendQuoted("_class", out);
+                out.append(':');
+                appendQuoted(element.name, out);
+                out.append(',');
+            }
             writeInlineAttributes(element.attributes, out);
             out.append(',');
             appendQuoted("_label", out);

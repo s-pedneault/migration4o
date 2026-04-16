@@ -129,6 +129,14 @@ public class ExportRequest {
      */
     public String exportLanguage = "fr";
 
+    // ── Files destination
+    // ──────────────────────────────────────────────────────────
+
+    /**
+     * Controls where exported data files are placed (folder hierarchy vs. embedded).
+     */
+    public FilesDestination filesDestination = FilesDestination.FOLDER;
+
     // ── Path helpers
     // ────────────────────────────────────────────────────────
 
@@ -210,6 +218,7 @@ public class ExportRequest {
         copy.selectedSkipUserOptions = this.selectedSkipUserOptions != null ? new ArrayList<>(this.selectedSkipUserOptions) : null;
         copy.seedQueries = this.seedQueries != null ? new ArrayList<>(this.seedQueries) : new ArrayList<>();
         copy.exportLanguage = this.exportLanguage;
+        copy.filesDestination = this.filesDestination;
         copy.organizationConfig = new OrganizationExportConfig(OrganizationExportMode.SINGLE_EXPORT, List.of(org), includeGeneralData);
         copy.separatePerOrgSubExport = true;
         copy.skipExtraXml = this.skipExtraXml;

@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import migration4o.migration.ExportOutputOption;
+import migration4o.migration.FilesDestination;
 
 /**
  * Persistent export configuration for a database. Saved per-database as
@@ -29,6 +30,7 @@ public class ExportConfig {
     private int seedMaxPerClass = 50;
     private String outputBranch;
     private String exportLanguage = "fr";
+    private FilesDestination filesDestination = FilesDestination.FOLDER;
 
     public ExportConfig() {
     }
@@ -145,6 +147,14 @@ public class ExportConfig {
 
     public void setExportLanguage(String exportLanguage) {
         this.exportLanguage = (exportLanguage != null && !exportLanguage.isBlank()) ? exportLanguage : "fr";
+    }
+
+    public FilesDestination getFilesDestination() {
+        return filesDestination;
+    }
+
+    public void setFilesDestination(FilesDestination filesDestination) {
+        this.filesDestination = filesDestination != null ? filesDestination : FilesDestination.FOLDER;
     }
 
     /**

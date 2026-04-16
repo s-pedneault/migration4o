@@ -89,7 +89,42 @@ public final class JsViewerHtmlGenerator {
                 if (!first)
                     sb.append(',');
                 String destName = schemaClass != null && schemaClass.attributes.destinationName != null ? schemaClass.attributes.destinationName : sourceName;
-                sb.append('"').append(destName.replace("\\", "\\\\").replace("\"", "\\\"")).append('"').append(':').append(layoutJson);
+                sb.append('"').append(escapeJson(destName)).append('"').append(':').append(layoutJson);
+                first = false;
+            }
+            sb.append('}');
+            return sb.toString();
+        } catch (Exception e) {
+            return "{}";
+        }
+    }
+
+    /**
+     * Builds a JSON object mapping each IDEntite class's {@code destinationName} to its
+     * target entity's {@code destinationName}, derived from the {@code pointsTo} attribute
+     * on schema classes. Example: {@code {"IDCodeAppel":"CodeAppel", ...}}.
+     * Used to populate the {@code CLASS_POINTS_TO} global in the viewer so that popup
+     * rows whose {@code _class} is an IDEntite can be rendered as cross-page link buttons.
+     */
+    static String buildClassPointsToJson() {
+        try {
+            DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
+            if (refSchema == null || refSchema.getClasses() == null)
+                return "{}";
+            StringBuilder sb = new StringBuilder("{");
+            boolean first = true;
+            for (DOSchemaClass cls : refSchema.getClasses()) {
+                String destName = cls.attributes.destinationName;
+                String pointsToFqn = cls.attributes.pointsTo;
+                if (destName == null || destName.isBlank() || pointsToFqn == null || pointsToFqn.isBlank())
+                    continue;
+                DOSchemaClass targetClass = refSchema.findClassByName(pointsToFqn);
+                String targetDest = targetClass != null && targetClass.attributes.destinationName != null && !targetClass.attributes.destinationName.isBlank() ? targetClass.attributes.destinationName : null;
+                if (targetDest == null)
+                    continue;
+                if (!first)
+                    sb.append(',');
+                sb.append('"').append(escapeJson(destName)).append("\":\"").append(escapeJson(targetDest)).append('"');
                 first = false;
             }
             sb.append('}');
@@ -123,7 +158,7 @@ public final class JsViewerHtmlGenerator {
         if (outputPath == null)
             throw new IllegalArgumentException("outputPath must not be null");
         String embeddedJs = (dataScript != null ? dataScript : "").replaceAll("(?i)</script", "<\\/script");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", baseHref != null ? baseHref : "./").replace("__NAV_ITEMS__", navItemsJson != null ? navItemsJson : "[]").replace("__DETAIL_LAYOUT__", layoutJson != null ? layoutJson : "null").replace("__CLASS_LAYOUTS__", classLayoutsJson != null ? classLayoutsJson : "{}").replace("__SCHEMA_FIELDS__", schemaFieldsJson != null ? schemaFieldsJson : "[]").replace("__DEFAULT_COLUMNS__", defaultColumnsJson != null ? defaultColumnsJson : "null").replace("__TITLE__", escapeHtml(title != null ? title : "")).replace("__ENTITY_NAME__", escapeHtml(entityName != null ? entityName : "")).replace("null/*XREF*/", (crossRefsJson != null ? crossRefsJson : "null") + "/*XREF*/").replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", baseHref != null ? baseHref : "./").replace("__NAV_ITEMS__", navItemsJson != null ? navItemsJson : "[]").replace("__DETAIL_LAYOUT__", layoutJson != null ? layoutJson : "null").replace("__CLASS_LAYOUTS__", classLayoutsJson != null ? classLayoutsJson : "{}").replace("__CLASS_POINTS_TO__", buildClassPointsToJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson != null ? schemaFieldsJson : "[]").replace("__DEFAULT_COLUMNS__", defaultColumnsJson != null ? defaultColumnsJson : "null").replace("__TITLE__", escapeHtml(title != null ? title : "")).replace("__ENTITY_NAME__", escapeHtml(entityName != null ? entityName : "")).replace("null/*XREF*/", (crossRefsJson != null ? crossRefsJson : "null") + "/*XREF*/").replace("__EMBEDDED_JS_DATA__", embeddedJs);
         Files.createDirectories(outputPath.getParent());
         Files.write(outputPath, html.getBytes(StandardCharsets.UTF_8));
         return outputPath;
@@ -168,7 +203,7 @@ public final class JsViewerHtmlGenerator {
         String layout = (layoutJson != null && !layoutJson.isBlank()) ? layoutJson : "null";
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__CLASS_POINTS_TO__", buildClassPointsToJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (outputPath.getParent() != null) {
             Files.createDirectories(outputPath.getParent());
@@ -200,7 +235,7 @@ public final class JsViewerHtmlGenerator {
         String schemaFieldsJson = buildFieldMetadataJson(schemaClass);
 
         Path htmlPath = jsPath.resolveSibling(baseName + ".html");
-        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
+        String html = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__CLASS_POINTS_TO__", buildClassPointsToJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", "null").replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName)).replace("__EMBEDDED_JS_DATA__", embeddedJs);
 
         if (htmlPath.getParent() != null) {
             Files.createDirectories(htmlPath.getParent());
@@ -323,7 +358,7 @@ public final class JsViewerHtmlGenerator {
 
         // Build the full template with all substitutions EXCEPT
         // __EMBEDDED_JS_DATA__
-        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
+        String template = loadTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__BASE_HREF__", base).replace("__NAV_ITEMS__", nav).replace("__DETAIL_LAYOUT__", layout).replace("__CLASS_LAYOUTS__", buildClassLayoutsJson()).replace("__CLASS_POINTS_TO__", buildClassPointsToJson()).replace("__SCHEMA_FIELDS__", schemaFieldsJson).replace("__DEFAULT_COLUMNS__", defaultCols).replace("__TITLE__", escapeHtml(title)).replace("__ENTITY_NAME__", escapeHtml(entityName));
 
         // Split at the placeholder — stream header, then JS data, then footer
         final String PLACEHOLDER = "__EMBEDDED_JS_DATA__";

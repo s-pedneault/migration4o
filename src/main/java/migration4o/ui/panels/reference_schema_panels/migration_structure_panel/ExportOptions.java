@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import migration4o.database.DODatabaseContext;
+import migration4o.migration.FilesDestination;
 import migration4o.migration.OrganizationExportConfig;
 import migration4o.migration.ExportOutputOption;
 import migration4o.migration.ExportRequest;
@@ -39,6 +40,7 @@ public class ExportOptions {
     private final String outputBranch;
     private final String exportLanguage;
     private OrganizationExportConfig organizationConfig;
+    private FilesDestination filesDestination = FilesDestination.FOLDER;
 
     public ExportOptions(Integer maxObjectsPerClass, boolean exportNativeIds, List<DOSchemaField> selectedSkipOptions, String outputPath, List<String> outputOptions, boolean applyUserSelectedFieldExclusions, boolean applySkipWhenConditions, boolean applyExportCriteriaFilters, boolean skipObjectsWithoutExportableFields) {
         this(maxObjectsPerClass, exportNativeIds, selectedSkipOptions, outputPath, outputOptions, applyUserSelectedFieldExclusions, applySkipWhenConditions, applyExportCriteriaFilters, skipObjectsWithoutExportableFields, true, null, null, "fr");
@@ -140,6 +142,14 @@ public class ExportOptions {
         this.organizationConfig = organizationConfig;
     }
 
+    public FilesDestination getFilesDestination() {
+        return filesDestination;
+    }
+
+    public void setFilesDestination(FilesDestination filesDestination) {
+        this.filesDestination = filesDestination != null ? filesDestination : FilesDestination.FOLDER;
+    }
+
     /**
      * Builds an {@code ExportOptions} from a persisted {@link ExportConfig}.
      * This is the single place that translates stored configuration into
@@ -167,7 +177,9 @@ public class ExportOptions {
             seeds = config.getSeeds();
         }
 
-        return new ExportOptions(maxPerClass, config.isExportNativeIds(), selectedSkipFields, "output", config.getOutputOptions(), config.isApplyUserSelectedFieldExclusions(), config.isApplySkipWhenConditions(), config.isApplyExportCriteriaFilters(), config.isSkipObjectsWithoutExportableFields(), config.isFullTracking(), seeds, config.getOutputBranch(), config.getExportLanguage());
+        ExportOptions options = new ExportOptions(maxPerClass, config.isExportNativeIds(), selectedSkipFields, "output", config.getOutputOptions(), config.isApplyUserSelectedFieldExclusions(), config.isApplySkipWhenConditions(), config.isApplyExportCriteriaFilters(), config.isSkipObjectsWithoutExportableFields(), config.isFullTracking(), seeds, config.getOutputBranch(), config.getExportLanguage());
+        options.setFilesDestination(config.getFilesDestination());
+        return options;
     }
 
     /**
@@ -201,6 +213,7 @@ public class ExportOptions {
         }
         request.exportLanguage = exportLanguage;
         request.organizationConfig = organizationConfig;
+        request.filesDestination = filesDestination;
         return request;
     }
 }

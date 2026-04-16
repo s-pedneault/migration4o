@@ -138,4 +138,15 @@ public class FileUtil {
         }
     }
 
+    public static void writeBytes(byte[] bytes, File destination) {
+        try {
+            File parent = destination.getParentFile();
+            if (parent != null && !parent.exists()) {
+                parent.mkdirs();
+            }
+            Files.write(destination.toPath(), bytes);
+        } catch (IOException e) {
+            System.err.println("[FileUtil] Failed to write " + destination + ": " + e.getMessage());
+        }
+    }
 }

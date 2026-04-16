@@ -173,6 +173,10 @@ public class DOReferenceSchemaWriter {
             writeAttribute(writer, "preview", schemaClass.attributes.preview);
         }
 
+        if (schemaClass.attributes.postProcessor != null) {
+            writeAttribute(writer, "postProcessor", schemaClass.attributes.postProcessor.rawSpec);
+        }
+
         // Check if we have fields, references or nested content
         boolean hasFields = schemaClass.fields != null && schemaClass.fields.length > 0;
         boolean hasReferences = schemaClass.schemaReferences != null && schemaClass.schemaReferences.length > 0;

@@ -296,11 +296,21 @@ function _popupBtn(idx, title, displayText) {
 
 // Renders a single table cell value. Used by both renderPopupTable and
 // renderCollectionSection — the single place where object→popup routing lives.
-// col is { key, label }. Returns an HTML string or null (→ render as empty).
-function renderTableCell(v, col) {
+// col is { key, label }. item is the parent row object (optional) — used to
+// build a data-URL for inline image previews from contenu. Returns an HTML
+// string or null (→ render as empty).
+function renderTableCell(v, col, item) {
     if (v === null || v === undefined) return null;
     if (col.key === '_preview') {
-        var _prevSrc = extractPreviewSrc(v);
+        // When the parent item carries Base64 content and the filename is an
+        // image, use a data-URL so the preview works without the file/ dir.
+        var _mime = item ? imageExtMime(String(item.nom || item._summary || '')) : null;
+        var _prevSrc;
+        if (_mime && item && item.contenu) {
+            _prevSrc = 'data:' + _mime + ';base64,' + item.contenu;
+        } else {
+            _prevSrc = extractPreviewSrc(v);
+        }
         if (!_prevSrc) return null;
         var _CLIP = '<svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'
             + '<path d="M4.5 3a2.5 2.5 0 0 1 5 0v9a1.5 1.5 0 0 1-3 0V5a.5.5 0 0 1 1 0v7a.5.5 0 0 0 1 0V3a1.5 1.5 0 1 0-3 0v9a2.5 2.5 0 0 0 5 0V5a.5.5 0 0 1 1 0v7a3.5 3.5 0 1 1-7 0z"/>'
@@ -337,6 +347,30 @@ function renderPopupTable(items) {
     if (!items || items.length === 0) {
         return '<p class="popup-empty">\u2014</p>';
     }
+
+    // IDEntite reference arrays: collections are homogeneous, so checking the
+    // first item's _class against CLASS_POINTS_TO is sufficient. Render each
+    // item as a cross-page reference link button instead of a columnar table.
+    var _firstForCheck = unwrapClassWrapper(items[0]);
+    if (typeof CLASS_POINTS_TO !== 'undefined' && CLASS_POINTS_TO &&
+        _firstForCheck && _firstForCheck._class && CLASS_POINTS_TO[_firstForCheck._class]) {
+        var refHtml = '<div class="popup-ref-list">';
+        var hasAny = false;
+        items.forEach(function (ri) {
+            var item = unwrapClassWrapper(ri);
+            var _rId = String(item._id ?? '').trim();
+            var _rTxt = String(item._label || item._summary || _rId || '').trim();
+            if (!_rTxt || _rTxt === '0' || _rTxt === '-1') return;
+            var _rDN = CLASS_POINTS_TO[item._class];
+            var _rHr = _rDN ? navHrefByDestName[_rDN] : null;
+            var _rLk = (_rHr && _rId && _rId !== '0' && _rId !== '-1') ? _rHr + '?open=' + encodeURIComponent(_rId) : null;
+            refHtml += '<div>' + (_rLk ? refLinkBtn(_rLk, _rTxt) : esc(_rTxt)) + '</div>';
+            hasAny = true;
+        });
+        refHtml += '</div>';
+        return hasAny ? refHtml : '<p class="popup-empty">\u2014</p>';
+    }
+
     var firstItem = unwrapClassWrapper(items[0]);
     var _itemClass = firstItem && firstItem._class ? firstItem._class : null;
     var _layout = (_itemClass && typeof CLASS_LAYOUTS !== 'undefined' && CLASS_LAYOUTS) ? CLASS_LAYOUTS[_itemClass] : null;
@@ -360,7 +394,7 @@ function renderPopupTable(items) {
         var html = '<table class="popup-kv-table">';
         cols.forEach(function (col) {
             var v = _layout ? resolveFieldValue(singleItem, col.key) : (singleItem ? singleItem[col.key] : undefined);
-            var cell = renderTableCell(unwrapClassWrapper(v), col);
+            var cell = renderTableCell(unwrapClassWrapper(v), col, singleItem);
             if (cell !== null) html += '<tr><th>' + esc(col.label) + '</th><td>' + cell + '</td></tr>';
         });
         html += '</table>';
@@ -376,7 +410,7 @@ function renderPopupTable(items) {
         html += '<tr>';
         cols.forEach(function (col) {
             var v = _layout ? resolveFieldValue(item, col.key) : (item ? item[col.key] : undefined);
-            var cell = renderTableCell(unwrapClassWrapper(v), col);
+            var cell = renderTableCell(unwrapClassWrapper(v), col, item);
             html += cell !== null ? '<td>' + cell + '</td>' : '<td></td>';
         });
         html += '</tr>';
@@ -601,7 +635,7 @@ function renderObjectSection(label, value, ctx) {
         var tabText = objSummary || objId || '';
         if (!tabText) return '';
         var tabHtml = linkHref ? refLinkBtn(linkHref, tabText) : esc(tabText);
-        tabHtml += ' ' + renderPreview(objPreview, { size: 'thumb-sm' });
+        tabHtml += ' ' + renderPreview(objPreview, { size: 'thumb-sm' }, value);
         return tabHtml;
     }
 
@@ -638,7 +672,7 @@ function renderObjectSection(label, value, ctx) {
         } else if (objId && linkHref) {
             embSummaryHtml = refLinkBtn(linkHref, objId);
         }
-        var embPreviewHtml = renderPreview(objPreview, { size: 'thumb-md' });
+        var embPreviewHtml = renderPreview(objPreview, { size: 'thumb-md' }, value);
 
         embHeader = '<div class="field-group-subtitle' + (linkHref ? ' ref-subtitle' : '') + '"' + sectionTitleAttr(label) + '>'
             + '<span>' + esc(embLabel) + '</span>';
@@ -674,7 +708,7 @@ function renderObjectSection(label, value, ctx) {
         + '<span class="summary-meta">' + ((objectEntries.length + referenceEntries.length + collectionEntries.length) > 0 ? esc(t('object')) : '') + '</span></summary><div class="section-body">';
 
     // Hero _preview at top for detail context
-    html += renderPreview(objPreview);
+    html += renderPreview(objPreview, null, value);
 
     html += renderPrimitiveGroup(primitiveEntries);
 

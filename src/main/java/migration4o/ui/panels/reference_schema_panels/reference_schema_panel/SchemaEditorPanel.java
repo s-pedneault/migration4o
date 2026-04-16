@@ -39,6 +39,7 @@ import javax.swing.tree.TreeNode;
 import javax.swing.tree.TreePath;
 
 import migration4o.database.DODatabaseService;
+import migration4o.models.schema.DOPostProcessorAttribute;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
 import migration4o.models.schema.DOSchemaField;
@@ -71,6 +72,7 @@ public class SchemaEditorPanel extends JPanel {
     private static final String SCHEMA_NOTES_COMPONENT_NAME = "schemaNotesField";
     private static final String STATIC_CHECKBOX_COMPONENT_NAME = "staticCheckBox";
     private static final String ALWAYS_EXPORT_ALL_CHECKBOX_COMPONENT_NAME = "alwaysExportAllCheckBox";
+    private static final String POST_PROCESSOR_FIELD_COMPONENT_NAME = "postProcessorField";
 
     private DOSchema schema;
     private boolean modified;
@@ -1102,6 +1104,13 @@ public class SchemaEditorPanel extends JPanel {
             schemaClass.attributes.alwaysExportAll = alwaysExportAllCheckBox.isSelected();
         }
 
+        // Apply Post-processor
+        JTextField postProcessorField = getPostProcessorFieldFromPanel();
+        if (postProcessorField != null) {
+            String pp = postProcessorField.getText();
+            schemaClass.attributes.postProcessor = pp != null && !pp.trim().isEmpty() ? DOPostProcessorAttribute.parse(pp.trim()) : null;
+        }
+
         // Apply Parent Class
         JComponent parentField = propertyPanel.getField("Parent Class");
         if (parentField instanceof JComboBox) {
@@ -1188,6 +1197,14 @@ public class SchemaEditorPanel extends JPanel {
         JTextField schemaNotesField = new JTextField(schemaClass.attributes.schemaNotes != null ? schemaClass.attributes.schemaNotes : "", 24);
         schemaNotesField.setName(SCHEMA_NOTES_COMPONENT_NAME);
         exportAndNotesPanel.add(schemaNotesField);
+
+        JLabel postProcessorLabel = new JLabel("Post-processor:");
+        exportAndNotesPanel.add(postProcessorLabel);
+
+        JTextField postProcessorField = new JTextField(schemaClass.attributes.postProcessor != null ? schemaClass.attributes.postProcessor.rawSpec : "", 16);
+        postProcessorField.setName(POST_PROCESSOR_FIELD_COMPONENT_NAME);
+        postProcessorField.setToolTipText("Optional value postprocessor name (e.g. \"file(path=...)\") — intercepts each field value during export");
+        exportAndNotesPanel.add(postProcessorField);
 
         propertyPanel.addCustomField(EXPORT_ROW_LABEL, exportAndNotesPanel);
 
@@ -1875,6 +1892,21 @@ public class SchemaEditorPanel extends JPanel {
         for (Component component : ((JPanel) exportField).getComponents()) {
             if (component instanceof JCheckBox && ALWAYS_EXPORT_ALL_CHECKBOX_COMPONENT_NAME.equals(component.getName())) {
                 return (JCheckBox) component;
+            }
+        }
+
+        return null;
+    }
+
+    private JTextField getPostProcessorFieldFromPanel() {
+        JComponent exportField = propertyPanel.getField(EXPORT_ROW_LABEL);
+        if (!(exportField instanceof JPanel)) {
+            return null;
+        }
+
+        for (Component component : ((JPanel) exportField).getComponents()) {
+            if (component instanceof JTextField && POST_PROCESSOR_FIELD_COMPONENT_NAME.equals(component.getName())) {
+                return (JTextField) component;
             }
         }
 

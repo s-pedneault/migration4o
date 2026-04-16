@@ -17,6 +17,7 @@ import migration4o.models.schema.DOSchemaField;
 import migration4o.models.schema.DOSchemaReference;
 import migration4o.models.schema.DOSchemaValueMap;
 import migration4o.models.schema.DOFieldCriteria;
+import migration4o.models.schema.DOPostProcessorAttribute;
 import migration4o.schema.processors.DOEmbeddingDetector;
 import migration4o.schema.processors.DOReferenceDetector;
 
@@ -133,6 +134,7 @@ public class DOReferenceSchemaReader {
         String isStaticAttr = classElement.getAttribute("isStatic");
         String alwaysExportAllAttr = classElement.getAttribute("alwaysExportAll");
         String preview = classElement.getAttribute("preview");
+        String postProcessor = classElement.getAttribute("postProcessor");
 
         // Use destinationName as simpleName if available, otherwise derive from
         // source
@@ -160,6 +162,7 @@ public class DOReferenceSchemaReader {
         newClass.attributes.isStatic = "true".equalsIgnoreCase(isStaticAttr);
         newClass.attributes.alwaysExportAll = "true".equalsIgnoreCase(alwaysExportAllAttr);
         newClass.attributes.preview = preview != null && !preview.trim().isEmpty() ? preview : null;
+        newClass.attributes.postProcessor = postProcessor != null && !postProcessor.trim().isEmpty() ? DOPostProcessorAttribute.parse(postProcessor) : null;
 
         // Parse fields, passing newClass so each field knows its parent
         List<DOSchemaField> fieldList = new ArrayList<>();

@@ -16,4 +16,7 @@ public class DOSchemaClassAttributes {
     public String preview; // Optional: preview generator keyword, e.g. "FILE(path/[ID])"
     public boolean alwaysExportAll; // Bypass export limits and export all objects of this class (use with caution, as this will make demo exports more complete)
 
+    /** Parsed form of {@link #postProcessor}. Set by {@code DOReferenceSchemaReader} when the schema is loaded; null when no postProcessor is configured. */
+    public DOPostProcessorAttribute postProcessor;
+
 }

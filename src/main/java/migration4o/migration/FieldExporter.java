@@ -36,6 +36,7 @@ import migration4o.util.DatabaseUtil;
 import migration4o.util.ReferenceUtil;
 import migration4o.util.ResolvedReference;
 import migration4o.util.ValueUtil;
+import migration4o.migration.processors.ValuePostProcessors;
 import migration4o.util.formatters.FormatterContext;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
 
@@ -296,6 +297,9 @@ public class FieldExporter {
                         }
                     }
 
+                    // Apply value postprocessor — single transit point for all stored field values.
+                    fieldValue = readFieldValue(delegate, obj, fieldValue, schemaField);
+
                     if (fieldValue == null) {
                         // Skip this field if skip conditions are met
                         if (shouldSkipField(fieldValue, schemaField, operation.referenceSchema)) {
@@ -414,6 +418,53 @@ public class FieldExporter {
             // Error accessing fields
         }
         return fieldsWritten;
+    }
+
+    /**
+     * Single transit point for all exported field values. Reads the raw value using the appropriate
+     * strategy for the field type, then applies the configured {@link ValuePostProcessors} interceptor
+     * if one is defined on the current schema class.
+     *
+     * <p>For stored fields, pass the already-read DB4O value as {@code preReadValue}; the method
+     * applies the postprocessor and returns. For scalar virtual and method-call fields, pass
+     * {@code null}; the method performs the read itself.
+     *
+     * @param delegate     Active database delegate
+     * @param readFrom     Object to read from: the GenericObject for stored/virtual fields,
+     *                     the reconstructed native object for method-call fields
+     * @param preReadValue Pre-read value for stored fields; ignored for virtual/method-call fields
+     * @param schemaField  Schema field definition
+     * @return The (possibly postprocessor-overridden) field value
+     */
+    private Object readFieldValue(DODatabaseDelegate delegate, Object readFrom, Object preReadValue, DOSchemaField schemaField) {
+        final Object rawValue;
+
+        if (schemaField.isScalarVirtualField()) {
+            String realFieldName = schemaField.getVirtualFieldName();
+            StoredClass storedClass = delegate.storedClass(readFrom);
+            Object found = null;
+            if (storedClass != null) {
+                for (StoredField sf : delegate.getAllFieldsIncludingAncestors(storedClass)) {
+                    if (realFieldName.equals(sf.getName())) {
+                        found = sf.get(readFrom);
+                        break;
+                    }
+                }
+            }
+            rawValue = found;
+        } else if (schemaField.isMethodCallField()) {
+            String methodName = schemaField.getMethodCallName();
+            try {
+                java.lang.reflect.Method method = readFrom.getClass().getMethod(methodName);
+                rawValue = method.invoke(readFrom);
+            } catch (ReflectiveOperationException e) {
+                throw new RuntimeException("Method-call field '" + schemaField.attributes.source + "' failed on " + readFrom.getClass().getName(), e);
+            }
+        } else {
+            rawValue = preReadValue;
+        }
+
+        return ValuePostProcessors.processField(ctxRef.currentObject().obj, rawValue, schemaField, ctxRef);
     }
 
     /**
@@ -924,23 +975,22 @@ public class FieldExporter {
      */
     private int writeOneScalarVirtualField(DODatabaseDelegate delegate, GenericObject obj, DOSchemaField schemaField, int indentLevel) {
         try {
-            String realFieldName = schemaField.getVirtualFieldName();
-            StoredClass storedClass = delegate.storedClass(obj);
-            Object rawValue = null;
-            if (storedClass != null) {
-                for (StoredField sf : delegate.getAllFieldsIncludingAncestors(storedClass)) {
-                    if (realFieldName.equals(sf.getName())) {
-                        rawValue = sf.get(obj);
-                        break;
-                    }
-                }
-            }
+            Object rawValue = readFieldValue(delegate, obj, null, schemaField);
             if (shouldSkipField(rawValue, schemaField, operation.referenceSchema)) {
                 return 0;
             }
+            if (rawValue instanceof byte[]) {
+                exportByteArrayField(delegate, (byte[]) rawValue, schemaField, indentLevel);
+                return 1;
+            }
             String stringValue = rawValue != null ? rawValue.toString() : null;
             stringValue = FieldValueMapper.applyMapping(stringValue, schemaField);
-            stringValue = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, obj), stringValue, schemaField);
+            FormatterContext fmtCtx = new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, obj);
+            fmtCtx.filesDestination = ctxRef.request.filesDestination;
+            stringValue = ValueUtil.formatFieldValue(delegate, fmtCtx, stringValue, schemaField);
+            if (stringValue == null) {
+                return 0;
+            }
             xmlWriter.elementWithContent(schemaField.attributes.destinationName, skippedBecauseAttributes(rawValue, schemaField, operation.referenceSchema), stringValue, true);
             return 1;
         } catch (Exception e) {
@@ -971,9 +1021,7 @@ public class FieldExporter {
             }
 
             try {
-                String methodName = schemaField.getMethodCallName();
-                java.lang.reflect.Method method = nativeObj.getClass().getMethod(methodName);
-                Object result = method.invoke(nativeObj);
+                Object result = readFieldValue(delegate, nativeObj, null, schemaField);
 
                 if (result == null) {
                     if (shouldSkipField(null, schemaField, operation.referenceSchema)) {

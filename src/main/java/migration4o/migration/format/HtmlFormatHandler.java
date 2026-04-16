@@ -349,11 +349,12 @@ public class HtmlFormatHandler extends FormatHandler {
                 String displayText = (result.label != null && !result.label.isBlank()) ? result.label : (result.mId != null ? String.valueOf(result.mId) : null);
                 if (displayText != null) {
                     Map<String, String> idEntiteAttrs = java.util.Collections.singletonMap("_id", String.valueOf(result.targetObjectId));
-                    // Use destinationName as-is (no prefix stripping) so the
-                    // data key matches
-                    // the SCHEMA_FIELDS path used by pointsToByPath in the JS
-                    // viewer.
-                    writer.elementWithContent(ctx.field.attributes.destinationName, idEntiteAttrs, displayText, false);
+                    // For collection fields the element name is used as the _class discriminator
+                    // in the JS output (writeKey writes nothing inside an array). Use the IDEntite
+                    // class destination name so the viewer's CLASS_POINTS_TO lookup works.
+                    // For scalar fields the element name is the JSON key, so use the field destination name.
+                    String elementName = ctx.field.attributes.isCollection ? fieldClass.attributes.destinationName : ctx.field.attributes.destinationName;
+                    writer.elementWithContent(elementName, idEntiteAttrs, displayText, false);
                     return true;
                 }
             }
