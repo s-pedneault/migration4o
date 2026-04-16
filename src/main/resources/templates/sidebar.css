@@ -2191,6 +2191,86 @@ body {
     display: flex;
 }
 
+/* ── Contenu (byte[]) field — tabbed Preview + Source panel ─────────────── */
+
+.contenu-tabs {
+    width: 100%;
+    border: 1px solid var(--c-border, #e2e8f0);
+    border-radius: var(--radius, 6px);
+    overflow: hidden;
+    margin-top: 4px;
+}
+
+.contenu-tab-bar {
+    display: flex;
+    border-bottom: 1px solid var(--c-border, #e2e8f0);
+    background: var(--c-surface-alt, #f8fafc);
+}
+
+.contenu-tab-bar button {
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    padding: 7px 14px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--c-text-secondary, #475569);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s, background 0.15s;
+    margin-bottom: -1px;
+}
+
+.contenu-tab-bar button:hover {
+    color: var(--c-primary, #4f46e5);
+    background: rgba(79, 70, 229, 0.06);
+}
+
+.contenu-tab-bar button.active {
+    color: var(--c-primary, #4f46e5);
+    border-bottom-color: var(--c-primary, #4f46e5);
+    font-weight: 600;
+    background: var(--c-surface, #fff);
+}
+
+.contenu-preview {
+    padding: 12px;
+    text-align: center;
+    background: var(--c-surface, #fff);
+}
+
+.contenu-preview-img {
+    max-width: 100%;
+    max-height: 320px;
+    border-radius: 4px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
+}
+
+.contenu-preview-unknown {
+    padding: 20px 12px;
+    text-align: center;
+    color: var(--c-text-muted, #94a3b8);
+    font-style: italic;
+    font-size: 0.85rem;
+}
+
+.contenu-source {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 0.72rem;
+    line-height: 1.4;
+    color: var(--c-text-secondary, #475569);
+    word-break: break-all;
+    white-space: pre-wrap;
+    margin: 0;
+    padding: 10px 12px;
+    max-height: 240px;
+    overflow-y: auto;
+    background: var(--c-surface-alt, #f8fafc);
+}
+
+.contenu-field-row .field-value {
+    padding-right: 0;
+}
+
 /* Key-value table for single-item popups */
 .popup-kv-table {
     width: 100%;

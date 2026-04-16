@@ -267,3 +267,57 @@ function renderPreview(preview, opts, obj) {
     return '<div class="detail-hero-preview"><a href="' + esc(src) + '" target="_blank"' + titleAttr + '><img src="' + esc(src) + '"' + fallbackAttr + ' /></a></div>';
 }
 
+/**
+ * Attempts to detect an image MIME type from the Base64 magic-byte prefix.
+ * Returns null for non-image types (e.g. PDF) or unrecognised formats.
+ * @param {string} b64 - raw Base64 string
+ * @returns {string|null}
+ */
+function _detectBase64Mime(b64) {
+    var p = String(b64 || '').substring(0, 8);
+    if (p.startsWith('/9j/')) return 'image/jpeg';
+    if (p.startsWith('iVBORw')) return 'image/png';
+    if (p.startsWith('R0lGOD')) return 'image/gif';
+    if (p.startsWith('Qk0')) return 'image/bmp';
+    if (p.startsWith('PD94') || p.startsWith('PHN2')) return 'image/svg+xml'; // <?xml or <svg
+    return null; // PDF (JVBERi) and other non-image types return null
+}
+
+/** Unique counter for contenu tab group IDs. */
+var _contentTabIdx = 0;
+
+/**
+ * Renders a two-tab panel for a binary (byte[]) field exported as Base64.
+ * - Tab 1 "Aperçu": visual preview rendered from a data-URL.
+ * - Tab 2 "Source": line-wrapped Base64 text (76-char lines).
+ * @param {string} base64 - raw Base64 string
+ * @param {string} [nom]  - original filename; used for MIME-type detection
+ * @returns {string} HTML string
+ */
+function renderContentTabs(base64, nom) {
+    var tabId = 'ct' + (++_contentTabIdx);
+    var b64 = String(base64 || '');
+
+    var mime = imageExtMime(String(nom || '')) || _detectBase64Mime(b64);
+
+    var previewHtml;
+    if (mime) {
+        var dataSrc = 'data:' + mime + ';base64,' + b64;
+        previewHtml = '<div class="contenu-preview"><img src="' + esc(dataSrc) + '" class="contenu-preview-img" /></div>';
+    } else {
+        previewHtml = '<div class="contenu-preview-unknown"><span>' + esc(t('contentPreviewUnavailable')) + '</span></div>';
+    }
+
+    var lines = b64.match(/.{1,76}/g) || [];
+    var sourceHtml = '<pre class="contenu-source">' + esc(lines.join('\n')) + '</pre>';
+
+    return '<div class="contenu-tabs">'
+        + '<div class="contenu-tab-bar">'
+        + '<button type="button" class="active" data-tab-target="' + tabId + '-0" onclick="window.activateTab(this)">Aper\u00e7u</button>'
+        + '<button type="button" data-tab-target="' + tabId + '-1" onclick="window.activateTab(this)">Source</button>'
+        + '</div>'
+        + '<div class="tab-panel active" data-tab-id="' + tabId + '-0">' + previewHtml + '</div>'
+        + '<div class="tab-panel" data-tab-id="' + tabId + '-1">' + sourceHtml + '</div>'
+        + '</div>';
+}
+

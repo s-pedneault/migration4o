@@ -2,6 +2,11 @@ function renderFieldRow(entry) {
     var label = displayFieldLabel(entry.key);
     var destName = String(entry.key || '').split('.').pop() || '';
     var titleAttr = destName && destName !== label ? ' title="' + esc(destName) + '"' : '';
+    // Binary (byte[]) content field — render as tabbed Preview + Source panel.
+    if (destName === 'contenu' && typeof entry.value === 'string' && entry.value.length > 50) {
+        var tabsHtml = renderContentTabs(entry.value, entry._contentNom || '');
+        return '<div class="field-row contenu-field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + tabsHtml + '</div></div>';
+    }
     // If this field is a direct IDEntite reference (embedContents=false), its value IS the ID —
     // render it as a clickable link to the target entity page.
     var _ptDestName = pointsToByPath[normalizeSchemaPath(entry.key || '')];
@@ -301,6 +306,12 @@ function _popupBtn(idx, title, displayText) {
 // string or null (→ render as empty).
 function renderTableCell(v, col, item) {
     if (v === null || v === undefined) return null;
+    // Binary content field — render as tabbed Preview + Source panel.
+    var _ck = String(col.key || '').split('.').pop();
+    if (_ck === 'contenu' && typeof v === 'string' && v.length > 50) {
+        var _nom = item ? String(item.nom || item._summary || '') : '';
+        return renderContentTabs(v, _nom);
+    }
     if (col.key === '_preview') {
         // When the parent item carries Base64 content and the filename is an
         // image, use a data-URL so the preview works without the file/ dir.
@@ -709,6 +720,14 @@ function renderObjectSection(label, value, ctx) {
 
     // Hero _preview at top for detail context
     html += renderPreview(objPreview, null, value);
+
+    // Attach nom to any contenu entries so renderFieldRow can determine MIME type.
+    var _nomForContent = String(value.nom || value._summary || '');
+    primitiveEntries.forEach(function (e) {
+        if (String(e.key || '').split('.').pop() === 'contenu') {
+            e._contentNom = _nomForContent;
+        }
+    });
 
     html += renderPrimitiveGroup(primitiveEntries);
 

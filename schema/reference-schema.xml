@@ -4109,7 +4109,7 @@
         <field source="mIDInfoEmploye" destinationName="idInfoEmploye" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.activite.IDInfoEmploye" embedContents="true" title="Information d'employé" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
-    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile" preview="file(mID)" postProcessor="file(path=file/[ID])">
+    <class source="gest.fichier.Fichier" destinationName="Fichier" isExported="true" title="Fichier" summary="[nom]" parentClass="gest.gen.EntiteContientIDResettableMobile" postProcessor="file(path=file/[ID])">
         <reference class="gest.borne.ModeleBorne" field="mIDCroquis" />
         <reference class="gest.centreDesRapports.RapportCentral" field="mTemplate" />
         <reference class="gest.classif.Classif" field="mIDFormulaire" />
@@ -4799,7 +4799,7 @@
         <field source="mUniteMesure" destinationName="uniteMesure" isExported="true" skipWhen="NULL" type="gest.gen.Qte" embedContents="true" title="Unité mesure" />
         <field source="mVectGraphPalier" destinationName="listeGraphPalier" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.graph.GraphPalier" title="Graph de palier" />
         <field source="mIDSSI" definition="mIDSSI" />
-        <field source="mIDTypeGraph" destinationName="idTypeGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDTypeGraph" embedContents="true" title="Type de graph" />
+        <field source="mIDTypeGraph" destinationName="idTypeGraph" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.graph.IDTypeGraph" embedContents="false" title="Type de graph" />
     </class>
     <class source="gest.graph.GraphLib" destinationName="GraphLib" isExported="true" title="Librairie de graph" summary="[nom]" parentClass="gest.gen.EntiteContientID">
         <reference class="gest.graph.TypeGraph" field="mVectIDGraphLib" />

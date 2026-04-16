@@ -65,7 +65,8 @@
             backRefs: 'Références',
             backRefsCapped: 'Affichage limité aux 25 premières références',
             openLinkedRecord: 'Ouvrir l\'enregistrement lié',
-            emptyTab: 'Aucune donnée'
+            emptyTab: 'Aucune donnée',
+            contentPreviewUnavailable: 'Aperçu non disponible pour ce type de fichier'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -85,7 +86,8 @@
             backRefs: 'References',
             backRefsCapped: 'Showing first 25 references only',
             openLinkedRecord: 'Open linked record',
-            emptyTab: 'No data'
+            emptyTab: 'No data',
+            contentPreviewUnavailable: 'Preview not available for this file type'
         }
     };
 

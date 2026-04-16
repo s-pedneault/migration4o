@@ -543,3 +543,20 @@ function bindTabEvents() {
     });
 }
 
+/**
+ * Switches the active tab in a dynamically created tab group.
+ * Works for any tab structure where the button's parent is the tab bar and
+ * the tab bar's parent contains the matching .tab-panel elements.
+ * Exposed as window.activateTab for use in inline onclick handlers.
+ */
+window.activateTab = function (btn) {
+    var target = btn.getAttribute('data-tab-target');
+    var bar = btn.parentElement;
+    bar.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    var container = bar.parentElement;
+    container.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
+    var panel = container.querySelector('[data-tab-id="' + target + '"]');
+    if (panel) panel.classList.add('active');
+};
+
