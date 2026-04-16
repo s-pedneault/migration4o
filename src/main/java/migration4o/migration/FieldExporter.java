@@ -715,6 +715,11 @@ public class FieldExporter {
             }
             xmlWriter.elementWithoutContent(fieldName, skippedBecauseAttributes(byteArray, schemaField, operation.referenceSchema));
         } else {
+            // In FOLDER mode the file is already copied to disk via the chemin/file() formatter.
+            // Embedding the raw bytes as Base64 would bloat the HTML output unnecessarily.
+            if (operation.filesDestination == FilesDestination.FOLDER) {
+                return;
+            }
             // Convert byte array to Base64 string
             String base64String = Base64.getEncoder().encodeToString(byteArray);
             base64String = ValueUtil.formatFieldValue(delegate, new FormatterContext(ctxRef.basePath, ctxRef.schemaClass, schemaField, ctxRef.currentObject().obj), base64String, schemaField);

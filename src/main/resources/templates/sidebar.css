@@ -2245,6 +2245,30 @@ body {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.10);
 }
 
+.contenu-preview-pdf {
+    padding: 24px 12px;
+    text-align: center;
+    background: var(--c-surface, #fff);
+}
+
+.contenu-pdf-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 20px;
+    background: var(--c-primary, #4f46e5);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius, 6px);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.contenu-pdf-btn:hover {
+    background: #4338ca;
+}
+
 .contenu-preview-unknown {
     padding: 20px 12px;
     text-align: center;

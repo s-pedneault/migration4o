@@ -275,13 +275,60 @@ function renderPreview(preview, opts, obj) {
  */
 function _detectBase64Mime(b64) {
     var p = String(b64 || '').substring(0, 8);
-    if (p.startsWith('/9j/')) return 'image/jpeg';
-    if (p.startsWith('iVBORw')) return 'image/png';
-    if (p.startsWith('R0lGOD')) return 'image/gif';
-    if (p.startsWith('Qk0')) return 'image/bmp';
-    if (p.startsWith('PD94') || p.startsWith('PHN2')) return 'image/svg+xml'; // <?xml or <svg
-    return null; // PDF (JVBERi) and other non-image types return null
+    if (p.startsWith('/9j/')) return 'image/jpeg';         // FF D8 FF  — all JPEG
+    if (p.startsWith('iVBORw')) return 'image/png';        // 89 50 4E 47 0D 0A — PNG signature
+    if (p.startsWith('R0lGOD')) return 'image/gif';        // 47 49 46 38 — GIF8
+    if (p.startsWith('PD94') || p.startsWith('PHN2')) return 'image/svg+xml'; // <?x or <sv
+    if (p.startsWith('JVBERi')) return 'application/pdf';   // %PDF-
+    // BMP omitted: byte 3 is the low byte of the file-size DWORD and varies,
+    // making the 3rd base64 char unpredictable (~25% hit rate). Use the 'nom'
+    // filename extension via imageExtMime() for BMP and WEBP detection instead.
+    return null;
 }
+
+/** SVG icon for the PDF open button. */
+var _PDF_ICON_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-4px;margin-right:6px"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/><line x1="9" y1="9" x2="11" y2="9"/></svg>';
+
+/** Registry of {b64, mime} entries opened via blob URLs. Indices are stable across the page lifetime. */
+var _blobDataRegistry = [];
+
+/**
+ * Converts a registered base64 payload to a Blob URL and opens it in a new tab.
+ * Blob URLs work in all major browsers where data: URIs in <object>/<iframe> are blocked.
+ */
+window._openBlobData = function (idx) {
+    var entry = _blobDataRegistry[idx];
+    if (!entry) return;
+    try {
+        var bytes = atob(entry.b64);
+        var byteArr = new Uint8Array(bytes.length);
+        for (var i = 0; i < bytes.length; i++) { byteArr[i] = bytes.charCodeAt(i); }
+        var blob = new Blob([byteArr], { type: entry.mime });
+        var url = URL.createObjectURL(blob);
+        var nom = entry.nom || 'fichier';
+        var win = window.open('', '_blank');
+        if (win) {
+            win.document.write('<!DOCTYPE html><html>'
+                + '<head><meta charset="utf-8"><title>' + nom + '</title></head>'
+                + '<body style="margin:0;overflow:hidden">'
+                + '<embed src="' + url + '" type="' + entry.mime + '" style="width:100vw;height:100vh" />'
+                + '</body></html>');
+            win.document.close();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 30000);
+        } else {
+            // Popup blocked — fall back to download.
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = nom;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 10000);
+        }
+    } catch (e) {
+        alert('Impossible d\'ouvrir le fichier : ' + e);
+    }
+};
 
 /** Unique counter for contenu tab group IDs. */
 var _contentTabIdx = 0;
@@ -294,23 +341,55 @@ var _contentTabIdx = 0;
  * @param {string} [nom]  - original filename; used for MIME-type detection
  * @returns {string} HTML string
  */
+// Shared preview panel builder used by both renderContentTabs (EMBED) and
+// renderFolderPreview (FOLDER).
+//   mime     — resolved MIME type string, or null/undefined
+//   nom      — original filename, used for the PDF fallback download name
+//   src      — EMBED: raw base64 string; FOLDER: relative file path "file/..."
+//   isFolder — false = build data-URL / blob for EMBED; true = use src as href/img-src
+function _buildFilePreviewHtml(mime, nom, src, isFolder) {
+    if (mime && mime.startsWith('image/')) {
+        var imgSrc = isFolder ? src : ('data:' + mime + ';base64,' + src);
+        return '<div class="contenu-preview"><img src="../' + esc(imgSrc) + '" class="contenu-preview-img" /></div>';
+    } else if (mime === 'application/pdf') {
+        if (isFolder) {
+            return '<div class="contenu-preview-pdf">'
+                + '<a href="../' + esc(src) + '" target="_blank" class="contenu-pdf-btn">'
+                + _PDF_ICON_SVG + 'Ouvrir le PDF</a>'
+                + '</div>';
+        } else {
+            var regIdx = _blobDataRegistry.length;
+            _blobDataRegistry.push({ b64: src, mime: 'application/pdf', nom: String(nom || 'fichier.pdf') });
+            return '<div class="contenu-preview-pdf">'
+                + '<button type="button" class="contenu-pdf-btn" onclick="window._openBlobData(' + regIdx + ')">'
+                + _PDF_ICON_SVG + 'Ouvrir le PDF</button>'
+                + '</div>';
+        }
+    } else {
+        return '<div class="contenu-preview-unknown"><span>' + esc(t('contentPreviewUnavailable')) + '</span></div>';
+    }
+}
+
+// FOLDER mode: preview-only panel (no Source tab — bytes are not embedded).
+// nom is the original filename used for MIME detection when chemin carries no extension.
+function renderFolderPreview(filePath, nom) {
+    var effectiveName = String(nom || String(filePath || '').split('/').pop());
+    var mime = imageExtMime(effectiveName)
+        || (effectiveName.split('.').pop().toLowerCase() === 'pdf' ? 'application/pdf' : null);
+    var previewHtml = _buildFilePreviewHtml(mime, effectiveName, filePath, true);
+    return '<div class="contenu-tabs">'
+        + '<div class="tab-panel active">' + previewHtml + '</div>'
+        + '</div>';
+}
+
+// EMBED mode: tabbed Aperçu + Source panel.
 function renderContentTabs(base64, nom) {
     var tabId = 'ct' + (++_contentTabIdx);
     var b64 = String(base64 || '');
-
     var mime = imageExtMime(String(nom || '')) || _detectBase64Mime(b64);
-
-    var previewHtml;
-    if (mime) {
-        var dataSrc = 'data:' + mime + ';base64,' + b64;
-        previewHtml = '<div class="contenu-preview"><img src="' + esc(dataSrc) + '" class="contenu-preview-img" /></div>';
-    } else {
-        previewHtml = '<div class="contenu-preview-unknown"><span>' + esc(t('contentPreviewUnavailable')) + '</span></div>';
-    }
-
+    var previewHtml = _buildFilePreviewHtml(mime, nom, b64, false);
     var lines = b64.match(/.{1,76}/g) || [];
     var sourceHtml = '<pre class="contenu-source">' + esc(lines.join('\n')) + '</pre>';
-
     return '<div class="contenu-tabs">'
         + '<div class="contenu-tab-bar">'
         + '<button type="button" class="active" data-tab-target="' + tabId + '-0" onclick="window.activateTab(this)">Aper\u00e7u</button>'

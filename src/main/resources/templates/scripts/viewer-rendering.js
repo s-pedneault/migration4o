@@ -7,6 +7,11 @@ function renderFieldRow(entry) {
         var tabsHtml = renderContentTabs(entry.value, entry._contentNom || '');
         return '<div class="field-row contenu-field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + tabsHtml + '</div></div>';
     }
+    // FOLDER mode: file copied to disk — render preview-only panel from the chemin path.
+    if (destName === 'chemin' && typeof entry.value === 'string' && entry.value.startsWith('file/')) {
+        var folderPreviewHtml = renderFolderPreview(entry.value, entry._contentNom || '');
+        return '<div class="field-row contenu-field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + folderPreviewHtml + '</div></div>';
+    }
     // If this field is a direct IDEntite reference (embedContents=false), its value IS the ID —
     // render it as a clickable link to the target entity page.
     var _ptDestName = pointsToByPath[normalizeSchemaPath(entry.key || '')];
@@ -311,6 +316,11 @@ function renderTableCell(v, col, item) {
     if (_ck === 'contenu' && typeof v === 'string' && v.length > 50) {
         var _nom = item ? String(item.nom || item._summary || '') : '';
         return renderContentTabs(v, _nom);
+    }
+    // FOLDER mode: file path — render preview-only panel.
+    if (_ck === 'chemin' && typeof v === 'string' && v.startsWith('file/')) {
+        var _chNom = item ? String(item.nom || item._summary || '') : '';
+        return renderFolderPreview(v, _chNom);
     }
     if (col.key === '_preview') {
         // When the parent item carries Base64 content and the filename is an
@@ -721,10 +731,11 @@ function renderObjectSection(label, value, ctx) {
     // Hero _preview at top for detail context
     html += renderPreview(objPreview, null, value);
 
-    // Attach nom to any contenu entries so renderFieldRow can determine MIME type.
+    // Attach nom to contenu and chemin entries so renderFieldRow can determine MIME type.
     var _nomForContent = String(value.nom || value._summary || '');
     primitiveEntries.forEach(function (e) {
-        if (String(e.key || '').split('.').pop() === 'contenu') {
+        var _ek = String(e.key || '').split('.').pop();
+        if (_ek === 'contenu' || _ek === 'chemin') {
             e._contentNom = _nomForContent;
         }
     });

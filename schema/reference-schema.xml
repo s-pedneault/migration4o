@@ -2789,7 +2789,7 @@
         <field source="mVectBornePer" destinationName="listeBornePeriodique" isExported="true" skipWhen="EMPTY_COLLECTION" type="java.util.Vector" collection="true" embedContents="true" childrenType="gest.borne.BornePer" title="Périodiques de borne" />
         <field source="mVectBornePiece" destinationName="listeBornePiece" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.borne.BornePiece" title="Pièces de borne" />
         <field source="mVectBouchon" destinationName="listeBouchon" isExported="true" skipWhen="EMPTY_COLLECTION" type="gen.util.VectRechID" collection="true" embedContents="true" childrenType="gest.borne.Bouchon" title="Bouchons" />
-        <field source="mIDCroquis" definition="croquis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Croquis" />
+        <field source="mIDCroquis" destinationName="croquis" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fichier.IDFichier" embedContents="true" title="Croquis" />
         <field source="mIDFournisseur" destinationName="idFournisseur" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.fournisseur.IDFournisseur" title="Fournisseur" />
         <field source="mIDSSI" definition="mIDSSI" />
     </class>
