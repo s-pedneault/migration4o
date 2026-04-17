@@ -274,7 +274,7 @@ function renderLayoutNode(data, node, ctx) {
                     var _refLink = (_refPtHref && _refId && _refId !== '0' && _refId !== '-1')
                         ? _refPtHref + '?open=' + encodeURIComponent(_refId)
                         : null;
-                    var _refValueHtml = _refLink ? refLinkBtn(_refLink, _refText) : esc(_refText);
+                    var _refValueHtml = _refLink ? refLinkBtn(_refLink, _refText, _refPtDestName, _refId) : esc(_refText);
                     return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                         + '</div><div class="field-value">' + _refValueHtml + '</div></div>';
                 }
@@ -412,7 +412,7 @@ function renderLayoutNode(data, node, ctx) {
                                 var _cellPtHref = _cellPtDestName ? navHrefByDestName[_cellPtDestName] : null;
                                 var _cellLink = (_cellPtHref && _cellId && _cellId !== '0' && _cellId !== '-1')
                                     ? _cellPtHref + '?open=' + encodeURIComponent(_cellId) : null;
-                                thtml += '<td>' + (_cellText ? (_cellLink ? refLinkBtn(_cellLink, _cellText) : esc(_cellText)) : '') + '</td>';
+                                thtml += '<td>' + (_cellText ? (_cellLink ? refLinkBtn(_cellLink, _cellText, _cellPtDestName, _cellId) : esc(_cellText)) : '') + '</td>';
                                 return;
                             }
                             if (cellVal._label !== undefined) {

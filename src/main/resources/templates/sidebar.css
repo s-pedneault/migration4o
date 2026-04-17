@@ -2899,6 +2899,32 @@ body {
     opacity: 1;
 }
 
+.ref-id-missing {
+    background: #7c3aed;
+}
+
+.cell-popup-header.demo-notice {
+    background: #7c3aed;
+}
+
+.cell-popup-header.demo-notice .cell-popup-title {
+    color: #fff;
+}
+
+.cell-popup-header.demo-notice .cell-popup-close {
+    color: rgba(255, 255, 255, .7);
+}
+
+.cell-popup-header.demo-notice .cell-popup-close:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, .15);
+}
+
+.ref-id-missing:hover {
+    background: #6d28d9;
+    box-shadow: 0 2px 6px rgba(124, 58, 237, 0.35);
+}
+
 .field-empty-group {
     background: var(--c-surface);
     border: 1px solid var(--c-border-light);

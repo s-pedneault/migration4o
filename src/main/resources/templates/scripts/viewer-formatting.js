@@ -191,8 +191,14 @@ function sortPrimitiveEntries(entries) {
 /** Inline SVG arrow icon used in reference link buttons. */
 var REF_ARROW_SVG = '<svg class="ref-btn-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12L12 4M12 4H5M12 4v7"/></svg>';
 
-/** Builds an internal reference link button with arrow icon. */
-function refLinkBtn(href, text) {
+/** Builds an internal reference link button with arrow icon. If the export is a demo and the target record was not exported, renders a purple button that opens a notice popup instead. */
+function refLinkBtn(href, text, destName, objectId) {
+    if (window.DEMO_EXPORT && destName && objectId) {
+        var _ids = window.DEMO_EXPORT[destName];
+        if (!_ids || !_ids.has(String(objectId))) {
+            return '<button type="button" class="ref-id-link ref-id-missing" onclick="window._openDemoNotice()">' + esc(text) + REF_ARROW_SVG + '</button>';
+        }
+    }
     return '<a class="ref-id-link" href="' + esc(href) + '">' + esc(text) + REF_ARROW_SVG + '</a>';
 }
 

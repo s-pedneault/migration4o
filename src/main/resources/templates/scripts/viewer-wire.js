@@ -49,6 +49,16 @@ function initialize() {
         // Sync language dropdown with export-configured default language
         if (languageSelect) languageSelect.value = currentLanguage;
         applyLanguage();
+        // Register demo-notice popup so purple missing-record buttons can open it.
+        if (window.DEMO_EXPORT) {
+            var _demoHtml = '<div style="padding:4px 8px">' + esc(t('demoMissingRecord')) + '</div>';
+            window._demoNoticeIdx = _registerHtmlPopup(_demoHtml);
+            window._openDemoNotice = function () {
+                window.openPopup(window._demoNoticeIdx, t('demoNoticeTitle'));
+                var _top = _cellPopupStack[_cellPopupStack.length - 1];
+                if (_top) { var _hdr = _top.querySelector('.cell-popup-header'); if (_hdr) _hdr.classList.add('demo-notice'); }
+            };
+        }
         renderResults();
         resultsCount.textContent = allRecords.length + ' ' + t('resultsTotal');
         // Auto-open a specific record if ?open=<id> is present in the URL

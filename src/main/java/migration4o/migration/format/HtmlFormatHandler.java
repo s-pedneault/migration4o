@@ -8,8 +8,10 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import migration4o.migration.ExportFormat;
 import migration4o.migration.OrganizationInfo;
@@ -96,6 +98,10 @@ public class HtmlFormatHandler extends FormatHandler {
      * Maps each exported root record's DB4O native object ID to the HTML file it was written into. Used by {@link #patchCrossRefsIntoHtmlFiles()} to find the exact file that contains a given target record, regardless of how many HTML files the same class is split across.
      */
     private final Map<Long, Path> objectIdToHtmlPath = new LinkedHashMap<>();
+    /**
+     * Maps each exported entity destination name to the set of root object IDs exported for it. Populated during export and used by {@link #patchDemoExportIntoHtmlFiles()} to embed a per-file lookup index so the JS viewer can identify broken links in demo (Max/Seed) exports.
+     */
+    private final Map<String, Set<Long>> exportedIdsByDestName = new LinkedHashMap<>();
 
     public HtmlFormatHandler() {
         super(ExportFormat.HTML);
@@ -285,6 +291,14 @@ public class HtmlFormatHandler extends FormatHandler {
             // across.
             if (currentRootObjectId > 0 && writer != null && writer.outputPath != null) {
                 objectIdToHtmlPath.put(currentRootObjectId, writer.outputPath);
+            }
+            // Track exported IDs per entity so demo-mode patching can embed
+            // a lookup index for the JS viewer.
+            // Register under the class's own destName AND all ancestor destNames
+            // so that pointsTo references targeting a parent class (e.g. DSI2003)
+            // can find IDs exported under a subclass (e.g. DSI2003E3).
+            if (currentRootObjectId > 0) {
+                registerExportedIdWithAncestors(ctx.schemaClass, currentRootObjectId, ctx.request.referenceSchema);
             }
         }
         writer.openStructure(ctx.schemaClass.attributes.destinationName, attrs);
@@ -516,6 +530,15 @@ public class HtmlFormatHandler extends FormatHandler {
                 System.err.println("Warning: failed to patch cross-refs into HTML files: " + e.getMessage());
             }
         }
+        // Patch the DEMO_EXPORT lookup index into every class HTML file so
+        // the JS viewer can identify links that point to unexported records.
+        if (isDemoExport(ctx.request) && !exportedIdsByDestName.isEmpty()) {
+            try {
+                patchDemoExportIntoHtmlFiles();
+            } catch (Exception e) {
+                System.err.println("Warning: failed to patch demo-export index into HTML files: " + e.getMessage());
+            }
+        }
     }
 
     /**
@@ -594,6 +617,61 @@ public class HtmlFormatHandler extends FormatHandler {
         sb.append('}');
     }
 
+    /**
+     * Returns {@code true} when the export is a demo (Max or Seed mode) — i.e. not all records were exported, so some cross-page links may point to unexported records.
+     */
+    private static boolean isDemoExport(migration4o.migration.ExportRequest request) {
+        return request.maxObjectsPerClass != null || (request.seedQueries != null && !request.seedQueries.isEmpty());
+    }
+
+    /**
+     * Writes the exported-IDs index into every class HTML file so the JS viewer can distinguish valid links from broken ones in demo exports.
+     * <p>
+     * Replaces the {@code null/*DEMO_EXPORT&#42;/} placeholder with {@code {"Entity":[id1,id2,...],...}/*DEMO_EXPORT&#42;/} so that {@code window.DEMO_EXPORT} is populated with the full index after the file is loaded.
+     */
+    private void patchDemoExportIntoHtmlFiles() {
+        final String PLACEHOLDER = "null/*DEMO_EXPORT*/";
+        String json = buildDemoExportJson(exportedIdsByDestName);
+        String replacement = json + "/*DEMO_EXPORT*/";
+        Set<Path> distinctPaths = new LinkedHashSet<>(objectIdToHtmlPath.values());
+        for (Path htmlPath : distinctPaths) {
+            if (!Files.exists(htmlPath))
+                continue;
+            try {
+                String html = Files.readString(htmlPath, StandardCharsets.UTF_8);
+                if (!html.contains(PLACEHOLDER))
+                    continue;
+                Files.writeString(htmlPath, html.replace(PLACEHOLDER, replacement), StandardCharsets.UTF_8);
+            } catch (Exception e) {
+                System.err.println("Warning: failed to patch demo-export index into " + htmlPath + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Builds the JSON object mapping each entity destination name to its array of exported root object IDs. Produces: {@code {"Intervention":[123,456],"Dossier":[789]}}.
+     */
+    private static String buildDemoExportJson(Map<String, Set<Long>> exportedIdsByDestName) {
+        StringBuilder sb = new StringBuilder("{");
+        boolean firstEntity = true;
+        for (Map.Entry<String, Set<Long>> entry : exportedIdsByDestName.entrySet()) {
+            if (!firstEntity)
+                sb.append(",");
+            firstEntity = false;
+            sb.append('"').append(escapeJsonStr(entry.getKey())).append('"').append(":[");
+            boolean firstId = true;
+            for (long id : entry.getValue()) {
+                if (!firstId)
+                    sb.append(",");
+                firstId = false;
+                sb.append(id);
+            }
+            sb.append("]");
+        }
+        sb.append("}");
+        return sb.toString();
+    }
+
     private static String escapeJsonStr(String s) {
         if (s == null)
             return "";
@@ -609,5 +687,22 @@ public class HtmlFormatHandler extends FormatHandler {
 
     private boolean hasSummaryWithAncestors(DOSchemaClass sc, DOSchema referenceSchema) {
         return SummaryGenerator.hasSummary(sc, referenceSchema);
+    }
+
+    /**
+     * Registers an exported root object ID under the class's own destName and
+     * all ancestor class destNames. This ensures that IDEntite fields whose
+     * {@code pointsTo} targets a parent class (e.g. DSI2003) can find IDs
+     * exported under a subclass (e.g. DSI2003E3) in the DEMO_EXPORT index.
+     */
+    private void registerExportedIdWithAncestors(DOSchemaClass schemaClass, long objectId, DOSchema referenceSchema) {
+        for (DOSchemaClass current = schemaClass; current != null;) {
+            String destName = current.attributes.destinationName;
+            if (destName != null) {
+                exportedIdsByDestName.computeIfAbsent(destName, k -> new LinkedHashSet<>()).add(objectId);
+            }
+            String parentName = current.attributes.parentClassName;
+            current = (parentName != null && !parentName.isEmpty()) ? referenceSchema.findClassByName(parentName) : null;
+        }
     }
 }

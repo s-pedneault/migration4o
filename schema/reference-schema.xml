@@ -286,7 +286,7 @@
     <class source="gest.DSI2003.IDDsi2003H3" destinationName="IDDsi2003H3" isExported="true" title="IDDsi2003 H3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=H3">
         <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="int" title="Valeur" />
     </class>
-    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003" pointsToFilter="mCode=E3">
+    <class source="gest.DSI2003.IDDsi2003E3" destinationName="IDDsi2003E3" isExported="true" title="IDDsi2003 E3" parentClass="gest.DSI2003.IDDSI2003" pointsTo="gest.DSI2003.DSI2003E3">
         <reference class="gest.dossPrev.DossPrev" field="mIDUsagePrincipal" />
         <reference class="gest.dossPrev.DossPrev" field="mIDUsageDuLocal" />
         <field source="@mID" destinationName="valeur" isExported="true" skipWhen="MINUS_ONE,NULL" type="string" title="Valeur">

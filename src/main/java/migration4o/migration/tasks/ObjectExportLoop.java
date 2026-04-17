@@ -38,8 +38,9 @@ public class ObjectExportLoop {
      * @param dbClass Database class (carries object IDs)
      */
     public void run(DODatabaseClass dbClass) throws Exception {
-        // Use pre-computed smart selection when available for this class
-        long[] objectIds = dbClass.objects.objectIds;
+        // Prefer deduplicated IDs so subclass objects are exported only in
+        // their own class pass, not duplicated into the parent class pass.
+        long[] objectIds = dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds : dbClass.objects.objectIds;
         if (request.preselectedObjectIds != null) {
             long[] preselected = request.preselectedObjectIds.get(dbClass.attributes.source);
             if (preselected != null) {

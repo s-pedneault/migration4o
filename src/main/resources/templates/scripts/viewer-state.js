@@ -66,7 +66,9 @@
             backRefsCapped: 'Affichage limité aux 25 premières références',
             openLinkedRecord: 'Ouvrir l\'enregistrement lié',
             emptyTab: 'Aucune donnée',
-            contentPreviewUnavailable: 'Aperçu non disponible pour ce type de fichier'
+            contentPreviewUnavailable: 'Aperçu non disponible pour ce type de fichier',
+            demoNoticeTitle: '🔑 Export démo',
+            demoMissingRecord: 'Cet élément n\u2019a pas été inclus dans cet export partiel. Dans un export complet, ce lien mènerait aux détails de cet élément.'
         },
         en: {
             search: 'Search', columns: 'Columns', addCondition: '+ Condition', clear: 'Clear', apply: 'Apply',
@@ -87,7 +89,9 @@
             backRefsCapped: 'Showing first 25 references only',
             openLinkedRecord: 'Open linked record',
             emptyTab: 'No data',
-            contentPreviewUnavailable: 'Preview not available for this file type'
+            contentPreviewUnavailable: 'Preview not available for this file type',
+            demoNoticeTitle: 'Limited Preview',
+            demoMissingRecord: 'This record was not included in this partial preview. In a complete export, this link would lead to the corresponding record.'
         }
     };
 

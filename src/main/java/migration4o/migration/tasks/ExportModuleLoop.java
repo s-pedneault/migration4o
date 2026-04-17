@@ -63,7 +63,8 @@ public class ExportModuleLoop {
                 }
 
                 ctx.setClass(schemaClass, config);
-                ctx.classObjectCount = (dbClass != null && dbClass.objects.objectIds != null) ? dbClass.objects.objectIds.length : 0;
+                long[] classIds = dbClass != null ? (dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds : dbClass.objects.objectIds) : null;
+                ctx.classObjectCount = classIds != null ? classIds.length : 0;
                 try {
                     if (dbClass != null) {
                         runClass(dbClass);

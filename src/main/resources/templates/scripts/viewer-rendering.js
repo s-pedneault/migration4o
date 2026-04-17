@@ -19,7 +19,7 @@ function renderFieldRow(entry) {
     var _idVal = _ptHref ? String(entry.value ?? '').trim() : null;
     if (_idVal === '0' || _idVal === '-1' || _idVal === '') _idVal = null;
     var valueHtml = (_ptHref && _idVal)
-        ? refLinkBtn(_ptHref + '?open=' + encodeURIComponent(_idVal), _idVal)
+        ? refLinkBtn(_ptHref + '?open=' + encodeURIComponent(_idVal), _idVal, _ptDestName, _idVal)
         : fmtValue(entry.value, entry.key);
     return '<div class="field-row"><div class="field-label"' + titleAttr + '>' + esc(label) + '</div><div class="field-value">' + valueHtml + '</div></div>';
 }
@@ -243,7 +243,7 @@ function renderCollectionTableBody(view) {
             if (_refId && _refId !== '0' && _refId !== '-1') {
                 const _destName = pointsToByPath[normalizeSchemaPath(col)];
                 const _href = _destName ? navHrefByDestName[_destName] : null;
-                html += '<td>' + (_href && _cellStr ? refLinkBtn(_href + '?open=' + encodeURIComponent(_refId), _cellStr) : fmtValue(_cellStr, col)) + '</td>';
+                html += '<td>' + (_href && _cellStr ? refLinkBtn(_href + '?open=' + encodeURIComponent(_refId), _cellStr, _destName, _refId) : fmtValue(_cellStr, col)) + '</td>';
             } else {
                 html += '<td>' + fmtValue(_cellStr, col) + '</td>';
             }
@@ -352,7 +352,7 @@ function renderTableCell(v, col, item) {
             var _rDN = pointsToByPath[normalizeSchemaPath(col.key)] || (v._class ? v._class : null);
             var _rHr = _rDN ? navHrefByDestName[_rDN] : null;
             var _rLk = (_rHr && _rId && _rId !== '0' && _rId !== '-1') ? _rHr + '?open=' + encodeURIComponent(_rId) : null;
-            return _rLk ? refLinkBtn(_rLk, _rTxt) : esc(_rTxt);
+            return _rLk ? refLinkBtn(_rLk, _rTxt, _rDN, _rId) : esc(_rTxt);
         }
         if (v._label !== undefined) return fmtValue(String(v._label || '').trim(), col.key);
         // Any other complex object: open as popup.
@@ -385,7 +385,7 @@ function renderPopupTable(items) {
             var _rDN = CLASS_POINTS_TO[item._class];
             var _rHr = _rDN ? navHrefByDestName[_rDN] : null;
             var _rLk = (_rHr && _rId && _rId !== '0' && _rId !== '-1') ? _rHr + '?open=' + encodeURIComponent(_rId) : null;
-            refHtml += '<div>' + (_rLk ? refLinkBtn(_rLk, _rTxt) : esc(_rTxt)) + '</div>';
+            refHtml += '<div>' + (_rLk ? refLinkBtn(_rLk, _rTxt, _rDN, _rId) : esc(_rTxt)) + '</div>';
             hasAny = true;
         });
         refHtml += '</div>';
@@ -619,7 +619,7 @@ function renderReferenceRow(label, value) {
         : null;
     var _refLabel = displayFieldLabel(label);
     var _refValueHtml = _refLink
-        ? refLinkBtn(_refLink, _refText)
+        ? refLinkBtn(_refLink, _refText, _refPtDestName, _refId)
         : esc(_refText);
     var _refPreviewHtml = renderPreview(value._preview);
     return '<div class="field-group"><div class="field-row">'
@@ -655,7 +655,7 @@ function renderObjectSection(label, value, ctx) {
     if (ctx === 'tabular') {
         var tabText = objSummary || objId || '';
         if (!tabText) return '';
-        var tabHtml = linkHref ? refLinkBtn(linkHref, tabText) : esc(tabText);
+        var tabHtml = linkHref ? refLinkBtn(linkHref, tabText, _ptDestName, objId) : esc(tabText);
         tabHtml += ' ' + renderPreview(objPreview, { size: 'thumb-sm' }, value);
         return tabHtml;
     }
@@ -689,9 +689,9 @@ function renderObjectSection(label, value, ctx) {
         var embLabel = displayFieldLabel(label);
         var embSummaryHtml = '';
         if (objSummary) {
-            embSummaryHtml = linkHref ? refLinkBtn(linkHref, objSummary) : esc(objSummary);
+            embSummaryHtml = linkHref ? refLinkBtn(linkHref, objSummary, _ptDestName, objId) : esc(objSummary);
         } else if (objId && linkHref) {
-            embSummaryHtml = refLinkBtn(linkHref, objId);
+            embSummaryHtml = refLinkBtn(linkHref, objId, _ptDestName, objId);
         }
         var embPreviewHtml = renderPreview(objPreview, { size: 'thumb-md' }, value);
 

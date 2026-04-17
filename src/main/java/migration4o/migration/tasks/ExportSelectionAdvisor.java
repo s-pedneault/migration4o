@@ -512,8 +512,11 @@ public class ExportSelectionAdvisor {
             String name = cfg.getClassName();
             if (!out.containsKey(name)) {
                 DODatabaseClass dbClass = database.findClassByName(name);
-                if (dbClass != null && dbClass.objects.objectIds != null && dbClass.objects.objectIds.length > 0) {
-                    out.put(name, dbClass.objects.objectIds);
+                if (dbClass != null) {
+                    long[] ids = dbClass.objects.uniqueObjectIds != null ? dbClass.objects.uniqueObjectIds : dbClass.objects.objectIds;
+                    if (ids != null && ids.length > 0) {
+                        out.put(name, ids);
+                    }
                 }
             }
         }
