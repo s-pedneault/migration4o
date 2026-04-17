@@ -3,16 +3,24 @@ package migration4o.ui.panels.database_panels.cost_panel;
 import migration4o.database.DODatabase;
 import migration4o.database.DODatabaseClass;
 import migration4o.database.DODatabaseDelegate;
+import migration4o.migration.OrganizationDetectionService;
+import migration4o.migration.OrganizationInfo;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaConstants;
 import migration4o.models.schema.DOSchemaModule;
 import migration4o.models.ui.ClassExportConfig;
 import migration4o.schema.DOSchemaService;
 import migration4o.schema.modules.DOModuleService;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
 import javax.swing.*;
 import javax.swing.table.AbstractTableModel;
 import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.TableColumn;
+import javax.swing.table.TableColumnModel;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.StringSelection;
@@ -21,12 +29,11 @@ import java.util.*;
 import java.util.List;
 
 /**
- * Panel for displaying processing cost analysis for the migration. Shows all
- * classes with a unit cost for the selected price list, with per-class
- * subtotals based on the actual object count in the database, and a grand
- * total.
+ * Panel for displaying processing cost analysis for the migration. Shows all classes with a unit cost for the selected price list, broken down by organization. Columns: Class | Unit Cost | Général (units) | Subtotal | {Org1 units} | Subtotal | ... | Total | Total cost.
  */
 public class CostPanel extends JPanel {
+
+    private static final Logger log = LogManager.getLogger(CostPanel.class);
 
     private final DODatabase database;
 
@@ -35,8 +42,15 @@ public class CostPanel extends JPanel {
     private CostTableModel tableModel;
     private JLabel totalLabel;
 
+    /** Organizations detected in the database, cached on refresh. */
+    private List<OrganizationInfo> organizations = List.of();
+    /** Column layout descriptor, rebuilt when organizations change. */
+    private CostColumnLayout columnLayout = new CostColumnLayout(List.of());
+
     private static final NumberFormat MONEY_FORMAT = NumberFormat.getCurrencyInstance(Locale.US);
     private static final NumberFormat INT_FORMAT = NumberFormat.getIntegerInstance(Locale.US);
+
+    private static final Color GRAND_TOTAL_BG = new Color(240, 240, 240);
 
     // -------------------------------------------------------------------------
     // Construction
@@ -65,32 +79,18 @@ public class CostPanel extends JPanel {
         toolbarPanel.add(priceListCombo);
         add(toolbarPanel, BorderLayout.NORTH);
 
-        // -- Centre: table --
+        // -- Centre: table (model rebuilt on each refresh) --
         tableModel = new CostTableModel();
         costTable = new JTable(tableModel);
-        costTable.setAutoResizeMode(JTable.AUTO_RESIZE_LAST_COLUMN);
+        costTable.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
         costTable.getTableHeader().setReorderingAllowed(false);
         costTable.setShowHorizontalLines(true);
-        costTable.setShowVerticalLines(false);
-        costTable.setGridColor(new Color(230, 230, 230));
+        costTable.setShowVerticalLines(true);
+        costTable.setGridColor(new Color(220, 220, 220));
         costTable.setRowHeight(22);
         costTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        // Right-align numeric columns
-        DefaultTableCellRenderer rightRenderer = new DefaultTableCellRenderer();
-        rightRenderer.setHorizontalAlignment(JLabel.RIGHT);
-        costTable.getColumnModel().getColumn(1).setCellRenderer(rightRenderer); // Unit
-                                                                                // Cost
-        costTable.getColumnModel().getColumn(2).setCellRenderer(rightRenderer); // Units
-        costTable.getColumnModel().getColumn(3).setCellRenderer(rightRenderer); // Subtotal
-
-        // Column widths
-        costTable.getColumnModel().getColumn(0).setPreferredWidth(300);
-        costTable.getColumnModel().getColumn(1).setPreferredWidth(110);
-        costTable.getColumnModel().getColumn(2).setPreferredWidth(80);
-        costTable.getColumnModel().getColumn(3).setPreferredWidth(110);
-
-        JScrollPane scrollPane = new JScrollPane(costTable);
+        JScrollPane scrollPane = new JScrollPane(costTable, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, JScrollPane.HORIZONTAL_SCROLLBAR_AS_NEEDED);
         scrollPane.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)));
         add(scrollPane, BorderLayout.CENTER);
 
@@ -112,31 +112,68 @@ public class CostPanel extends JPanel {
         add(bottomPanel, BorderLayout.SOUTH);
     }
 
+    /** Applies column widths and cell renderers after a structural change. */
+    private void applyColumnRenderers() {
+        TableColumnModel cm = costTable.getColumnModel();
+        int colCount = cm.getColumnCount();
+
+        for (int c = 0; c < colCount; c++) {
+            TableColumn tc = cm.getColumn(c);
+            if (c == 0) {
+                tc.setPreferredWidth(300);
+            } else {
+                tc.setPreferredWidth(100);
+                tc.setMinWidth(60);
+                tc.setMaxWidth(160);
+            }
+        }
+
+        costTable.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (column >= 1) {
+                    setHorizontalAlignment(JLabel.RIGHT);
+                } else {
+                    setHorizontalAlignment(JLabel.LEFT);
+                }
+                if (!isSelected) {
+                    boolean isGrandTotalRow = row == table.getRowCount() - 1 && tableModel.isGrandTotalRow(row);
+                    if (isGrandTotalRow) {
+                        c.setBackground(GRAND_TOTAL_BG);
+                        c.setFont(c.getFont().deriveFont(Font.BOLD));
+                    } else {
+                        c.setBackground(columnLayout.columnBackground(column));
+                        c.setFont(c.getFont().deriveFont(Font.PLAIN));
+                    }
+                }
+                return c;
+            }
+        });
+    }
+
     // -------------------------------------------------------------------------
     // Data loading
     // -------------------------------------------------------------------------
 
     /**
-     * Rebuilds the price-list combo and refreshes the table. Call this whenever
-     * the underlying module data may have changed.
+     * Rebuilds the price-list combo and refreshes the table. Call this whenever the underlying module data may have changed.
      */
     public void refresh() {
-        // Collect all unique non-default price-list keys from all module class
-        // configs
+        organizations = OrganizationDetectionService.detectOrganizations(database);
+        columnLayout = new CostColumnLayout(organizations);
+
         Set<String> nonDefaultKeys = new LinkedHashSet<>();
         collectNonDefaultPriceListKeys(DOModuleService.getInstance().getModules(), nonDefaultKeys);
 
-        // Remember selected item so we can restore it if possible
         String previousSelection = (String) priceListCombo.getSelectedItem();
 
         priceListCombo.removeAllItems();
-        // "Default" represents the empty-string key; always shown first
         priceListCombo.addItem("Default");
         for (String key : nonDefaultKeys) {
             priceListCombo.addItem(key);
         }
 
-        // Restore previous selection when it still exists
         if (previousSelection != null) {
             for (int i = 0; i < priceListCombo.getItemCount(); i++) {
                 if (previousSelection.equals(priceListCombo.getItemAt(i))) {
@@ -149,9 +186,6 @@ public class CostPanel extends JPanel {
         refreshTable();
     }
 
-    /**
-     * Recursively gathers all non-empty price-list keys found in class configs.
-     */
     private void collectNonDefaultPriceListKeys(List<DOSchemaModule> modules, Set<String> keys) {
         for (DOSchemaModule module : modules) {
             for (ClassExportConfig config : module.classConfigs) {
@@ -165,97 +199,158 @@ public class CostPanel extends JPanel {
         }
     }
 
-    /** Rebuilds the table rows for the currently selected price list. */
     private void refreshTable() {
         String selectedDisplay = (String) priceListCombo.getSelectedItem();
-        // Map "Default" display name back to the empty raw key
         String priceListKey = "Default".equals(selectedDisplay) ? "" : (selectedDisplay != null ? selectedDisplay : "");
 
         List<CostEntry> entries = buildEntries(priceListKey);
-        tableModel.setEntries(entries);
+        tableModel.setData(entries, columnLayout);
+        applyColumnRenderers();
 
-        // Grand total
-        float total = 0f;
-        for (CostEntry entry : entries) {
-            total += entry.subtotal;
+        float grandTotal = 0f;
+        for (CostEntry e : entries) {
+            grandTotal += e.totalCost();
         }
-        totalLabel.setText("Grand total: " + MONEY_FORMAT.format(total));
+        totalLabel.setText("Grand total: " + MONEY_FORMAT.format(grandTotal));
     }
 
-    /** Builds the list of cost entries for the given price-list key. */
     private List<CostEntry> buildEntries(String priceListKey) {
         List<CostEntry> entries = new ArrayList<>();
-        collectEntries(DOModuleService.getInstance().getModules(), priceListKey, entries);
+        DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
+        collectEntries(DOModuleService.getInstance().getModules(), priceListKey, refSchema, entries);
         return entries;
     }
 
-    /**
-     * Recursively walks modules and adds an entry for every class config whose
-     * unit cost for the selected price list is greater than zero.
-     */
-    private void collectEntries(List<DOSchemaModule> modules, String priceListKey, List<CostEntry> entries) {
+    private void collectEntries(List<DOSchemaModule> modules, String priceListKey, DOSchema refSchema, List<CostEntry> entries) {
         for (DOSchemaModule module : modules) {
             for (ClassExportConfig config : module.classConfigs) {
                 float unitCost = config.getUnitCost(priceListKey);
                 if (unitCost > 0f) {
-                    int units = getObjectCount(config);
-                    float subtotal = unitCost * units;
+                    String displayName = resolveDisplayName(config, refSchema);
 
-                    // Use config title first (user-specified per-config title),
-                    // then reference schema class title, then description, then
-                    // destination file name
-                    String displayName = config.hasTitle() ? config.getTitle() : null;
-                    if (displayName == null || displayName.isEmpty()) {
-                        displayName = getReferenceClassTitle(config.getClassName());
-                    }
-                    if (displayName == null || displayName.isEmpty()) {
-                        displayName = config.getDescription();
-                    }
-                    if (displayName == null || displayName.isEmpty()) {
-                        displayName = config.getDestinationFileName();
-                    }
+                    int[] orgUnits = new int[organizations.size()];
+                    int generalUnits = countObjectsByOrganization(config, refSchema, orgUnits);
 
-                    entries.add(new CostEntry(displayName, config.getClassName(), unitCost, units, subtotal));
+                    int totalUnits = generalUnits;
+                    for (int u : orgUnits)
+                        totalUnits += u;
+
+                    entries.add(new CostEntry(displayName, unitCost, generalUnits, orgUnits, totalUnits, unitCost * totalUnits));
                 }
             }
-            collectEntries(module.children, priceListKey, entries);
+            collectEntries(module.children, priceListKey, refSchema, entries);
         }
     }
 
     /**
-     * Returns the title of a class from the reference schema, or null if not
-     * found.
+     * Resolves the best display name for a class config: config title → reference schema class title → description → destination file name.
      */
-    private String getReferenceClassTitle(String className) {
-        DOSchema refSchema = DOSchemaService.getInstance().getReferenceSchema();
-        if (refSchema == null) {
-            return null;
+    private String resolveDisplayName(ClassExportConfig config, DOSchema refSchema) {
+        if (config.hasTitle() && !config.getTitle().isEmpty()) {
+            return config.getTitle();
         }
+        String schemaTitle = getReferenceClassTitle(config.getClassName(), refSchema);
+        if (schemaTitle != null) {
+            return schemaTitle;
+        }
+        if (config.getDescription() != null && !config.getDescription().isEmpty()) {
+            return config.getDescription();
+        }
+        return config.getDestinationFileName();
+    }
+
+    private String getReferenceClassTitle(String className, DOSchema refSchema) {
+        if (refSchema == null)
+            return null;
         DOSchemaClass cls = refSchema.findClassByName(className);
         return (cls != null && cls.attributes.title != null && !cls.attributes.title.isEmpty()) ? cls.attributes.title : null;
     }
 
     /**
-     * Returns the object count for a config, applying criteria filtering when
-     * the config has criteria defined. This prevents over-billing when the same
-     * class appears multiple times with different criteria.
+     * Counts objects split by organization. Fills {@code orgUnits} (one slot per organization) and returns the general-data count (IDSSI&lt;0 or non-multi-org classes).
      */
-    private int getObjectCount(ClassExportConfig config) {
-        if (database == null) {
+    private int countObjectsByOrganization(ClassExportConfig config, DOSchema refSchema, int[] orgUnits) {
+        if (database == null)
             return 0;
-        }
+
         DODatabaseClass dbClass = database.findClassByName(config.getClassName());
         if (dbClass == null || dbClass.objects.objectIds == null || dbClass.objects.objectIds.length == 0) {
             return 0;
         }
 
-        // When the config has criteria and we have a database delegate,
-        // count only the objects that match all criteria
-        if (config.hasCriteria() && dbClass.delegate != null && !dbClass.delegate.isClosed()) {
-            return config.countMatchingObjects(dbClass.delegate, dbClass.objects.objectIds);
-        }
+        boolean multiOrg = isMultiOrganization(config.getClassName(), refSchema);
 
-        return dbClass.objects.objectIds.length;
+        Map<Integer, Integer> idSSIToIndex = buildIdSSILookup();
+
+        DODatabaseDelegate delegate = dbClass.delegate;
+        boolean useCriteria = config.hasCriteria() && delegate != null && !delegate.isClosed();
+
+        int generalCount = 0;
+        for (long objectId : dbClass.objects.objectIds) {
+            Object obj;
+            try {
+                obj = delegate.getByID(objectId);
+            } catch (Exception e) {
+                log.warn("Failed to load object {} of class {}: {}", objectId, config.getClassName(), e.getMessage());
+                continue;
+            }
+            if (obj == null)
+                continue;
+
+            if (useCriteria && !matchesCriteria(config, delegate, obj)) {
+                continue;
+            }
+
+            if (!multiOrg) {
+                generalCount++;
+                continue;
+            }
+
+            generalCount += classifyByOrganization(delegate, obj, idSSIToIndex, orgUnits);
+        }
+        return generalCount;
+    }
+
+    private boolean isMultiOrganization(String className, DOSchema refSchema) {
+        if (refSchema == null)
+            return false;
+        DOSchemaClass schemaClass = refSchema.findClassByName(className);
+        return schemaClass != null && schemaClass.isMultiOrganization();
+    }
+
+    private Map<Integer, Integer> buildIdSSILookup() {
+        Map<Integer, Integer> map = new HashMap<>();
+        for (int i = 0; i < organizations.size(); i++) {
+            map.put(organizations.get(i).idSSI(), i);
+        }
+        return map;
+    }
+
+    private boolean matchesCriteria(ClassExportConfig config, DODatabaseDelegate delegate, Object obj) {
+        if (obj instanceof com.db4o.reflect.generic.GenericObject) {
+            return config.matchesAllCriteria(delegate, (com.db4o.reflect.generic.GenericObject) obj);
+        }
+        return false;
+    }
+
+    /**
+     * Classifies a single object into its organization bucket. Returns 1 if the object is general data, 0 otherwise (org bucket incremented directly).
+     */
+    private int classifyByOrganization(DODatabaseDelegate delegate, Object obj, Map<Integer, Integer> idSSIToIndex, int[] orgUnits) {
+        Object idValue = delegate.getStoredFieldValue(obj, DOSchemaConstants.ORGANIZATION_BUSINESS_ID_FIELD_NAME);
+        if (!(idValue instanceof Number)) {
+            return 1; // No IDSSI → general
+        }
+        int idSSI = ((Number) idValue).intValue();
+        if (idSSI < 0) {
+            return 1; // Negative IDSSI → general
+        }
+        Integer idx = idSSIToIndex.get(idSSI);
+        if (idx != null) {
+            orgUnits[idx]++;
+            return 0;
+        }
+        return 1; // Unknown org → general
     }
 
     // -------------------------------------------------------------------------
@@ -265,16 +360,22 @@ public class CostPanel extends JPanel {
     private void copyToClipboard() {
         StringBuilder sb = new StringBuilder();
 
-        // Header
-        sb.append("Class\tUnit Cost\tUnits\tSubtotal\n");
-
-        // Data rows
-        for (int row = 0; row < tableModel.getRowCount(); row++) {
-            sb.append(tableModel.getValueAt(row, 0)).append('\t').append(tableModel.getValueAt(row, 1)).append('\t').append(tableModel.getValueAt(row, 2)).append('\t').append(tableModel.getValueAt(row, 3)).append('\n');
+        for (int c = 0; c < tableModel.getColumnCount(); c++) {
+            if (c > 0)
+                sb.append('\t');
+            sb.append(tableModel.getColumnName(c));
         }
+        sb.append('\n');
 
-        // Grand total line
-        sb.append("\t\t\t").append(totalLabel.getText());
+        for (int row = 0; row < tableModel.getRowCount(); row++) {
+            for (int c = 0; c < tableModel.getColumnCount(); c++) {
+                if (c > 0)
+                    sb.append('\t');
+                Object val = tableModel.getValueAt(row, c);
+                sb.append(val != null ? val : "");
+            }
+            sb.append('\n');
+        }
 
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         clipboard.setContents(new StringSelection(sb.toString()), null);
@@ -284,47 +385,61 @@ public class CostPanel extends JPanel {
     // Inner types
     // -------------------------------------------------------------------------
 
-    /** Immutable value object representing a single table row. */
-    private static final class CostEntry {
-        final String displayName;
-        final String className;
-        final float unitCost;
-        final int units;
-        final float subtotal;
-
-        CostEntry(String displayName, String className, float unitCost, int units, float subtotal) {
-            this.displayName = displayName;
-            this.className = className;
-            this.unitCost = unitCost;
-            this.units = units;
-            this.subtotal = subtotal;
-        }
+    /** Value object representing a single data row. */
+    record CostEntry(String displayName, float unitCost, int generalUnits, int[] orgUnits, int totalUnits, float totalCost) {
     }
 
-    /** Table model for the cost rows. */
-    private final class CostTableModel extends AbstractTableModel {
+    /** Table model with dynamic columns based on detected organizations. */
+    private static final class CostTableModel extends AbstractTableModel {
 
-        private final String[] COLUMNS = { "Class", "Unit Cost", "Units", "Subtotal" };
         private List<CostEntry> entries = new ArrayList<>();
+        private CostColumnLayout layout = new CostColumnLayout(List.of());
+        private boolean hasGrandTotal = false;
 
-        void setEntries(List<CostEntry> entries) {
+        // Grand total accumulators
+        private float grandTotalGeneralSubtotal;
+        private float[] grandTotalOrgSubtotals = new float[0];
+        private float grandTotalCost;
+        private int grandTotalUnits;
+
+        void setData(List<CostEntry> entries, CostColumnLayout layout) {
             this.entries = entries;
-            fireTableDataChanged();
+            this.layout = layout;
+
+            grandTotalGeneralSubtotal = 0f;
+            grandTotalOrgSubtotals = new float[layout.pairCount() - 2]; // org pairs only
+            grandTotalCost = 0f;
+            grandTotalUnits = 0;
+            for (CostEntry e : entries) {
+                grandTotalGeneralSubtotal += e.unitCost * e.generalUnits;
+                for (int i = 0; i < grandTotalOrgSubtotals.length; i++) {
+                    grandTotalOrgSubtotals[i] += e.unitCost * e.orgUnits[i];
+                }
+                grandTotalCost += e.totalCost;
+                grandTotalUnits += e.totalUnits;
+            }
+            hasGrandTotal = !entries.isEmpty();
+
+            fireTableStructureChanged();
+        }
+
+        boolean isGrandTotalRow(int row) {
+            return hasGrandTotal && row == entries.size();
         }
 
         @Override
         public int getRowCount() {
-            return entries.size();
+            return entries.size() + (hasGrandTotal ? 1 : 0);
         }
 
         @Override
         public int getColumnCount() {
-            return COLUMNS.length;
+            return layout.columnCount();
         }
 
         @Override
         public String getColumnName(int col) {
-            return COLUMNS[col];
+            return layout.columnName(col);
         }
 
         @Override
@@ -334,18 +449,42 @@ public class CostPanel extends JPanel {
 
         @Override
         public Object getValueAt(int row, int col) {
-            CostEntry e = entries.get(row);
-            switch (col) {
-            case 0:
+            if (isGrandTotalRow(row)) {
+                return getGrandTotalValue(col);
+            }
+            return getEntryValue(entries.get(row), col);
+        }
+
+        private Object getEntryValue(CostEntry e, int col) {
+            if (col == 0)
                 return e.displayName;
-            case 1:
+            if (col == 1)
                 return MONEY_FORMAT.format(e.unitCost);
-            case 2:
-                return INT_FORMAT.format(e.units);
-            case 3:
-                return MONEY_FORMAT.format(e.subtotal);
-            default:
+
+            CostColumnLayout.PairPosition pos = layout.resolvePair(col);
+            if (pos.isGeneralPair()) {
+                return pos.isSubtotal() ? MONEY_FORMAT.format(e.unitCost * e.generalUnits) : INT_FORMAT.format(e.generalUnits);
+            } else if (pos.isOrganizationPair()) {
+                int units = e.orgUnits[pos.organizationIndex()];
+                return pos.isSubtotal() ? MONEY_FORMAT.format(e.unitCost * units) : INT_FORMAT.format(units);
+            } else {
+                return pos.isSubtotal() ? MONEY_FORMAT.format(e.totalCost) : INT_FORMAT.format(e.totalUnits);
+            }
+        }
+
+        private Object getGrandTotalValue(int col) {
+            if (col == 0)
+                return "Grand total";
+            if (col == 1)
                 return "";
+
+            CostColumnLayout.PairPosition pos = layout.resolvePair(col);
+            if (pos.isGeneralPair()) {
+                return pos.isSubtotal() ? MONEY_FORMAT.format(grandTotalGeneralSubtotal) : "";
+            } else if (pos.isOrganizationPair()) {
+                return pos.isSubtotal() ? MONEY_FORMAT.format(grandTotalOrgSubtotals[pos.organizationIndex()]) : "";
+            } else {
+                return pos.isSubtotal() ? MONEY_FORMAT.format(grandTotalCost) : INT_FORMAT.format(grandTotalUnits);
             }
         }
     }

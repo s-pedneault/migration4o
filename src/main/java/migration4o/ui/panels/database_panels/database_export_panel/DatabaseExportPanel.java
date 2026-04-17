@@ -464,7 +464,7 @@ public class DatabaseExportPanel extends JPanel {
         saveButton.addActionListener(e -> saveConfig());
         panel.add(saveButton);
 
-        JButton exportButton = new JButton("Export All Modules");
+        JButton exportButton = new JButton("Export now!");
         exportButton.addActionListener(e -> triggerExport());
         panel.add(exportButton);
 
