@@ -3745,7 +3745,7 @@
         <field source="mID" definition="mID" />
         <field source="mAdresse" definition="mAdresse" />
         <field source="mCell" destinationName="cellulaire" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Cellulaire" />
-        <field source="mCodePermanent" destinationName="codePermanent" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Code permanent" />
+        <field source="mCodePermanent" destinationName="codePermanent" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Codes permanents" title="Code permanent" />
         <field source="mCouriel" destinationName="couriel" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Couriel" />
         <field source="mCourielPaget" destinationName="courielTeleavertisseur" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Couriel téléavertisseur" />
         <field source="mDateEmbauche" destinationName="dateEmbauche" isExported="true" skipWhen="NULL" type="date" title="Date de l'embauche" />

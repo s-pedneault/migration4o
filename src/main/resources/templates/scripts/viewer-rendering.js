@@ -710,10 +710,10 @@ function renderObjectSection(label, value, ctx) {
         } else {
             if (primitiveEntries.length >= 2) {
                 embHtml += '<div class="field-columns-2">';
-                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e); });
                 embHtml += '</div>';
             } else {
-                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e.key, e.value); });
+                primitiveEntries.forEach(function (e) { embHtml += renderFieldRow(e); });
             }
             referenceEntries.forEach(function (e) { embHtml += renderReferenceRow(e.key, e.value); });
             objectEntries.forEach(function (e) { embHtml += renderValue(e.key, e.value, 'embedded'); });

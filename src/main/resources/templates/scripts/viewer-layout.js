@@ -290,6 +290,20 @@ function renderLayoutNode(data, node, ctx) {
                 return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                     + '</div><div class="field-value">' + _inlineTable + '</div></div>';
             }
+            // Binary (byte[]) content field — render as tabbed Preview + Source panel.
+            if (fieldDestName === 'contenu' && typeof scalarVal === 'string' && scalarVal.length > 50) {
+                var _nomParent = String(p.ref || '').split('.').slice(0, -1).join('.');
+                var _nomObj = _nomParent ? unwrapClassWrapper(resolveFieldValue(data, _nomParent)) : data;
+                var _nom = _nomObj ? String(_nomObj.nom || _nomObj._summary || '') : '';
+                return '<div class="field-row contenu-field-row"><div class="field-label"' + fieldTitleAttr + '>' + esc(label) + '</div><div class="field-value">' + renderContentTabs(scalarVal, _nom) + '</div></div>';
+            }
+            // FOLDER mode: file copied to disk — render preview-only panel.
+            if (fieldDestName === 'chemin' && typeof scalarVal === 'string' && scalarVal.startsWith('file/')) {
+                var _chNomParent = String(p.ref || '').split('.').slice(0, -1).join('.');
+                var _chNomObj = _chNomParent ? unwrapClassWrapper(resolveFieldValue(data, _chNomParent)) : data;
+                var _chNom = _chNomObj ? String(_chNomObj.nom || _chNomObj._summary || '') : '';
+                return '<div class="field-row contenu-field-row"><div class="field-label"' + fieldTitleAttr + '>' + esc(label) + '</div><div class="field-value">' + renderFolderPreview(scalarVal, _chNom) + '</div></div>';
+            }
             var formatted = fmtValueWithFormat(scalarVal, p.format, p.ref);
             return '<div class="field-row' + styleCls + '"' + styleAttr + '><div class="field-label"' + fieldTitleAttr + '>' + esc(label)
                 + '</div><div class="field-value">' + formatted + '</div></div>';
