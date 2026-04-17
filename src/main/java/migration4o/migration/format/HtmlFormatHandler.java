@@ -14,20 +14,24 @@ import java.util.Map;
 import java.util.Set;
 
 import migration4o.migration.ExportFormat;
+import migration4o.migration.FilesDestination;
+import migration4o.migration.OrganizationExportMode;
 import migration4o.migration.OrganizationInfo;
 import migration4o.migration.SummaryGenerator;
 import migration4o.migration.SummaryGenerator.IDEntiteResult;
 import migration4o.migration.tasks.NavTreeBuilder;
 import migration4o.models.schema.DOSchema;
 import migration4o.models.schema.DOSchemaClass;
+import migration4o.models.schema.DOSchemaField;
 import migration4o.models.ui.layout.DetailLayout;
 import migration4o.schema.modules.DOModuleService;
 import migration4o.util.ClassUtil;
+import migration4o.util.ExportConfigDisplay;
 import migration4o.util.JsViewerHtmlGenerator;
 import migration4o.util.MunicipalityCsvReader;
 import migration4o.util.ResolvedReference;
-import migration4o.util.WelcomePageParams;
 import migration4o.util.SchemaUtil;
+import migration4o.util.WelcomePageParams;
 import migration4o.util.formatters.FormatterContext;
 import migration4o.util.previews.ObjectPreview;
 import migration4o.util.tools.structuredwriter.StructuredWriter;
@@ -507,6 +511,27 @@ public class HtmlFormatHandler extends FormatHandler {
     }
 
     /**
+     * Builds a read-only summary of the export configuration for the welcome page.
+     */
+    private static ExportConfigDisplay buildExportConfigDisplay(ExportCurrentState ctx) {
+        boolean fullContents = ctx.request.maxObjectsPerClass == null && (ctx.request.seedQueries == null || ctx.request.seedQueries.isEmpty());
+        boolean filesInFolder = ctx.request.filesDestination == FilesDestination.FOLDER;
+        boolean singleService = ctx.request.organizationConfig == null || ctx.request.organizationConfig.getMode() == OrganizationExportMode.SINGLE_EXPORT;
+
+        List<ExportConfigDisplay.ExclusionOption> exclusions = new ArrayList<>();
+        if (ctx.request.availableSkipUserOptions != null) {
+            var selected = ctx.request.selectedSkipUserOptions != null ? ctx.request.selectedSkipUserOptions : List.<DOSchemaField>of();
+            for (DOSchemaField opt : ctx.request.availableSkipUserOptions) {
+                String label = opt.attributes.skipUserOption;
+                if (label != null && !label.isBlank()) {
+                    exclusions.add(new ExportConfigDisplay.ExclusionOption(label, selected.contains(opt)));
+                }
+            }
+        }
+        return new ExportConfigDisplay(fullContents, filesInFolder, singleService, exclusions);
+    }
+
+    /**
      * After all classes (including referenced ones) are exported, regenerates the welcome page so it can report the definitive exported-object count.
      */
     @Override
@@ -517,7 +542,8 @@ public class HtmlFormatHandler extends FormatHandler {
             String displayName = ctx.currentOrganization != null ? ctx.currentOrganization.name() : ctx.request.getDatabaseFolderName();
             int objectCount = ctx.statistics != null ? ctx.statistics.getUniqueExportedCount() : this.exportedIds.size();
             List<OrganizationInfo> orgTiles = buildOrgTileList(ctx);
-            WelcomePageParams params = new WelcomePageParams(htmlBasePath, displayName, ctx.cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount, ctx.municipality, orgTiles);
+            ExportConfigDisplay configDisplay = buildExportConfigDisplay(ctx);
+            WelcomePageParams params = new WelcomePageParams(htmlBasePath, displayName, ctx.cachedNavJson, ctx.htmlWelcomeModuleCount, ctx.htmlWelcomeClassCount, objectCount, ctx.municipality, orgTiles, configDisplay);
             JsViewerHtmlGenerator.writeWelcomePage(params);
         } catch (Exception e) {
             System.err.println("Warning: failed to regenerate welcome page in done(): " + e.getMessage());

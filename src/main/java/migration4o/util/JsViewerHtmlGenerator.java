@@ -269,8 +269,9 @@ public final class JsViewerHtmlGenerator {
         String clientPop = municipality != null && municipality.population != null ? escapeHtml(municipality.population) : "";
 
         String orgTilesHtml = buildOrgTilesHtml(params.organizations());
+        String configRowHtml = buildConfigRowHtml(params.configDisplay());
 
-        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(params.moduleCount())).replace("__CLASS_COUNT__", String.valueOf(params.classCount())).replace("__OBJECT_COUNT__", objects).replace("__CLIENT_NAME__", clientName).replace("__CLIENT_MRC__", clientMrc).replace("__CLIENT_REGION__", clientRegion).replace("__CLIENT_ADDR__", clientAddr).replace("__CLIENT_EMAIL__", clientEmail).replace("__CLIENT_WEB__", clientWeb).replace("__CLIENT_POP__", clientPop).replace("__ORG_TILES__", orgTilesHtml);
+        String html = loadWelcomeTemplate().replace("__SIDEBAR_CSS__", loadSidebarCss()).replace("__SIDEBAR_NAV_JS__", loadSidebarNavJs()).replace("__EXPORT_LANGUAGE__", exportLanguage).replace("__NAV_ITEMS__", nav).replace("__DB_NAME__", escapeHtml(name)).replace("__EXPORT_DATE__", escapeHtml(date)).replace("__MODULE_COUNT__", String.valueOf(params.moduleCount())).replace("__CLASS_COUNT__", String.valueOf(params.classCount())).replace("__OBJECT_COUNT__", objects).replace("__CLIENT_NAME__", clientName).replace("__CLIENT_MRC__", clientMrc).replace("__CLIENT_REGION__", clientRegion).replace("__CLIENT_ADDR__", clientAddr).replace("__CLIENT_EMAIL__", clientEmail).replace("__CLIENT_WEB__", clientWeb).replace("__CLIENT_POP__", clientPop).replace("__ORG_TILES__", orgTilesHtml).replace("__EXPORT_CONFIG_ROW__", configRowHtml);
 
         Files.createDirectories(params.dbRoot());
         Path welcomePath = params.dbRoot().resolve("index.html");
@@ -302,6 +303,76 @@ public final class JsViewerHtmlGenerator {
             sb.append("                    </div>\n");
             sb.append("                </div>\n");
         }
+        return sb.toString();
+    }
+
+    /**
+     * Builds the HTML for the export configuration summary row displayed below the stats grid.
+     * Returns an empty string when no config is available.
+     */
+    private static final String ICON_EXCLUDED = "<span class=\"config-icon\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\">" + "<circle cx=\"9\" cy=\"9\" r=\"7.5\" fill=\"none\" stroke=\"#ef4444\" stroke-width=\"2\"/>" + "<line x1=\"4\" y1=\"4\" x2=\"14\" y2=\"14\" stroke=\"#ef4444\" stroke-width=\"2\" stroke-linecap=\"round\"/>" + "</svg></span>";
+    private static final String ICON_INCLUDED = "<span class=\"config-icon\"><svg width=\"18\" height=\"18\" viewBox=\"0 0 18 18\">" + "<rect x=\"1\" y=\"1\" width=\"16\" height=\"16\" rx=\"3\" fill=\"#22c55e\"/>" + "<polyline points=\"4,9 7.5,12.5 13.5,5.5\" fill=\"none\" stroke=\"#fff\" stroke-width=\"2.2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>" + "</svg></span>";
+
+    private static String buildConfigRowHtml(ExportConfigDisplay cfg) {
+        if (cfg == null) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("                    <div class=\"config-grid\">\n");
+
+        // Column 1 — Contents
+        sb.append("                        <div class=\"config-col\">\n");
+        sb.append("                            <div class=\"config-label\">Contenu</div>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-c\"");
+        if (cfg.fullContents())
+            sb.append(" checked");
+        sb.append(" disabled> Complet</label>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-c\"");
+        if (!cfg.fullContents())
+            sb.append(" checked");
+        sb.append(" disabled> Partiel</label>\n");
+        sb.append("                        </div>\n");
+
+        // Column 2 — Attachments
+        sb.append("                        <div class=\"config-col\">\n");
+        sb.append("                            <div class=\"config-label\">Pi\u00e8ces jointes</div>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-a\"");
+        if (cfg.filesInFolder())
+            sb.append(" checked");
+        sb.append(" disabled> Dossier \u00ab\u00a0file\u00a0\u00bb</label>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-a\"");
+        if (!cfg.filesInFolder())
+            sb.append(" checked");
+        sb.append(" disabled> Int\u00e9gr\u00e9es au XML</label>\n");
+        sb.append("                        </div>\n");
+
+        // Column 3 — Mode
+        sb.append("                        <div class=\"config-col\">\n");
+        sb.append("                            <div class=\"config-label\">Mode</div>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-m\"");
+        if (cfg.singleService())
+            sb.append(" checked");
+        sb.append(" disabled> SSI unique</label>\n");
+        sb.append("                            <label class=\"config-option\"><input type=\"radio\" name=\"cfg-m\"");
+        if (!cfg.singleService())
+            sb.append(" checked");
+        sb.append(" disabled> Multi-services</label>\n");
+        sb.append("                        </div>\n");
+
+        // Column 4 — Exclusions
+        sb.append("                        <div class=\"config-col\">\n");
+        sb.append("                            <div class=\"config-label\">Informations sensibles</div>\n");
+        if (cfg.exclusions().isEmpty()) {
+            sb.append("                            <span class=\"config-none\">Aucune</span>\n");
+        } else {
+            for (ExportConfigDisplay.ExclusionOption opt : cfg.exclusions()) {
+                String icon = opt.selected() ? ICON_EXCLUDED : ICON_INCLUDED;
+                sb.append("                            <label class=\"config-option\">").append(icon).append(' ').append(escapeHtml(opt.label())).append("</label>\n");
+            }
+        }
+        sb.append("                        </div>\n");
+
+        sb.append("                    </div>");
         return sb.toString();
     }
 

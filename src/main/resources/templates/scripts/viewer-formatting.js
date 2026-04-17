@@ -355,8 +355,8 @@ var _contentTabIdx = 0;
 //   isFolder — false = build data-URL / blob for EMBED; true = use src as href/img-src
 function _buildFilePreviewHtml(mime, nom, src, isFolder) {
     if (mime && mime.startsWith('image/')) {
-        var imgSrc = isFolder ? src : ('data:' + mime + ';base64,' + src);
-        return '<div class="contenu-preview"><img src="../' + esc(imgSrc) + '" class="contenu-preview-img" /></div>';
+        var imgSrc = isFolder ? ('../' + esc(src)) : ('data:' + mime + ';base64,' + src);
+        return '<div class="contenu-preview"><img src="' + imgSrc + '" class="contenu-preview-img" /></div>';
     } else if (mime === 'application/pdf') {
         if (isFolder) {
             return '<div class="contenu-preview-pdf">'

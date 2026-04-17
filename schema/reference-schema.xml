@@ -2261,7 +2261,7 @@
             </valueMap>
         </field>
     </class>
-    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" title="DSI2003 E3" parentClass="gest.DSI2003.DSI2003" isStatic="true">
+    <class source="gest.DSI2003.DSI2003E3" destinationName="DSI2003E3" isExported="true" title="DSI2003 E3" parentClass="gest.DSI2003.DSI2003" isStatic="true" alwaysExportAll="false">
         <field source="mIDDSI2003E3" destinationName="idDSI2003E3" isExported="true" type="int" />
         <field source="mIsInactif" destinationName="isInactif" isExported="true" type="boolean" />
     </class>
@@ -3038,7 +3038,7 @@
         <reference class="gest.prevention.ParamPrevention" field="mVectIDTypeChampPersoCol" />
         <field source="mID" definition="mID" />
     </class>
-    <class source="gest.champPerso.TypeChampPerso" destinationName="TypeChampPerso" isExported="true" title="Type de champ personnalisé" summary="[nom]" parentClass="gest.gen.EntiteContientID" alwaysExportAll="true">
+    <class source="gest.champPerso.TypeChampPerso" destinationName="TypeChampPerso" isExported="true" title="Type de champ personnalisé" summary="[nom]" parentClass="gest.gen.EntiteContientID" alwaysExportAll="false">
         <reference class="gest.prevention.ParamPrevention" field="mVectIDTypeChampPersoCol" />
         <reference class="gest.equipement.TypeEquipement" field="mVectTypeChampPerso" />
         <reference class="gest.horaire.ModeleHoraire" field="mVectTypeChampPerso" />
@@ -3750,19 +3750,19 @@
         <field source="mCourielPaget" destinationName="courielTeleavertisseur" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Couriel téléavertisseur" />
         <field source="mDateEmbauche" destinationName="dateEmbauche" isExported="true" skipWhen="NULL" type="date" title="Date de l'embauche" />
         <field source="mDateFin" definition="mDateFin" />
-        <field source="mDateNais" destinationName="dateNaissance" isExported="true" skipWhen="NULL" type="date" skipUserOption="Exclude employee birthdays?" title="Date de naissance" />
+        <field source="mDateNais" destinationName="dateNaissance" isExported="true" skipWhen="NULL" type="date" skipUserOption="Dates de naissance" title="Date de naissance" />
         <field source="mInactif" definition="mInactif" />
         <field source="mMatricule" definition="mMatricule" />
-        <field source="mNAS" destinationName="nas" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Exclude employee social security numbers?" title="Numéro d'assurance sociale (NAS)" />
+        <field source="mNAS" destinationName="nas" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Numéros d'assurance sociale" title="Numéro d'assurance sociale (NAS)" />
         <field source="mNom" definition="mNom" />
         <field source="mNote" definition="mNote" />
-        <field source="mNumAssMaladie" destinationName="numeroAssuranceMaladie" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Exclude employee health insurance card numbers?" title="Numéro assurance maladie" />
+        <field source="mNumAssMaladie" destinationName="numeroAssuranceMaladie" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Numéros de carte d'assurance maladie" title="Numéro assurance maladie" />
         <field source="mNumEmploye" destinationName="numeroEmploye" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Numéro employé" />
         <field source="mNumSeqTache" destinationName="numeroSequentielTache" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Numéro sequentiel de tâche" />
         <field source="mPaget" destinationName="teleavertisseur" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléavertisseur" />
         <field source="mPagetCode" destinationName="teleavertisseurCode" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléavertisseur - code" />
         <field source="mPermisClasse" destinationName="permisClasse" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Classe de permis de conduire" />
-        <field source="mPermisConduire" destinationName="permisConduire" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Exclude employee driver's license numbers?" title="Permis de conduire" />
+        <field source="mPermisConduire" destinationName="permisConduire" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" skipUserOption="Numéros de permis de conduire" title="Permis de conduire" />
         <field source="mPermisExpiration" destinationName="permisExpiration" isExported="true" skipWhen="NULL" type="date" title="Expiration du permis" />
         <field source="mPrenom" destinationName="prenom" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Prénom" />
         <field source="mTelBureau" destinationName="telephoneBureau" isExported="true" skipWhen="NULL,EMPTY_STRING" type="string" title="Téléphone bureau" />
@@ -4012,7 +4012,7 @@
         <field source="mIDEquipExistAssemble" destinationName="idEquipementAssemble" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.equipement.IDEquipExist" embedContents="true" title="Équipement assemblé" />
         <field source="mIDVehicule" destinationName="idVehicule" isExported="true" skipWhen="MINUS_ONE,NULL" type="gest.vehicule.IDVehicule" title="Véhicule" />
     </class>
-    <class source="gest.equipement.TypeEquipement" destinationName="TypeEquipement" isExported="true" title="Type d'équipement" summary="[nom]" parentClass="gest.gen.EntiteContientID" alwaysExportAll="true">
+    <class source="gest.equipement.TypeEquipement" destinationName="TypeEquipement" isExported="true" title="Type d'équipement" summary="[nom]" parentClass="gest.gen.EntiteContientID" alwaysExportAll="false">
         <reference class="gest.maintenance.Maintenance" field="mVectIDTypeEquipement" />
         <reference class="gest.equipement.EquipExist" field="mIDTypeEquipement" />
         <reference class="gest.equipement.QteRequise" field="mIDTypeEquipement" />
