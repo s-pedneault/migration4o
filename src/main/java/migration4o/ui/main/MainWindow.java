@@ -51,6 +51,7 @@ import migration4o.ui.panels.database_panels.conformity_analysis_panel.SchemaCom
 import migration4o.ui.panels.database_panels.cost_panel.CostPanel;
 import migration4o.ui.panels.database_panels.multi_database_comparison_panel.MultiDatabaseComparisonPanel;
 import migration4o.ui.panels.reference_schema_panels.migration_structure_panel.MigrationStructurePanel;
+import migration4o.ui.panels.reference_schema_panels.processing_indicators_panel.ProcessingIndicatorsPanel;
 import migration4o.ui.panels.reference_schema_panels.reference_schema_panel.SchemaEditorPanel;
 import migration4o.ui.panels.reference_schema_panels.schema_structure_panel.SchemaStructurePanel;
 import migration4o.ui.panels.welcome_panel.WelcomePanel;
@@ -325,6 +326,9 @@ public class MainWindow extends JFrame {
             // Add migration structure tab to Schema section
             migrationStructurePanel = new MigrationStructurePanel(schema);
             schemaTabPane.addTab("Migration structure", migrationStructurePanel);
+
+            // Add processing indicators tab to Schema section
+            schemaTabPane.addTab("Processing indicators", new ProcessingIndicatorsPanel());
 
             // Set up repeat export callback
             setRepeatExportCallback(() -> migrationStructurePanel.repeatLastExport());
@@ -850,8 +854,7 @@ public class MainWindow extends JFrame {
     }
 
     /**
-     * Opens a new Results tab in the Export section for a per-organization export and switches to it.
-     * Must be called on the EDT.
+     * Opens a new Results tab in the Export section for a per-organization export and switches to it. Must be called on the EDT.
      *
      * @param tabTitle tab label, e.g. "R\u00e9sultats \u2013 OrgName"
      * @return the new panel as a {@link migration4o.ui.common.DOExportMonitor}

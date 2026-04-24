@@ -217,11 +217,15 @@ class XSDFieldWriter {
         } else if (field.attributes.valueMap != null && !field.attributes.valueMap.isEmpty()) {
             // ValueMap: generate inline simpleType with xs:enumeration facets.
             // However, if the field type is "object", the value can be anything
-            // (dates, numbers, strings) — the valueMap is a best-effort
-            // transformation, not an exhaustive constraint. Use xs:string.
+            // (simple strings OR complex nested elements) — the valueMap is a
+            // best-effort transformation applied only when the raw value is a
+            // plain string. Use xs:anyType so both simple and complex content
+            // are valid.
             // Bitmask value maps produce comma-separated combinations, so they
             // cannot be constrained to a single enumeration value.
-            if ("object".equalsIgnoreCase(fieldType) || field.attributes.valueMap.bitmask) {
+            if ("object".equalsIgnoreCase(fieldType)) {
+                writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:anyType\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
+            } else if (field.attributes.valueMap.bitmask) {
                 writer.write(indent + "<xs:element name=\"" + fieldName + "\" type=\"xs:string\" minOccurs=\"0\" maxOccurs=\"1\"/>\n");
             } else {
                 Collection<String> mappedValues = field.attributes.valueMap.values();

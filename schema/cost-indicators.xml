@@ -1,0 +1,95 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<indicators>
+    <indicator name="Configurations SSI">
+        <class name="gest.config.ParamConfigSSI"/>
+    </indicator>
+    <indicator name="Fichiers">
+        <class name="gest.fichier.Fichier"/>
+    </indicator>
+    <indicator name="Rapports central">
+        <class name="gest.centreDesRapports.RapportCentral"/>
+    </indicator>
+
+    <indicator name="Dossiers adresse">
+        <class name="gest.dossPrev.DossPrev">
+            <criteria field="mIDDossPrevOld" operator="==" value="-1"/>
+        </class>
+    </indicator>
+    <indicator name="Dossiers adresse antérieurs">
+        <class name="gest.dossPrev.DossPrev">
+            <criteria field="mIDDossPrevOld" operator="==" value="-5"/>
+        </class>
+        <class name="gest.dossPrev.DossPrev">
+            <criteria field="mIDDossPrevOld" operator="!=" value="-1"/>
+            <criteria field="mIDDossPrevOld" operator="!=" value="-5"/>
+        </class>
+        <class name="gest.dossPrev.DossPrevSuppr"/>
+    </indicator>
+    <indicator name="Plans intervention">
+        <class name="gest.planInterv.PlanInterv"/>
+    </indicator>
+    <indicator name="Documents du Plan de sécurité civile">
+        <class name="gest.docum.Docum"/>
+    </indicator>
+    <indicator name="Sinistres ou simulations">
+        <class name="gest.secCiv.Sinistre"/>
+    </indicator>
+
+    <indicator name="Casernes">
+        <class name="gest.caserne.Caserne"/>
+    </indicator>
+    <indicator name="Véhicules">
+        <class name="gest.vehicule.Vehicule"/>
+    </indicator>
+
+    <indicator name="Bornes">
+        <class name="gest.borne.BorneIncendie"/>
+        <class name="gest.borne.BorneSeche"/>
+        <class name="gest.borne.PointEau"/>
+    </indicator>
+
+    <indicator name="Maintenances de bornes">
+        <class name="gest.borne.MaintBorne"/>
+    </indicator>
+    <indicator name="Équipements">
+        <class name="gest.equipement.EquipExist"/>
+    </indicator>
+    <indicator name="Maintenances d&apos;équipements">
+        <class name="gest.maintEquip.MaintEquip"/>
+    </indicator>
+
+    <indicator name="Employés">
+        <class name="gest.employe.Employe"/>
+    </indicator>
+    <indicator name="Équipes">
+        <class name="gest.equipe.Equipe"/>
+    </indicator>
+    <indicator name="Utilisateurs">
+        <class name="gest.utilGroupe.Utilisateur"/>
+    </indicator>
+    <indicator name="Modèles d'horaires">
+        <class name="gest.horaire.Horaire"/>
+    </indicator>
+    <indicator name="Quarts de travail">
+        <class name="gest.horaire.HorQuart"/>
+    </indicator>
+    <indicator name="Formations">
+        <class name="gest.formation.Formation"/>
+    </indicator>
+
+    <indicator name="Préventions">
+        <class name="gest.prevention.Prevention"/>
+    </indicator>
+    <indicator name="Types d&apos;anomalie">
+        <class name="gest.typeAnom.TypeAnom"/>
+    </indicator>
+    <indicator name="Interventions">
+        <class name="gest.intervention.Intervention"/>
+    </indicator>
+    <indicator name="Enquêtes / RCCI">
+        <class name="gest.rci.Rci"/>
+    </indicator>
+    <indicator name="Feuilles de temps (autre travail)">
+        <class name="gest.quart.Quart"/>
+    </indicator>
+</indicators>

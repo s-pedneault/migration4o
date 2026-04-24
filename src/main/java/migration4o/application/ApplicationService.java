@@ -2,19 +2,15 @@ package migration4o.application;
 
 import migration4o.models.schema.DOSchema;
 import migration4o.schema.DOSchemaService;
+import migration4o.schema.indicators.ProcessingIndicatorService;
 import migration4o.schema.modules.DOModuleService;
 
 /**
- * Central application service responsible for initializing all core services.
- * This service ensures that schemas and modules are loaded at startup,
- * eliminating the need for UI components to check initialization state.
+ * Central application service responsible for initializing all core services. This service ensures that schemas and modules are loaded at startup, eliminating the need for UI components to check initialization state.
  * 
- * Services initialized at startup:
- * - DOSchemaService: Reference schema from schema/reference-schema.xml
- * - DOModuleService: Module structure from schema/migration-format.xml
+ * Services initialized at startup: - DOSchemaService: Reference schema from schema/reference-schema.xml - DOModuleService: Module structure from schema/migration-format.xml
  * 
- * Services NOT initialized here:
- * - DODatabaseService: Requires user to select a database file
+ * Services NOT initialized here: - DODatabaseService: Requires user to select a database file
  */
 public class ApplicationService {
 
@@ -37,9 +33,7 @@ public class ApplicationService {
     }
 
     /**
-     * Initialize all core application services.
-     * This should be called once at application startup.
-     * Subsequent calls will be ignored if already initialized.
+     * Initialize all core application services. This should be called once at application startup. Subsequent calls will be ignored if already initialized.
      * 
      * @throws Exception If any service fails to initialize
      */
@@ -56,6 +50,9 @@ public class ApplicationService {
 
         // Initialize module service
         initializeModuleService();
+
+        // Initialize processing indicator service
+        ProcessingIndicatorService.getInstance().load();
 
         initialized = true;
         System.out.println("=== Application Services Initialized ===");
@@ -110,8 +107,7 @@ public class ApplicationService {
     }
 
     /**
-     * Reset the initialization state (primarily for testing).
-     * This does NOT clear the services themselves, only the initialization flag.
+     * Reset the initialization state (primarily for testing). This does NOT clear the services themselves, only the initialization flag.
      */
     public synchronized void resetInitializationState() {
         initialized = false;
