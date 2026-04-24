@@ -7,8 +7,7 @@ import migration4o.migration.ExportOutputOption;
 import migration4o.migration.FilesDestination;
 
 /**
- * Persistent export configuration for a database. Saved per-database as
- * {@code export-config.json} in the database file's parent folder.
+ * Persistent export configuration for a database. Saved per-database as {@code export-config.json} in the database file's parent folder.
  */
 public class ExportConfig {
 
@@ -31,6 +30,11 @@ public class ExportConfig {
     private String outputBranch;
     private String exportLanguage = "fr";
     private FilesDestination filesDestination = FilesDestination.FOLDER;
+
+    // Organization export config (persisted so --repeat-export can restore it)
+    private String organizationMode; // null = not yet configured; else OrganizationExportMode.name()
+    private List<Integer> selectedOrgIds = new ArrayList<>();
+    private boolean includeGeneralData = true;
 
     public ExportConfig() {
     }
@@ -171,12 +175,34 @@ public class ExportConfig {
         }
     }
 
+    public String getOrganizationMode() {
+        return organizationMode;
+    }
+
+    public void setOrganizationMode(String organizationMode) {
+        this.organizationMode = organizationMode;
+    }
+
+    public List<Integer> getSelectedOrgIds() {
+        return selectedOrgIds;
+    }
+
+    public void setSelectedOrgIds(List<Integer> selectedOrgIds) {
+        this.selectedOrgIds = selectedOrgIds != null ? selectedOrgIds : new ArrayList<>();
+    }
+
+    public boolean isIncludeGeneralData() {
+        return includeGeneralData;
+    }
+
+    public void setIncludeGeneralData(boolean includeGeneralData) {
+        this.includeGeneralData = includeGeneralData;
+    }
+
     // ── Derived helpers ──────────────────────────────────────────────────────
 
     /**
-     * Returns the effective maxObjectsPerClass for the export pipeline: null
-     * for ALL_OBJECTS mode, the configured value for MAX_PER_CLASS, null for
-     * SEED_BASED (seed mode uses the advisor differently).
+     * Returns the effective maxObjectsPerClass for the export pipeline: null for ALL_OBJECTS mode, the configured value for MAX_PER_CLASS, null for SEED_BASED (seed mode uses the advisor differently).
      */
     public Integer getEffectiveMaxObjectsPerClass() {
         if (exportMode == ExportMode.MAX_PER_CLASS) {

@@ -638,20 +638,31 @@ public class DatabaseExportPanel extends JPanel {
             return; // User cancelled or detection error
         }
 
+        // Persist the chosen org config so --repeat-export can restore it without showing the dialog again
+        OrganizationExportConfig orgCfg = exportOptions.getOrganizationConfig();
+        if (orgCfg != null) {
+            config.setOrganizationMode(orgCfg.getMode().name());
+            config.setSelectedOrgIds(orgCfg.getSelectedOrganizations().stream().map(OrganizationInfo::idSSI).collect(java.util.stream.Collectors.toList()));
+            config.setIncludeGeneralData(orgCfg.isIncludeGeneralData());
+            try {
+                ExportConfigPersistence.save(config, databasePath);
+            } catch (Exception ex) {
+                System.err.println("[DatabaseExportPanel] Failed to persist org config: " + ex.getMessage());
+            }
+        }
+
         exportOrchestrator.exportModulesAsync(dbContext, modulesToExport, exportOptions);
     }
 
     // ── UI helpers ──────────────────────────────────────────────────────────
 
     /**
-     * Detects organizations in the database and applies the appropriate
-     * {@link OrganizationExportConfig} to {@code exportOptions}.
+     * Detects organizations in the database and applies the appropriate {@link OrganizationExportConfig} to {@code exportOptions}.
      * <ul>
-     *   <li>No orgs found — config stays {@code null} (no org filtering); returns {@code true}</li>
-     *   <li>One org found — single-org config set automatically; returns {@code true}</li>
-     *   <li>Multiple orgs — {@link OrganizationExportDialog} shown; returns {@code true} on OK,
-     *       {@code false} if user cancels</li>
-     *   <li>Detection error — shows error dialog; returns {@code false}</li>
+     * <li>No orgs found — config stays {@code null} (no org filtering); returns {@code true}</li>
+     * <li>One org found — single-org config set automatically; returns {@code true}</li>
+     * <li>Multiple orgs — {@link OrganizationExportDialog} shown; returns {@code true} on OK, {@code false} if user cancels</li>
+     * <li>Detection error — shows error dialog; returns {@code false}</li>
      * </ul>
      */
     private boolean applyOrganizationConfig(ExportOptions exportOptions) {

@@ -45,6 +45,10 @@ import javax.swing.tree.TreePath;
 import org.jdesktop.swingx.JXTreeTable;
 
 import migration4o.migration.ExportConfigPersistence;
+import migration4o.migration.OrganizationDetectionService;
+import migration4o.migration.OrganizationExportConfig;
+import migration4o.migration.OrganizationExportMode;
+import migration4o.migration.OrganizationInfo;
 import migration4o.migration.monitoring.ExportStatistics;
 import migration4o.migration.monitoring.ValidationResult;
 import migration4o.models.schema.DOSchema;
@@ -1090,6 +1094,25 @@ public class MigrationStructurePanel extends JPanel {
         // each export)
         ExportConfig config = ExportConfigPersistence.load(activeContext.databaseFilePath);
         ExportOptions options = ExportOptions.fromConfig(config);
+
+        // Restore org config from persisted data so no dialog is shown
+        String savedOrgMode = config.getOrganizationMode();
+        if (savedOrgMode != null && !savedOrgMode.isBlank()) {
+            try {
+                List<OrganizationInfo> allOrgs = OrganizationDetectionService.detectOrganizations(activeContext.database);
+                if (!allOrgs.isEmpty()) {
+                    List<Integer> savedIds = config.getSelectedOrgIds();
+                    List<OrganizationInfo> selected = savedIds.isEmpty() ? new ArrayList<>(allOrgs) : allOrgs.stream().filter(o -> savedIds.contains(o.idSSI())).collect(java.util.stream.Collectors.toList());
+                    if (selected.isEmpty()) {
+                        selected = new ArrayList<>(allOrgs);
+                    }
+                    OrganizationExportMode orgMode = OrganizationExportMode.valueOf(savedOrgMode);
+                    options.setOrganizationConfig(new OrganizationExportConfig(orgMode, selected, config.isIncludeGeneralData()));
+                }
+            } catch (Exception e) {
+                System.err.println("[MigrationStructurePanel] Failed to restore org config: " + e.getMessage());
+            }
+        }
 
         // Collect all modules — same as the Export button
         List<DOSchemaModule> modules = DOModuleService.getInstance().getModules();
