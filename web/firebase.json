@@ -16,15 +16,6 @@
                         "value": "no-cache, max-age=0"
                     }
                 ]
-            },
-            {
-                "source": "municipalities.js",
-                "headers": [
-                    {
-                        "key": "Cache-Control",
-                        "value": "public, max-age=86400"
-                    }
-                ]
             }
         ]
     },

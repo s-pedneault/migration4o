@@ -2,16 +2,16 @@
 <html lang="fr">
 
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title data-i18n="pageTitle">Téléversement de base de données — Migration</title>
-
-    <!-- Firebase SDKs (compat v9) -->
-    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.11.1/firebase-storage-compat.js"></script>
-
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Migration4o</title>
+    <meta name="description"
+        content="Migration4o — Extraction complète de vos données PL et accès local gratuit à vie à vos données.">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet">
     <style>
-        /* ── Reset & base ────────────────────────────────────────── */
         *,
         *::before,
         *::after {
@@ -21,221 +21,200 @@
         }
 
         :root {
-            --blue: #1a56db;
-            --blue-lt: #e8f0fe;
-            --green: #057a55;
-            --green-lt: #d5f0e8;
-            --red: #c81e1e;
-            --red-lt: #fde8e8;
-            --gray: #6b7280;
-            --gray-lt: #f3f4f6;
-            --border: #d1d5db;
-            --text: #111827;
-            --radius: 10px;
-            --shadow: 0 4px 24px rgba(0, 0, 0, .10);
-            --trans: .3s ease;
-            --c-primary-hover: #3b5ce0;
-            --c-primary-selected: #19417c;
+            --blue-deep: #07111f;
+            --blue-dark: #0d1e36;
+            --blue-mid: #152d52;
+            --blue-bright: #2563eb;
+            --blue-light: #6fabff;
+            --gold: #f59e0b;
+            --gold-light: #fbbf24;
+            --green: #10b981;
+            --amber: #f59e0b;
+            --text-primary: #f0f6ff;
+            --text-secondary: #8fa8c8;
+            --text-muted: #4f6785;
+            --surface: #111d2e;
+            --surface-light: #172336;
+            --border: rgba(255, 255, 255, 0.07);
+            --radius: 12px;
+            --radius-lg: 18px;
+            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        html {
+            scroll-behavior: smooth;
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #1a3a5c;
-            min-height: 100vh;
-            color: var(--text);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            isolation: isolate;
+            background: var(--blue-deep);
+            color: var(--text-primary);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            font-size: 16px;
+            line-height: 1.6;
+            overflow-x: hidden;
         }
 
-        body::before {
-            content: '';
+        /* ── Navigation ────────────────────────────────── */
+        nav {
             position: fixed;
-            inset: -20px;
-            background-image: url('splash.jpg');
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-            filter: blur(8px);
-            z-index: -1;
-        }
-
-        /* ── Top bar ─────────────────────────────────────────────── */
-        header {
-            width: 100%;
-            background: #fff;
-            border-bottom: 1px solid var(--border);
-            padding: 12px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            position: sticky;
             top: 0;
+            left: 0;
+            right: 0;
             z-index: 100;
-            box-shadow: 0 1px 6px rgba(0, 0, 0, .06);
+            padding: 0 2rem;
+            height: 64px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(7, 17, 31, 0.85);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
         }
 
-        header .brand {
-            font-size: 15px;
-            font-weight: 600;
-            color: var(--c-primary-selected);
-            letter-spacing: -.3px;
+        .nav-logo {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            text-decoration: none;
+            letter-spacing: -0.02em;
         }
 
-        #lang-select {
-            font-size: 12px;
-            padding: 4px 8px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--gray-lt);
-            color: var(--gray);
-            cursor: pointer;
-            outline: none;
-            transition: border-color var(--trans);
+        .nav-logo span {
+            color: var(--gold);
         }
 
-        #lang-select:hover {
-            border-color: var(--blue);
-            color: var(--blue);
+        .nav-links {
+            display: flex;
+            gap: 2.5rem;
+            list-style: none;
         }
 
-        /* ── Card ────────────────────────────────────────────────── */
-        main {
-            width: 100%;
-            max-width: 640px;
-            padding: 40px 16px 60px;
+        .nav-links a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color var(--transition);
         }
 
-        .card {
-            background: #fff;
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
+        .nav-links a:hover {
+            color: var(--text-primary);
+        }
+
+        @media (max-width: 600px) {
+            .nav-links {
+                gap: 1.25rem;
+            }
+        }
+
+        /* ── Hero ──────────────────────────────────────── */
+        .hero {
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 8rem 2rem 5rem;
             overflow: hidden;
         }
 
-        .card-header {
-            background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
-            color: #fff;
-            padding: 28px 32px 24px;
-        }
-
-        .card-header h1 {
-            font-size: 21px;
-            font-weight: 700;
-            line-height: 1.25;
-            margin-bottom: 6px;
-        }
-
-        .card-header p {
-            font-size: 14px;
-            opacity: .84;
-            line-height: 1.5;
-        }
-
-        /* ── Stepper ─────────────────────────────────────────────── */
-        .stepper {
-            display: flex;
-            justify-content: center;
-            padding: 20px 24px 10px;
-            gap: 0;
-            background: #fff;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .step-item {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            flex: 1;
-        }
-
-        .step-item:not(:last-child)::after {
-            content: '';
+        .hero-bg {
             position: absolute;
-            top: 15px;
-            left: 60%;
-            width: 80%;
-            height: 2px;
-            background: var(--border);
-            transition: background var(--trans);
+            inset: 0;
+            background:
+                radial-gradient(ellipse 90% 55% at 50% -10%, rgba(37, 99, 235, 0.45) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 85% 110%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
+                linear-gradient(180deg, var(--blue-dark) 0%, var(--blue-deep) 100%);
         }
 
-        .step-item.done:not(:last-child)::after,
-        .step-item.active:not(:last-child)::after {
-            background: var(--blue);
+        .hero-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+            background-size: 64px 64px;
+            animation: grid-scroll 25s linear infinite;
         }
 
-        .step-dot {
-            width: 30px;
-            height: 30px;
-            border-radius: 50%;
-            border: 2px solid var(--border);
-            background: #fff;
-            display: flex;
+        @keyframes grid-scroll {
+            0% {
+                transform: translateY(0);
+            }
+
+            100% {
+                transform: translateY(64px);
+            }
+        }
+
+        .hero-content {
+            position: relative;
+            max-width: 820px;
+        }
+
+        .hero-badge {
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            font-size: 12px;
+            gap: 0.5rem;
+            background: rgba(37, 99, 235, 0.18);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            border-radius: 100px;
+            padding: 0.375rem 1.125rem;
+            font-size: 0.75rem;
             font-weight: 700;
-            color: var(--gray);
-            transition: all var(--trans);
-            z-index: 1;
+            color: var(--blue-light);
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 2rem;
+            animation: fade-up 0.8s ease both;
         }
 
-        .step-item.active .step-dot {
-            border-color: var(--blue);
-            background: var(--blue);
-            color: #fff;
+        .hero-badge::before {
+            content: '';
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--blue-light);
+            animation: dot-pulse 2s ease infinite;
         }
 
-        .step-item.done .step-dot {
-            border-color: var(--green);
-            background: var(--green);
-            color: #fff;
+        .hero h1 {
+            font-size: clamp(2.4rem, 6vw, 4.25rem);
+            font-weight: 900;
+            line-height: 1.06;
+            letter-spacing: -0.035em;
+            margin-bottom: 1.5rem;
+            animation: fade-up 0.8s 0.1s ease both;
         }
 
-        .step-item.done .step-dot::before {
-            content: '✓';
+        .hero h1 .highlight {
+            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
 
-        .step-label {
-            font-size: 10px;
-            margin-top: 5px;
-            color: var(--gray);
-            text-align: center;
-            white-space: nowrap;
-            transition: color var(--trans);
+        .hero p {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 580px;
+            margin: 0 auto 2.5rem;
+            animation: fade-up 0.8s 0.2s ease both;
         }
 
-        .step-item.active .step-label {
-            color: var(--blue);
-            font-weight: 600;
+        .hero-cta {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            animation: fade-up 0.8s 0.3s ease both;
         }
 
-        .step-item.done .step-label {
-            color: var(--green);
-        }
-
-        /* ── Step panels ─────────────────────────────────────────── */
-        .steps-container {
-            padding: 28px 32px 32px;
-        }
-
-        .step-panel {
-            display: none;
-        }
-
-        .step-panel.active {
-            display: block;
-            animation: fadeIn .25s ease;
-        }
-
-        @keyframes fadeIn {
+        @keyframes fade-up {
             from {
                 opacity: 0;
-                transform: translateY(8px);
+                transform: translateY(24px);
             }
 
             to {
@@ -244,2413 +223,871 @@
             }
         }
 
-        /* ── Form elements ───────────────────────────────────────── */
-        .field-group {
-            margin-bottom: 20px;
+        @keyframes dot-pulse {
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.4;
+                transform: scale(0.75);
+            }
         }
 
-        label {
-            display: block;
-            font-size: 13px;
-            font-weight: 600;
-            margin-bottom: 6px;
-            color: #374151;
-        }
-
-        label span.req {
-            color: var(--red);
-            margin-left: 2px;
-        }
-
-        input[type=text],
-        input[type=email],
-        input[type=file] {
-            width: 100%;
-            padding: 10px 14px;
-            font-size: 15px;
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            outline: none;
-            transition: border-color var(--trans), box-shadow var(--trans);
-            background: #fff;
-            color: var(--text);
-        }
-
-        input[type=text]:focus,
-        input[type=email]:focus {
-            border-color: var(--blue);
-            box-shadow: 0 0 0 3px rgba(26, 86, 219, .12);
-        }
-
-        input.invalid {
-            border-color: var(--red);
-            box-shadow: 0 0 0 3px rgba(200, 30, 30, .10);
-        }
-
-        input.valid {
-            border-color: var(--green);
-        }
-
-        .field-hint {
-            font-size: 12px;
-            color: var(--gray);
-            margin-top: 5px;
-        }
-
-        .field-error {
-            font-size: 12px;
-            color: var(--red);
-            margin-top: 5px;
-            display: none;
-        }
-
-        /* ── Municipality result card ────────────────────────────── */
-        #muni-result {
-            background: var(--blue-lt);
-            border: 1.5px solid #93c5fd;
-            border-radius: 8px;
-            padding: 12px 16px;
-            margin-top: 12px;
-            display: none;
-            animation: fadeIn .2s ease;
-            cursor: pointer;
-            transition: background var(--trans), border-color var(--trans), box-shadow var(--trans);
-        }
-
-        #muni-result:hover {
-            background: #d0e2ff;
-            border-color: var(--blue);
-            box-shadow: 0 2px 12px rgba(26, 86, 219, .15);
-        }
-
-        #muni-result .muni-name {
-            font-size: 17px;
-            font-weight: 700;
-            color: var(--blue);
-        }
-
-        #muni-result .muni-mrc {
-            font-size: 13px;
-            color: #1e40af;
-            margin-top: 3px;
-        }
-
-        #muni-result .muni-arrow {
-            float: right;
-            font-size: 18px;
-            color: var(--blue);
-            margin-top: 2px;
-            transition: transform var(--trans);
-        }
-
-        #muni-result:hover .muni-arrow {
-            transform: translateX(4px);
-        }
-
-        #muni-not-found {
-            background: var(--red-lt);
-            border: 1.5px solid #fca5a5;
-            border-radius: 8px;
-            padding: 10px 14px;
-            margin-top: 10px;
-            font-size: 13px;
-            color: var(--red);
-            display: none;
-        }
-
-        /* ── Legal text ──────────────────────────────────────────── */
-        .legal-box {
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            padding: 16px 18px;
-            height: 220px;
-            overflow-y: auto;
-            font-size: 13px;
-            line-height: 1.65;
-            color: #374151;
-            background: var(--gray-lt);
-            margin-bottom: 16px;
-        }
-
-        .legal-box h3 {
-            font-size: 14px;
-            margin-bottom: 8px;
-            color: var(--text);
-        }
-
-        .legal-box p {
-            margin-bottom: 10px;
-        }
-
-        .checkbox-row {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-top: 4px;
-        }
-
-        .checkbox-row input[type=checkbox] {
-            width: 18px;
-            height: 18px;
-            margin-top: 2px;
-            flex-shrink: 0;
-            accent-color: var(--blue);
-            cursor: pointer;
-        }
-
-        .checkbox-row label {
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            margin: 0;
-        }
-
-        /* ── File upload zone ────────────────────────────────────── */
-        .drop-zone {
-            border: 2px dashed var(--border);
-            border-radius: 10px;
-            padding: 28px 20px;
-            text-align: center;
-            cursor: pointer;
-            transition: border-color var(--trans), background var(--trans);
-            background: var(--gray-lt);
-            position: relative;
-        }
-
-        .drop-zone:hover,
-        .drop-zone.dragover {
-            border-color: var(--blue);
-            background: var(--blue-lt);
-        }
-
-        .drop-zone input[type=file] {
-            position: absolute;
-            inset: 0;
-            opacity: 0;
-            cursor: pointer;
-            width: 100%;
-            height: 100%;
-        }
-
-        .drop-icon {
-            font-size: 36px;
-            margin-bottom: 10px;
-            display: block;
-        }
-
-        .drop-zone .drop-text {
-            font-size: 14px;
-            font-weight: 600;
-            color: #374151;
-        }
-
-        .drop-zone .drop-sub {
-            font-size: 12px;
-            color: var(--gray);
-            margin-top: 4px;
-        }
-
-        #file-name-display {
-            margin-top: 10px;
-            font-size: 13px;
-            color: var(--blue);
-            font-weight: 600;
-            word-break: break-all;
-        }
-
-        /* ── Progress bar ────────────────────────────────────────── */
-        .progress-wrapper {
-            margin-top: 18px;
-            display: none;
-        }
-
-        .progress-header {
-            display: flex;
-            justify-content: space-between;
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            margin-bottom: 6px;
-        }
-
-        .progress-bar-track {
-            width: 100%;
-            height: 12px;
-            background: #e5e7eb;
-            border-radius: 999px;
-            overflow: hidden;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #1a56db, #6366f1);
-            border-radius: 999px;
-            width: 0%;
-            transition: width .4s ease;
-        }
-
-        .progress-sub {
-            font-size: 12px;
-            color: var(--gray);
-            margin-top: 6px;
-            text-align: right;
-        }
-
-        .upload-error {
-            margin-top: 12px;
-            padding: 10px 14px;
-            background: var(--red-lt);
-            border: 1.5px solid #fca5a5;
-            border-radius: 8px;
-            font-size: 13px;
-            color: var(--red);
-            display: none;
-        }
-
-        /* ── Summary box ─────────────────────────────────────────── */
-        .summary-box {
-            background: var(--gray-lt);
-            border: 1.5px solid var(--border);
-            border-radius: 8px;
-            padding: 14px 18px;
-            font-size: 14px;
-            margin-bottom: 20px;
-        }
-
-        .summary-row {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 6px;
-            align-items: baseline;
-        }
-
-        .summary-row:last-child {
-            margin-bottom: 0;
-        }
-
-        .summary-label {
-            font-weight: 600;
-            color: #374151;
-            min-width: 160px;
-            font-size: 13px;
-        }
-
-        .summary-value {
-            color: var(--text);
-            font-size: 13px;
-            word-break: break-word;
-        }
-
-        /* ── Confirmation screen ─────────────────────────────────── */
-        .success-icon {
-            width: 72px;
-            height: 72px;
-            background: var(--green-lt);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 36px;
-            margin: 0 auto 20px;
-        }
-
-        .confirmation-panel {
-            text-align: center;
-            padding-top: 8px;
-        }
-
-        .confirmation-panel h2 {
-            font-size: 22px;
-            font-weight: 700;
-            color: var(--green);
-            margin-bottom: 10px;
-        }
-
-        .confirmation-panel p {
-            font-size: 14px;
-            color: #374151;
-            line-height: 1.6;
-            max-width: 460px;
-            margin: 0 auto 16px;
-        }
-
-        .ref-chip {
-            display: inline-block;
-            background: var(--blue-lt);
-            border: 1.5px solid #93c5fd;
-            border-radius: 8px;
-            padding: 8px 18px;
-            font-family: monospace;
-            font-size: 14px;
-            color: var(--blue);
-            font-weight: 700;
-            letter-spacing: .5px;
-            margin-bottom: 20px;
-        }
-
-        /* ── Navigation buttons ──────────────────────────────────── */
-        .nav-row {
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
-            margin-top: 24px;
-            padding-top: 20px;
-            border-top: 1px solid var(--border);
-        }
-
+        /* ── Buttons ───────────────────────────────────── */
         .btn {
-            padding: 10px 24px;
-            font-size: 14px;
-            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.875rem 1.75rem;
             border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: var(--transition);
             cursor: pointer;
             border: none;
-            transition: all var(--trans);
-        }
-
-        .btn-sm {
-            padding: 8px 18px;
-            font-size: 13px;
-        }
-
-        .btn-prev {
-            background: var(--gray-lt);
-            color: #374151;
-            border: 1.5px solid var(--border);
-        }
-
-        .btn-prev:hover {
-            background: #e5e7eb;
-        }
-
-        .btn-next {
-            background: var(--blue);
-            color: #fff;
-        }
-
-        .btn-next:hover {
-            background: #1e40af;
-        }
-
-        .btn-next:disabled {
-            opacity: .5;
-            cursor: not-allowed;
-        }
-
-        .btn-upload {
-            background: var(--green);
-            color: #fff;
-            width: 100%;
-            padding: 12px;
-            font-size: 15px;
-            margin-top: 16px;
-        }
-
-        .btn-upload:hover {
-            background: #065f46;
-        }
-
-        .btn-upload:disabled {
-            opacity: .5;
-            cursor: not-allowed;
-        }
-
-        /* ── Purpose selection tiles ─────────────────────────────── */
-        .purpose-intro {
-            font-size: 13px;
-            color: #374151;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .purpose-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .purpose-tile {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-            padding: 16px 20px;
-            border: 2px solid var(--border);
-            border-radius: 10px;
-            background: #fff;
-            cursor: pointer;
-            text-align: left;
-            width: 100%;
-            transition: border-color var(--trans), background var(--trans), box-shadow var(--trans);
             font-family: inherit;
         }
 
-        .purpose-tile:hover {
-            border-color: var(--blue);
-            background: var(--blue-lt);
-            box-shadow: 0 2px 12px rgba(26, 86, 219, .10);
+        .btn-primary {
+            background: var(--blue-bright);
+            color: white;
         }
 
-        .purpose-tile.selected {
-            border-color: var(--blue);
-            background: var(--blue-lt);
-            box-shadow: 0 0 0 3px rgba(26, 86, 219, .15);
+        .btn-primary:hover {
+            background: var(--blue-light);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 28px rgba(37, 99, 235, 0.45);
         }
 
-        .purpose-tile-icon {
-            font-size: 26px;
-            flex-shrink: 0;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--gray-lt);
-            border-radius: 10px;
-            transition: background var(--trans);
-        }
-
-        .purpose-tile:hover .purpose-tile-icon,
-        .purpose-tile.selected .purpose-tile-icon {
-            background: #c7d7fb;
-        }
-
-        .purpose-tile-body {
-            flex: 1;
-            min-width: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 3px;
-        }
-
-        .purpose-tile-title {
-            font-size: 15px;
-            font-weight: 700;
-            color: var(--text);
-        }
-
-        .purpose-tile-desc {
-            font-size: 12px;
-            color: var(--gray);
-            line-height: 1.45;
-        }
-
-        .purpose-tile:hover .purpose-tile-title,
-        .purpose-tile.selected .purpose-tile-title {
-            color: var(--blue);
-        }
-
-        .purpose-tile-check {
-            font-size: 20px;
-            flex-shrink: 0;
-            color: var(--blue);
-            opacity: 0;
-            transition: opacity var(--trans);
-        }
-
-        .purpose-tile.selected .purpose-tile-check {
-            opacity: 1;
-        }
-
-        /* ── Responsive ──────────────────────────────────────────── */
-        @media (max-width: 480px) {
-            .card-header {
-                padding: 22px 20px 18px;
-            }
-
-            .steps-container {
-                padding: 22px 20px 24px;
-            }
-
-            .step-label {
-                display: none;
-            }
-
-            .summary-label {
-                min-width: 120px;
-            }
-        }
-
-        .sidebar-logo {
-            width: 34px;
-            height: 34px;
-            background: linear-gradient(135deg, var(--c-primary-hover), var(--c-primary-selected));
-            border-radius: 10px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            color: #fff;
-            font-weight: 800;
-            font-size: 16px;
-            flex-shrink: 0;
-            box-shadow: 0 2px 8px rgba(79, 70, 229, .25);
-            transition: transform .2s var(--ease-spring), box-shadow .2s ease;
-        }
-
-        /* ── Preparation guide link ───────────────────────────────── */
-        .guide-link {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            margin-top: 12px;
-            font-size: 13px;
-            color: rgba(255, 255, 255, .92);
-            cursor: pointer;
-            text-decoration: none;
-            border-bottom: 1px dashed rgba(255, 255, 255, .45);
-            padding-bottom: 1px;
-            transition: color var(--trans), border-color var(--trans);
-        }
-
-        .guide-link:hover {
-            color: #fff;
-            border-color: #fff;
-        }
-
-        /* ── Guide modal ──────────────────────────────────────────── */
-        .guide-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, .55);
-            z-index: 9000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn .2s ease;
-        }
-
-        .guide-overlay.open {
-            display: flex;
-        }
-
-        .guide-modal {
-            background: #fff;
-            border-radius: 16px;
-            box-shadow: 0 12px 48px rgba(0, 0, 0, .25);
-            width: 94%;
-            max-width: 520px;
-            max-height: 88vh;
-            overflow-y: auto;
-            animation: fadeIn .25s ease;
-        }
-
-        .guide-modal-header {
-            background: linear-gradient(135deg, #1a56db 0%, #1e40af 100%);
-            color: #fff;
-            padding: 22px 28px 18px;
-            border-radius: 16px 16px 0 0;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-
-        .guide-modal-header h2 {
-            font-size: 18px;
-            font-weight: 700;
-            margin: 0;
-        }
-
-        .guide-modal-header p {
-            font-size: 13px;
-            opacity: .8;
-            margin-top: 4px;
-        }
-
-        .guide-close {
-            background: rgba(255, 255, 255, .18);
-            border: none;
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            font-size: 18px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-            transition: background var(--trans);
-        }
-
-        .guide-close:hover {
-            background: rgba(255, 255, 255, .3);
-        }
-
-        .guide-body {
-            padding: 20px 24px 24px;
-            min-height: 420px;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .guide-body .pl-mockup {
-            flex: 1;
-        }
-
-        /* ── PL app visual mockup ─────────────────────────────────── */
-        .pl-mockup {
-            border-radius: 14px;
-            overflow: hidden;
-            border: 2.5px solid #c2410c;
-            background: #fef0e6;
-            box-shadow: 0 4px 20px rgba(234, 88, 12, .15);
-        }
-
-        .pl-titlebar {
-            background: linear-gradient(135deg, #ea580c 0%, #d6540a 100%);
-            color: #fff;
-            font-size: 28px;
-            font-weight: 900;
-            text-align: center;
-            padding: 12px 0;
-            letter-spacing: 2px;
-            text-shadow: 0 2px 4px rgba(0, 0, 0, .2);
-        }
-
-        .pl-menubar {
-            background: #e5e7eb;
-            padding: 0;
-            position: relative;
-            border-bottom: 1px solid #d1d5db;
-            height: 56px;
-        }
-
-        .pl-menu-item {
-            display: inline-block;
-            padding: 6px 14px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #111827;
-            cursor: default;
-        }
-
-        .pl-menu-active {
-            background: #fff;
-            border: 1px solid #d1d5db;
-            border-bottom: 1px solid #fff;
-            margin-bottom: -1px;
-            position: relative;
-            z-index: 1;
-        }
-
-        .pl-dropdown {
-            position: absolute;
-            left: 65px;
-            top: 29px;
-            background: #fff;
-            border: 1px solid #d1d5db;
-            border-radius: 0 0 4px 4px;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, .1);
-            z-index: 2;
-        }
-
-        .pl-dropdown-item {
-            display: block;
-            padding: 6px 18px;
-            font-size: 13px;
-            color: #111827;
-            white-space: nowrap;
-        }
-
-        .pl-config-body {
-            display: flex;
-            gap: 0;
-            padding: 12px;
-        }
-
-        .pl-nav {
-            background: #fcd7b6;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 14px 16px;
-            min-width: 120px;
-            flex-shrink: 0;
-        }
-
-        .pl-nav-title {
-            font-size: 13px;
-            font-weight: 700;
-            color: #111827;
-            margin-bottom: 10px;
-        }
-
-        .pl-nav-sub {
-            display: flex;
-            align-items: stretch;
-            gap: 0;
-            padding-left: 6px;
-        }
-
-        .pl-nav-line {
-            width: 2px;
-            background: #9ca3af;
-            flex-shrink: 0;
-            margin-right: 8px;
-            border-radius: 2px;
-        }
-
-        .pl-nav-sub-label {
-            font-size: 12px;
-            color: #374151;
-            padding: 2px 0;
-        }
-
-        .pl-panel {
-            flex: 1;
-            min-width: 0;
-            margin-left: 10px;
-        }
-
-        .pl-tab {
-            display: inline-block;
-            background: #fff;
-            border: 1px solid #d1d5db;
-            border-bottom: none;
-            border-radius: 6px 6px 0 0;
-            padding: 5px 14px;
-            font-size: 12px;
-            font-weight: 600;
-            color: #111827;
-            position: relative;
-            z-index: 1;
-        }
-
-        .pl-tab-content {
-            background: #fde5d0;
-            border: 1px solid #d1d5db;
-            border-radius: 0 8px 8px 8px;
-            padding: 16px;
-        }
-
-        .pl-field-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            margin-bottom: 16px;
-        }
-
-        .pl-field-label {
-            font-size: 13px;
-            color: #111827;
-            white-space: nowrap;
-        }
-
-        .pl-field-value {
-            background: #fff;
-            border: 1px solid #d1d5db;
-            border-radius: 4px;
-            padding: 5px 10px;
-            font-size: 12px;
-            color: #374151;
-            font-family: monospace;
-            flex: 1;
-        }
-
-        .pl-backup-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            background: #fff;
-            border: 2px solid #374151;
-            border-radius: 6px;
-            padding: 8px 16px;
-            font-size: 13px;
-            font-weight: 700;
-            color: #111827;
-            cursor: default;
-        }
-
-        /* ── Progressive reveal ──────────────────────────────────── */
-        [data-gs] {
-            transition: opacity .35s ease, max-height .4s ease, transform .35s ease;
-        }
-
-        [data-gs].gs-hidden {
-            opacity: 0;
-            max-height: 0 !important;
-            overflow: hidden;
-            pointer-events: none;
-            transform: translateY(-4px);
-        }
-
-        [data-gs].gs-active {
-            box-shadow: 0 0 0 2.5px #ea580c, 0 0 12px rgba(234, 88, 12, .25);
-            border-radius: 6px;
-        }
-
-        /* Guide nav bar */
-        .guide-nav {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: 16px;
-            gap: 12px;
-        }
-
-        .guide-nav-btn {
-            background: var(--blue);
-            color: #fff;
-            border: none;
-            border-radius: 8px;
-            padding: 8px 18px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background var(--trans), opacity var(--trans);
-        }
-
-        .guide-nav-btn:hover {
-            background: #1e40af;
-        }
-
-        .guide-nav-btn:disabled {
-            opacity: .35;
-            cursor: default;
-        }
-
-        .guide-nav-btn.outline {
+        .btn-outline {
             background: transparent;
-            color: var(--blue);
-            border: 1.5px solid var(--blue);
+            color: var(--text-primary);
+            border: 1px solid rgba(255, 255, 255, 0.15);
         }
 
-        .guide-nav-btn.outline:hover {
-            background: var(--blue-lt);
+        .btn-outline:hover {
+            background: rgba(255, 255, 255, 0.06);
+            border-color: rgba(255, 255, 255, 0.28);
+            transform: translateY(-2px);
         }
 
-        .guide-dots {
-            display: flex;
-            gap: 6px;
+        /* ── Shared section layout ─────────────────────── */
+        section {
+            padding: 6rem 2rem;
         }
 
-        .guide-dot {
-            width: 9px;
-            height: 9px;
-            border-radius: 50%;
-            background: #bfdbfe;
-            transition: background var(--trans), transform var(--trans);
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
-        .guide-dot.active {
-            background: var(--blue);
-            transform: scale(1.3);
-        }
-
-        .guide-result {
-            margin-top: 18px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 12px 16px;
-            background: #f0fdf4;
-            border: 1px solid #86efac;
-            border-radius: 10px;
-        }
-
-        .guide-result-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-
-        .guide-result-text {
-            font-size: 13px;
-            color: #166534;
-            line-height: 1.5;
-        }
-
-        .guide-result-file {
+        .section-label {
+            font-size: 0.7rem;
             font-weight: 700;
-            color: #15803d;
-        }
-
-        /* ── Upload + Encryption side-by-side ─────────────────────── */
-        .upload-row {
-            display: flex;
-            gap: 14px;
-            margin-bottom: 6px;
-        }
-
-        .upload-row>.drop-zone {
-            flex: 1;
-            min-width: 0;
-            margin: 0;
-        }
-
-        .upload-row>.encrypt-toggle {
-            flex: 0 0 220px;
-            margin: 0;
-        }
-
-        @media (max-width: 580px) {
-            .upload-row {
-                flex-direction: column;
-            }
-
-            .upload-row>.encrypt-toggle {
-                flex: none;
-            }
-        }
-
-        /* ── Encryption toggle ────────────────────────────────────── */
-        .encrypt-toggle {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            padding: 12px 16px;
-            background: var(--red-lt);
-            border: 2px solid #fca5a5;
-            border-radius: 8px;
-            transition: border-color var(--trans), background var(--trans);
-        }
-
-        .encrypt-toggle.enabled {
-            background: #eff6ff;
-            border-color: #93c5fd;
-        }
-
-        .encrypt-toggle input[type=checkbox] {
-            width: 18px;
-            height: 18px;
-            margin-top: 2px;
-            flex-shrink: 0;
-            accent-color: var(--blue);
-            cursor: pointer;
-        }
-
-        .encrypt-toggle-body {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .encrypt-toggle-label {
-            font-size: 13px;
-            font-weight: 600;
-            color: #374151;
-            cursor: pointer;
-        }
-
-        .encrypt-toggle-desc {
-            font-size: 12px;
-            color: var(--gray);
-            margin-top: 3px;
-            line-height: 1.45;
-        }
-
-        .encrypt-badge {
-            font-size: 10px;
-            font-weight: 700;
-            background: var(--blue);
-            color: #fff;
-            padding: 2px 7px;
-            border-radius: 4px;
-            margin-left: 6px;
-            vertical-align: middle;
-            letter-spacing: .3px;
-        }
-
-        /* ── Encryption key display (confirmation step) ────────── */
-        .key-section {
-            display: none;
-            margin: 20px auto 0;
-            max-width: 480px;
-            text-align: left;
-        }
-
-        .key-section.visible {
-            display: block;
-        }
-
-        .key-warning {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            background: #fff7ed;
-            border: 1.5px solid #fdba74;
-            border-radius: 10px;
-            padding: 12px 16px;
-            margin-bottom: 14px;
-        }
-
-        .key-warning-icon {
-            font-size: 22px;
-            flex-shrink: 0;
-        }
-
-        .key-warning-text {
-            font-size: 13px;
-            color: #9a3412;
-            line-height: 1.5;
-        }
-
-        .key-box {
-            background: #1e293b;
-            border-radius: 10px;
-            padding: 16px 18px;
-            position: relative;
-        }
-
-        .key-label {
-            font-size: 11px;
-            font-weight: 600;
-            color: #94a3b8;
             text-transform: uppercase;
-            letter-spacing: .5px;
-            margin-bottom: 8px;
+            letter-spacing: 0.14em;
+            color: var(--blue-light);
+            margin-bottom: 0.875rem;
         }
 
-        .key-value {
-            font-family: 'SF Mono', 'Fira Code', monospace;
-            font-size: 13px;
-            color: #67e8f9;
-            word-break: break-all;
-            line-height: 1.6;
-            user-select: all;
+        .section-title {
+            font-size: clamp(1.75rem, 4vw, 2.75rem);
+            font-weight: 800;
+            letter-spacing: -0.025em;
+            line-height: 1.15;
+            margin-bottom: 0.875rem;
         }
 
-        .key-actions {
+        .section-subtitle {
+            font-size: 1.05rem;
+            color: var(--text-secondary);
+            max-width: 540px;
+            line-height: 1.65;
+        }
+
+        /* ── Product section ───────────────────────────── */
+        .product-section {
+            /* background-color: var(--blue-dark); */
+            border-top: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
+
+            background-image: url('splash-blur.jpg');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+        }
+
+
+        .product-header {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4rem;
+            align-items: center;
+            margin-bottom: 3.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .product-header {
+                grid-template-columns: 1fr;
+                gap: 2.5rem;
+            }
+        }
+
+        .product-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.25rem;
+        }
+
+        .stat-card {
+            background: rgba(25, 69, 162, 0.3);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+        }
+
+        .stat-number {
+            font-size: 2.25rem;
+            font-weight: 900;
+            color: var(--text-primary);
+            letter-spacing: -0.04em;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            line-height: 1.4;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+            gap: 1.25rem;
+        }
+
+        .feature-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            transition: var(--transition);
+        }
+
+        .feature-card:hover {
+            border-color: rgba(59, 130, 246, 0.3);
+            background: var(--surface-light);
+            transform: translateY(-3px);
+        }
+
+        .feature-icon {
+            font-size: 1.6rem;
+            margin-bottom: 0.875rem;
+        }
+
+        .feature-title {
+            font-size: 0.92rem;
+            font-weight: 600;
+            margin-bottom: 0.4rem;
+        }
+
+        .feature-desc {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            line-height: 1.55;
+        }
+
+        /* ── Software table ────────────────────────────── */
+        .table-section {
+            background: var(--blue-deep);
+        }
+
+        .table-header {
             display: flex;
-            gap: 8px;
-            margin-top: 12px;
+            align-items: flex-end;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+            gap: 1rem;
         }
 
-        .key-btn {
+        .software-table-wrap {
+            overflow-x: auto;
+            border-radius: var(--radius-lg);
+            border: 1px solid var(--border);
+        }
+
+        .software-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+
+        .software-table th {
+            background: var(--surface);
+            padding: 1rem 1.25rem;
+            text-align: left;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .software-table td {
+            padding: 1.25rem;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .software-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        .software-table td:first-child,
+        .software-table th:first-child {
+            width: 35%;
+            min-width: 350px;
+        }
+
+        .software-table tbody tr {
+            transition: background var(--transition);
+        }
+
+        .software-table tbody tr:hover {
+            background: var(--surface);
+        }
+
+        .software-name {
+            font-weight: 700;
+            /* font-size: 0.975rem; */
+            font-size: 1.2rem;
+        }
+
+        .software-name a {
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            text-decoration: none;
+            transition: color var(--transition);
+        }
+
+        .software-name a::after {
+            content: ' 🔗';
+            font-size: 0.8rem;
+        }
+
+        .software-name a:hover {
+            color: var(--text-primary);
+        }
+
+
+
+        .software-vendor {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            margin-top: 0.2rem;
+        }
+
+        /* Status badges */
+        .badge {
             display: inline-flex;
             align-items: center;
-            gap: 5px;
-            padding: 7px 14px;
-            font-size: 12px;
+            gap: 0.375rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 100px;
+            font-size: 0.72rem;
             font-weight: 600;
-            border-radius: 6px;
-            cursor: pointer;
-            border: none;
-            transition: background var(--trans);
+            white-space: nowrap;
         }
 
-        .key-btn-copy {
-            background: var(--blue);
-            color: #fff;
-        }
-
-        .key-btn-copy:hover {
-            background: #1e40af;
-        }
-
-        .key-btn-download {
-            background: #334155;
-            color: #e2e8f0;
-        }
-
-        .key-btn-download:hover {
-            background: #475569;
-        }
-
-        .key-copied {
-            font-size: 12px;
-            color: var(--green);
-            font-weight: 600;
-            margin-left: 6px;
-            opacity: 0;
-            transition: opacity .2s;
-        }
-
-        .key-copied.show {
-            opacity: 1;
-        }
-
-        /* ── Encryption stop banner (confirmation step) ─────────── */
-        .encrypt-stop-banner {
-            display: none;
-            align-items: flex-start;
-            gap: 12px;
-            margin: 16px auto 20px;
-            max-width: 480px;
-            padding: 14px 18px;
-            background: #fef2f2;
-            border: 2px solid #f87171;
-            border-radius: 10px;
-            text-align: left;
-            animation: fadeIn .25s ease;
-        }
-
-        .encrypt-stop-banner.visible {
-            display: flex;
-        }
-
-        .encrypt-stop-banner-icon {
-            font-size: 24px;
+        .badge::before {
+            content: '';
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
             flex-shrink: 0;
         }
 
-        .encrypt-stop-banner-body {
-            flex: 1;
-            min-width: 0;
+        .badge-available {
+            background: rgba(16, 185, 129, 0.14);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.22);
         }
 
-        .encrypt-stop-banner-title {
-            font-size: 14px;
-            font-weight: 800;
-            color: #b91c1c;
-            margin-bottom: 4px;
+        .badge-available::before {
+            background: #10b981;
         }
 
-        .encrypt-stop-banner-text {
-            font-size: 13px;
-            color: #991b1b;
-            line-height: 1.55;
+        .badge-unavailable {
+            background: rgba(16, 185, 129, 0.14);
+            color: #b92c10;
+            border: 1px solid rgba(16, 185, 129, 0.22);
+        }
+
+        .badge-unavailable::before {
+            background: #ff1a1a;
+        }
+
+        .badge-partial {
+            background: rgba(157, 185, 16, 0.22);
+            color: #ffee00;
+            border: 1px solid rgba(157, 185, 16, 0.22);
+        }
+
+        .badge-partial::before {
+            background: #fdf142;
+        }
+
+
+
+        .badge-dev {
+            background: rgba(245, 158, 11, 0.14);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.22);
+        }
+
+        .badge-dev::before {
+            background: #f59e0b;
+            animation: dot-pulse 1.5s ease infinite;
+        }
+
+        .badge-planned {
+            background: rgba(100, 116, 139, 0.14);
+            color: #94a3b8;
+            border: 1px solid rgba(100, 116, 139, 0.22);
+        }
+
+        .badge-planned::before {
+            background: #64748b;
+        }
+
+        /* Compatibility cell */
+        .compat-native {
+            color: var(--gold);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .compat-avancee {
+            color: var(--green);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        .compat-unknown {
+            color: var(--blue-bright);
+            font-weight: 700;
+            font-size: 0.85rem;
+        }
+
+        /* Module tags */
+        .modules-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+
+        .module-tag {
+            background: rgba(37, 99, 235, 0.13);
+            color: var(--blue-light);
+            border: 1px solid rgba(59, 130, 246, 0.18);
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 500;
+        }
+
+        .table-note {
+            margin-top: 1.25rem;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            text-align: center;
+        }
+
+        .table-note a {
+            color: var(--blue-light);
+            text-decoration: none;
+        }
+
+        .table-note a:hover {
+            text-decoration: underline;
+        }
+
+        /* ── Contact section ───────────────────────────── */
+        .contact-section {
+            background: linear-gradient(140deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
+            border-top: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .contact-card {
+            max-width: 620px;
+            margin: 0 auto;
+        }
+
+        .contact-card p {
+            color: var(--text-secondary);
+            margin-bottom: 2.5rem;
+            font-size: 1.05rem;
+        }
+
+        .contact-btns {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        /* ── Scroll-reveal ─────────────────────────────── */
+        .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* ── Scroll-to-top button ──────────────────────── */
+        .scroll-top {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            width: 44px;
+            height: 44px;
+            background: var(--blue-bright);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-decoration: none;
+            font-size: 1.2rem;
+            line-height: 1;
+            opacity: 0;
+            pointer-events: none;
+            transition: var(--transition);
+            box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45);
+        }
+
+        .scroll-top.visible {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* ── Footer ────────────────────────────────────── */
+        footer {
+            padding: 2rem;
+            border-top: 1px solid var(--border);
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.82rem;
+        }
+
+        footer a {
+            color: var(--text-secondary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--text-primary);
         }
     </style>
 </head>
 
 <body>
 
-    <!-- ── Top bar ──────────────────────────────────────────────── -->
-    <header>
-        <span>
-            <span class="sidebar-logo">G</span>
-            <span class="brand" data-i18n="brandName">Gestion Technologies</span>
-        </span>
-        <select id="lang-select" onchange="setLang(this.value)" title="Language / Langue">
-            <option value="fr">Français</option>
-            <option value="en">English</option>
-        </select>
-    </header>
+    <!-- ── Navigation ───────────────────────────────── -->
+    <nav>
+        <a href="#" class="nav-logo">Migration4o</a>
+        <ul class="nav-links">
+            <li><a href="#logiciels">Alternatives à PL</a></li>
+            <li><a href="#produit">Extraction des données</a></li>
+            <li><a href="#contact">Contact</a></li>
+        </ul>
+    </nav>
 
-    <!-- ── Main card ────────────────────────────────────────────── -->
-    <main>
-        <div class="card">
-
-            <!-- Card header -->
-            <div class="card-header">
-                <h1 data-i18n="heading">Téléversement de base de données PL</h1>
-                <p data-i18n="subheading">Transmettez votre base de données PL de façon sécurisée pour qu'elle soit
-                    traitée avec Migration4o</p>
-                <a class="guide-link" onclick="openGuide()" data-i18n="guideLink">📋 Comment préparer votre fichier
-                    ?</a>
-            </div>
-
-            <!-- Stepper -->
-            <nav class="stepper" id="stepper" aria-label="Étapes">
-                <div class="step-item active" id="si-0">
-                    <div class="step-dot">1</div>
-                    <span class="step-label" data-i18n="stepLabelPurpose">Objectif</span>
-                </div>
-                <div class="step-item" id="si-1">
-                    <div class="step-dot">2</div>
-                    <span class="step-label" data-i18n="stepLabelMuni">Municipalité</span>
-                </div>
-                <div class="step-item" id="si-2">
-                    <div class="step-dot">3</div>
-                    <span class="step-label" data-i18n="stepLabelEmail">Courriel</span>
-                </div>
-                <div class="step-item" id="si-3">
-                    <div class="step-dot">4</div>
-                    <span class="step-label" data-i18n="stepLabelLegal">Conditions</span>
-                </div>
-                <div class="step-item" id="si-4">
-                    <div class="step-dot">5</div>
-                    <span class="step-label" data-i18n="stepLabelUpload">Fichier</span>
-                </div>
-                <div class="step-item" id="si-5">
-                    <div class="step-dot">6</div>
-                    <span class="step-label" data-i18n="stepLabelDone">Reçu</span>
-                </div>
-            </nav>
-
-            <!-- Step panels -->
-            <div class="steps-container">
-
-                <!-- ── STEP 0 : Purpose ───────────────────────────────── -->
-                <div class="step-panel active" id="step-0">
-                    <p class="purpose-intro" data-i18n="purposeIntro">Veuillez sélectionner l'objectif de cette
-                        soumission.</p>
-                    <div class="purpose-grid">
-                        <button class="purpose-tile" data-purpose="analyse" onclick="selectPurpose(this)">
-                            <span class="purpose-tile-icon">🔍</span>
-                            <span class="purpose-tile-body">
-                                <span class="purpose-tile-title" data-i18n="purposeOpt1">Analyse et estimation du
-                                    prix</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt1Desc">Soumettre la base de données
-                                    pour analyse préliminaire et soumission de prix.</span>
-                            </span>
-                            <span class="purpose-tile-check">✓</span>
-                        </button>
-                        <button class="purpose-tile" data-purpose="test" onclick="selectPurpose(this)">
-                            <span class="purpose-tile-icon">🧪</span>
-                            <span class="purpose-tile-body">
-                                <span class="purpose-tile-title" data-i18n="purposeOpt2">Extraction test</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt2Desc">Soumettre la base de données
-                                    pour une extraction d'essai et validation des résultats.</span>
-                            </span>
-                            <span class="purpose-tile-check">✓</span>
-                        </button>
-                        <button class="purpose-tile" data-purpose="final" onclick="selectPurpose(this)">
-                            <span class="purpose-tile-icon">🚀</span>
-                            <span class="purpose-tile-body">
-                                <span class="purpose-tile-title" data-i18n="purposeOpt3">Migration finale</span>
-                                <span class="purpose-tile-desc" data-i18n="purposeOpt3Desc">Soumettre la base de données
-                                    pour la migration officielle et définitive.</span>
-                            </span>
-                            <span class="purpose-tile-check">✓</span>
-                        </button>
-                    </div>
-                    <div class="nav-row">
-                        <button class="btn btn-next" id="next-0" onclick="goNext(0)" disabled
-                            data-i18n="btnNext">Suivant →</button>
-                    </div>
-                </div>
-
-                <!-- ── STEP 1 : Municipality ─────────────────────────── -->
-                <div class="step-panel" id="step-1">
-                    <div class="field-group">
-                        <label for="muni-code">
-                            <span data-i18n="muniLabel">Code de municipalité</span>
-                            <span class="req">*</span>
-                        </label>
-                        <input type="text" id="muni-code" maxlength="5" inputmode="numeric" placeholder=""
-                            autocomplete="off" />
-                        <p class="field-hint" data-i18n="muniHint">Entrez le code à 5 chiffres de votre municipalité.
-                        </p>
-                        <div class="field-error" id="muni-error" data-i18n="muniError">Veuillez entrer un code de
-                            municipalité valide.</div>
-                    </div>
-
-                    <div id="muni-result" onclick="goNext(1)">
-                        <span class="muni-arrow">→</span>
-                        <div class="muni-name" id="muni-name"></div>
-                        <div class="muni-mrc" id="muni-mrc"></div>
-                    </div>
-
-                    <div id="muni-not-found" data-i18n="muniNotFound">Aucune municipalité trouvée pour ce code.</div>
-
-                    <div class="nav-row">
-                        <button class="btn btn-next" id="next-1" onclick="goNext(1)" disabled
-                            data-i18n="btnNext">Suivant →</button>
-                    </div>
-                </div>
-
-                <!-- ── STEP 2 : Email ────────────────────────────────── -->
-                <div class="step-panel" id="step-2">
-                    <div class="field-group">
-                        <label for="email1">
-                            <span data-i18n="emailLabel">Adresse courriel</span>
-                            <span class="req">*</span>
-                        </label>
-                        <input type="email" id="email1" data-i18n-placeholder="emailPlaceholder"
-                            placeholder="vous@exemple.com" autocomplete="email" />
-                    </div>
-                    <div class="field-group">
-                        <label for="email2">
-                            <span data-i18n="emailConfirmLabel">Confirmer le courriel</span>
-                            <span class="req">*</span>
-                        </label>
-                        <input type="email" id="email2" data-i18n-placeholder="emailConfirmPlaceholder"
-                            placeholder="vous@exemple.com" autocomplete="off" />
-                        <div class="field-error" id="email-error" data-i18n="emailMismatch">Les adresses courriel ne
-                            correspondent pas.</div>
-                    </div>
-
-                    <div class="nav-row">
-                        <button class="btn btn-prev" onclick="goPrev(2)" data-i18n="btnPrev">← Retour</button>
-                        <button class="btn btn-next" id="next-2" onclick="goNext(2)" data-i18n="btnNext">Suivant
-                            →</button>
-                    </div>
-                </div>
-
-                <!-- ── STEP 3 : Legal ────────────────────────────────── -->
-                <div class="step-panel" id="step-3">
-                    <div class="legal-box" id="legal-box">
-                        <h3 data-i18n="legalTitle">Conditions d'utilisation et autorisation de traitement</h3>
-
-                        <!-- FR placeholder text — to be replaced by client -->
-                        <div id="legal-text-fr">
-                            <p>Les présentes conditions encadrent la transmission et le traitement de votre base de
-                                données PL à des fins d'analyse et de planification du coût de traitement, et/ou
-                                d'extraction et de migration vers les formats universels visés.</p>
-                            <p>En soumettant votre fichier, vous confirmez être dûment autorisé(e) à partager ces
-                                données au nom de votre municipalité ou organisme.</p>
-                            <p>Le fichier transmis sera stocké de façon sécurisée et ne sera utilisé qu'aux fins de la
-                                conversion demandée. Il ne sera pas divulgué à des tiers sans votre consentement
-                                explicite.</p>
-                            <p>Les données seront conservées le temps nécessaire au traitement, puis supprimées de nos
-                                dossiers.</p>
-                            <p>Gestion Technologies se réserve le droit de refuser tout fichier non conforme ou dont le
-                                contenu serait inapproprié.</p>
-                        </div>
-
-                        <!-- EN placeholder text -->
-                        <div id="legal-text-en" style="display:none">
-                            <p>These terms govern the transmission and processing of your PL database for analysis and
-                                cost planning purposes, and/or for extraction and migration to the targeted universal
-                                formats.</p>
-                            <p>By submitting your file, you confirm that you are duly authorized to share this data on
-                                behalf of your municipality or organization.</p>
-                            <p>The submitted file will be stored securely and used only for the requested conversion. It
-                                will not be disclosed to third parties without your explicit consent.</p>
-                            <p>Data will be retained as long as necessary for processing, then deleted from our records.
-                            </p>
-                            <p>Gestion Technologies reserves the right to refuse any non-conforming or inappropriate
-                                file.</p>
-                        </div>
-                    </div>
-
-                    <div class="checkbox-row">
-                        <input type="checkbox" id="legal-check" onchange="onLegalCheck()" />
-                        <label for="legal-check" data-i18n="legalCheckbox">
-                            J'ai lu et j'accepte les conditions ci-dessus.
-                        </label>
-                    </div>
-                    <div class="field-error" id="legal-error" data-i18n="legalError">Vous devez accepter les conditions
-                        pour continuer.</div>
-
-                    <div class="nav-row">
-                        <button class="btn btn-prev" onclick="goPrev(3)" data-i18n="btnPrev">← Retour</button>
-                        <button class="btn btn-next" id="next-3" onclick="goNext(3)" disabled
-                            data-i18n="btnNext">Suivant →</button>
-                    </div>
-                </div>
-
-                <!-- ── STEP 4 : Upload ───────────────────────────────── -->
-                <div class="step-panel" id="step-4">
-
-                    <!-- Summary -->
-                    <div class="summary-box" id="upload-summary">
-                        <div class="summary-row">
-                            <span class="summary-label" data-i18n="summaryPurpose">Objectif :</span>
-                            <span class="summary-value" id="sum-purpose">—</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-label" data-i18n="summaryMuni">Municipalité :</span>
-                            <span class="summary-value" id="sum-muni">—</span>
-                        </div>
-                        <div class="summary-row">
-                            <span class="summary-label" data-i18n="summaryEmail">Courriel :</span>
-                            <span class="summary-value" id="sum-email">—</span>
-                        </div>
-                    </div>
-
-                    <!-- Drop zone + Encryption side by side -->
-                    <div class="upload-row">
-                        <div class="drop-zone" id="drop-zone" ondragover="onDragOver(event)"
-                            ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
-                            <input type="file" id="file-input" accept=".zip,.db,.db4o,.dat,.bak"
-                                onchange="onFileSelected(event)" />
-                            <span class="drop-icon">📂</span>
-                            <div class="drop-text" data-i18n="dropText">Glisser-déposer le fichier ici</div>
-                            <div class="drop-sub" data-i18n="dropSub">ou cliquer pour parcourir — .zip, .db, .db4o,
-                                .dat,
-                                .bak</div>
-                        </div>
-
-                        <!-- Encryption toggle -->
-                        <div class="encrypt-toggle" id="encrypt-toggle">
-                            <input type="checkbox" id="encrypt-check" onchange="onEncryptToggle(this.checked)" />
-                            <div class="encrypt-toggle-body">
-                                <label class="encrypt-toggle-label" for="encrypt-check">
-                                    <span data-i18n="encryptLabel">🔒 Chiffrer le fichier avant l'envoi</span>
-                                    <span class="encrypt-badge" data-i18n="encryptBadge">AES-256</span>
-                                </label>
-                                <div class="encrypt-toggle-desc" data-i18n="encryptDesc">
-                                    Le fichier sera chiffré dans votre navigateur avant d'être téléversé. Une clé de
-                                    déchiffrement vous sera remise à la fin.
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div id="file-name-display"></div>
-
-                    <!-- Progress bar -->
-                    <div class="progress-wrapper" id="progress-wrapper">
-                        <div class="progress-header">
-                            <span data-i18n="progressLabel">Téléversement en cours…</span>
-                            <span id="progress-pct">0 %</span>
-                        </div>
-                        <div class="progress-bar-track">
-                            <div class="progress-bar-fill" id="progress-fill"></div>
-                        </div>
-                        <div class="progress-sub" id="progress-sub"></div>
-                    </div>
-
-                    <div class="upload-error" id="upload-error"></div>
-
-                    <button class="btn btn-upload" id="btn-upload" onclick="startUpload()" disabled
-                        data-i18n="btnUpload">Téléverser le fichier</button>
-
-                    <div class="nav-row" style="border-top:none; padding-top:0; margin-top:10px;">
-                        <button class="btn btn-prev btn-sm" id="btn-prev-4" onclick="goPrev(4)" data-i18n="btnPrev">←
-                            Retour</button>
-                    </div>
-                </div>
-
-                <!-- ── STEP 5 : Confirmation ─────────────────────────── -->
-                <div class="step-panel" id="step-5">
-                    <div class="confirmation-panel">
-                        <div class="success-icon">✅</div>
-                        <h2 data-i18n="confirmTitle">Fichier reçu !</h2>
-
-                        <!-- Red stop banner — shown only when encryption was used -->
-                        <div class="encrypt-stop-banner" id="encrypt-stop-banner">
-                            <span class="encrypt-stop-banner-icon">🛑</span>
-                            <div class="encrypt-stop-banner-body">
-                                <div class="encrypt-stop-banner-title" data-i18n="encryptStopTitle">ARRÊTEZ !
-                                    Sauvegardez votre clé de chiffrement</div>
-                                <div class="encrypt-stop-banner-text" data-i18n="encryptStopText">
-                                    Votre fichier a été chiffré. Sauvegardez la clé ci-dessous maintenant, puis
-                                    transmettez-la-nous séparément afin que nous puissions déchiffrer votre fichier.
-                                </div>
-                            </div>
-                        </div>
-
-                        <p data-i18n="confirmText">Votre base de données a été transmise avec succès. Notre équipe la
-                            traitera dans les prochains jours ouvrables.</p>
-                        <p data-i18n="confirmEmail">Un courriel de confirmation vous sera envoyé à l'adresse fournie.
-                        </p>
-
-                        <!-- Encryption key display (shown only when encryption was used) -->
-                        <div class="key-section" id="key-section">
-                            <div class="key-warning">
-                                <span class="key-warning-icon">⚠️</span>
-                                <span class="key-warning-text" data-i18n="keyWarning">
-                                    Conservez cette clé précieusement ! Elle est indispensable pour déchiffrer votre
-                                    fichier. Elle ne sera plus affichée après avoir quitté cette page.
-                                </span>
-                            </div>
-                            <div class="key-box">
-                                <div class="key-label" data-i18n="keyLabel">Clé de déchiffrement</div>
-                                <div class="key-value" id="key-value"></div>
-                                <div class="key-actions">
-                                    <button class="key-btn key-btn-copy" onclick="copyKey()">
-                                        📋 <span data-i18n="keyCopy">Copier</span>
-                                    </button>
-                                    <button class="key-btn key-btn-download" onclick="downloadKeyFile()">
-                                        💾 <span data-i18n="keyDownload">Télécharger .txt</span>
-                                    </button>
-                                    <span class="key-copied" id="key-copied" data-i18n="keyCopied">Copié !</span>
-                                </div>
-                            </div>
-                        </div>
-                        <!-- <p data-i18n="confirmRef">Votre numéro de référence :</p>
-                        <div class="ref-chip" id="ref-number">—</div> -->
-
-                    </div>
-                </div>
-
-            </div><!-- /steps-container -->
-        </div><!-- /card -->
-    </main>
-
-    <!-- ── Preparation guide modal ────────────────────────────────── -->
-    <div class="guide-overlay" id="guide-overlay" onclick="if(event.target===this)closeGuide()">
-        <div class="guide-modal">
-            <div class="guide-modal-header">
-                <div>
-                    <h2 data-i18n="guideTitle">Préparer votre base de données</h2>
-                    <p></p>
-                </div>
-                <button class="guide-close" onclick="closeGuide()" aria-label="Fermer">&times;</button>
-            </div>
-            <div class="guide-body">
-
-                <!-- Step navigation -->
-                <div class="guide-nav">
-                    <button class="guide-nav-btn outline" id="guide-prev" onclick="guideGoPrev()" data-i18n="btnPrev">←
-                        Retour</button>
-                    <div class="guide-dots" id="guide-dots">
-                        <span class="guide-dot"></span>
-                        <span class="guide-dot"></span>
-                        <span class="guide-dot"></span>
-                        <span class="guide-dot"></span>
-                    </div>
-                    <button class="guide-nav-btn" id="guide-next" onclick="guideGoNext()" data-i18n="btnNext">Suivant
-                        →</button>
-                </div>
-
-                <!-- Visual mockup of the PL application -->
-                <div class="pl-mockup">
-                    <!-- PL title bar -->
-                    <div class="pl-titlebar">PL</div>
-
-                    <!-- Step 1: Menu bar with Options > Configuration -->
-                    <div data-gs="1" class="pl-menubar">
-                        <span class="pl-menu-item" style="font-weight:700">Fichier</span>
-                        <span class="pl-menu-item pl-menu-active">Options</span>
-                        <div class="pl-dropdown">
-                            <span class="pl-dropdown-item">Configuration</span>
-                        </div>
-                    </div>
-
-                    <!-- Steps 2-3: Configuration window content -->
-                    <div data-gs="2" class="pl-config-body">
-                        <!-- Step 2: Left nav -->
-                        <div class="pl-nav" data-gs="2">
-                            <div class="pl-nav-title">Administration<br>du système</div>
-                            <div class="pl-nav-sub">
-                                <div class="pl-nav-line"></div>
-                                <div class="pl-nav-sub-label">Paramètres<br>de base</div>
-                            </div>
-                        </div>
-
-                        <!-- Step 3: Right panel -->
-                        <div class="pl-panel" data-gs="3">
-                            <div class="pl-tab">Copie de sûreté</div>
-                            <div class="pl-tab-content">
-                                <div class="pl-field-row">
-                                    <span class="pl-field-label">Répertoire:</span>
-                                    <span class="pl-field-value">C:\PL\Backup\</span>
-                                </div>
-                                <div style="text-align:center">
-                                    <div class="pl-backup-btn">👉 <span>Faire une copie<br>MAINTENANT</span></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Step 4: Result instruction -->
-                <div class="guide-result" data-gs="4" id="guide-result">
-                    <span class="guide-result-icon">📦</span>
-                    <div class="guide-result-text">
-                        Récupérez le fichier <span class="guide-result-file">BackupManuel.zip</span>
-                        dans le répertoire indiqué, puis téléversez-le à l'étape « Fichier » de ce formulaire.
-                    </div>
-                </div>
-
+    <!-- ── Hero ─────────────────────────────────────── -->
+    <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-grid"></div>
+        <div class="hero-content">
+            <!-- <div class="hero-badge">Migration4o</div> -->
+            <h1>
+                Alternatives au logiciel<br>
+                <span class="highlight">Première Ligne</span><br>
+                qui est en <span style="color:red">fin de vie</span><br>
+            </h1>
+            <p>
+                Les services de sécurité incendie sont nombreux à chercher des alternatives pour remplacer le logiciel
+                de gestion incendie Première Ligne. Cette page vise à répertorier les différentes options accessibles
+                aux SSI.
+            </p>
+            <div class="hero-cta">
+                <a href="#logiciels" class="btn btn-primary">Alternatives disponibles sur le marché</a>
+                <a href="#produit" class="btn btn-outline">Extraction des données de PL</a>
             </div>
         </div>
-    </div>
+    </section>
 
-    <!-- ── Municipalities data ───────────────────────────────────── -->
-    <script src="municipalities.js"></script>
+    <!-- ── Compatible software ───────────────────────── -->
+    <section class="table-section" id="logiciels">
+        <div class="container">
+            <div class="table-header">
+                <div>
+                    <div class="section-label">Fin de vie de Première Ligne</div>
+                    <h2 class="section-title">Alternatives disponibles sur le marché</h2>
+                    <p class="section-subtitle">
+                        Logiciels de gestion incendie pouvant potentiellement succéder à Première Ligne.
+                    </p>
+                </div>
+                <a href="#contact" class="btn btn-outline">+ Ajouter un logiciel au répertoire</a>
+            </div>
+
+            <div class="software-table-wrap reveal">
+                <table class="software-table">
+                    <thead>
+                        <tr>
+                            <th>Logiciel</th>
+                            <th>Fournisseur</th>
+                            <th>Statut</th>
+                            <th>Fonctionnalités</th>
+                            <th>Tarification</th>
+                            <th>Import des données</th>
+                            <th>Compatibilité Migration4o</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a
+                                            href="https://icosolutions.com/logiciels/ico-incendie/" target="_blank">ICO
+                                            Incendie</a></span></div>
+                                <div class="software-vendor">Plateforme web</div>
+                            </td>
+                            <td>ICO Solutions</td>
+                            <td><span class="badge badge-available">Disponible</span></td>
+                            <td>
+                                <span class="badge badge-available">Tous les modules</span>
+
+                            </td>
+                            <td>
+                                $$$<br>
+                                <!-- <small style="color:var(--text-muted)">Inclus avec service Migration4o</small> -->
+                            </td>
+                            <td>Quelques options limitées d'import Excel/CSV</td>
+                            <td><span class="compat-unknown">À déterminer</span></td>
+                        </tr>
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a
+                                            href="https://www.profiremanager.com"
+                                            target="_blank">ProFireManager</a></span></div>
+                                <div class="software-vendor">Plateforme web nuagique</div>
+                            </td>
+                            <td>ProFireManager</td>
+                            <td><span class="badge badge-available">Disponible</span></td>
+                            <td>
+                                <span class="badge badge-partial">La plupart des modules</span>
+                            </td>
+                            <td>
+                                $$<br>
+                                <!-- <small style="color:var(--text-muted)">Inclus avec service Migration4o</small> -->
+                            </td>
+                            <td>Plusieurs options</td>
+                            <td><span class="compat-avancee">Avancée</span></td>
+                        </tr>
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a href="" target="_blank">Plateforme
+                                            X</a></span></div>
+                                <div class="software-vendor">(nom temporaire, en développement)</div>
+                                <div class="software-vendor">Plateforme web nuagique</div>
+                            </td>
+                            <td>À déterminer</td>
+                            <td><span class="badge badge-unavailable">En développement</span></td>
+                            <td>
+                                <span class="badge badge-unknown">À déterminer</span>
+                            </td>
+                            <td>
+                                $$<br>
+                                <!-- <small style="color:var(--text-muted)">Inclus avec service Migration4o</small> -->
+                            </td>
+                            <td>À déterminer</td>
+                            <td><span class="compat-unknown">À déterminer</span></td>
+                        </tr>
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a
+                                            href="https://www.logicielradar.com" target="_blank">Radar</a></span></div>
+                                <div class="software-vendor">Plateforme web nuagique</div>
+                            </td>
+                            <td>Logiciels Radar</td>
+                            <td><span class="badge badge-available">Disponible</span></td>
+                            <td>
+                                <span class="badge badge-partial">La plupart des modules</span>
+                            </td>
+                            <td>
+                                $$<br>
+                                <!-- <small style="color:var(--text-muted)">À déterminer</small> -->
+                            </td>
+                            <td>À déterminer</td>
+                            <td><span class="compat-unknown">À déterminer</span></td>
+                        </tr>
+
+
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a href="https://www.firstdue.com"
+                                            target="_blank">First
+                                            Due</a></span></div>
+                                <div class="software-vendor">Plateforme web nuagique</div>
+                            </td>
+                            <td>First Due</td>
+                            <td><span class="badge badge-partial">Disponible*</span><br />
+                                <small style="color:var(--text-muted)">* en anglais seulement, <br />français en
+                                    développement</small>
+
+                            </td>
+                            <td>
+                                <span class="badge badge-available">Tous les modules</span>
+                            </td>
+                            <td>
+                                $$$<br>
+                                <!-- <small style="color:var(--text-muted)">À déterminer</small> -->
+                            </td>
+                            <td>Plusieurs options</td>
+                            <td><span class="compat-unknown">À déterminer</span></td>
+                        </tr>
+
+
+                        <tr>
+                            <td>
+                                <div class="software-name">Projet provincial (Québec)</div>
+                                <div class="software-vendor">Technologie inconnue</div>
+                            </td>
+                            <td>AGSCIQ / MSP?</td>
+                            <td><span class="badge badge-unavailable">Développement non-débuté</span></td>
+                            <td>
+                                <span class="badge badge-unavailable">À l'étape de projet</span>
+                            </td>
+                            <td>
+                                <small style="color:var(--text-muted)">À déterminer</small>
+                            </td>
+                            <td><small style="color:var(--text-muted)">À déterminer</small></td>
+                            <td><span class="compat-unknown">À déterminer</span></td>
+                        </tr>
+
+
+                        <tr style="background:rgba(0, 20, 50, 1)">
+                            <td>
+                                <div class="software-name"><span class="nav-links"><a href="#produit">M4o</a></span>
+                                </div>
+                                <div class="software-vendor">App web locale</div>
+                            </td>
+                            <td>Gestion Technologies</td>
+                            <td><span class="badge badge-available">Disponible</span></td>
+                            <td>
+                                <span class="badge badge-available">Tous les modules</span><br />
+                                <small class="compat-native">★ en lecture seulement</small>
+                                <small style="color:var(--text-muted)">(recherche et consultation locale des
+                                    données de PL)</small>
+
+                            </td>
+                            <td>
+                                Gratuit à vie<br>
+                                <small style="color:var(--text-muted)">Inclus avec extraction Migration4o</small>
+                            </td>
+                            <td>XML</td>
+                            <td><span class="compat-native">★ 100%</span></td>
+                        </tr>
+
+                    </tbody>
+                </table>
+            </div>
+
+
+            <p class="table-note">
+                D'autres alternatives seront ajoutées dès qu'elles seront connues.<br />
+                Une information dans le tableau ci-dessus est inexacte ou incomplète ?
+                <a href="#contact">Contactez-nous! →</a>
+            </p>
+        </div>
+    </section>
+
+
+    <!-- ── Product ───────────────────────────────────── -->
+    <section class="product-section" id="produit">
+        <div class="container">
+            <div class="product-header">
+                <div>
+                    <div class="section-label">Extraction de 100% des données de PL</div>
+                    <h2 class="section-title">Migration4o</h2>
+                    <p class="section-subtitle">
+                        Une solution complète pour l'extraction et la préservation des données PL, incluant l'app de
+                        recherche et consultation locale M4o gratuite et disponible à vie.
+                    </p>
+                </div>
+                <div class="product-stats">
+                    <div class="stat-card">
+                        <div class="stat-number">100%</div>
+                        <div class="stat-label">des données extraites de façon structurée et systématique directement à
+                            partir de la base de données, incluant les pièces jointes</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">TOUS LES MODULES</div>
+                        <div class="stat-label"><b>Tous les modules exportés</b> — dossiers adresse, interventions,
+                            prévention, horaires, plans d'intervention, formations, employés, sécurité civile, …
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">XML</div>
+                        <div class="stat-label">Données propres et structurées au format universel XML, avec schéma XSD
+                            inclus</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">∞</div>
+                        <div class="stat-label">Accès local gratuit à vie à vos données, plus besoin de payer une
+                            licence PL pour consulter vos données</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="features-grid reveal">
+                <div class="feature-card">
+                    <div class="feature-icon">🗄️</div>
+                    <div class="feature-title">Extraction 100 % complète</div>
+                    <div class="feature-desc">Toutes les informations de la base de données PL, incluant les données de
+                        support invisibles dans le logiciel.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📄</div>
+                    <div class="feature-title">Format XML + XSD universel</div>
+                    <div class="feature-desc">Export vers le standard universel XML avec schéma XSD pour une
+                        interopérabilité maximale avec tout logiciel cible.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">📎</div>
+                    <div class="feature-title">Pièces jointes incluses</div>
+                    <div class="feature-desc">Photos, plans et documents intégrés aux fichiers XML ou exportés dans des
+                        fichiers séparés, selon votre préférence.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔗</div>
+                    <div class="feature-title">Relations complexes préservées</div>
+                    <div class="feature-desc">Maintien intégral des références et relations entre les objets de la base
+                        de données.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🏢</div>
+                    <div class="feature-title">Multi-services</div>
+                    <div class="feature-desc">Support complet pour les bases de données PL en configuration
+                        multi-services.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🔒</div>
+                    <div class="feature-title">Données sensibles protégées</div>
+                    <div class="feature-desc">Option d'exclusion des données sensibles : NAS, RAMQ, date de naissance,
+                        code permanent, permis de conduire.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🚫</div>
+                    <div class="feature-title">Sans intelligence artificielle</div>
+                    <div class="feature-desc">Traitement déterministe par processus programmés — aucun moteur d'IA ne
+                        touche vos données.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💾</div>
+                    <div class="feature-title">Copie de sûreté immédiate</div>
+                    <div class="feature-desc">La première extraction constitue une copie de sauvegarde complète de
+                        l'ensemble de vos données, au cas où PL cesserait de fonctionner.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">➡</div>
+                    <div class="feature-title">Données migrables</div>
+                    <div class="feature-desc">Le format universel XML avec schéma XSD facilite la migration de vos
+                        données vers tout logiciel compatible.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">🌐</div>
+                    <div class="feature-title">App web locale gratuite</div>
+                    <div class="feature-desc">Application web évoluée incluse pour rechercher, naviguer et consulter vos
+                        données localement, gratuitement pour toujours. Pas besoin de continuer à payer une licence PL
+                        après votre migration pour consulter vos données historiques.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">💡</div>
+                    <div class="feature-title">Coût raisonnable</div>
+                    <div class="feature-desc">L'extraction se fait à un coût unique, établi selon la taille de la
+                        population de la municipalité. Aucun frais récurrent.</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+
+    <!-- ── Contact ───────────────────────────────────── -->
+    <section class="contact-section" id="contact">
+        <div class="container">
+            <div class="contact-card">
+                <div class="section-label" style="text-align:center">Contact</div>
+                <h2 class="section-title" style="margin-bottom:1.25rem">
+                    Vous connaissez une autre alternative à Première Ligne ?
+                </h2>
+                <p>
+                    Signalez-nous tout logiciel de gestion incendie pouvant potentiellement succéder à Première Ligne,
+                    même s'il n'est pas encore disponible sur le marché,
+                    ou contactez-nous pour en savoir plus sur la partie "extraction de données".
+                </p>
+                <div class="contact-btns">
+                    <a href="mailto:sylvain@securitepublique.ca" class="btn btn-primary">Nous contacter</a>
+                    <a href="mailto:sylvain@securitepublique.ca?subject=Alternative%20a%20PL"
+                        class="btn btn-outline">Ajouter une alternative</a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Footer ────────────────────────────────────── -->
+    <footer>
+        <p>© 2026 <a href="#">Gestion Technologies</a> — Tous droits réservés</p>
+    </footer>
+
+    <!-- Scroll-to-top -->
+    <a href="#" class="scroll-top" id="scrollTop" aria-label="Retour en haut">↑</a>
 
     <script>
-        /* ════════════════════════════════════════════════════════════════
-           FIREBASE CONFIGURATION
-           ──────────────────────────────────────────────────────────────
-           Replace the values below with your own Firebase project config.
-           You can find them in the Firebase Console → Project Settings →
-           General → Your apps → SDK setup and configuration.
-           ════════════════════════════════════════════════════════════════ */
-        const FIREBASE_CONFIG = {
-            apiKey: "AIzaSyCNlYgUp5xBJdtI1-ZcXTkiJweG83EGE98",
-            authDomain: "securitepublique-859dd.firebaseapp.com",
-            projectId: "securitepublique-859dd",
-            storageBucket: "securitepublique-859dd.appspot.com",
-            messagingSenderId: "1042182846479",
-            appId: "1:1042182846479:web:f201ae0d8bb0fa786f0b7a",
-            measurementId: "G-EW01G1B1MJ"
-        };
-
-        // Storage folder where uploads will be stored
-        const STORAGE_FOLDER = "databases";
-
-        /* ════════════════════════════════════════════════════════════════
-           i18n STRINGS
-           ════════════════════════════════════════════════════════════════ */
-        const I18N = {
-            fr: {
-                pageTitle: "Téléversement de base de données PL — Migration4o",
-                brandName: "Gestion Technologies",
-                heading: "Téléversement de base de données PL",
-                subheading: "Transmettez votre base de données PL de façon sécurisée pour qu'elle soit traitée avec Migration4o.",
-                stepLabelPurpose: "Objectif",
-                stepLabelMuni: "Municipalité",
-                stepLabelEmail: "Courriel",
-                stepLabelLegal: "Conditions",
-                stepLabelUpload: "Fichier",
-                stepLabelDone: "Reçu",
-                purposeIntro: "Veuillez sélectionner l'objectif de cette soumission.",
-                purposeOpt1: "Analyse et estimation du prix",
-                purposeOpt1Desc: "Soumettre la base de données pour analyse préliminaire et soumission de prix.",
-                purposeOpt2: "Extraction test",
-                purposeOpt2Desc: "Soumettre la base de données pour une extraction d'essai et validation des résultats.",
-                purposeOpt3: "Migration finale",
-                purposeOpt3Desc: "Soumettre la base de données pour la migration officielle et définitive.",
-                summaryPurpose: "Objectif :",
-                muniLabel: "Code de municipalité",
-                muniPlaceholder: "",
-                muniHint: "Entrez le code à 5 chiffres de votre municipalité.",
-                muniError: "Veuillez entrer un code de municipalité valide.",
-                muniNotFound: "Aucune municipalité trouvée pour ce code.",
-                emailLabel: "Adresse courriel",
-                emailPlaceholder: "vous@exemple.com",
-                emailConfirmLabel: "Confirmer le courriel",
-                emailConfirmPlaceholder: "vous@exemple.com",
-                emailMismatch: "Les adresses courriel ne correspondent pas.",
-                legalTitle: "Conditions d'utilisation et autorisation de traitement",
-                legalCheckbox: "J'ai lu et j'accepte les conditions ci-dessus.",
-                legalError: "Vous devez accepter les conditions pour continuer.",
-                summaryMuni: "Municipalité :",
-                summaryEmail: "Courriel :",
-                dropText: "Glisser-déposer le fichier ici",
-                dropSub: "ou cliquer pour parcourir — .zip, .db, .db4o, .dat, .bak",
-                progressLabel: "Téléversement en cours…",
-                progressDoneLabel: "Téléversement terminé",
-                btnUpload: "Téléverser le fichier",
-                uploadErrNoFile: "Veuillez sélectionner un fichier avant de continuer.",
-                uploadErrGeneric: "Erreur lors du téléversement. Veuillez réessayer.",
-                confirmTitle: "Fichier reçu !",
-                confirmText: "Votre base de données a été transmise avec succès. Notre équipe la traitera dans les prochains jours ouvrables.",
-                confirmRef: "Votre numéro de référence :",
-                confirmEmail: "Un courriel de confirmation vous sera envoyé à l'adresse fournie.",
-                btnNext: "Suivant →",
-                btnPrev: "← Retour",
-                transferredOf: "Mo transférés sur",
-                guideLink: "📋 Comment préparer votre fichier ?",
-                guideTitle: "Préparer votre base de données",
-                guideSubtitle: "Suivez ces étapes dans votre logiciel PremièreLigne",
-                guideResultText: "Récupérez le fichier <span class='guide-result-file'>BackupManuel.zip</span> dans le répertoire indiqué, puis téléversez-le à l'étape « Fichier » de ce formulaire.",
-                guideCaption1: "Dans la barre de menus, cliquez sur <strong>Options</strong> puis sélectionnez <strong>Configuration</strong>.",
-                guideCaption2: "Dans le panneau de gauche, naviguez vers <strong>Administration du système</strong> → <strong>Paramètres de base</strong>.",
-                guideCaption3: "Sélectionnez l'onglet <strong>Copie de sûreté</strong>, notez le <strong>Répertoire</strong>, puis cliquez sur <strong>Faire une copie MAINTENANT</strong>.",
-                guideCaption4: "Récupérez le fichier <strong>BackupManuel.zip</strong> dans le répertoire indiqué et téléversez-le ci-dessous.",
-                encryptLabel: "🔒 Chiffrer le fichier avant l'envoi",
-                encryptBadge: "AES-256",
-                encryptDesc: "Le fichier sera chiffré dans votre navigateur avant d'être téléversé. Une clé de déchiffrement vous sera remise à la fin.",
-                encryptingLabel: "Chiffrement en cours…",
-                encryptingDoneLabel: "Chiffrement terminé",
-                keyWarning: "Conservez cette clé précieusement ! Elle est indispensable pour déchiffrer votre fichier. Elle ne sera plus affichée après avoir quitté cette page.",
-                keyLabel: "Clé de déchiffrement",
-                keyCopy: "Copier",
-                keyDownload: "Télécharger .txt",
-                keyCopied: "Copié !",
-                encryptStopTitle: "ARRÊTEZ ! Sauvegardez votre clé de chiffrement",
-                encryptStopText: "Votre fichier a été chiffré. Sauvegardez la clé ci-dessous maintenant, puis transmettez-la-nous séparément afin que nous puissions déchiffrer votre fichier.",
-                encryptErrUnsupported: "Le chiffrement n'est pas disponible dans ce navigateur. Veuillez utiliser un navigateur récent (Chrome, Edge, Firefox, Safari) en HTTPS.",
-                encryptErrMemory: "Mémoire insuffisante pour chiffrer ce fichier. Essayez de fermer d'autres onglets ou utilisez un appareil avec plus de mémoire.",
-                encryptErrGeneric: "Erreur lors du chiffrement du fichier.",
-                encryptUnavailableDesc: "Le chiffrement n'est pas disponible dans ce navigateur.",
-            },
-            en: {
-                pageTitle: "PL Database Upload — Migration4o",
-                brandName: "Gestion Technologies",
-                heading: "PL Database Upload",
-                subheading: "Securely transmit your PL database to be processed with Migration4o.",
-                stepLabelPurpose: "Purpose",
-                stepLabelMuni: "Municipality",
-                stepLabelEmail: "Email",
-                stepLabelLegal: "Terms",
-                stepLabelUpload: "File",
-                stepLabelDone: "Done",
-                purposeIntro: "Please select the purpose of this submission.",
-                purposeOpt1: "Analysis & pricing",
-                purposeOpt1Desc: "Submit the database for preliminary analysis and a pricing quote.",
-                purposeOpt2: "Test migration",
-                purposeOpt2Desc: "Submit the database for a trial migration and results validation.",
-                purposeOpt3: "Final migration",
-                purposeOpt3Desc: "Submit the database for the official and definitive migration.",
-                summaryPurpose: "Purpose:",
-                muniLabel: "Municipality Code",
-                muniPlaceholder: "",
-                muniHint: "Enter the 5-digit code for your municipality.",
-                muniError: "Please enter a valid municipality code.",
-                muniNotFound: "No municipality found for this code.",
-                emailLabel: "Email Address",
-                emailPlaceholder: "you@example.com",
-                emailConfirmLabel: "Confirm Email",
-                emailConfirmPlaceholder: "you@example.com",
-                emailMismatch: "Email addresses do not match.",
-                legalTitle: "Terms of Use and Processing Authorization",
-                legalCheckbox: "I have read and agree to the terms above.",
-                legalError: "You must accept the terms to continue.",
-                summaryMuni: "Municipality:",
-                summaryEmail: "Email:",
-                dropText: "Drag and drop file here",
-                dropSub: "or click to browse — .zip, .db, .db4o, .dat, .bak",
-                progressLabel: "Upload in progress…",
-                progressDoneLabel: "Upload complete",
-                btnUpload: "Upload File",
-                uploadErrNoFile: "Please select a file before continuing.",
-                uploadErrGeneric: "Upload error. Please try again.",
-                confirmTitle: "File Received!",
-                confirmText: "Your database was successfully transmitted. Our team will process it within the next business days.",
-                confirmRef: "Your reference number:",
-                confirmEmail: "A confirmation email will be sent to the address you provided.",
-                btnNext: "Next →",
-                btnPrev: "← Back",
-                transferredOf: "MB transferred of",
-                guideLink: "📋 How to prepare your file?",
-                guideTitle: "Prepare your database",
-                guideSubtitle: "Follow these steps in your PremièreLigne software",
-                guideResultText: "Collect the <span class='guide-result-file'>BackupManuel.zip</span> file from the directory shown, then upload it in the \"File\" step of this form.",
-                guideCaption1: "In the menu bar, click <strong>Options</strong> then select <strong>Configuration</strong>.",
-                guideCaption2: "In the left panel, navigate to <strong>Administration du système</strong> → <strong>Paramètres de base</strong>.",
-                guideCaption3: "Select the <strong>Copie de sûreté</strong> tab, note the <strong>Répertoire</strong> path, then click <strong>Faire une copie MAINTENANT</strong>.",
-                guideCaption4: "Collect the <strong>BackupManuel.zip</strong> file from that directory and upload it below.",
-                encryptLabel: "🔒 Encrypt file before upload",
-                encryptBadge: "AES-256",
-                encryptDesc: "The file will be encrypted in your browser before uploading. A decryption key will be provided at the end.",
-                encryptingLabel: "Encrypting…",
-                encryptingDoneLabel: "Encryption complete",
-                keyWarning: "Keep this key safe! It is required to decrypt your file. It will not be shown again after you leave this page.",
-                keyLabel: "Decryption key",
-                keyCopy: "Copy",
-                encryptStopTitle: "STOP! Save your encryption key",
-                encryptStopText: "Your file was encrypted. Save the key below now, then send it to us separately so we can decrypt your file.",
-                keyDownload: "Download .txt",
-                keyCopied: "Copied!",
-                encryptErrUnsupported: "Encryption is not available in this browser. Please use a modern browser (Chrome, Edge, Firefox, Safari) over HTTPS.",
-                encryptErrMemory: "Not enough memory to encrypt this file. Try closing other tabs or use a device with more memory.",
-                encryptErrGeneric: "An error occurred while encrypting the file.",
-                encryptUnavailableDesc: "Encryption is not available in this browser.",
-            }
-        };
-
-        /* ════════════════════════════════════════════════════════════════
-           STATE
-           ════════════════════════════════════════════════════════════════ */
-        let currentLang = 'fr';
-        let currentStep = 0;
-        const TOTAL_STEPS = 6;
-
-        let state = {
-            purpose: '',
-            muniCode: '',
-            muniName: '',
-            muniMRC: '',
-            email: '',
-            file: null,
-            refNumber: ''
-        };
-
-        /* ════════════════════════════════════════════════════════════════
-           FIREBASE INIT (lazy — only when needed)
-           ════════════════════════════════════════════════════════════════ */
-        let firebaseApp = null;
-        let firebaseStorage = null;
-
-        function initFirebase() {
-            if (firebaseApp) return;
-            try {
-                firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
-                firebaseStorage = firebase.storage();
-            } catch (e) {
-                console.error('Firebase init error:', e);
-            }
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           i18n
-           ════════════════════════════════════════════════════════════════ */
-        function t(key) {
-            return I18N[currentLang][key] || I18N.fr[key] || key;
-        }
-
-        function applyLang(lang) {
-            currentLang = lang;
-            document.documentElement.lang = lang;
-            document.title = t('pageTitle');
-
-            // Text nodes
-            document.querySelectorAll('[data-i18n]').forEach(el => {
-                el.textContent = t(el.dataset.i18n);
-            });
-
-            // Placeholder attributes
-            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
-                el.placeholder = t(el.dataset.i18nPlaceholder);
-            });
-
-            // Legal text visibility
-            document.getElementById('legal-text-fr').style.display = lang === 'fr' ? '' : 'none';
-            document.getElementById('legal-text-en').style.display = lang === 'en' ? '' : 'none';
-        }
-
-        function setLang(lang) {
-            applyLang(lang);
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           STEP NAVIGATION
-           ════════════════════════════════════════════════════════════════ */
-        function showStep(n) {
-            document.querySelectorAll('.step-panel').forEach((p, i) => {
-                p.classList.toggle('active', i === n);
-            });
-
-            document.querySelectorAll('.step-item').forEach((si, i) => {
-                si.classList.remove('active', 'done');
-                if (i < n) si.classList.add('done');
-                if (i === n) si.classList.add('active');
-
-                // Replace number with checkmark for done steps (managed via CSS ::before)
-                const dot = si.querySelector('.step-dot');
-                if (i < n) {
-                    dot.textContent = '';  // CSS adds ✓ via ::before
-                } else if (i > n) {
-                    dot.textContent = i + 1;
-                } else {
-                    dot.textContent = i + 1;
-                }
-            });
-
-            currentStep = n;
-        }
-
-        function goNext(fromStep) {
-            if (!validateStep(fromStep)) return;
-
-            if (fromStep === 1) {
-                state.muniCode = document.getElementById('muni-code').value.trim();
-                const m = MUNICIPALITIES[state.muniCode];
-                state.muniName = m ? m.n : state.muniCode;
-                state.muniMRC = m ? m.m : '';
-            }
-            if (fromStep === 2) {
-                state.email = document.getElementById('email1').value.trim();
-            }
-            if (fromStep === 4) {
-                // Upload step — goNext not used; upload button handles transition
-                return;
-            }
-
-            // Populate upload summary before showing step 4
-            if (fromStep + 1 === 4) {
-                const selectedTile = document.querySelector('.purpose-tile.selected [data-i18n^="purposeOpt"][class*="title"]');
-                document.getElementById('sum-purpose').textContent = selectedTile ? selectedTile.textContent : state.purpose;
-                const mrc = state.muniMRC ? ` — ${state.muniMRC}` : '';
-                document.getElementById('sum-muni').textContent = `${state.muniName} (${state.muniCode})${mrc}`;
-                document.getElementById('sum-email').textContent = state.email;
-                initFirebase();
-                initEncryptionToggle();
-            }
-
-            showStep(fromStep + 1);
-        }
-
-        function goPrev(fromStep) {
-            if (fromStep === 0) return;
-            showStep(fromStep - 1);
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           VALIDATION
-           ════════════════════════════════════════════════════════════════ */
-        function validateStep(step) {
-            if (step === 0) {
-                return !!state.purpose;
-            }
-
-            if (step === 1) {
-                const code = document.getElementById('muni-code').value.trim();
-                const errEl = document.getElementById('muni-error');
-                if (!MUNICIPALITIES[code]) {
-                    errEl.style.display = 'block';
-                    document.getElementById('muni-code').classList.add('invalid');
-                    return false;
-                }
-                errEl.style.display = 'none';
-                return true;
-            }
-
-            if (step === 2) {
-                const e1 = document.getElementById('email1').value.trim();
-                const e2 = document.getElementById('email2').value.trim();
-                const errEl = document.getElementById('email-error');
-                const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                if (!emailRe.test(e1) || e1 !== e2) {
-                    errEl.textContent = !emailRe.test(e1)
-                        ? (currentLang === 'fr' ? 'Veuillez entrer une adresse courriel valide.' : 'Please enter a valid email address.')
-                        : t('emailMismatch');
-                    errEl.style.display = 'block';
-                    document.getElementById('email2').classList.add('invalid');
-                    return false;
-                }
-                errEl.style.display = 'none';
-                document.getElementById('email2').classList.remove('invalid');
-                return true;
-            }
-
-            if (step === 3) {
-                const checked = document.getElementById('legal-check').checked;
-                document.getElementById('legal-error').style.display = checked ? 'none' : 'block';
-                return checked;
-            }
-
-            return true;
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           STEP 0 — purpose selection
-           ════════════════════════════════════════════════════════════════ */
-        function selectPurpose(tile) {
-            document.querySelectorAll('.purpose-tile').forEach(t => t.classList.remove('selected'));
-            tile.classList.add('selected');
-            state.purpose = tile.dataset.purpose;
-            document.getElementById('next-0').disabled = false;
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           STEP 1 — municipality lookup
-           ════════════════════════════════════════════════════════════════ */
-        document.getElementById('muni-code').addEventListener('input', function () {
-            const code = this.value.trim();
-            const res = document.getElementById('muni-result');
-            const nf = document.getElementById('muni-not-found');
-            const btn = document.getElementById('next-1');
-            const errEl = document.getElementById('muni-error');
-
-            errEl.style.display = 'none';
-            this.classList.remove('invalid', 'valid');
-
-            if (code.length === 0) {
-                res.style.display = 'none';
-                nf.style.display = 'none';
-                btn.disabled = true;
-                return;
-            }
-
-            const m = MUNICIPALITIES[code];
-            if (m) {
-                document.getElementById('muni-name').textContent = m.n;
-                document.getElementById('muni-mrc').textContent = m.m || '';
-                res.style.display = 'block';
-                nf.style.display = 'none';
-                this.classList.add('valid');
-                btn.disabled = false;
-            } else {
-                res.style.display = 'none';
-                if (code.length === 5) {
-                    nf.style.display = 'block';
-                    this.classList.add('invalid');
-                } else {
-                    nf.style.display = 'none';
-                }
-                btn.disabled = true;
-            }
-        });
-
-        /* ════════════════════════════════════════════════════════════════
-           STEP 3 — legal checkbox
-           ════════════════════════════════════════════════════════════════ */
-        function onLegalCheck() {
-            const checked = document.getElementById('legal-check').checked;
-            document.getElementById('next-3').disabled = !checked;
-            if (checked) document.getElementById('legal-error').style.display = 'none';
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           STEP 4 — file selection & drag/drop
-           ════════════════════════════════════════════════════════════════ */
-        function onFileSelected(evt) {
-            const file = evt.target.files[0];
-            setSelectedFile(file);
-        }
-
-        function setSelectedFile(file) {
-            if (!file) return;
-            state.file = file;
-            const sizeMB = (file.size / 1024 / 1024).toFixed(1);
-            document.getElementById('file-name-display').textContent = `📄 ${file.name}  (${sizeMB} MB)`;
-            document.getElementById('btn-upload').disabled = false;
-            resetProgress();
-        }
-
-        function onDragOver(evt) {
-            evt.preventDefault();
-            document.getElementById('drop-zone').classList.add('dragover');
-        }
-        function onDragLeave() {
-            document.getElementById('drop-zone').classList.remove('dragover');
-        }
-        function onDrop(evt) {
-            evt.preventDefault();
-            document.getElementById('drop-zone').classList.remove('dragover');
-            const file = evt.dataTransfer.files[0];
-            if (file) setSelectedFile(file);
-        }
-
-        function resetProgress() {
-            document.getElementById('progress-wrapper').style.display = 'none';
-            document.getElementById('progress-pct').textContent = '0 %';
-            document.getElementById('progress-fill').style.width = '0%';
-            document.getElementById('progress-sub').textContent = '';
-            document.getElementById('upload-error').style.display = 'none';
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           UPLOAD
-           ════════════════════════════════════════════════════════════════ */
-        function generateRefNumber() {
-            const ts = Date.now().toString(36).toUpperCase();
-            const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
-            return `${state.muniCode}-${ts}-${rand}`;
-        }
-
-        function startUpload() {
-            if (!state.file) {
-                showUploadError(t('uploadErrNoFile'));
-                return;
-            }
-
-            if (!firebaseStorage) {
-                showUploadError('Firebase Storage non initialisé. Vérifiez la configuration.');
-                return;
-            }
-
-            state.refNumber = generateRefNumber();
-
-            // Lock UI
-            document.getElementById('btn-upload').disabled = true;
-            document.getElementById('btn-prev-4').disabled = true;
-            document.getElementById('file-input').disabled = true;
-            document.getElementById('encrypt-check').disabled = true;
-            document.getElementById('upload-error').style.display = 'none';
-
-            const pw = document.getElementById('progress-wrapper');
-            pw.style.display = 'block';
-
-            if (encryptionEnabled) {
-                // Show encrypting status
-                document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('encryptingLabel');
-                document.getElementById('progress-fill').style.width = '0%';
-                document.getElementById('progress-pct').textContent = '0 %';
-
-                // Pre-flight check: is Web Crypto available?
-                if (!isCryptoAvailable()) {
-                    document.getElementById('btn-upload').disabled = false;
-                    document.getElementById('btn-prev-4').disabled = false;
-                    document.getElementById('file-input').disabled = false;
-                    document.getElementById('encrypt-check').disabled = false;
-                    showUploadError(t('encryptErrUnsupported'));
-                    return;
-                }
-
-                generateEncryptionKey().then(({ key, keyB64 }) => {
-                    lastEncryptionKeyB64 = keyB64;
-                    return encryptFile(state.file, key, (progress) => {
-                        const pct = Math.round(progress * 100);
-                        document.getElementById('progress-fill').style.width = pct + '%';
-                        document.getElementById('progress-pct').textContent = pct + ' %';
-                    }).then(encryptedBlob => {
-                        // Update progress to show encryption done
-                        document.getElementById('progress-fill').style.width = '100%';
-                        document.getElementById('progress-pct').textContent = '100 %';
-                        document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('encryptingDoneLabel');
-
-                        // Short pause then start upload
-                        setTimeout(() => {
-                            document.getElementById('progress-fill').style.width = '0%';
-                            document.getElementById('progress-pct').textContent = '0 %';
-                            doFirebaseUpload(encryptedBlob, true);
-                        }, 400);
-                    });
-                }).catch(err => {
-                    console.error('Encryption error:', err);
-                    document.getElementById('btn-upload').disabled = false;
-                    document.getElementById('btn-prev-4').disabled = false;
-                    document.getElementById('file-input').disabled = false;
-                    document.getElementById('encrypt-check').disabled = false;
-
-                    // Provide a specific, actionable error message
-                    let msg;
-                    if (err instanceof TypeError && /subtle|crypto/i.test(err.message)) {
-                        msg = t('encryptErrUnsupported');
-                    } else if (err.name === 'QuotaExceededError' || err.message?.includes('alloc') || err.message?.includes('memory') || err.message?.includes('ArrayBuffer')) {
-                        msg = t('encryptErrMemory');
-                    } else {
-                        msg = t('encryptErrGeneric') + ' (' + (err.message || err.name || 'unknown') + ')';
-                    }
-                    showUploadError(msg);
-                });
-            } else {
-                lastEncryptionKeyB64 = '';
-                doFirebaseUpload(state.file, false);
-            }
-        }
-
-        function doFirebaseUpload(fileOrBlob, encrypted) {
-            const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-            const safeName = state.file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-            const fileName = encrypted ? safeName + '.enc' : safeName;
-            const path = `${STORAGE_FOLDER}/${state.muniCode}/${state.email}/${timestamp}_${fileName}`;
-
-            const storageRef = firebaseStorage.ref().child(path);
-            const metadata = {
-                customMetadata: {
-                    purpose: state.purpose,
-                    muniCode: state.muniCode,
-                    muniName: state.muniName,
-                    email: state.email,
-                    refNumber: state.refNumber,
-                    uploadedAt: new Date().toISOString(),
-                    encrypted: encrypted ? 'AES-256-GCM' : 'none',
-                    originalName: state.file.name
-                }
-            };
-
-            document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent = t('progressLabel');
-
-            const uploadTask = storageRef.put(fileOrBlob, metadata);
-
-            uploadTask.on(
-                'state_changed',
-
-                /* progress */
-                (snap) => {
-                    const pct = Math.round((snap.bytesTransferred / snap.totalBytes) * 100);
-                    const donesMB = (snap.bytesTransferred / 1024 / 1024).toFixed(1);
-                    const totalMB = (snap.totalBytes / 1024 / 1024).toFixed(1);
-
-                    document.getElementById('progress-fill').style.width = pct + '%';
-                    document.getElementById('progress-pct').textContent = pct + ' %';
-                    document.getElementById('progress-sub').textContent =
-                        `${donesMB} ${t('transferredOf')} ${totalMB} MB`;
-                },
-
-                /* error */
-                (err) => {
-                    console.error('Upload error:', err);
-                    document.getElementById('btn-upload').disabled = false;
-                    document.getElementById('btn-prev-4').disabled = false;
-                    document.getElementById('file-input').disabled = false;
-                    document.getElementById('encrypt-check').disabled = false;
-                    showUploadError(t('uploadErrGeneric') + ' (' + err.code + ')');
-                },
-
-                /* complete */
-                () => {
-                    document.getElementById('progress-fill').style.width = '100%';
-                    document.getElementById('progress-pct').textContent = '100 %';
-                    document.querySelector('#progress-wrapper [data-i18n="progressLabel"]').textContent =
-                        t('progressDoneLabel');
-
-                    const refEl = document.getElementById('ref-number');
-                    if (refEl) refEl.textContent = state.refNumber;
-
-                    // Show encryption key if encryption was used
-                    const keySection = document.getElementById('key-section');
-                    const stopBanner = document.getElementById('encrypt-stop-banner');
-                    if (lastEncryptionKeyB64) {
-                        document.getElementById('key-value').textContent = lastEncryptionKeyB64;
-                        keySection.classList.add('visible');
-                        stopBanner.classList.add('visible');
-                    } else {
-                        keySection.classList.remove('visible');
-                        stopBanner.classList.remove('visible');
-                    }
-
-                    setTimeout(() => showStep(5), 600);
-                }
-            );
-        }
-
-        function showUploadError(msg) {
-            const el = document.getElementById('upload-error');
-            el.textContent = msg;
-            el.style.display = 'block';
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           ENCRYPTION — Web Crypto API (AES-256-GCM)
-           ════════════════════════════════════════════════════════════════ */
-        let encryptionEnabled = false;
-        let lastEncryptionKeyB64 = '';
-
-        /** Check whether the Web Crypto API is usable (requires secure context). */
-        function isCryptoAvailable() {
-            return typeof crypto !== 'undefined' &&
-                typeof crypto.subtle !== 'undefined' &&
-                typeof crypto.subtle.generateKey === 'function';
-        }
-
-        /** Disable the encryption toggle when crypto is not available. */
-        function initEncryptionToggle() {
-            if (!isCryptoAvailable()) {
-                const cb = document.getElementById('encrypt-check');
-                cb.disabled = true;
-                cb.checked = false;
-                encryptionEnabled = false;
-                const desc = document.querySelector('.encrypt-toggle-desc');
-                if (desc) desc.textContent = t('encryptUnavailableDesc');
-                document.getElementById('encrypt-toggle').style.opacity = '0.5';
-                console.warn('Web Crypto API not available — encryption disabled. Secure context:', window.isSecureContext);
-            }
-        }
-
-        function onEncryptToggle(checked) {
-            if (checked && !isCryptoAvailable()) {
-                // Should not happen since the checkbox is disabled, but guard anyway
-                document.getElementById('encrypt-check').checked = false;
-                showUploadError(t('encryptErrUnsupported'));
-                return;
-            }
-            encryptionEnabled = checked;
-            document.getElementById('encrypt-toggle').classList.toggle('enabled', checked);
-        }
-
-        /**
-         * Generate a random AES-256-GCM key and export it as Base64.
-         * Returns { key: CryptoKey, keyB64: string }
-         */
-        async function generateEncryptionKey() {
-            const key = await crypto.subtle.generateKey(
-                { name: 'AES-GCM', length: 256 },
-                true,   // extractable — needed to export
-                ['encrypt']
-            );
-            const raw = await crypto.subtle.exportKey('raw', key);
-            const keyB64 = btoa(String.fromCharCode(...new Uint8Array(raw)));
-            return { key, keyB64 };
-        }
-
-        /**
-         * Encrypt a File using AES-256-GCM in chunks to avoid memory issues.
-         *
-         * File format ("M4E1" — Migration4o Encrypted v1):
-         *   [4 bytes]  magic  "M4E1"
-         *   [4 bytes]  chunk size (uint32 BE) — plaintext size per chunk
-         *   [4 bytes]  total chunks (uint32 BE)
-         *   Per chunk:
-         *     [12 bytes] IV
-         *     [4 bytes]  ciphertext length (uint32 BE, includes 16-byte GCM tag)
-         *     [N bytes]  ciphertext
-         *
-         * @param {File} file
-         * @param {CryptoKey} cryptoKey
-         * @param {function(number)} onProgress — called with 0..1
-         * @returns {Promise<Blob>}
-         */
-        const CHUNK_SIZE = 64 * 1024 * 1024; // 64 MB
-
-        async function encryptFile(file, cryptoKey, onProgress) {
-            const totalChunks = Math.ceil(file.size / CHUNK_SIZE) || 1;
-            const parts = []; // ArrayBuffer parts assembled into a Blob at the end
-
-            // ── Header ──────────────────────────────────────────────
-            const header = new ArrayBuffer(12);
-            const hView = new DataView(header);
-            // Magic "M4E1"
-            hView.setUint8(0, 0x4D); // M
-            hView.setUint8(1, 0x34); // 4
-            hView.setUint8(2, 0x45); // E
-            hView.setUint8(3, 0x31); // 1
-            hView.setUint32(4, CHUNK_SIZE, false); // big-endian
-            hView.setUint32(8, totalChunks, false);
-            parts.push(header);
-
-            // ── Chunks ──────────────────────────────────────────────
-            for (let i = 0; i < totalChunks; i++) {
-                const start = i * CHUNK_SIZE;
-                const end = Math.min(start + CHUNK_SIZE, file.size);
-                const slice = file.slice(start, end);
-                const plaintext = await slice.arrayBuffer();
-
-                const iv = crypto.getRandomValues(new Uint8Array(12));
-                const ciphertext = await crypto.subtle.encrypt(
-                    { name: 'AES-GCM', iv: iv },
-                    cryptoKey,
-                    plaintext
-                );
-
-                // Chunk header: IV (12) + length (4)
-                const chunkHeader = new ArrayBuffer(16);
-                new Uint8Array(chunkHeader).set(iv, 0);
-                new DataView(chunkHeader).setUint32(12, ciphertext.byteLength, false);
-
-                parts.push(chunkHeader);
-                parts.push(ciphertext);
-
-                if (onProgress) onProgress((i + 1) / totalChunks);
-            }
-
-            return new Blob(parts, { type: 'application/octet-stream' });
-        }
-
-        /** Copy encryption key to clipboard */
-        function copyKey() {
-            navigator.clipboard.writeText(lastEncryptionKeyB64).then(() => {
-                const el = document.getElementById('key-copied');
-                el.classList.add('show');
-                setTimeout(() => el.classList.remove('show'), 2000);
-            });
-        }
-
-        /** Download encryption key as a .txt file */
-        function downloadKeyFile() {
-            const content = [
-                t('keyLabel'),
-                '═'.repeat(40),
-                '',
-                lastEncryptionKeyB64,
-                '',
-                'Reference: ' + state.refNumber,
-                'Municipality: ' + state.muniName + ' (' + state.muniCode + ')',
-                'Date: ' + new Date().toISOString(),
-                '',
-                'Algorithm: AES-256-GCM',
-                'Format: Base64-encoded 256-bit raw key',
-                'Chunk size: 64 MB (last chunk may be smaller)',
-                '',
-                'File layout (M4E1):',
-                '  [4 bytes]  magic "M4E1"',
-                '  [4 bytes]  chunk size (uint32 BE)',
-                '  [4 bytes]  total chunks (uint32 BE)',
-                '  Per chunk:',
-                '    [12 bytes] IV (random per chunk)',
-                '    [4 bytes]  ciphertext length (uint32 BE, includes 16-byte GCM tag)',
-                '    [N bytes]  ciphertext',
-            ].join('\n');
-
-            const blob = new Blob([content], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `decryption-key-${state.refNumber}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-        }
-
-        /* ════════════════════════════════════════════════════════════════
-           INIT
-           ════════════════════════════════════════════════════════════════ */
-        /* ════════════════════════════════════════════════════════════════
-           PREPARATION GUIDE
-           ════════════════════════════════════════════════════════════════ */
-        const GUIDE_STEPS = 4;
-        let guideStep = 1;
-
-        function openGuide() {
-            guideStep = 1;
-            renderGuideStep();
-            document.getElementById('guide-overlay').classList.add('open');
-        }
-        function closeGuide() {
-            document.getElementById('guide-overlay').classList.remove('open');
-        }
-        function guideGoNext() {
-            if (guideStep < GUIDE_STEPS) { guideStep++; renderGuideStep(); }
-        }
-        function guideGoPrev() {
-            if (guideStep > 1) { guideStep--; renderGuideStep(); }
-        }
-        function renderGuideStep() {
-            // Show/hide mockup regions
-            document.querySelectorAll('[data-gs]').forEach(function (el) {
-                var step = parseInt(el.getAttribute('data-gs'));
-                el.classList.toggle('gs-hidden', step > guideStep);
-                el.classList.toggle('gs-active', step === guideStep && step <= 3);
-            });
-            // Update subtitle with step caption
-            var key = 'guideCaption' + guideStep;
-            var subtitle = document.querySelector('.guide-modal-header p');
-            subtitle.innerHTML = I18N[currentLang][key] || '';
-            // Update result text for current language
-            var resultEl = document.querySelector('#guide-result .guide-result-text');
-            if (resultEl) resultEl.innerHTML = I18N[currentLang]['guideResultText'] || '';
-            // Dots
-            var dots = document.querySelectorAll('#guide-dots .guide-dot');
-            dots.forEach(function (d, i) { d.classList.toggle('active', i < guideStep); });
-            // Buttons
-            document.getElementById('guide-prev').disabled = (guideStep === 1);
-            document.getElementById('guide-next').disabled = (guideStep === GUIDE_STEPS);
-        }
-        document.addEventListener('keydown', function (e) {
-            if (e.key === 'Escape') closeGuide();
-            var overlay = document.getElementById('guide-overlay');
-            if (!overlay.classList.contains('open')) return;
-            if (e.key === 'ArrowRight' && guideStep < GUIDE_STEPS) { guideStep++; renderGuideStep(); }
-            if (e.key === 'ArrowLeft' && guideStep > 1) { guideStep--; renderGuideStep(); }
-        });
-
-        applyLang('fr');
+        // Scroll-reveal
+        const revealObserver = new IntersectionObserver((entries) => {
+            entries.forEach(e => { if (e.isIntersecting) e.target.classList.add('visible'); });
+        }, { threshold: 0.12 });
+        document.querySelectorAll('.reveal').forEach(el => revealObserver.observe(el));
+
+        // Scroll-to-top
+        const scrollTopBtn = document.getElementById('scrollTop');
+        window.addEventListener('scroll', () => {
+            scrollTopBtn.classList.toggle('visible', window.scrollY > 500);
+        }, { passive: true });
     </script>
 </body>
 
