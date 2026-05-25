@@ -19,911 +19,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Alternatives à Première Ligne et migration</title>
-    <style>
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        :root {
-            --blue-deep: #07111f;
-            --blue-dark: #0d1e36;
-            --blue-mid: #152d52;
-            --blue-bright: #2563eb;
-            --blue-light: #6fabff;
-            --gold: #f59e0b;
-            --gold-light: #fbbf24;
-            --green: #10b981;
-            --amber: #f59e0b;
-            --red: #9d3201;
-            --text-primary: #f0f6ff;
-            --text-secondary: #8fa8c8;
-            --text-muted: #4f6785;
-            --surface: #111d2e;
-            --surface-light: #172336;
-            --border: rgba(255, 255, 255, 0.07);
-            --radius: 12px;
-            --radius-lg: 18px;
-            --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        html {
-            scroll-behavior: smooth;
-        }
-
-        body {
-            background: var(--blue-deep);
-            color: var(--text-primary);
-            font-family: 'Inter', system-ui, -apple-system, sans-serif;
-            font-size: 16px;
-            line-height: 1.6;
-            overflow-x: hidden;
-        }
-
-        /* ── Navigation ────────────────────────────────── */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 200;
-            padding: 0 2rem;
-            height: 64px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background: rgba(7, 17, 31, 0.92);
-            backdrop-filter: blur(16px);
-            border-bottom: 1px solid var(--border);
-        }
-
-        .nav-logo {
-            font-size: 1rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            text-decoration: none;
-            letter-spacing: -0.02em;
-        }
-
-        .nav-logo span {
-            color: var(--gold);
-        }
-
-        /* Desktop links */
-        .nav-links {
-            display: flex;
-            gap: 2.5rem;
-            list-style: none;
-        }
-
-        .nav-links a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: color var(--transition);
-        }
-
-        .nav-links a:hover {
-            color: var(--text-primary);
-        }
-
-        /* Hamburger button — hidden on desktop */
-        .nav-hamburger {
-            display: none;
-            flex-direction: column;
-            justify-content: center;
-            gap: 5px;
-            width: 40px;
-            height: 40px;
-            background: none;
-            border: none;
-            cursor: pointer;
-            padding: 4px;
-            z-index: 201;
-        }
-
-        .nav-hamburger span {
-            display: block;
-            height: 2px;
-            border-radius: 2px;
-            background: var(--text-primary);
-            transition: transform 0.3s ease, opacity 0.3s ease, width 0.3s ease;
-            transform-origin: center;
-        }
-
-        .nav-hamburger span:nth-child(1),
-        .nav-hamburger span:nth-child(2),
-        .nav-hamburger span:nth-child(3) {
-            width: 100%;
-        }
-
-        /* Animated to X when open */
-        .nav-hamburger.open span:nth-child(1) {
-            transform: translateY(7px) rotate(45deg);
-        }
-
-        .nav-hamburger.open span:nth-child(2) {
-            opacity: 0;
-            transform: scaleX(0);
-        }
-
-        .nav-hamburger.open span:nth-child(3) {
-            width: 100%;
-            transform: translateY(-7px) rotate(-45deg);
-        }
-
-        /* Drawer overlay */
-        .nav-drawer {
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 199;
-        }
-
-        .nav-drawer-backdrop {
-            position: absolute;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.55);
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-
-        .nav-drawer-panel {
-            position: absolute;
-            top: 0;
-            right: 0;
-            left: auto;
-            width: min(65vw, 220px);
-            height: 100%;
-            background: var(--blue-dark);
-            border-left: 1px solid var(--border);
-            padding: 70px 1.25rem 1.5rem;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: stretch;
-            gap: 0;
-            transform: translateX(100%);
-            transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: -6px 0 24px rgba(0, 0, 0, 0.35);
-        }
-
-        .nav-drawer.open .nav-drawer-backdrop {
-            opacity: 1;
-        }
-
-        .nav-drawer.open .nav-drawer-panel {
-            transform: translateX(0);
-        }
-
-        .nav-drawer-panel a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            font-weight: 400;
-            padding: 0.65rem 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.07);
-            transition: color var(--transition);
-        }
-
-        .nav-drawer-panel a:last-child {
-            border-bottom: none;
-        }
-
-        .nav-drawer-panel a:hover {
-            color: var(--text-primary);
-        }
-
-        @media (max-width: 700px) {
-            .nav-links {
-                display: none;
-            }
-
-            .nav-hamburger {
-                display: flex;
-            }
-        }
-
-        /* ── Hero ──────────────────────────────────────── */
-        .hero {
-            position: relative;
-            min-height: 100vh;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-            padding: 8rem 2rem 5rem;
-            overflow: hidden;
-        }
-
-        .hero-bg {
-            position: absolute;
-            inset: 0;
-            background:
-                radial-gradient(ellipse 90% 55% at 50% -10%, rgba(37, 99, 235, 0.45) 0%, transparent 70%),
-                radial-gradient(ellipse 60% 40% at 85% 110%, rgba(245, 158, 11, 0.12) 0%, transparent 60%),
-                linear-gradient(180deg, var(--blue-dark) 0%, var(--blue-deep) 100%);
-        }
-
-        .hero-grid {
-            position: absolute;
-            inset: 0;
-            background-image:
-                linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
-            background-size: 64px 64px;
-            animation: grid-scroll 25s linear infinite;
-        }
-
-        @keyframes grid-scroll {
-            0% {
-                transform: translateY(0);
-            }
-
-            100% {
-                transform: translateY(64px);
-            }
-        }
-
-        .hero-content {
-            position: relative;
-            max-width: 820px;
-        }
-
-        .hero-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            background: rgba(37, 99, 235, 0.18);
-            border: 1px solid rgba(59, 130, 246, 0.35);
-            border-radius: 100px;
-            padding: 0.375rem 1.125rem;
-            font-size: 0.75rem;
-            font-weight: 700;
-            color: var(--blue-light);
-            text-transform: uppercase;
-            letter-spacing: 0.12em;
-            margin-bottom: 2rem;
-            animation: fade-up 0.8s ease both;
-        }
-
-        .hero-badge::before {
-            content: '';
-            width: 6px;
-            height: 6px;
-            border-radius: 50%;
-            background: var(--blue-light);
-            animation: dot-pulse 2s ease infinite;
-        }
-
-        .hero h1 {
-            font-size: clamp(2.4rem, 6vw, 4.25rem);
-            font-weight: 900;
-            line-height: 1.06;
-            letter-spacing: -0.035em;
-            margin-bottom: 1.5rem;
-            animation: fade-up 0.8s 0.1s ease both;
-        }
-
-        .hero h1 .highlight {
-            background: linear-gradient(135deg, var(--gold) 0%, var(--gold-light) 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .hero p {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 580px;
-            margin: 0 auto 2.5rem;
-            animation: fade-up 0.8s 0.2s ease both;
-        }
-
-        .hero-cta {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-            animation: fade-up 0.8s 0.3s ease both;
-        }
-
-        @keyframes fade-up {
-            from {
-                opacity: 0;
-                transform: translateY(24px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes dot-pulse {
-
-            0%,
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
-
-            50% {
-                opacity: 0.4;
-                transform: scale(0.75);
-            }
-        }
-
-        /* ── Buttons ───────────────────────────────────── */
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.875rem 1.75rem;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: var(--transition);
-            cursor: pointer;
-            border: none;
-            font-family: inherit;
-        }
-
-        .btn-primary {
-            background: var(--blue-bright);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background: var(--blue-light);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 28px rgba(37, 99, 235, 0.45);
-        }
-
-        .btn-outline {
-            background: transparent;
-            color: var(--text-primary);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-        }
-
-        .btn-outline:hover {
-            background: rgba(255, 255, 255, 0.06);
-            border-color: rgba(255, 255, 255, 0.28);
-            transform: translateY(-2px);
-        }
-
-        /* ── Shared section layout ─────────────────────── */
-        section {
-            padding: 6rem 2rem;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .section-label {
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.14em;
-            color: var(--blue-light);
-            margin-bottom: 0.875rem;
-        }
-
-        .section-title {
-            font-size: clamp(1.75rem, 4vw, 2.75rem);
-            font-weight: 800;
-            letter-spacing: -0.025em;
-            line-height: 1.15;
-            margin-bottom: 0.875rem;
-        }
-
-        .section-subtitle {
-            font-size: 1.05rem;
-            color: var(--text-secondary);
-            max-width: 540px;
-            line-height: 1.65;
-        }
-
-        /* ── Product section ───────────────────────────── */
-        .product-section {
-            /* background-color: var(--blue-dark); */
-            border-top: 1px solid var(--border);
-            border-bottom: 1px solid var(--border);
-
-            background-image: url('splash-blur.jpg');
-            background-size: cover;
-            background-position: center center;
-            background-repeat: no-repeat;
-        }
-
-
-        .product-header {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 4rem;
-            align-items: center;
-            margin-bottom: 3.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .product-header {
-                grid-template-columns: 1fr;
-                gap: 2.5rem;
-            }
-        }
-
-        .product-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
-            gap: 1.25rem;
-        }
-
-        .stat-card {
-            background: rgba(25, 69, 162, 0.3);
-            border: 1px solid rgba(59, 130, 246, 0.3);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-        }
-
-        .stat-number {
-            font-size: clamp(1.5rem, 6vw, 2.25rem);
-            font-weight: 900;
-            color: var(--text-primary);
-            letter-spacing: -0.04em;
-            line-height: 1;
-            margin-bottom: 0.5rem;
-            word-break: break-word;
-        }
-
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            line-height: 1.4;
-        }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr));
-            gap: 1.25rem;
-        }
-
-        .feature-card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            transition: var(--transition);
-        }
-
-        .feature-card:hover {
-            border-color: rgba(59, 130, 246, 0.3);
-            background: var(--surface-light);
-            transform: translateY(-3px);
-        }
-
-        .feature-icon {
-            font-size: 1.6rem;
-            margin-bottom: 0.875rem;
-        }
-
-        .feature-title {
-            font-size: 0.92rem;
-            font-weight: 600;
-            margin-bottom: 0.4rem;
-        }
-
-        .feature-desc {
-            font-size: 0.82rem;
-            color: var(--text-secondary);
-            line-height: 1.55;
-        }
-
-        /* ── Software table ────────────────────────────── */
-        .table-section {
-            background: var(--blue-deep);
-        }
-
-        .table-header {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-
-        .software-table-outer {
-            position: relative;
-        }
-
-        /* Right-edge fade overlay — visible when not fully scrolled */
-        .software-table-outer::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            bottom: 0;
-            width: 72px;
-            border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-            background: linear-gradient(to right, transparent, rgba(7, 17, 31, 0.92));
-            pointer-events: none;
-            transition: opacity 0.4s ease;
-            z-index: 2;
-        }
-
-        .software-table-outer.scrolled-end::after {
-            opacity: 0;
-        }
-
-        .software-table-wrap {
-            overflow-x: auto;
-            border-radius: var(--radius-lg);
-            border: 1px solid var(--border);
-            -webkit-overflow-scrolling: touch;
-        }
-
-        /* Mobile swipe hint */
-        .scroll-hint {
-            display: none;
-        }
-
-        @media (max-width: 900px) {
-            .scroll-hint {
-                display: inline-flex;
-                align-items: center;
-                gap: 0.4rem;
-                font-size: 0.78rem;
-                color: var(--text-secondary);
-                background: rgba(37, 99, 235, 0.12);
-                border: 1px solid rgba(59, 130, 246, 0.22);
-                border-radius: 100px;
-                padding: 0.3rem 0.85rem;
-                margin-bottom: 0.75rem;
-                transition: opacity 0.4s ease;
-                animation: hint-slide 1.2s 0.8s ease both;
-            }
-
-            .scroll-hint.hidden {
-                opacity: 0;
-                pointer-events: none;
-            }
-
-            @keyframes hint-slide {
-                0% {
-                    opacity: 0;
-                    transform: translateX(-8px);
-                }
-
-                100% {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-            }
-
-            .scroll-hint-arrow {
-                display: inline-block;
-                animation: arrow-bounce 1.4s ease infinite;
-            }
-
-            @keyframes arrow-bounce {
-
-                0%,
-                100% {
-                    transform: translateX(0);
-                }
-
-                50% {
-                    transform: translateX(5px);
-                }
-            }
-        }
-
-        .software-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 0.875rem;
-        }
-
-        .software-table th {
-            background: var(--surface);
-            padding: 1rem 1.25rem;
-            text-align: left;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            color: var(--text-muted);
-            border-bottom: 1px solid var(--border);
-            white-space: nowrap;
-        }
-
-        .software-table td {
-            padding: 1.25rem;
-            border-bottom: 1px solid var(--border);
-            vertical-align: top;
-        }
-
-        .software-table tr:last-child td {
-            border-bottom: none;
-        }
-
-        .software-table td:nth-child(1),
-        .software-table th:nth-child(1) {
-            width: 35%;
-            min-width: 280px;
-        }
-
-        .software-table td:nth-child(2),
-        .software-table th:nth-child(2) {
-            width: 25%;
-            min-width: 225px;
-        }
-
-        .software-table td:nth-child(9),
-        .software-table th:nth-child(9) {
-            /* width: 25%; */
-            min-width: 335px;
-        }
-
-        .software-table tbody tr {
-            transition: background var(--transition);
-        }
-
-        .software-table tbody tr:hover {
-            background: var(--surface);
-        }
-
-        .software-name {
-            font-weight: 700;
-            /* font-size: 0.975rem; */
-            font-size: 1.2rem;
-        }
-
-        .software-name a {
-            font-size: 1.2rem;
-            color: var(--text-primary);
-            text-decoration: none;
-            transition: color var(--transition);
-        }
-
-        .software-name a::after {
-            content: ' 🔗';
-            font-size: 0.8rem;
-        }
-
-        .software-name a:hover {
-            color: var(--text-primary);
-        }
-
-
-
-        .software-vendor {
-            color: var(--text-secondary);
-            font-size: 0.8rem;
-            margin-top: 0.2rem;
-        }
-
-        .provider-warning:after {
-            content: ' (même propriétaire que PL)';
-            font-size: 0.8rem;
-            color: var(--red);
-            /* font-weight: 600; */
-        }
-
-        /* Status badges */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.375rem;
-            padding: 0.25rem 0.75rem;
-            border-radius: 100px;
-            font-size: 0.72rem;
-            font-weight: 600;
-            white-space: nowrap;
-        }
-
-        .badge::before {
-            content: '';
-            width: 5px;
-            height: 5px;
-            border-radius: 50%;
-            flex-shrink: 0;
-        }
-
-        .badge-available {
-            background: rgba(16, 185, 129, 0.14);
-            color: #10b981;
-            border: 1px solid rgba(16, 185, 129, 0.22);
-        }
-
-        .badge-available::before {
-            background: #10b981;
-        }
-
-        .badge-unavailable {
-            background: rgba(16, 185, 129, 0.14);
-            color: #b92c10;
-            border: 1px solid rgba(16, 185, 129, 0.22);
-        }
-
-        .badge-unavailable::before {
-            background: #ff1a1a;
-        }
-
-        .badge-partial {
-            background: rgba(157, 185, 16, 0.22);
-            color: #ffee00;
-            border: 1px solid rgba(157, 185, 16, 0.22);
-        }
-
-        .badge-partial::before {
-            background: #fdf142;
-        }
-
-
-
-        .badge-dev {
-            background: rgba(245, 158, 11, 0.14);
-            color: #f59e0b;
-            border: 1px solid rgba(245, 158, 11, 0.22);
-        }
-
-        .badge-dev::before {
-            background: #f59e0b;
-            animation: dot-pulse 1.5s ease infinite;
-        }
-
-        .badge-planned {
-            background: rgba(100, 116, 139, 0.14);
-            color: #94a3b8;
-            border: 1px solid rgba(100, 116, 139, 0.22);
-        }
-
-        .badge-planned::before {
-            background: #64748b;
-        }
-
-        /* Compatibility cell */
-        .compat-native {
-            color: var(--gold);
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        .compat-avancee {
-            color: var(--green);
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        .compat-unknown {
-            color: var(--blue-bright);
-            font-weight: 700;
-            font-size: 0.85rem;
-        }
-
-        /* Module tags */
-        .modules-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.3rem;
-        }
-
-        .module-tag {
-            background: rgba(37, 99, 235, 0.13);
-            color: var(--blue-light);
-            border: 1px solid rgba(59, 130, 246, 0.18);
-            padding: 0.15rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.68rem;
-            font-weight: 500;
-        }
-
-        .table-note {
-            margin-top: 1.25rem;
-            color: var(--text-muted);
-            font-size: 0.82rem;
-            text-align: center;
-        }
-
-        .table-note a {
-            color: var(--blue-light);
-            text-decoration: none;
-        }
-
-        .table-note a:hover {
-            text-decoration: underline;
-        }
-
-        /* ── Contact section ───────────────────────────── */
-        .contact-section {
-            background: linear-gradient(140deg, var(--blue-dark) 0%, var(--blue-mid) 100%);
-            border-top: 1px solid var(--border);
-            text-align: center;
-        }
-
-        .contact-card {
-            max-width: 620px;
-            margin: 0 auto;
-        }
-
-        .contact-card p {
-            color: var(--text-secondary);
-            margin-bottom: 2.5rem;
-            font-size: 1.05rem;
-        }
-
-        .contact-btns {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        /* ── Scroll-reveal ─────────────────────────────── */
-        .reveal {
-            opacity: 0;
-            transform: translateY(28px);
-            transition: opacity 0.7s ease, transform 0.7s ease;
-        }
-
-        .reveal.visible {
-            opacity: 1;
-            transform: translateY(0);
-        }
-
-        /* ── Scroll-to-top button ──────────────────────── */
-        .scroll-top {
-            position: fixed;
-            bottom: 2rem;
-            right: 2rem;
-            width: 44px;
-            height: 44px;
-            background: var(--blue-bright);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            text-decoration: none;
-            font-size: 1.2rem;
-            line-height: 1;
-            opacity: 0;
-            pointer-events: none;
-            transition: var(--transition);
-            box-shadow: 0 4px 18px rgba(37, 99, 235, 0.45);
-        }
-
-        .scroll-top.visible {
-            opacity: 1;
-            pointer-events: all;
-        }
-
-        /* ── Footer ────────────────────────────────────── */
-        footer {
-            padding: 2rem;
-            border-top: 1px solid var(--border);
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.82rem;
-        }
-
-        footer a {
-            color: var(--text-secondary);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            color: var(--text-primary);
-        }
-    </style>
+    <link rel="stylesheet" href="styles.css">
 </head>
 
 <body>
@@ -933,6 +29,7 @@
         <a href="#" class="nav-logo">Migration4o</a>
         <ul class="nav-links">
             <li><a href="#logiciels">Alternatives à PL</a></li>
+            <li><a href="#enjeux">Enjeux</a></li>
             <li><a href="#produit">Extraction des données</a></li>
             <li><a href="#contact">Contact</a></li>
         </ul>
@@ -947,6 +44,7 @@
         <div class="nav-drawer-backdrop" id="navBackdrop"></div>
         <nav class="nav-drawer-panel" id="navPanel">
             <a href="#logiciels" class="nav-drawer-link">Alternatives à PL</a>
+            <a href="#enjeux" class="nav-drawer-link">Enjeux</a>
             <a href="#produit" class="nav-drawer-link">Extraction des données</a>
             <a href="#contact" class="nav-drawer-link">Contact</a>
         </nav>
@@ -1317,6 +415,204 @@
             </p>
         </div>
     </section>
+
+
+    <!-- ── Stakes ────────────────────────────────────── -->
+    <section class="stakes-section" id="enjeux">
+        <div class="container">
+            <div class="stakes-header reveal">
+                <div class="section-label">Agir maintenant</div>
+                <h2 class="section-title">Enjeux avec vos données</h2>
+                <p class="section-subtitle">
+                    La transition vers un nouveau logiciel ne suffit pas. Les données accumulées dans Première Ligne
+                    représentent des années de travail irremplaçables — et leur sort est souvent le dernier élément
+                    considéré, alors qu'il devrait être le premier.
+                </p>
+            </div>
+
+            <!-- ── Bloc légal ─────────────────────────────── -->
+
+            <div class="stakes-banner stakes-banner-legal reveal">
+                <div class="stakes-banner-icon">⚖️</div>
+                <div class="stakes-banner-content">
+                    <div class="stakes-banner-label">📋 Conformité réglementaire</div>
+                    <div class="stakes-banner-title">Obligations légales de conservation et d'accès aux données</div>
+                    <div class="stakes-banner-desc">
+                        La Loi sur les archives du Québec et les calendriers de conservation des municipalités
+                        imposent des durées de rétention strictes aux SSI. Perdre ces données n'est pas seulement
+                        un problème opérationnel — c'est une faute de gestion documentaire avec des conséquences
+                        légales potentiellement sévères.
+                    </div>
+                </div>
+            </div>
+
+            <div class="stakes-grid reveal">
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/5668484/pexels-photo-5668484.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Marteau de juge sur bureau de tribunal">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Poursuites civiles et criminelles</div>
+                        <div class="stake-card-desc">
+                            Un propriétaire, un héritier ou un assureur peut intenter une poursuite des années
+                            après un sinistre. Le rapport d'intervention — chronologie, ressources déployées,
+                            décisions prises — constitue la pièce maîtresse de la défense de la municipalité.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/2030190/pexels-photo-2030190.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Pompier en équipement de protection avec lance d'incendie">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Cancer professionnel des pompiers</div>
+                        <div class="stake-card-desc">
+                            Les pompiers peuvent développer des cancers liés à l'exposition aux carcinogènes
+                            lors d'interventions, avec des latences pouvant dépasser 20 à 30 ans. L'historique
+                            complet des interventions est indispensable pour établir le lien de causalité
+                            professionnelle et soutenir une réclamation à la CNESST.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/3927131/pexels-photo-3927131.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Piles de vieux documents et dossiers sur des étagères">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Demandes d'accès à l'information</div>
+                        <div class="stake-card-desc">
+                            En vertu de la Loi sur l'accès aux documents des organismes publics et sur la
+                            protection des renseignements personnels, tout citoyen peut exiger l'accès à des
+                            dossiers couvrant de longues périodes. L'incapacité à produire ces documents
+                            expose la municipalité à des sanctions de la Commission d'accès à l'information.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/10481266/pexels-photo-10481266.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Équipe forensique examinant une scène de crime">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Enquêtes du Bureau du coroner</div>
+                        <div class="stake-card-desc">
+                            Une enquête du coroner sur un décès lié à un incendie peut être ouverte ou
+                            rouverte des années après les faits. Les dossiers d'intervention complets et
+                            les rapports de prévention sont systématiquement requis.
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="stake-card stakes-conservation-card reveal">
+                <div class="stake-inner-title">Durées minimales de conservation typiques</div>
+                <div class="stake-conservation-list">
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Enquêtes sur sinistres (décès, pertes majeures)</span>
+                        <span class="stake-conservation-value conservation-permanent">Permanent</span>
+                    </div>
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Rapports d'intervention</span>
+                        <span class="stake-conservation-value conservation-long">10 ans +</span>
+                    </div>
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Dossiers de prévention / inspections</span>
+                        <span class="stake-conservation-value conservation-long">5–10 ans</span>
+                    </div>
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Registres de formation des pompiers</span>
+                        <span class="stake-conservation-value conservation-long">Durée d'emploi + 5 ans</span>
+                    </div>
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Dossiers de sécurité civile</span>
+                        <span class="stake-conservation-value conservation-long">10 ans +</span>
+                    </div>
+                    <div class="stake-conservation-item">
+                        <span class="stake-conservation-label">Plans d'intervention (bâtiments)</span>
+                        <span class="stake-conservation-value conservation-medium">Validité + 5 ans</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── Bloc financier / opérationnel ──────────── -->
+
+            <div class="stakes-banner stakes-banner-financial reveal">
+                <div class="stakes-banner-icon">💸</div>
+                <div class="stakes-banner-content">
+                    <div class="stakes-banner-label">⚡ Risques financiers et opérationnels</div>
+                    <div class="stakes-banner-title">Enjeux financiers</div>
+                    <div class="stakes-banner-desc">
+                        Au-delà des obligations légales, la perte de vos données PL expose votre SSI à des
+                        coûts directs, à des vulnérabilités opérationnelles et à des pertes de valeur
+                        stratégique qui se manifestent dès les premiers mois suivant la migration.
+                    </div>
+                </div>
+            </div>
+
+            <div class="stakes-grid-3 reveal">
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/28379997/pexels-photo-28379997.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Écran d'ordinateur portable brisé avec distorsion numérique">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Fermeture soudaine sans préavis</div>
+                        <div class="stake-card-desc">
+                            Première Ligne est un logiciel vieillissant dont la fin de vie peut survenir à
+                            tout moment : incompatibilité Windows, panne matérielle ou fin de support. Sans
+                            extraction préalable, des années de données deviennent inaccessibles du jour
+                            au lendemain.
+                        </div>
+                        <span class="stake-card-accent stake-accent-danger">⚡ Risque immédiat</span>
+                    </div>
+                </div>
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/10805427/pexels-photo-10805427.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Cadenas rouillé sur chaînes métalliques">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Dépendance coûteuse à une licence</div>
+                        <div class="stake-card-desc">
+                            Sans extraction, votre SSI sera contraint de maintenir indéfiniment une licence
+                            Première Ligne uniquement pour accéder à son propre historique. Vos données vous
+                            appartiennent et ne devraient pas vous coûter un abonnement perpétuel.
+                        </div>
+                        <span class="stake-card-accent stake-accent-cost">💰 Économies importantes</span>
+                    </div>
+                </div>
+
+                <div class="stake-card">
+                    <div class="stake-card-image">
+                        <img src="https://images.pexels.com/photos/234800/pexels-photo-234800.jpeg?auto=compress&cs=tinysrgb&w=800&h=336&fit=crop" alt="Clavier d'ordinateur en gros plan en noir et blanc">
+                        <div class="stake-card-image-overlay"></div>
+                    </div>
+                    <div class="stake-card-body">
+                        <div class="stake-card-title">Reprise manuelle coûteuse</div>
+                        <div class="stake-card-desc">
+                            Sans extraction, vos équipes devront ressaisir manuellement des années de données
+                            dans le nouveau système — des dizaines d'heures de travail administratif, sources
+                            d'erreurs et de retards dans la mise en service complète du nouvel outil.
+                        </div>
+                        <span class="stake-card-accent stake-accent-cost">⏳ Perte de temps et budget</span>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+    </section>
+
 
 
     <!-- ── Product ───────────────────────────────────── -->
