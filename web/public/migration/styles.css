@@ -437,7 +437,7 @@ section {
 
 .stakes-header {
     text-align: center;
-    margin-bottom: 3.5rem;
+    margin-bottom: 5.5rem;
 }
 
 .stakes-header .section-subtitle {
@@ -448,7 +448,7 @@ section {
 .stakes-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 1.75rem;
+    gap: 2.75rem;
 }
 
 @media (max-width: 768px) {
@@ -467,10 +467,22 @@ section {
     transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
 }
 
+
 .stake-card:hover {
     border-color: rgba(59, 130, 246, 0.38);
     transform: translateY(-5px);
     box-shadow: 0 24px 56px rgba(0, 0, 0, 0.45);
+}
+
+.stakes-cards-financial .stake-card {
+    background: rgba(185, 28, 28, 0.22);
+    border: 1px solid rgba(185, 28, 28, 0.35);
+}
+
+.stakes-cards-financial .stake-card:hover {
+    border-color: rgba(223, 1, 1, 0.45);
+    transform: translateY(-5px);
+    box-shadow: 0 24px 56px rgba(185, 28, 28, 0.45);
 }
 
 .stake-card-image {
@@ -500,8 +512,23 @@ section {
 .stake-card-image-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, transparent 50%, rgba(8, 18, 38, 0.82) 100%);
+    background: linear-gradient(180deg,
+            rgba(37, 99, 235, 0.25) 0%,
+            rgba(21, 45, 82, 0.45) 50%,
+            rgba(8, 18, 38, 0.75) 100%);
     pointer-events: none;
+}
+
+/* Red tint for financial stakes cards */
+.stakes-cards-financial .stake-card-image-overlay {
+    background: linear-gradient(180deg,
+            rgba(185, 28, 28, 0.28) 0%,
+            rgba(153, 27, 27, 0.50) 50%,
+            rgba(127, 29, 29, 0.75) 100%);
+}
+
+.stakes-cards-financial .stake-card-desc {
+    color: #fca5a5;
 }
 
 .stake-card-body {
@@ -509,7 +536,7 @@ section {
 }
 
 .stake-card-title {
-    font-size: 1.1rem;
+    font-size: 2.5rem;
     font-weight: 700;
     margin-bottom: 0.625rem;
     letter-spacing: -0.015em;
@@ -587,7 +614,7 @@ section {
 }
 
 .stake-inner-title {
-    font-size: 0.68rem;
+    font-size: 1.68rem;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.13em;
@@ -774,6 +801,124 @@ section {
     font-size: 0.82rem;
     color: var(--text-secondary);
     line-height: 1.55;
+}
+
+/* ── Selection Criteria ──────────────────────────── */
+.criteria-section {
+    position: relative;
+    background: var(--blue-dark);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    padding: 5rem 0;
+}
+
+.criteria-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.criteria-header .section-subtitle {
+    max-width: 640px;
+    margin: 0.875rem auto 0;
+}
+
+.criteria-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+}
+
+@media (max-width: 768px) {
+    .criteria-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.criteria-category {
+    background: rgba(8, 18, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transition: transform var(--transition), border-color var(--transition), box-shadow var(--transition);
+}
+
+.criteria-category:hover {
+    border-color: rgba(59, 130, 246, 0.32);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 42px rgba(0, 0, 0, 0.35);
+}
+
+.criteria-category-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.5rem 1.75rem 1.25rem;
+    background: rgba(37, 99, 235, 0.08);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.criteria-category-icon {
+    font-size: 2rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.criteria-category-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+}
+
+.criteria-category-desc {
+    padding: 1rem 1rem 1rem;
+    font-size: 1rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+    margin: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.criteria-category-desc a,
+.criteria-category-desc a:visited,
+.criteria-text a,
+.criteria-text a:visited {
+    color: var(--blue-light);
+    text-decoration: none;
+    font-weight: 500;
+    transition: color var(--transition);
+}
+
+.criteria-list {
+    list-style: none;
+    padding: 1.25rem 1.75rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+}
+
+.criteria-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-size: 0.875rem;
+    line-height: 1.6;
+}
+
+.criteria-check {
+    color: var(--green);
+    font-size: 1rem;
+    line-height: 1.4;
+    flex-shrink: 0;
+    font-weight: 700;
+}
+
+.criteria-text {
+    color: var(--text-secondary);
+    flex: 1;
 }
 
 /* ── Software table ────────────────────────────── */
@@ -1219,7 +1364,7 @@ footer a:hover {
 }
 
 .stakes-banner-title {
-    font-size: 1.3rem;
+    font-size: 4rem;
     font-weight: 800;
     letter-spacing: -0.02em;
     line-height: 1.2;
@@ -1232,6 +1377,10 @@ footer a:hover {
     color: var(--text-secondary);
     line-height: 1.7;
     max-width: 700px;
+}
+
+.stakes-banner-financial .stakes-banner-desc {
+    color: #fca5a5;
 }
 
 @media (max-width: 600px) {
