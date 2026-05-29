@@ -750,6 +750,17 @@ section {
     padding: 1.5rem;
 }
 
+.stat-card-highlight {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.45);
+    box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2), 0 4px 24px rgba(16, 185, 129, 0.12);
+}
+
+.stat-card-highlight .stat-number {
+    color: white;
+    text-shadow: 0 0 12px rgba(16, 185, 129, 0.9), 0 0 28px rgba(16, 185, 129, 0.6), 0 0 48px rgba(16, 185, 129, 0.3);
+}
+
 .stat-number {
     font-size: clamp(1.5rem, 6vw, 2.25rem);
     font-weight: 900;
@@ -1027,6 +1038,22 @@ section {
     font-size: 0.875rem;
 }
 
+/* Viewport-pinned cloned header (JS-driven) */
+.table-sticky-clone {
+    position: fixed;
+    top: 64px;
+    display: none;
+    overflow: hidden;
+    z-index: 50;
+    border-bottom: 1px solid var(--border);
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+}
+
+.table-sticky-clone .software-table {
+    /* widths are set per-cell by JS; let the table overflow the clipped container */
+    width: auto;
+}
+
 .software-table th {
     background: var(--surface);
     padding: 1rem 1.25rem;
@@ -1062,8 +1089,14 @@ section {
     min-width: 225px;
 }
 
-.software-table td:nth-child(9),
-.software-table th:nth-child(9) {
+.software-table td:nth-child(5),
+.software-table th:nth-child(5) {
+    width: 12%;
+    min-width: 130px;
+}
+
+.software-table td:nth-child(10),
+.software-table th:nth-child(10) {
     /* width: 25%; */
     min-width: 335px;
 }
@@ -1180,6 +1213,26 @@ section {
 
 .badge-planned::before {
     background: #64748b;
+}
+
+.badge-opensource {
+    background: rgba(16, 185, 129, 0.14);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.22);
+}
+
+.badge-opensource::before {
+    background: #10b981;
+}
+
+.badge-commercial {
+    background: rgba(239, 68, 68, 0.14);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.22);
+}
+
+.badge-commercial::before {
+    background: #ef4444;
 }
 
 /* Compatibility cell */
