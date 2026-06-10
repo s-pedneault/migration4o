@@ -17,6 +17,7 @@
     --green: #10b981;
     --amber: #f59e0b;
     --red: #9d3201;
+    --red-light: #fd1900;
     --text-primary: #f0f6ff;
     --text-secondary: #8fa8c8;
     --text-muted: #4f6785;
@@ -929,6 +930,12 @@ section {
 
 .criteria-text {
     color: var(--text-secondary);
+    flex: 1;
+}
+
+.criteria-text-important {
+    color: var(--gold);
+    font-weight: 700;
     flex: 1;
 }
 
