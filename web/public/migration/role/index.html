@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Rôle d'évaluation → Excel</title>
+    <style>
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        :root {
+            --bg: #07111f;
+            --surface: #0d1e31;
+            --surface2: #112540;
+            --border: rgba(255, 255, 255, 0.08);
+            --text-primary: #e8f0fe;
+            --text-secondary: #94aabe;
+            --text-muted: #5a7a92;
+            --green: #10b981;
+            --green-dim: rgba(16, 185, 129, 0.12);
+            --green-border: rgba(16, 185, 129, 0.3);
+            --blue: #3b82f6;
+            --blue-dim: rgba(59, 130, 246, 0.12);
+            --gold: #f59e0b;
+            --radius: 8px;
+            --radius-lg: 14px;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 2rem 1rem 4rem;
+        }
+
+        .container {
+            max-width: 760px;
+            margin: 0 auto;
+        }
+
+        /* ── Header ── */
+        .page-header {
+            margin-bottom: 2.5rem;
+        }
+
+        .page-label {
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--green);
+            margin-bottom: 0.6rem;
+        }
+
+        .page-title {
+            font-size: clamp(1.6rem, 4vw, 2.2rem);
+            font-weight: 700;
+            line-height: 1.2;
+            margin-bottom: 0.75rem;
+        }
+
+        .page-subtitle {
+            font-size: 0.95rem;
+            color: var(--text-secondary);
+            line-height: 1.6;
+            max-width: 600px;
+        }
+
+        /* ── Drop zone ── */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: var(--radius-lg);
+            background: var(--surface);
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.2s, background 0.2s;
+            margin-bottom: 1.5rem;
+            position: relative;
+        }
+
+        .drop-zone:hover,
+        .drop-zone.drag-over {
+            border-color: var(--green-border);
+            background: var(--green-dim);
+        }
+
+        .drop-zone input[type="file"] {
+            position: absolute;
+            inset: 0;
+            opacity: 0;
+            cursor: pointer;
+            width: 100%;
+            height: 100%;
+        }
+
+        .drop-icon {
+            font-size: 2.5rem;
+            margin-bottom: 0.75rem;
+            line-height: 1;
+        }
+
+        .drop-label {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.35rem;
+        }
+
+        .drop-hint {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        .drop-zone.has-file {
+            border-color: var(--green-border);
+            background: var(--green-dim);
+        }
+
+        .drop-zone.has-file .drop-icon::after {
+            content: '';
+        }
+
+        .file-name {
+            margin-top: 0.6rem;
+            font-size: 0.85rem;
+            color: var(--green);
+            font-weight: 500;
+        }
+
+        /* ── Summary card ── */
+        .summary-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.25rem 1.5rem;
+            margin-bottom: 1.5rem;
+            display: none;
+        }
+
+        .summary-card.visible {
+            display: block;
+        }
+
+        .summary-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 0.85rem;
+        }
+
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+        }
+
+        .stat-item {
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.6rem;
+            font-weight: 700;
+            color: var(--green);
+            line-height: 1.1;
+        }
+
+        .stat-desc {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+        }
+
+        .street-list {
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.4rem;
+        }
+
+        .street-tag {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 0.2rem 0.75rem;
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+        }
+
+        /* ── Convert button ── */
+        .btn-convert {
+            display: block;
+            width: 100%;
+            padding: 0.9rem 1.5rem;
+            background: var(--green);
+            color: #07111f;
+            border: none;
+            border-radius: var(--radius);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            margin-bottom: 1rem;
+        }
+
+        .btn-convert:hover:not(:disabled) {
+            opacity: 0.88;
+        }
+
+        .btn-convert:active:not(:disabled) {
+            transform: scale(0.99);
+        }
+
+        .btn-convert:disabled {
+            background: var(--surface2);
+            color: var(--text-muted);
+            cursor: not-allowed;
+        }
+
+        /* ── Status / progress ── */
+        #status {
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            text-align: center;
+            min-height: 1.4em;
+            margin-bottom: 0.75rem;
+        }
+
+        #status.error {
+            color: #f87171;
+        }
+
+        #status.success {
+            color: var(--green);
+        }
+
+        /* ── Info section ── */
+        .info-section {
+            margin-top: 2.5rem;
+            border-top: 1px solid var(--border);
+            padding-top: 2rem;
+        }
+
+        .info-title {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 0.75rem;
+        }
+
+        .columns-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.35rem 1.5rem;
+        }
+
+        .col-item {
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            padding: 0.25rem 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .col-num {
+            color: var(--text-muted);
+            min-width: 1.5rem;
+            text-align: right;
+            flex-shrink: 0;
+        }
+
+        .col-name {
+            color: var(--text-secondary);
+        }
+
+        footer {
+            margin-top: 3rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--border);
+            font-size: 0.78rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
+        footer a {
+            color: var(--text-muted);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+
+        <header class="page-header">
+            <div class="page-label">Outil utilitaire</div>
+            <h1 class="page-title">Rôle d'évaluation → Excel</h1>
+            <p class="page-subtitle">
+                Convertit un fichier XML de rôle d'évaluation foncière (format MAMROT/MAMH)
+                en classeur Excel structuré — 3 onglets : <strong>Recherche</strong> (formulaire de sélection),
+                <strong>Détail</strong> (fiche complète façon PDF), et <strong>Rôle</strong> (toutes les unités).
+            </p>
+        </header>
+
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept=".xml" />
+            <div class="drop-icon" id="dropIcon">📄</div>
+            <div class="drop-label">Glisser-déposer le fichier XML ici</div>
+            <div class="drop-hint">ou cliquer pour sélectionner</div>
+            <div class="file-name" id="fileName"></div>
+        </div>
+
+        <div class="summary-card" id="summaryCard">
+            <div class="summary-title">Aperçu du fichier</div>
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-value" id="statEntries">—</div>
+                    <div class="stat-desc">unités d'évaluation</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statStreets">—</div>
+                    <div class="stat-desc">rues différentes</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="statMunicipality">—</div>
+                    <div class="stat-desc">code municipalité</div>
+                </div>
+            </div>
+            <div class="street-list" id="streetList"></div>
+        </div>
+
+        <div id="status">Aucun fichier sélectionné.</div>
+
+        <button class="btn-convert" id="convertBtn" disabled>
+            ⬇ Télécharger le fichier Excel
+        </button>
+
+        <div class="info-section">
+            <div class="info-title">Colonnes exportées (dans l'ordre)</div>
+            <div class="columns-grid">
+                <div class="col-item"><span class="col-num">1</span><span class="col-name">Adresse complète</span></div>
+                <div class="col-item"><span class="col-num">2</span><span class="col-name">Numéro civique</span></div>
+                <div class="col-item"><span class="col-num">3</span><span class="col-name">Cadastre(s)</span></div>
+                <div class="col-item"><span class="col-num">4</span><span class="col-name">Numéro matricule</span></div>
+                <div class="col-item"><span class="col-num">5</span><span class="col-name">Utilisation prédominante</span></div>
+                <div class="col-item"><span class="col-num">6</span><span class="col-name">Unité de voisinage</span></div>
+                <div class="col-item"><span class="col-num">7</span><span class="col-name">Propriétaire(s)</span></div>
+                <div class="col-item"><span class="col-num">8</span><span class="col-name">Statut d'imposition scolaire</span></div>
+                <div class="col-item"><span class="col-num">9</span><span class="col-name">Date d'inscription au rôle</span></div>
+                <div class="col-item"><span class="col-num">10</span><span class="col-name">Adresse postale du propriétaire</span></div>
+                <div class="col-item"><span class="col-num">11</span><span class="col-name">Nombre d'étages</span></div>
+                <div class="col-item"><span class="col-num">12</span><span class="col-name">Année de construction</span></div>
+                <div class="col-item"><span class="col-num">13</span><span class="col-name">Aire d'étages (m²)</span></div>
+                <div class="col-item"><span class="col-num">14</span><span class="col-name">Genre de construction</span></div>
+                <div class="col-item"><span class="col-num">15</span><span class="col-name">Lien physique</span></div>
+                <div class="col-item"><span class="col-num">16</span><span class="col-name">Nombre de logements</span></div>
+                <div class="col-item"><span class="col-num">17</span><span class="col-name">Locaux non résidentiels</span></div>
+                <div class="col-item"><span class="col-num">18</span><span class="col-name">Chambres locatives</span></div>
+                <div class="col-item"><span class="col-num">19</span><span class="col-name">Mesure frontale (m)</span></div>
+                <div class="col-item"><span class="col-num">20</span><span class="col-name">Superficie (m²)</span></div>
+                <div class="col-item"><span class="col-num">21</span><span class="col-name">Zonage agricole</span></div>
+                <div class="col-item"><span class="col-num">22</span><span class="col-name">Superficie totale (m²)</span></div>
+                <div class="col-item"><span class="col-num">23</span><span class="col-name">Superficie zone agricole (m²)</span></div>
+                <div class="col-item"><span class="col-num">24</span><span class="col-name">Superficie imposition max. (m²)</span></div>
+                <div class="col-item"><span class="col-num">25</span><span class="col-name">Date référence marché</span></div>
+                <div class="col-item"><span class="col-num">26</span><span class="col-name">Valeur terrain ($)</span></div>
+                <div class="col-item"><span class="col-num">27</span><span class="col-name">Valeur bâtiment ($)</span></div>
+                <div class="col-item"><span class="col-num">28</span><span class="col-name">Valeur immeuble ($)</span></div>
+                <div class="col-item"><span class="col-num">29</span><span class="col-name">Valeur rôle antérieur ($)</span></div>
+                <div class="col-item"><span class="col-num">30</span><span class="col-name">Valeur non imposable ($)</span></div>
+                <div class="col-item"><span class="col-num">31</span><span class="col-name">Valeur imposable ($)</span></div>
+                <div class="col-item"><span class="col-num">32</span><span class="col-name">EAE (exploitation agr. enreg.)</span></div>
+            </div>
+        </div>
+
+        <footer>
+            <p>Outil généré par <a href="..">Gestion Technologies</a> — Données du rôle d'évaluation foncière MAMH Québec</p>
+        </footer>
+
+    </div><!-- /container -->
+
+    <!-- xlsx-js-style: SheetJS fork with full cell-style support (font/fill/border/alignment) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx-js-style@1.2.0/dist/xlsx.bundle.js"></script>
+    <script>
+        // ─────────────────────────────────────────────────────────────
+        //  LOOKUP TABLES
+        // ─────────────────────────────────────────────────────────────
+        const UTILISATION = {
+            '1000': 'Logement',
+            '1001': 'Logement en copropriété divise',
+            '1002': 'Logement en copropriété indivise',
+            '1003': 'Maison en rangée',
+            '1004': 'Autre logement résidentiel',
+            '1010': 'Duplex',
+            '1011': 'Triplex',
+            '1012': 'Quadruplex',
+            '1013': 'Quintuplex',
+            '1014': 'Sextuplex',
+            '1015': 'Immeuble résidentiel (7 logements et plus)',
+            '1020': 'Résidence pour personnes âgées',
+            '1100': 'Chalet ou maison de villégiature',
+            '1101': 'Chalet en copropriété divise',
+            '1102': 'Terrain de camping',
+            '1103': 'Marina',
+            '1104': 'Immeuble récréatif et de villégiature',
+            '1105': 'Terrain de golf (avec ou sans bâtiment)',
+            '1106': 'Club sportif ou de récréation',
+            '1211': 'Maison mobile',
+            '1511': 'Maison de chambres et pension',
+            '1990': 'Autres immeubles résidentiels',
+            '2713': "Industrie de produits de scierie et d'ateliers de rabotage",
+            '2819': 'Autres industries du meuble résidentiel',
+            '3280': "Atelier d'usinage",
+            '3310': 'Industrie de machines agricoles',
+            '3791': "Industrie de la fabrication de mélanges d'asphaltage",
+            '4111': 'Chemin de fer',
+            '4214': "Garage d'autobus et équipement d'entretien",
+            '4222': 'Garage et équipement d\'entretien pour le transport par camion',
+            '4229': 'Autres activités reliées au transport de matériaux par camion',
+            '4530': 'Artère principale',
+            '4550': "Rue et avenue pour l'accès local",
+            '4562': 'Passage',
+            '4590': 'Autres routes et voies publiques',
+            '4621': 'Terrain de stationnement pour automobiles',
+            '4715': 'Services de télécommunications sans fil',
+            '4719': 'Autres services de télécommunications',
+            '4823': 'Transport et gestion du gaz par canalisation',
+            '4834': "Station de contrôle de la pression de l'eau",
+            '4842': "Espace pour le séchage des boues provenant de l'usine d'épuration",
+            '4849': "Autres systèmes d'égouts",
+            '5010': 'Immeuble commercial',
+            '5020': 'Entreposage de tout genre',
+            '5270': 'Vente au détail de produits de béton et de briques',
+            '5332': 'Vente au détail de marchandises d\'occasion et marché aux puces',
+            '5412': "Vente au détail de produits d'épicerie",
+            '5711': 'Vente au détail de meubles',
+            '5933': 'Vente au détail de produits artisanaux, locaux ou régionaux',
+            '6352': "Service de location d'outils ou d'équipements",
+            '6375': 'Entreposage du mobilier et d\'appareils ménagers',
+            '6411': "Service de réparation d'automobiles (garage)",
+            '6413': 'Service de débosselage et de peinture d\'automobiles',
+            '6441': 'Service de réparation et d\'entretien de véhicules lourds',
+            '6442': 'Service de débosselage et de peinture de véhicules lourds',
+            '6498': 'Service de soudure',
+            '6541': 'Service de garderie',
+            '6631': 'Service de plomberie, chauffage, climatisation',
+            '6634': 'Service de maçonnerie (entrepreneur spécialisé)',
+            '6649': 'Autres services de travaux de construction spécialisés',
+            '6713': 'Administration publique municipale et régionale',
+            '6731': 'Bureau de poste',
+            '6812': 'École élémentaire',
+            '6911': 'Église, synagogue, mosquée et temple',
+            '7111': 'Bibliothèque',
+            '7414': 'Centre de tir pour armes à feu',
+            '7424': 'Centre récréatif en général',
+            '7611': 'Parc pour la récréation en général',
+            '7620': 'Parc à caractère récréatif et ornemental',
+            '8121': 'Élevage de bovins de boucherie',
+            '8122': 'Élevage de bovins laitiers',
+            '8123': 'Élevage de porcs',
+            '8125': 'Élevage de volailles et production d\'œufs',
+            '8126': 'Élevage d\'équidés',
+            '8127': 'Élevage caprin',
+            '8128': 'Apiculture',
+            '8131': 'Acériculture',
+            '8132': 'Culture de céréales, de plantes oléagineuses et de légumineuses',
+            '8133': 'Culture de légumes',
+            '8135': 'Horticulture ornementale',
+            '8199': 'Autres activités agricoles',
+            '8219': "Autres services de traitement des produits de l'agriculture",
+            '8542': 'Extraction de la pierre pour le concassage et l\'enrochement',
+            '9100': 'Espace de terrain non aménagé et non exploité',
+            '9220': "Forêt inexploitée qui n'est pas une réserve",
+        };
+
+        const TYPE_VOIE = {
+            'RU': 'rue', 'RUE': 'rue', 'CH': 'chemin', 'AV': 'avenue', 'AVE': 'avenue',
+            'BL': 'boulevard', 'BOUL': 'boulevard', 'BLV': 'boulevard',
+            'CT': 'côte', 'MT': 'montée', 'RAG': 'rang', 'RG': 'rang',
+            'ST': 'sentier', 'ALL': 'allée', 'IMP': 'impasse', 'PL': 'place',
+            'CR': 'croissant', 'RON': 'rondpoint', 'VL': 'voie locale',
+            'CC': 'carré', 'PA': 'passage', 'TER': 'terrasse', 'PP': 'promenade',
+        };
+
+        const LIEN_PHYSIQUE = {
+            '1': 'Détaché', '2': 'Jumelé', '3': 'En rangée', '4': 'En rangée (coin)',
+            '5': 'Jumelé (autre)', '6': 'En rangée (autre)',
+        };
+
+        const GENRE_CONSTR = {
+            '1': 'Unifamilial isolé', '2': 'Unifamilial jumelé', '3': 'Unifamilial en rangée',
+            '4': 'Duplex', '5': 'Triplex', '6': 'Quadruplex et plus',
+            '7': 'Immeuble à logements multiples', '8': 'Résidence pour personnes âgées',
+            '9': 'Immeuble de villégiature',
+        };
+
+        const STATUT_SCOLAIRE = {
+            '1': 'Personne physique', '2': 'Personne morale',
+            '3': 'Organisme à but non lucratif', '4': 'Personne exemptée',
+        };
+
+        // ─────────────────────────────────────────────────────────────
+        //  HELPERS
+        // ─────────────────────────────────────────────────────────────
+        function getFirst(parent, tag) {
+            const els = parent.getElementsByTagName(tag);
+            return els.length > 0 ? els[0] : null;
+        }
+        function getText(parent, tag, fallback = '') {
+            const el = getFirst(parent, tag);
+            return el ? (el.textContent || '').trim() : fallback;
+        }
+        function getAll(parent, tag) {
+            return Array.from(parent.getElementsByTagName(tag));
+        }
+        function num(str) {
+            if (!str) return '';
+            const n = parseFloat(str);
+            return isNaN(n) ? '' : n;
+        }
+        function int(str) {
+            if (!str) return '';
+            const n = parseInt(str, 10);
+            return isNaN(n) ? '' : n;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  PARSE ONE ENTRY
+        // ─────────────────────────────────────────────────────────────
+        function extractEntry(e) {
+            // Section 1 – Identification
+            const rl0101x = getFirst(e, 'RL0101x');
+            const civicNo = rl0101x ? getText(rl0101x, 'RL0101Ax') : '';
+            const typeVoie = rl0101x ? getText(rl0101x, 'RL0101Ex') : '';
+            const streetRaw = rl0101x ? getText(rl0101x, 'RL0101Gx') : '';
+
+            // Cadastres – join all RL0103Ax values
+            const cadastres = getAll(e, 'RL0103x').map(x => {
+                const code = getText(x, 'RL0103Ax');
+                const bx = getText(x, 'RL0103Bx');
+                const cx = getText(x, 'RL0103Cx');
+                return [bx, cx, code].filter(Boolean).join(' ');
+            }).filter(Boolean).join(', ');
+
+            const matricule = getText(getFirst(e, 'RLZU1001') || e, 'RLZU1001A') ||
+                [getText(e, 'RL0104A'), getText(e, 'RL0104B'), getText(e, 'RL0104C')]
+                    .filter(Boolean).join('-');
+
+            const utilCode = getText(e, 'RL0105A');
+            const voisinage = getText(e, 'RL0107A');
+
+            // Section 2 – Propriétaire(s)
+            const ownerEls = getAll(e, 'RL0201x');
+            const ownerNames = [];
+            for (const ow of ownerEls) {
+                const nom = getText(ow, 'RL0201Ax');
+                const prenom = getText(ow, 'RL0201Bx');
+                if (nom) ownerNames.push(prenom ? `${prenom} ${nom}` : nom);
+            }
+            // Deduplicate preserving order
+            const seen = new Set();
+            const uniqueOwners = ownerNames.filter(n => { if (seen.has(n)) return false; seen.add(n); return true; });
+
+            const firstOwner = ownerEls[0] || null;
+            const statutCode = firstOwner ? getText(firstOwner, 'RL0201Hx') : '';
+            const dateInscription = firstOwner ? getText(firstOwner, 'RL0201Gx') : '';
+            const adresseRue = firstOwner ? getText(firstOwner, 'RL0201Cx') : '';
+            const adresseVille = firstOwner ? getText(firstOwner, 'RL0201Dx') : '';
+            const adresseCP = firstOwner ? getText(firstOwner, 'RL0201Ex') : '';
+
+            // Section 3 – Caractéristiques
+            const nbEtages = getText(e, 'RL0303A');
+            const anneeConstr = getText(e, 'RL0307A');
+            const aireEtages = getText(e, 'RL0308A');
+            const genreCode = getText(e, 'RL0306A');
+            const lienCode = getText(e, 'RL0309A');
+            const nbLogements = getText(e, 'RL0311A');
+            const nbLocaux = getText(e, 'RL0312A');
+            const nbChambres = getText(e, 'RL0313A');
+            const mesureFrontale = getText(e, 'RL0301A');
+            const superficie = getText(e, 'RL0302A');
+            const superficieTot = getText(e, 'RL0304A');
+            const superficieZA = getText(e, 'RL0305A');
+            const superficieImpo = getText(e, 'RL0314A');
+
+            // Zonage agricole (derived)
+            let zonageAgri = '';
+            if (superficieZA && parseFloat(superficieZA) > 0) {
+                const za = parseFloat(superficieZA);
+                const tot = parseFloat(superficieTot || superficie || '0');
+                zonageAgri = (tot > 0 && za >= tot * 0.99) ? 'En entier' : 'En partie';
+            } else if (getFirst(e, 'RLZU1002')) {
+                zonageAgri = 'En partie';
+            }
+
+            // EAE flag
+            const isEAE = superficieImpo && parseFloat(superficieImpo) > 0;
+
+            // Section 4 – Valeurs
+            const dateRef = getText(e, 'RL0401A');
+            const valTerrain = getText(e, 'RL0402A');
+            const valBatiment = getText(e, 'RL0403A');
+            const valImmeuble = getText(e, 'RL0404A');
+            const valAnterieur = getText(e, 'RL0405A');
+
+            // Section 5 – Répartition
+            const valNonImposable = getText(e, 'RL0501A');
+            const imposable = (valImmeuble && valNonImposable !== '')
+                ? Math.max(0, int(valImmeuble) - int(valNonImposable))
+                : (valImmeuble ? int(valImmeuble) : '');
+
+            // Build formatted address
+            const tvFr = TYPE_VOIE[typeVoie.toUpperCase()] || (typeVoie.toLowerCase() || '');
+            const parts = [];
+            if (civicNo) parts.push(civicNo);
+            if (tvFr) parts.push(tvFr);
+            if (streetRaw) parts.push(streetRaw);
+            const adresse = parts.join(' ');
+
+            return {
+                streetKey: streetRaw || '(sans rue)',
+                // Row data in column order
+                adresse,
+                civicNo,
+                cadastres,
+                matricule,
+                utilisation: utilCode
+                    ? `${utilCode} – ${UTILISATION[utilCode] || utilCode}`
+                    : '',
+                voisinage,
+                proprietaires: uniqueOwners.join(' / '),
+                statut: STATUT_SCOLAIRE[statutCode] || statutCode,
+                dateInscription,
+                adressePostale: [adresseRue, adresseVille, adresseCP].filter(Boolean).join(', '),
+                nbEtages: nbEtages !== '' ? int(nbEtages) : '',
+                anneeConstr: anneeConstr !== '' ? int(anneeConstr) : '',
+                aireEtages: num(aireEtages),
+                genreConstr: genreCode
+                    ? `${genreCode} – ${GENRE_CONSTR[genreCode] || genreCode}`
+                    : '',
+                lienPhysique: LIEN_PHYSIQUE[lienCode] || lienCode,
+                nbLogements: nbLogements !== '' ? int(nbLogements) : '',
+                nbLocaux: nbLocaux !== '' ? int(nbLocaux) : '',
+                nbChambres: nbChambres !== '' ? int(nbChambres) : '',
+                mesureFrontale: num(mesureFrontale),
+                superficie: num(superficie),
+                zonageAgri,
+                superficieTot: num(superficieTot),
+                superficieZA: num(superficieZA),
+                superficieImpo: num(superficieImpo),
+                dateRef,
+                valTerrain: int(valTerrain),
+                valBatiment: int(valBatiment),
+                valImmeuble: int(valImmeuble),
+                valAnterieur: int(valAnterieur),
+                valNonImposable: int(valNonImposable),
+                valImposable: imposable,
+                eae: isEAE ? 'Oui' : '',
+            };
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  BUILD EXCEL WORKBOOK
+        // ─────────────────────────────────────────────────────────────
+        const HEADERS = [
+            'Adresse complète', 'Numéro civique', 'Cadastre(s)', 'Numéro matricule',
+            'Utilisation prédominante', "Numéro d'unité de voisinage",
+            'Propriétaire(s)', "Statut d'imposition scolaire", "Date d'inscription",
+            'Adresse postale du propriétaire',
+            "Nombre d'étages", 'Année de construction', "Aire d'étages (m²)",
+            'Genre de construction', 'Lien physique',
+            'Nombre de logements', 'Locaux non résidentiels', 'Chambres locatives',
+            'Mesure frontale (m)', 'Superficie (m²)', 'Zonage agricole',
+            'Superficie totale (m²)', 'Superficie zone agricole (m²)', 'Superficie imposition max. (m²)',
+            'Date réf. marché', 'Valeur terrain ($)', 'Valeur bâtiment ($)',
+            'Valeur immeuble ($)', 'Valeur rôle antérieur ($)',
+            'Valeur non imposable ($)', 'Valeur imposable ($)', 'EAE',
+        ];
+
+        const KEYS = [
+            'adresse', 'civicNo', 'cadastres', 'matricule',
+            'utilisation', 'voisinage',
+            'proprietaires', 'statut', 'dateInscription', 'adressePostale',
+            'nbEtages', 'anneeConstr', 'aireEtages',
+            'genreConstr', 'lienPhysique',
+            'nbLogements', 'nbLocaux', 'nbChambres',
+            'mesureFrontale', 'superficie', 'zonageAgri',
+            'superficieTot', 'superficieZA', 'superficieImpo',
+            'dateRef', 'valTerrain', 'valBatiment',
+            'valImmeuble', 'valAnterieur',
+            'valNonImposable', 'valImposable', 'eae',
+        ];
+
+        const COL_WIDTHS = [
+            36, 12, 22, 18,
+            52, 10,
+            42, 24, 16, 52,
+            10, 12, 14,
+            30, 14,
+            10, 10, 10,
+            14, 16, 14,
+            16, 20, 20,
+            14, 16, 16,
+            16, 18,
+            18, 16, 6,
+        ];
+
+        // ─── Column letter helper (0-indexed) ──────────────────────
+        function colLetter(idx) {
+            if (idx < 26) return String.fromCharCode(65 + idx);
+            return String.fromCharCode(64 + Math.floor(idx / 26)) +
+                String.fromCharCode(65 + (idx % 26));
+        }
+
+        // ─── Cell style palette ───────────────────────────────────────
+        const ST = {
+            title: { font: { bold: true, sz: 16, color: { rgb: '1A3A5C' } } },
+            sub: { font: { italic: true, sz: 12, color: { rgb: '666666' } } },
+            munic: { font: { bold: true, sz: 13, color: { rgb: '1A3A5C' } } },
+            secHdr: {
+                font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+                fill: { patternType: 'solid', fgColor: { rgb: '2B547E' } },
+                alignment: { horizontal: 'left', vertical: 'center' },
+            },
+            subHdr: {
+                font: { bold: true, sz: 11, color: { rgb: '1A3A5C' } },
+                fill: { patternType: 'solid', fgColor: { rgb: 'DCE6F1' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            },
+            lbl: {
+                font: { bold: true, sz: 12 },
+                alignment: { horizontal: 'right', vertical: 'top' },
+            },
+            val: {
+                font: { sz: 12 },
+                alignment: { horizontal: 'left', vertical: 'top', wrapText: true },
+            },
+            input: {
+                font: { bold: true, sz: 13 },
+                fill: { patternType: 'solid', fgColor: { rgb: 'FFFDE7' } },
+                border: {
+                    top: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    bottom: { style: 'medium', color: { rgb: '1A3A5C' } },
+                    left: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                    right: { style: 'thin', color: { rgb: 'CCCCCC' } },
+                },
+            },
+            hint: {
+                font: { italic: true, sz: 11, color: { rgb: '999999' } },
+                alignment: { horizontal: 'left' },
+            },
+            rLbl: {
+                font: { bold: true, sz: 12, color: { rgb: '1A3A5C' } },
+                alignment: { horizontal: 'right' },
+            },
+            rVal: {
+                font: { sz: 12 },
+                fill: { patternType: 'solid', fgColor: { rgb: 'F0F4FF' } },
+                alignment: { wrapText: true },
+            },
+            hdrData: {
+                font: { bold: true, sz: 12 },
+                fill: { patternType: 'solid', fgColor: { rgb: 'DCE6F1' } },
+            },
+            btn: {
+                font: { bold: true, sz: 13, color: { rgb: 'FFFFFF' } },
+                fill: { patternType: 'solid', fgColor: { rgb: '2B547E' } },
+                border: {
+                    top: { style: 'thin', color: { rgb: '1A3A5C' } },
+                    bottom: { style: 'thin', color: { rgb: '1A3A5C' } },
+                    left: { style: 'thin', color: { rgb: '1A3A5C' } },
+                    right: { style: 'thin', color: { rgb: '1A3A5C' } },
+                },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            },
+        };
+
+        // ─── Cell / worksheet helpers ─────────────────────────────────
+        function sc(v, s) {
+            return { v: v !== undefined ? v : '', t: typeof v === 'number' ? 'n' : 's', s: s || {} };
+        }
+        function fc(formula, s, t) {
+            return { f: formula, t: t || 's', s: s || {} };
+        }
+        function nfc(formula, s) {
+            return { f: formula, t: 'n', z: '#,##0', s: s || {} };
+        }
+        function addCell(ws, row, col, cell) {
+            ws[XLSX.utils.encode_cell({ r: row - 1, c: col - 1 })] = cell;
+        }
+        function addMerge(ws, r1, c1, r2, c2) {
+            if (!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({ s: { r: r1 - 1, c: c1 - 1 }, e: { r: r2 - 1, c: c2 - 1 } });
+        }
+
+        // ─── Sheet 3 (last): Rôle — all entries, flat table ──────────
+        // streetGroups: Map<street, entry[]>  (already sorted by street+civicNo)
+        function buildRoleSheet(streetGroups) {
+            const grpHdrS = {
+                font: { bold: true, sz: 12, color: { rgb: 'FFFFFF' } },
+                fill: { patternType: 'solid', fgColor: { rgb: '2B547E' } },
+                alignment: { vertical: 'center' },
+            };
+
+            const aoa = [HEADERS];
+            const rowMeta = [{ hpt: 18 }]; // row 0 = column header
+            const grpHdrRows = []; // track which aoa indices are street-header rows
+
+            for (const [street, group] of streetGroups) {
+                const label = street + '  (' + group.length +
+                    ' unité' + (group.length > 1 ? 's' : '') + ')';
+                // Street header row — column A empty so MATCH() on address skips it;
+                // label goes in column B (visible, merged later via styling loop)
+                const hdrRow = Array(KEYS.length).fill('');
+                hdrRow[0] = label;   // col A carries the text (styled, not searched by address MATCH)
+                aoa.push(hdrRow);
+                grpHdrRows.push(aoa.length - 1); // 0-based index in aoa
+                rowMeta.push({ hpt: 20 }); // summary row — NO level, always visible
+
+                for (const e of group) {
+                    aoa.push(KEYS.map(k => (e[k] !== undefined && e[k] !== null ? e[k] : '')));
+                    rowMeta.push({ hpt: 18, level: 1, hidden: true }); // grouped, collapsed
+                }
+            }
+
+            const ws = XLSX.utils.aoa_to_sheet(aoa);
+            ws['!cols'] = COL_WIDTHS.map(w => ({ wch: w }));
+            ws['!views'] = [{ state: 'frozen', ySplit: 1 }];
+            ws['!rows'] = rowMeta;
+
+            // Style column header row
+            for (let c = 0; c < HEADERS.length; c++) {
+                const addr = XLSX.utils.encode_cell({ r: 0, c });
+                if (ws[addr]) ws[addr].s = ST.hdrData;
+            }
+
+            // Style street header rows (navy background across all columns)
+            for (const r of grpHdrRows) {
+                for (let c = 0; c < KEYS.length; c++) {
+                    const addr = XLSX.utils.encode_cell({ r, c });
+                    if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+                    ws[addr].s = grpHdrS;
+                }
+            }
+
+            if (!ws['!merges']) ws['!merges'] = [];
+            for (const r of grpHdrRows) {
+                ws['!merges'].push({
+                    s: { r, c: 0 }, e: { r, c: KEYS.length - 1 },
+                });
+            }
+
+            return ws;
+        }
+
+        // ─── Sheet 1: Recherche — search form + multi-result table ──
+        function buildRechercheSheet(municipalite, exercices) {
+            const ws = {};
+
+            // Cols: A=address(32) B=civicNo/input(10) C=matricule/hint(16)
+            //       D=proprietaire/hint(28) E=value/hint(14) F=edge(2) G=helper(hidden)
+            ws['!cols'] = [
+                { wch: 32 }, { wch: 10 }, { wch: 16 },
+                { wch: 28 }, { wch: 14 }, { wch: 2 },
+                { hidden: true },
+            ];
+
+            // Row layout: 1-2 title, 3 spacer, 4 section hdr, 5 matricule, 6 divider,
+            // 7 address, 8 spacer, 9 B9 helper (2pt), 10 navigate btn,
+            // 11 spacer, 12 results section hdr, 13 col headers, 14-33 result rows, 34 spacer
+            ws['!rows'] = [
+                { hpt: 30 }, { hpt: 18 }, { hpt: 6  }, { hpt: 24 },  // 1-4
+                { hpt: 28 }, { hpt: 14 }, { hpt: 28 }, { hpt: 10 },  // 5-8
+                { hpt: 2  }, { hpt: 32 }, { hpt: 10 }, { hpt: 24 },  // 9-12
+                { hpt: 22 },                                            // 13: col headers
+                ...Array.from({ length: 20 }, () => ({ hpt: 22 })),   // 14-33: results
+                { hpt: 8  },                                            // 34: spacer
+            ];
+            ws['!views'] = [{ showGridLines: false }];
+
+            const exercLabel = exercices
+                ? `Exercices ${exercices} — Code municipalité : ${municipalite}`
+                : `Code municipalité : ${municipalite}`;
+
+            addCell(ws, 1, 1, sc("Rôle d'évaluation foncière — Recherche", ST.title));
+            addMerge(ws, 1, 1, 1, 6);
+            addCell(ws, 2, 1, sc(exercLabel, ST.sub));
+            addMerge(ws, 2, 1, 2, 6);
+
+            addCell(ws, 4, 1, sc('RECHERCHE', ST.secHdr));
+            addMerge(ws, 4, 1, 4, 6);
+
+            addCell(ws, 5, 1, sc('Numéro matricule :', ST.lbl));
+            addCell(ws, 5, 2, sc('', ST.input));
+            addCell(ws, 5, 3, sc('(ex : 5248-52-2780)', ST.hint));
+            addMerge(ws, 5, 3, 5, 6);
+
+            addCell(ws, 6, 2, sc('— ou —', {
+                font: { italic: true, sz: 11, color: { rgb: 'BBBBBB' } },
+                alignment: { horizontal: 'center' },
+            }));
+
+            addCell(ws, 7, 1, sc('Adresse (partielle) :', ST.lbl));
+            addCell(ws, 7, 2, sc('', ST.input));
+            addCell(ws, 7, 3, sc('(ex : PRINCIPALE ou 566)', ST.hint));
+            addMerge(ws, 7, 3, 7, 6);
+
+            // Row 9: B9 = G14 (first match row — referenced by Détail sheet as Recherche!$B$9)
+            addCell(ws, 9, 2, { f: 'G14', t: 'n', s: { font: { sz: 1, color: { rgb: 'FFFFFF' } } } });
+
+            // Row 10: navigate to Détail
+            addCell(ws, 10, 1,
+                fc(`HYPERLINK("#'Détail'!A1","  →  Voir la fiche du 1er résultat  ")`, ST.btn));
+            addMerge(ws, 10, 1, 10, 6);
+
+            // Row 12: results section header
+            addCell(ws, 12, 1, sc('RÉSULTATS CORRESPONDANTS', ST.secHdr));
+            addMerge(ws, 12, 1, 12, 6);
+
+            // Row 13: column headers
+            const tHdr = {
+                font: { bold: true, sz: 12 },
+                fill: { patternType: 'solid', fgColor: { rgb: 'DCE6F1' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+                border: { bottom: { style: 'thin', color: { rgb: '9AB0CC' } } },
+            };
+            for (const [c, label] of [
+                [1, 'Adresse'], [2, 'No.'], [3, 'Matricule'],
+                [4, 'Propriétaire'], [5, 'Valeur immeuble'],
+            ]) {
+                addCell(ws, 13, c, sc(label, tHdr));
+            }
+
+            // ── 20 result rows + hidden helper formulas in column G ───
+            const adrStyle = {
+                font: { sz: 12, color: { rgb: '1A3A5C' }, underline: true },
+                alignment: { horizontal: 'left', vertical: 'center' },
+                border: { bottom: { style: 'thin', color: { rgb: 'EEEEEE' } } },
+            };
+            const cellStyle = {
+                font: { sz: 12 },
+                alignment: { horizontal: 'left', vertical: 'center' },
+                border: { bottom: { style: 'thin', color: { rgb: 'EEEEEE' } } },
+            };
+            const numStyle = {
+                font: { sz: 12 },
+                alignment: { horizontal: 'right', vertical: 'center' },
+                border: { bottom: { style: 'thin', color: { rgb: 'EEEEEE' } } },
+            };
+
+            for (let i = 0; i < 20; i++) {
+                const excelRow = 14 + i;
+                const g = `G${excelRow}`;
+
+                // Hidden helper: row number in Rôle for this result
+                let helperF;
+                if (i === 0) {
+                    helperF =
+                        `IF($B$5<>"",IFERROR(MATCH($B$5,'Rôle'!$D:$D,0),0),` +
+                        `IF($B$7<>"",IFERROR(MATCH("*"&UPPER($B$7)&"*",'Rôle'!$A:$A,0),0),0))`;
+                } else {
+                    const prev = `G${13 + i}`;  // G14 when i=1, G15 when i=2, …
+                    helperF =
+                        `IF($B$5<>"",0,IF(${prev}=0,0,` +
+                        `IFERROR(MATCH("*"&UPPER($B$7)&"*",` +
+                        `OFFSET('Rôle'!$A$1,${prev},0,1048576-${prev},1),0)+${prev},0)))`;
+                }
+                addCell(ws, excelRow, 7, { f: helperF, t: 'n', s: {} });
+
+                // Display cells A:E
+                addCell(ws, excelRow, 1,
+                    fc(`IF(${g}>0,HYPERLINK("#'Rôle'!A"&${g},INDEX('Rôle'!$A:$A,${g})),"")`, adrStyle));
+                addCell(ws, excelRow, 2,
+                    fc(`IF(${g}>0,INDEX('Rôle'!$B:$B,${g}),"")`, cellStyle));
+                addCell(ws, excelRow, 3,
+                    fc(`IF(${g}>0,INDEX('Rôle'!$D:$D,${g}),"")`, cellStyle));
+                addCell(ws, excelRow, 4,
+                    fc(`IF(${g}>0,INDEX('Rôle'!$G:$G,${g}),"")`, cellStyle));
+                const valCell = {
+                    f: `IF(${g}>0,IFERROR(INDEX('Rôle'!$AB:$AB,${g})+0,0),0)`,
+                    t: 'n', z: '#,##0', s: numStyle,
+                };
+                addCell(ws, excelRow, 5, valCell);
+            }
+
+            ws['!ref'] = 'A1:G34';
+            return ws;
+        }
+
+        // ─── Sheet 2: Détail — PDF-style record view ─────────────────
+        function buildDetailSheet(municipalite, exercices) {
+            const ws = {};
+
+            // Cols: A=label(28) B=left-val/value(24) C=divider(2) D=right-lbl(26) E=right-val(20) F=edge(2)
+            ws['!cols'] = [
+                { wch: 28 }, { wch: 24 }, { wch: 2 }, { wch: 26 }, { wch: 20 }, { wch: 2 },
+            ];
+
+            const ROW = 'Recherche!$B$9';
+
+            // ── PDF-matching local styles ──────────────────────────────
+            const thin = (rgb) => ({ style: 'thin', color: { rgb } });
+            const med = (rgb) => ({ style: 'medium', color: { rgb } });
+
+            const pdfSecHdr = {
+                font: { bold: true, sz: 12 },
+                fill: { patternType: 'solid', fgColor: { rgb: 'EBEBEB' } },
+                border: { top: thin('AAAAAA'), bottom: thin('AAAAAA') },
+                alignment: { horizontal: 'left', vertical: 'center' },
+            };
+            const pdfSubHdr = {
+                font: { sz: 11, italic: true, color: { rgb: '444444' } },
+                fill: { patternType: 'solid', fgColor: { rgb: 'F5F5F5' } },
+                border: { bottom: thin('CCCCCC') },
+                alignment: { horizontal: 'left', vertical: 'center' },
+            };
+            const rowB = { bottom: thin('E0E0E0') };
+            const pdfLbl = {
+                font: { sz: 11, color: { rgb: '555555' } },
+                border: rowB,
+                alignment: { horizontal: 'left', vertical: 'top' },
+            };
+            const pdfVal = {
+                font: { bold: true, sz: 11 },
+                border: rowB,
+                alignment: { horizontal: 'left', vertical: 'top', wrapText: true },
+            };
+            const pdfValR = {
+                font: { bold: true, sz: 11 },
+                border: rowB,
+                alignment: { horizontal: 'right', vertical: 'top' },
+            };
+            const pdfTitle = { font: { sz: 14 } };
+            const pdfTitleB = { font: { bold: true, sz: 14 } };
+            const pdfSubT = { font: { sz: 12 } };
+            const pdfSubTB = { font: { bold: true, sz: 12 } };
+
+            function fld(ci) {
+                const col = colLetter(ci);
+                return `IF(${ROW}>0,IFERROR(INDEX('Rôle'!$${col}:$${col},${ROW}),""),"")`;
+            }
+            function nfld(ci) {
+                const col = colLetter(ci);
+                return `IF(${ROW}>0,IFERROR(INDEX('Rôle'!$${col}:$${col},${ROW}),0),0)`;
+            }
+            // Number cell: right-aligned, #,##0 format
+            function nc(ci) { return { f: nfld(ci), t: 'n', z: '#,##0', s: pdfValR }; }
+
+            // Apply pdfSecHdr style to all 6 cells of a header row (for full-width border)
+            function styleSecRow(r) {
+                for (let c = 0; c < 6; c++) {
+                    const addr = XLSX.utils.encode_cell({ r: r - 1, c });
+                    if (!ws[addr]) ws[addr] = { v: '', t: 's' };
+                    ws[addr].s = pdfSecHdr;
+                }
+            }
+
+            // ── Title header ──────────────────────────────────────────
+            addCell(ws, 1, 1, sc("Rôle d'évaluation foncière", pdfTitle));
+            addMerge(ws, 1, 1, 1, 6);
+
+            addCell(ws, 2, 1, sc('Municipalité de', pdfTitle));
+            addCell(ws, 2, 2, sc(municipalite, pdfTitleB));
+            addMerge(ws, 2, 2, 2, 6);
+
+            addCell(ws, 3, 1, sc('en vigueur pour les exercices financiers', pdfSubT));
+            addMerge(ws, 3, 1, 3, 3);
+            if (exercices) {
+                addCell(ws, 3, 4, sc(exercices, pdfSubTB));
+                addMerge(ws, 3, 4, 3, 6);
+            }
+
+            // ── Section 1: Identification ─────────────────────────────
+            addCell(ws, 5, 1, sc("1.  Identification de l'unité d'évaluation", pdfSecHdr));
+            addMerge(ws, 5, 1, 5, 6);
+            styleSecRow(5);
+
+            for (const [r, lbl, ci] of [
+                [6, 'Adresse :', 0],
+                [7, 'Cadastre(s) et numéro(s) de lot :', 2],
+                [8, 'Numéro matricule :', 3],
+                [9, 'Utilisation prédominante :', 4],
+                [10, "Numéro d'unité de voisinage :", 5],
+            ]) {
+                addCell(ws, r, 1, sc(lbl, pdfLbl));
+                addCell(ws, r, 2, fc(fld(ci), pdfVal));
+                addMerge(ws, r, 2, r, 6);
+            }
+
+            // ── Section 2: Propriétaire ───────────────────────────────
+            addCell(ws, 12, 1, sc('2.  Propriétaire', pdfSecHdr));
+            addMerge(ws, 12, 1, 12, 6);
+            styleSecRow(12);
+
+            for (const [r, lbl, ci] of [
+                [13, 'Nom :', 6],
+                [14, "Statut aux fins d'imposition scolaire :", 7],
+                [15, "Date d'inscription au rôle :", 8],
+                [16, 'Adresse postale :', 9],
+            ]) {
+                addCell(ws, r, 1, sc(lbl, pdfLbl));
+                addCell(ws, r, 2, fc(fld(ci), pdfVal));
+                addMerge(ws, r, 2, r, 6);
+            }
+
+            // ── Section 3: Caractéristiques ───────────────────────────
+            // PDF layout: LEFT = terrain, RIGHT = bâtiment
+            addCell(ws, 18, 1, sc("3.  Caractéristiques de l'unité d'évaluation", pdfSecHdr));
+            addMerge(ws, 18, 1, 18, 6);
+            styleSecRow(18);
+
+            addCell(ws, 19, 1, sc('Caractéristiques du terrain', pdfSubHdr));
+            addMerge(ws, 19, 1, 19, 3);
+            addCell(ws, 19, 4, sc('Caractéristiques du bâtiment principal', pdfSubHdr));
+            addMerge(ws, 19, 4, 19, 6);
+
+            // [row, leftLabel, leftCI, rightLabel, rightCI]
+            for (const [r, lblL, ciL, lblR, ciR] of [
+                [20, 'Mesure frontale :', 18, "Nombre d'étages :", 10],
+                [21, 'Superficie :', 19, 'Année de construction :', 11],
+                [22, 'Zonage agricole :', 20, "Aire d'étages :", 12],
+                [23, 'Expl. agricole enreg. (EAE) :', 31, 'Genre de construction :', 13],
+                [24, 'Superficie totale :', 21, 'Lien physique :', 14],
+                [25, 'Superficie en zone agricole :', 22, 'Nombre de logements :', 15],
+                [26, 'Superficie visée impo. max. :', 23, 'Locaux non résidentiels :', 16],
+                [27, null, null, 'Chambres locatives :', 17],
+            ]) {
+                if (lblL !== null) {
+                    addCell(ws, r, 1, sc(lblL, pdfLbl));
+                    addCell(ws, r, 2, fc(fld(ciL), pdfVal));
+                }
+                addCell(ws, r, 4, sc(lblR, pdfLbl));
+                addCell(ws, r, 5, fc(fld(ciR), pdfVal));
+                addMerge(ws, r, 5, r, 6);
+            }
+
+            // ── Section 4: Valeurs ────────────────────────────────────
+            addCell(ws, 29, 1, sc("4.  Valeurs au rôle d'évaluation", pdfSecHdr));
+            addMerge(ws, 29, 1, 29, 6);
+            styleSecRow(29);
+
+            addCell(ws, 30, 1, sc('Date de référence au marché :', pdfLbl));
+            addCell(ws, 30, 2, fc(fld(24), pdfVal));
+            addMerge(ws, 30, 2, 30, 6);
+
+            for (const [r, lbl, ci] of [
+                [31, 'Valeur du terrain :', 25],
+                [32, 'Valeur du bâtiment :', 26],
+                [33, "Valeur de l'immeuble :", 27],
+                [34, "Valeur de l'immeuble au rôle antérieur :", 28],
+            ]) {
+                addCell(ws, r, 1, sc(lbl, pdfLbl));
+                addCell(ws, r, 2, nc(ci));
+                addMerge(ws, r, 2, r, 6);
+            }
+
+            // ── Section 5: Répartition fiscale ────────────────────────
+            addCell(ws, 36, 1, sc('5.  Répartition fiscale', pdfSecHdr));
+            addMerge(ws, 36, 1, 36, 6);
+            styleSecRow(36);
+
+            // Two-column: imposable | non-imposable (matches PDF)
+            addCell(ws, 37, 1, sc("Valeur imposable de l'immeuble :", pdfLbl));
+            addCell(ws, 37, 2, nc(30));
+            // col C = spacer
+            addCell(ws, 37, 4, sc("Valeur non imposable de l'immeuble :", pdfLbl));
+            addCell(ws, 37, 5, nc(29));
+            addMerge(ws, 37, 5, 37, 6);
+
+            // ── Navigation button ─────────────────────────────────────
+            addCell(ws, 39, 1,
+                fc(`HYPERLINK("#Recherche!B5","  ←  Modifier / Nouvelle recherche  ")`, ST.btn));
+            addMerge(ws, 39, 1, 39, 6);
+
+            ws['!ref'] = 'A1:F40';
+            ws['!views'] = [{ showGridLines: false }];
+            ws['!rows'] = [
+                { hpt: 22 }, { hpt: 22 }, { hpt: 18 }, { hpt: 6 }, // 1-4
+                { hpt: 20 }, { hpt: 18 }, { hpt: 18 }, { hpt: 18 }, { hpt: 18 }, { hpt: 18 }, // 5-10
+                { hpt: 6 }, { hpt: 20 }, // 11-12
+                { hpt: 18 }, { hpt: 18 }, { hpt: 18 }, { hpt: 18 }, // 13-16
+                { hpt: 6 }, { hpt: 20 }, { hpt: 16 }, // 17-19
+                { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, // 20-24
+                { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, // 25-27
+                { hpt: 6 }, { hpt: 20 }, // 28-29
+                { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, { hpt: 16 }, // 30-34
+                { hpt: 6 }, { hpt: 20 }, // 35-36
+                { hpt: 16 }, // 37
+                { hpt: 6 }, { hpt: 28 }, // 38-39
+            ];
+            return ws;
+        }
+
+        // ─── Sheet 3: Rues — street index with jump links ───────────
+        function buildRuesSheet(streetIndex) {
+            const ws = {};
+            ws['!cols'] = [{ wch: 6 }, { wch: 52 }, { wch: 10 }];
+
+            const stLnk = {
+                font: { sz: 10, color: { rgb: '1A3A5C' }, underline: true },
+                alignment: { vertical: 'center' },
+            };
+            const stCount = {
+                font: { sz: 10, color: { rgb: '555555' } },
+                alignment: { horizontal: 'center', vertical: 'center' },
+            };
+
+            // Title row
+            addCell(ws, 1, 1, sc('RUES', ST.secHdr));
+            addMerge(ws, 1, 1, 1, 3);
+
+            // Column headers
+            addCell(ws, 2, 1, sc('', ST.hdrData));
+            addCell(ws, 2, 2, sc('Nom de la rue', ST.hdrData));
+            addCell(ws, 2, 3, sc('Unités', ST.hdrData));
+
+            let row = 3;
+            for (const [street, { firstRow, count }] of streetIndex) {
+                // Escape any double-quotes in the street name for the Excel formula
+                const safeStreet = street.replace(/"/g, '""');
+                const target = `#'Rôle'!A${firstRow}`;
+                addCell(ws, row, 1, fc(`HYPERLINK("${target}","↗")`, ST.btn));
+                addCell(ws, row, 2, fc(`HYPERLINK("${target}","${safeStreet}")`, stLnk));
+                addCell(ws, row, 3, sc(count, stCount));
+                row++;
+            }
+
+            ws['!ref'] = `A1:C${row - 1}`;
+            ws['!rows'] = [{ hpt: 22 }, { hpt: 18 },
+            ...Array.from({ length: row - 3 }, () => ({ hpt: 18 }))];
+            return ws;
+        }
+
+        function buildWorkbook(entries, municipalite, exercices) {
+            // Sort by street name (French), then civic number
+            const sorted = [...entries].sort((a, b) => {
+                const sa = (a.streetKey || '').localeCompare(b.streetKey || '', 'fr');
+                if (sa !== 0) return sa;
+                const na = parseInt(a.civicNo, 10) || 0;
+                const nb = parseInt(b.civicNo, 10) || 0;
+                return na - nb;
+            });
+
+            // Build ordered streetGroups Map
+            const streetGroups = new Map();
+            for (const e of sorted) {
+                const street = e.streetKey || '(sans rue)';
+                if (!streetGroups.has(street)) streetGroups.set(street, []);
+                streetGroups.get(street).push(e);
+            }
+
+            // Compute Rôle row numbers for Rues hyperlinks.
+            // Layout: row 1 = column header; then for each street:
+            //   1 street-header row (always visible) + N data rows (grouped/hidden)
+            const streetIndex = new Map();
+            let excelRow = 2; // first street header lands on Excel row 2
+            for (const [street, group] of streetGroups) {
+                streetIndex.set(street, { firstRow: excelRow, count: group.length });
+                excelRow += 1 + group.length; // 1 header + N data rows
+            }
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, buildRechercheSheet(municipalite, exercices), 'Recherche');
+            XLSX.utils.book_append_sheet(wb, buildDetailSheet(municipalite, exercices), 'Détail');
+            XLSX.utils.book_append_sheet(wb, buildRuesSheet(streetIndex), 'Rues');
+            XLSX.utils.book_append_sheet(wb, buildRoleSheet(streetGroups), 'Rôle');
+            return wb;
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  FILE PARSING PIPELINE
+        // ─────────────────────────────────────────────────────────────
+        let parsedEntries = null;
+        let parsedMeta = { municipalite: '?', exercices: '' };
+        let sourceFileName = 'role.xlsx';
+
+        function parseXMLBuffer(buffer) {
+            // Decode ISO-8859-1 → JS string, then let DOMParser handle it as UTF-8
+            const decoder = new TextDecoder('iso-8859-1');
+            let text = decoder.decode(buffer);
+            // Replace encoding declaration so DOMParser accepts the now-unicode string
+            text = text.replace(/encoding=["']iso-8859-1["']/gi, 'encoding="UTF-8"');
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(text, 'text/xml');
+            const parseError = xmlDoc.querySelector('parsererror');
+            if (parseError) throw new Error('Erreur de lecture XML: ' + parseError.textContent.slice(0, 120));
+            return xmlDoc;
+        }
+
+        function processFile(file) {
+            setStatus('Lecture du fichier…', '');
+            parsedEntries = null;
+            convertBtn.disabled = true;
+            summaryCard.classList.remove('visible');
+
+            const reader = new FileReader();
+            reader.onload = (evt) => {
+                try {
+                    const xmlDoc = parseXMLBuffer(evt.target.result);
+                    const municipalityCode = (xmlDoc.querySelector('RLM01A') || {}).textContent || '?';
+                    const exercicesYear = (xmlDoc.querySelector('RLM02A') || {}).textContent || '';
+                    const entryEls = xmlDoc.getElementsByTagName('RLUEx');
+
+                    if (entryEls.length === 0) {
+                        throw new Error('Aucune unité d\'évaluation (RLUEx) trouvée dans ce fichier.');
+                    }
+
+                    setStatus(`Traitement de ${entryEls.length} entrées…`, '');
+
+                    // Parse entries (defer to avoid blocking UI)
+                    setTimeout(() => {
+                        try {
+                            const entries = [];
+                            for (const el of entryEls) {
+                                entries.push(extractEntry(el));
+                            }
+
+                            // Build street summary
+                            const streetMap = new Map();
+                            for (const e of entries) {
+                                streetMap.set(e.streetKey, (streetMap.get(e.streetKey) || 0) + 1);
+                            }
+
+                            parsedEntries = entries;
+                            parsedMeta = { municipalite: municipalityCode, exercices: exercicesYear };
+                            sourceFileName = file.name.replace(/\.xml$/i, '') + '.xlsx';
+
+                            // Update summary UI
+                            statEntries.textContent = entries.length;
+                            statStreets.textContent = streetMap.size;
+                            statMunicipality.textContent = municipalityCode;
+
+                            streetList.innerHTML = '';
+                            const sortedS = [...streetMap.keys()].sort((a, b) => a.localeCompare(b, 'fr'));
+                            for (const s of sortedS) {
+                                const tag = document.createElement('span');
+                                tag.className = 'street-tag';
+                                tag.textContent = `${s} (${streetMap.get(s)})`;
+                                streetList.appendChild(tag);
+                            }
+
+                            summaryCard.classList.add('visible');
+                            convertBtn.disabled = false;
+                            setStatus(`✓ ${entries.length} unités, ${streetMap.size} rues. Prêt à exporter (3 onglets : Recherche, Détail, Rôle).`, 'success');
+                        } catch (err) {
+                            setStatus('Erreur de traitement : ' + err.message, 'error');
+                        }
+                    }, 50);
+
+                } catch (err) {
+                    setStatus('Erreur : ' + err.message, 'error');
+                }
+            };
+            reader.onerror = () => setStatus('Impossible de lire le fichier.', 'error');
+            reader.readAsArrayBuffer(file);
+        }
+
+        function setStatus(msg, cls) {
+            statusEl.textContent = msg;
+            statusEl.className = cls || '';
+        }
+
+        // ─────────────────────────────────────────────────────────────
+        //  DOM WIRING
+        // ─────────────────────────────────────────────────────────────
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const dropIcon = document.getElementById('dropIcon');
+        const fileNameEl = document.getElementById('fileName');
+        const summaryCard = document.getElementById('summaryCard');
+        const statEntries = document.getElementById('statEntries');
+        const statStreets = document.getElementById('statStreets');
+        const statMunicipality = document.getElementById('statMunicipality');
+        const streetList = document.getElementById('streetList');
+        const statusEl = document.getElementById('status');
+        const convertBtn = document.getElementById('convertBtn');
+
+        function handleFileSelected(file) {
+            if (!file) return;
+            if (!file.name.toLowerCase().endsWith('.xml')) {
+                setStatus('Veuillez sélectionner un fichier .xml.', 'error');
+                return;
+            }
+            dropZone.classList.add('has-file');
+            dropIcon.textContent = '✅';
+            fileNameEl.textContent = file.name;
+            processFile(file);
+        }
+
+        fileInput.addEventListener('change', () => {
+            if (fileInput.files.length > 0) handleFileSelected(fileInput.files[0]);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+            if (e.dataTransfer.files.length > 0) handleFileSelected(e.dataTransfer.files[0]);
+        });
+
+        convertBtn.addEventListener('click', () => {
+            if (!parsedEntries) return;
+            setStatus('Génération du fichier Excel…', '');
+            convertBtn.disabled = true;
+
+            setTimeout(() => {
+                try {
+                    const wb = buildWorkbook(parsedEntries, parsedMeta.municipalite, parsedMeta.exercices);
+                    XLSX.writeFile(wb, sourceFileName, { cellStyles: true });
+                    setStatus(`✓ Fichier « ${sourceFileName} » téléchargé.`, 'success');
+                } catch (err) {
+                    setStatus('Erreur lors de la génération Excel : ' + err.message, 'error');
+                }
+                convertBtn.disabled = false;
+            }, 50);
+        });
+    </script>
+</body>
+
+</html>
