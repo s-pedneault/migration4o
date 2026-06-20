@@ -31,7 +31,7 @@
             <li><a href="#plan">Votre plan</a></li>
             <li><a href="#enjeux">Enjeux et obligations</a></li>
             <li><a href="#criteres">Critères de sélection</a></li>
-            <li><a href="#logiciels">Liste des produits</a></li>
+            <li><a href="#logiciels">Alternatives sur le marché</a></li>
             <li><a href="#produit">Extraction de 100% des données</a></li>
             <li><a href="#contact">Contact</a></li>
         </ul>
@@ -48,7 +48,7 @@
             <a href="#plan" class="nav-drawer-link">Votre plan</a>
             <a href="#enjeux" class="nav-drawer-link">Enjeux et obligations</a>
             <a href="#criteres" class="nav-drawer-link">Critères de sélection</a>
-            <a href="#logiciels" class="nav-drawer-link">Liste des produits</a>
+            <a href="#logiciels" class="nav-drawer-link">Alternatives sur le marché</a>
             <a href="#produit" class="nav-drawer-link">Extraction de 100% des données</a>
             <a href="#contact" class="nav-drawer-link">Contact</a>
         </nav>
@@ -75,7 +75,7 @@
                 <a href="#plan" class="btn btn-primary">Votre plan de migration</a>
                 <a href="#enjeux" class="btn btn-outline">Enjeux et obligations</a>
                 <a href="#criteres" class="btn btn-outline">Critères de sélection</a>
-                <a href="#logiciels" class="btn btn-outline">Liste des produits</a>
+                <a href="#logiciels" class="btn btn-outline">Alternatives sur le marché</a>
                 <a href="#produit" class="btn btn-outline">Extraction de 100% des données</a>
             </div>
         </div>
@@ -93,153 +93,15 @@
                     La réussite de votre migration nécessitera une approche structurée en plusieurs étapes.
                     Voici le plan recommandé pour assurer une transition en douceur.
                 </p>
-            </div>
-
-            <!-- Migration Flow Diagram -->
-            <div class="migration-diagram reveal">
-                <!-- Scenario 1: Separate Historic Data -->
-                <div class="diagram-scenario">
-                    <h4 class="diagram-subtitle"><strong>Scénario A : </strong>Données historiques séparées</h4>
-                    <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <linearGradient id="boxGradient1" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.15" />
-                                <stop offset="100%" style="stop-color:#3b82f6;stop-opacity:0.03" />
-                            </linearGradient>
-                            <linearGradient id="boxGradient2" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#10b981;stop-opacity:0.15" />
-                                <stop offset="100%" style="stop-color:#10b981;stop-opacity:0.03" />
-                            </linearGradient>
-                            <linearGradient id="boxGradientOrange" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#f97316;stop-opacity:0.15" />
-                                <stop offset="100%" style="stop-color:#f97316;stop-opacity:0.03" />
-                            </linearGradient>
-                            <marker id="arrowhead1" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa" />
-                            </marker>
-                            <filter id="shadow1" x="-50%" y="-50%" width="200%" height="200%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3" />
-                            </filter>
-                        </defs>
-
-                        <!-- Vertical dashed transition line -->
-                        <line x1="540" y1="10" x2="540" y2="240" stroke="#60a5fa" stroke-width="2" stroke-dasharray="8,6" opacity="0.4" />
-
-                        <!-- Arrows -->
-                        <path d="M 200 80 L 310 60" stroke="#60a5fa" stroke-width="2.5" fill="none" marker-end="url(#arrowhead1)" opacity="0.7" />
-                        <path d="M 200 105 L 310 180" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrowhead1)" opacity="0.7" />
-                        <path d="M 480 60 L 590 60" stroke="#60a5fa" stroke-width="2.5" fill="none" marker-end="url(#arrowhead1)" opacity="0.7" />
-                        <path d="M 480 180 L 590 180" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrowhead1)" opacity="0.7" />
-
-                        <!-- Box 1: Première Ligne -->
-                        <rect x="30" y="40" width="170" height="90" rx="12" fill="url(#boxGradientOrange)" stroke="#f97316" stroke-width="2.5" filter="url(#shadow1)" />
-                        <text x="115" y="75" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="700">Serveur</text>
-                        <text x="115" y="95" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="700">Première Ligne</text>
-                        <text x="115" y="115" text-anchor="middle" fill="#94a3b8" font-size="12">(Existant)</text>
-
-                        <!-- Box 2: Decision -->
-                        <rect x="310" y="20" width="170" height="80" rx="12" fill="url(#boxGradient1)" stroke="#3b82f6" stroke-width="2.5" filter="url(#shadow1)" />
-                        <text x="395" y="48" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Recherche et</text>
-                        <text x="395" y="65" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">acquisition d'un</text>
-                        <text x="395" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">nouveau produit</text>
-
-                        <!-- Box 3: Extraction -->
-                        <rect x="310" y="140" width="170" height="80" rx="12" fill="url(#boxGradient2)" stroke="#10b981" stroke-width="2.5" filter="url(#shadow1)" />
-                        <text x="395" y="175" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">Extraction des</text>
-                        <text x="395" y="195" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">données de PL</text>
-
-                        <!-- Box 4: New Platform -->
-                        <rect x="590" y="20" width="240" height="80" rx="12" fill="url(#boxGradient1)" stroke="#3b82f6" stroke-width="2.5" filter="url(#shadow1)" />
-                        <!-- Rich platform icon (dashboard-style) -->
-                        <rect x="600" y="30" rx="8" ry="8" width="60" height="60" fill="#1e3a5f" opacity="0.8" />
-                        <!-- Dashboard elements -->
-                        <rect x="605" y="35" rx="2" ry="2" width="22" height="3" fill="#3b82f6" opacity="0.9" />
-                        <rect x="605" y="41" rx="2" ry="2" width="50" height="2" fill="#60a5fa" opacity="0.6" />
-                        <rect x="605" y="46" rx="2" ry="2" width="50" height="2" fill="#60a5fa" opacity="0.6" />
-                        <!-- Grid/cards -->
-                        <rect x="605" y="52" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="630" y="52" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="605" y="71" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="630" y="71" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <text x="735" y="55" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">Nouvelle</text>
-                        <text x="735" y="73" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">plateforme</text>
-
-                        <!-- Box 5: Historic Consultation -->
-                        <rect x="590" y="140" width="240" height="80" rx="12" fill="url(#boxGradient2)" stroke="#10b981" stroke-width="2.5" filter="url(#shadow1)" />
-                        <!-- Migration4o logo image -->
-                        <image x="600" y="150" width="60" height="60" href="logo.png" />
-                        <text x="735" y="173" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">App de consultation</text>
-                        <text x="735" y="191" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">des données</text>
-                        <text x="735" y="209" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">historiques</text>
-                    </svg>
-                </div>
-
-                <div class="diagram-divider"></div>
-
-                <!-- Scenario 2: Import into New Platform -->
-                <div class="diagram-scenario">
-                    <h4 class="diagram-subtitle"><strong>Scénario B : </strong>Import des données historiques</h4>
-                    <svg viewBox="0 0 900 260" xmlns="http://www.w3.org/2000/svg">
-                        <defs>
-                            <marker id="arrowhead2" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#60a5fa" />
-                            </marker>
-                            <marker id="arrowhead2green" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-                                <polygon points="0 0, 10 3.5, 0 7" fill="#10b981" />
-                            </marker>
-                            <linearGradient id="boxGradientOrange2" x1="0%" y1="0%" x2="0%" y2="100%">
-                                <stop offset="0%" style="stop-color:#f97316;stop-opacity:0.15" />
-                                <stop offset="100%" style="stop-color:#f97316;stop-opacity:0.03" />
-                            </linearGradient>
-                            <filter id="shadow2" x="-50%" y="-50%" width="200%" height="200%">
-                                <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3" />
-                            </filter>
-                        </defs>
-
-                        <!-- Vertical dashed transition line -->
-                        <line x1="540" y1="10" x2="540" y2="240" stroke="#60a5fa" stroke-width="2" stroke-dasharray="8,6" opacity="0.4" />
-
-                        <!-- Arrows -->
-                        <path d="M 200 80 L 310 60" stroke="#60a5fa" stroke-width="2.5" fill="none" marker-end="url(#arrowhead2)" opacity="0.7" />
-                        <path d="M 200 105 L 310 180" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrowhead2green)" opacity="0.7" />
-                        <path d="M 480 60 L 590 60" stroke="#60a5fa" stroke-width="2.5" fill="none" marker-end="url(#arrowhead2)" opacity="0.7" />
-                        <!-- Curved arrow from Extraction to New Platform -->
-                        <path d="M 480 180 Q 535 120, 590 75" stroke="#10b981" stroke-width="2.5" fill="none" marker-end="url(#arrowhead2green)" opacity="0.7" stroke-dasharray="5,5" />
-
-                        <!-- Box 1: Première Ligne -->
-                        <rect x="30" y="40" width="170" height="90" rx="12" fill="url(#boxGradientOrange2)" stroke="#f97316" stroke-width="2.5" filter="url(#shadow2)" />
-                        <text x="115" y="75" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="700">Serveur</text>
-                        <text x="115" y="95" text-anchor="middle" fill="#e2e8f0" font-size="16" font-weight="700">Première Ligne</text>
-                        <text x="115" y="115" text-anchor="middle" fill="#94a3b8" font-size="12">(Existant)</text>
-
-                        <!-- Box 2: Decision -->
-                        <rect x="310" y="20" width="170" height="80" rx="12" fill="url(#boxGradient1)" stroke="#3b82f6" stroke-width="2.5" filter="url(#shadow2)" />
-                        <text x="395" y="48" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">Recherche et</text>
-                        <text x="395" y="65" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">acquisition d'un</text>
-                        <text x="395" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="600">nouveau produit</text>
-
-                        <!-- Box 3: Extraction -->
-                        <rect x="310" y="140" width="170" height="80" rx="12" fill="url(#boxGradient2)" stroke="#10b981" stroke-width="2.5" filter="url(#shadow2)" />
-                        <text x="395" y="175" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">Extraction des</text>
-                        <text x="395" y="195" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="600">données de PL</text>
-
-                        <!-- Box 4: New Platform (with historical data) -->
-                        <rect x="590" y="20" width="240" height="80" rx="12" fill="url(#boxGradient1)" stroke="#3b82f6" stroke-width="2.5" filter="url(#shadow2)" />
-                        <!-- Rich platform icon (dashboard-style) -->
-                        <rect x="600" y="30" rx="8" ry="8" width="60" height="60" fill="#1e3a5f" opacity="0.8" />
-                        <!-- Dashboard elements -->
-                        <rect x="605" y="35" rx="2" ry="2" width="22" height="3" fill="#3b82f6" opacity="0.9" />
-                        <rect x="605" y="41" rx="2" ry="2" width="50" height="2" fill="#60a5fa" opacity="0.6" />
-                        <rect x="605" y="46" rx="2" ry="2" width="50" height="2" fill="#60a5fa" opacity="0.6" />
-                        <!-- Grid/cards -->
-                        <rect x="605" y="52" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="630" y="52" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="605" y="71" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <rect x="630" y="71" rx="2" ry="2" width="22" height="16" fill="#3b82f6" opacity="0.4" />
-                        <text x="735" y="51" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">Nouvelle</text>
-                        <text x="735" y="69" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">plateforme</text>
-                        <text x="735" y="87" text-anchor="middle" fill="#10b981" font-size="11" font-weight="500">+ données historiques</text>
-                    </svg>
+                <div style="text-align: center; margin-top: 1.5rem;">
+                    <button id="downloadChecklistTop" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="7 10 12 15 17 10"></polyline>
+                            <line x1="12" y1="15" x2="12" y2="3"></line>
+                        </svg>
+                        Télécharger le plan en Word
+                    </button>
                 </div>
             </div>
 
@@ -258,12 +120,103 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p>Avant de chercher un remplaçant, prenez le temps de bien comprendre vos besoins réels. Identifiez les fonctionnalités que vous utilisez vraiment dans Première Ligne, les processus critiques de votre service incendie, vos besoins d'intégration avec d'autres systèmes (répartiteur, MSI, etc.), vos contraintes budgétaires réalistes, et le niveau de risque que vous êtes prêt à assumer en termes de stabilité et de maturité du nouveau fournisseur.</p>
-                        <div class="plan-step-cta">
-                            <a href="#enjeux" class="btn btn-outline">Lire sur les enjeux et obligations</a>
-                            &nbsp;
-                            <a href="#criteres" class="btn btn-primary">Voir les critères de sélection à retenir</a>
-                        </div>
+                        <p>Avant de chercher un remplaçant, prenez le temps de bien comprendre vos besoins réels :</p>
+                        <ul>
+                            <li class="plan-step-item" data-item-id="step1-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Quelles fonctionnalités utilisez-vous <u>vraiment</u> dans Première Ligne?</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step1-item1-0"><label for="step1-item1-0">Faites un inventaire des modules utilisés quotidiennement</label></li>
+                                        <li><input type="checkbox" id="step1-item1-1"><label for="step1-item1-1">Identifiez les fonctionnalités essentielles vs. "nice to have"</label></li>
+                                        <li><input type="checkbox" id="step1-item1-2"><label for="step1-item1-2">Consultez vos officiers sur leurs besoins réels</label></li>
+                                        <li><input type="checkbox" id="step1-item1-3"><label for="step1-item1-3">Identifiez ce que vous ne pouvez pas faire avec d'autres logiciels que vous possédez déjà</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step1-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Quels sont les processus critiques de votre SSI?</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step1-item2-0"><label for="step1-item2-0">Réception de cartes d'appel et rédaction des rapports d'intervention</label></li>
+                                        <li><input type="checkbox" id="step1-item2-1"><label for="step1-item2-1">Import du rôle, gestion des dossiers adresses, export vers le répartiteur</label></li>
+                                        <li><input type="checkbox" id="step1-item2-2"><label for="step1-item2-2">Planification, programmation et suivi des inspections de prévention</label></li>
+                                        <li><input type="checkbox" id="step1-item2-3"><label for="step1-item2-3">Plans d'intervention</label></li>
+                                        <li><input type="checkbox" id="step1-item2-4"><label for="step1-item2-4">Gestion des ressources humaines</label></li>
+                                        <li><input type="checkbox" id="step1-item2-5"><label for="step1-item2-5">Gestion des équipements</label></li>
+                                        <li><input type="checkbox" id="step1-item2-6"><label for="step1-item2-6">Horaires et quarts de travail</label></li>
+                                        <li><input type="checkbox" id="step1-item2-7"><label for="step1-item2-7">Enquêtes (RCCI)</label></li>
+                                        <li><input type="checkbox" id="step1-item2-8"><label for="step1-item2-8">Rapports et statistiques</label></li>
+                                        <li><input type="checkbox" id="step1-item2-9"><label for="step1-item2-9">Sécurité civile</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step1-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Quels sont vos besoins d'intégration avec d'autres systèmes?</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step1-item4-0"><label for="step1-item4-0">Import des données historiques de PL (de Migration4o)</label></li>
+                                        <li><input type="checkbox" id="step1-item4-1"><label for="step1-item4-1">Réception des cartes d'appel du répartiteur</label></li>
+                                        <li><input type="checkbox" id="step1-item4-2"><label for="step1-item4-2">Export des dossiers adresse vers le répartiteur</label></li>
+                                        <li><input type="checkbox" id="step1-item4-3"><label for="step1-item4-3">Export des nouveaux DSI vers le MSI</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step1-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Quelles sont vos contraintes budgétaires réalistes?</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step1-item5-0"><label for="step1-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step1-item6">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text"><b>Quel niveau de risque êtes vous prêt à assumer?</b></span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step1-item6-0"><label for="step1-item6-0">Taille et stabilité financière du fournisseur</label></li>
+                                        <li><input type="checkbox" id="step1-item6-1"><label for="step1-item6-1">Historique et maturité du produit</label></li>
+                                        <li><input type="checkbox" id="step1-item6-2"><label for="step1-item6-2">Garanties contractuelles et SLA</label></li>
+                                        <li><input type="checkbox" id="step1-item6-3"><label for="step1-item6-3">Nombre de clients existants et références</label></li>
+                                        <li><input type="checkbox" id="step1-item6-4"><label for="step1-item6-4">Stratégie de sortie en cas de problème</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
@@ -279,10 +232,84 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p>Comparez les <a href="#logiciels">solutions disponibles</a> selon vos besoins et critères établis. Demandez des démonstrations détaillées avec vos cas d'usage spécifiques, vérifiez les références clients dans d'autres services incendies similaires au vôtre, évaluez la facilité d'utilisation et la courbe d'apprentissage, analysez les coûts totaux incluant formation et support, et validez la capacité du système à exporter toutes vos données à tout moment pour éviter d'être captif à nouveau.</p>
-                        <div class="plan-step-cta">
-                            <a href="#logiciels" class="btn btn-primary">Voir les produits disponibles</a>
-                        </div>
+                        <p>Comparez les solutions disponibles selon vos critères établis :</p>
+                        <ul>
+                            <li class="plan-step-item" data-item-id="step2-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Demandez des démonstrations détaillées avec vos cas d'usage</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step2-item1-0"><label for="step2-item1-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step2-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Vérifiez la conformité avec les exigences québécoises</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step2-item2-0"><label for="step2-item2-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step2-item3">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Évaluez la qualité du support technique en français</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step2-item3-0"><label for="step2-item3-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step2-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Consultez les références d'autres SSI québécois</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step2-item4-0"><label for="step2-item4-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step2-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Analysez le coût total de possession (TCO) sur 5-10 ans</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step2-item5-0"><label for="step2-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
 
@@ -298,16 +325,83 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p>Votre adoption d'un nouveau logiciel de gestion incendie ne se fait pas dans un silo.<br />
-                            <strong>Assurez-vous de vous coordonner:</strong>
-                        </p>
+                        <p>Une migration implique plusieurs parties prenantes :</p>
                         <ul>
-                            <li>avec vos SSI voisins afin de faciliter la coopération,</li>
-                            <li>avec votre MRC pour pouvoir fournir les statistiques requises,</li>
-                            <li>avec votre service de prévention régional (s'il y a lieu) pour s'assurer qu'ils pourront l'utiliser,</li>
-                            <li>avec votre répartiteur 9-1-1 pour recevoir les cartes d'appel et transmettre vos dossiers adresse et plans d'intervention,</li>
-                            <li>avec le service de paie de votre municipalité pour s'assurer de la compatibilité avec le logiciel de paie,</li>
-                            <li>avec votre service d'informatique pour les aspects techniques et de sécurité,</li>
+                            <li class="plan-step-item" data-item-id="step3-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Coordination avec votre service TI municipal</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step3-item1-0"><label for="step3-item1-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step3-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Communication avec les équipes de pompiers et les gestionnaires</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step3-item2-0"><label for="step3-item2-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step3-item3">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Planification avec le nouveau fournisseur pour la formation</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step3-item3-0"><label for="step3-item3-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step3-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Coordination avec les intervenants externes (MRC, SOPFEU, etc.)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step3-item4-0"><label for="step3-item4-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step3-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Validation avec votre service des archives et conformité</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step3-item5-0"><label for="step3-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -324,17 +418,128 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p>Une migration réussie nécessite une planification budgétaire réaliste. Au-delà du coût du nouveau logiciel, anticipez plusieurs dépenses: </p>
+                        <p>Une migration réussie nécessite une planification budgétaire réaliste. Au-delà du coût du nouveau logiciel, plusieurs dépenses doivent être anticipées :</p>
                         <ul>
-                            <li>coûts d'acquisition du nouveau système (licences, abonnements, installation)</li>
-                            <li>période de double abonnement pendant la transition</li>
-                            <li>formation initiale et continue des équipes</li>
-                            <li>extraction et sécurisation des données historiques <i>(coût unique pour <a href="#produit">Migration4o</a>, à partir de 3000$ pour l'ensemble de vos données)</i></li>
-                            <li>configuration et personnalisation du nouveau système</li>
-                            <li>reconstruction des formulaires et avis personnalisés</li>
-                            <li>import des données</li>
-                            <li>support technique supplémentaire pendant la période d'adaptation</li>
-                            <li>et une contingence pour imprévus (recommandé: 15-20% du budget total)</li>
+                            <li class="plan-step-item" data-item-id="step4-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Coûts d'acquisition du nouveau système (licences, abonnements, installation)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item1-0"><label for="step4-item1-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Période de double abonnement pendant la transition (PL + nouveau système)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item2-0"><label for="step4-item2-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item3">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Formation initiale et continue des équipes</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item3-0"><label for="step4-item3-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Extraction et sécurisation des données historiques <small>(coût unique pour Migration4o)</small></span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item4-0"><label for="step4-item4-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Configuration et personnalisation du nouveau système</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item5-0"><label for="step4-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item6">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Import des données dans le nouveau système (si applicable)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item6-0"><label for="step4-item6-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item7">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Support technique supplémentaire pendant la période d'adaptation</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item7-0"><label for="step4-item7-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step4-item8">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Contingence pour imprévus et ajustements (recommandé: 15-20% du budget total)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step4-item8-0"><label for="step4-item8-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
                         </ul>
                         <p><strong>Conseil :</strong> Calculez le coût total de possession (TCO) sur 5-10 ans, pas seulement le prix d'acquisition initial.</p>
                     </div>
@@ -353,9 +558,101 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p><strong>Cette étape est cruciale et ne doit pas être négligée.</strong> Vos données historiques ont une valeur juridique, opérationnelle et patrimoniale qu'il faut protéger. Migration4o fait l'extraction complète de 100% de vos données de Première Ligne, préservées dans un format XML ouvert et pérenne. Une interface de consultation locale gratuite à vie permet un accès hors ligne sans dépendance à un serveur ou licence, tout en assurant la conformité avec les obligations de conservation légales. Vos données restent portables et réutilisables pour vos besoins futurs.</p>
+                        <p><strong>Cette étape est cruciale et ne doit pas être négligée.</strong> Vos données historiques ont une valeur juridique, opérationnelle et patrimoniale qu'il faut protéger.</p>
+                        <ul>
+                            <li class="plan-step-item" data-item-id="step5-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Extraction complète de 100% de vos données de Première Ligne</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item1-0"><label for="step5-item1-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step5-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Préservation dans un format ouvert et pérenne (XML structuré)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item2-0"><label for="step5-item2-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step5-item3">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Interface de consultation locale gratuite à vie (Migration4o)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item3-0"><label for="step5-item3-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step5-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Accès hors ligne sans dépendance à un serveur ou licence</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item4-0"><label for="step5-item4-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step5-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Conformité avec les obligations de conservation légales</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item5-0"><label for="step5-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step5-item6">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Données portables et réutilisables pour vos besoins futurs</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step5-item6-0"><label for="step5-item6-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
                         <div class="plan-step-cta">
-                            <a href="#produit" class="btn btn-primary">En savoir plus sur l'extraction</a>
+                            <a href="#produit" class="btn btn-primary">En savoir plus sur Migration4o</a>
                         </div>
                     </div>
                 </div>
@@ -372,9 +669,112 @@
                         </button>
                     </div>
                     <div class="plan-step-content">
-                        <p>Une fois votre choix arrêté et vos données sécurisées, procédez à la mise en place: négociez le contrat et les SLA avec le fournisseur, planifiez le déploiement et la formation des équipes, effectuez une migration progressive si possible (phase pilote), assurez une période de fonctionnement en parallèle, validez l'intégration avec vos autres systèmes, et documentez les nouveaux processus et workflows.</p>
+                        <p>Une fois votre choix arrêté et vos données sécurisées :</p>
+                        <ul>
+                            <li class="plan-step-item" data-item-id="step6-item1">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Négociez le contrat et les SLA avec le fournisseur</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item1-0"><label for="step6-item1-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step6-item2">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Planifiez le déploiement et la formation des équipes</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item2-0"><label for="step6-item2-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step6-item3">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Effectuez une migration progressive si possible (phase pilote)</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item3-0"><label for="step6-item3-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step6-item4">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Assurez une période de fonctionnement en parallèle</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item4-0"><label for="step6-item4-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step6-item5">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Validez l'intégration avec vos autres systèmes</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item5-0"><label for="step6-item5-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                            <li class="plan-step-item" data-item-id="step6-item6">
+                                <div class="plan-step-item-header">
+                                    <button class="plan-step-item-toggle" aria-label="Afficher les détails">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <polyline points="6 9 12 15 18 9"></polyline>
+                                        </svg>
+                                    </button>
+                                    <span class="plan-step-item-text">Documentez les nouveaux processus et workflows</span>
+                                </div>
+                                <div class="plan-step-item-content">
+                                    <ul>
+                                        <li><input type="checkbox" id="step6-item6-0"><label for="step6-item6-0">À venir</label></li>
+                                    </ul>
+                                </div>
+                            </li>
+                        </ul>
                     </div>
                 </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 3rem; margin-bottom: 2rem;">
+                <button id="downloadChecklistBottom" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem;">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="7 10 12 15 17 10"></polyline>
+                        <line x1="12" y1="15" x2="12" y2="3"></line>
+                    </svg>
+                    Télécharger le plan en Word
+                </button>
             </div>
         </div>
     </section>
@@ -1028,7 +1428,7 @@
             <div class="table-header">
                 <div>
                     <div class="section-label">Fin de vie de Première Ligne</div>
-                    <h2 class="section-title">Produits disponibles sur le marché</h2>
+                    <h2 class="section-title">Alternatives disponibles sur le marché</h2>
                     <p class="section-subtitle">
                         Voici une liste de logiciels ou services de gestion incendie pouvant potentiellement succéder à
                         Première Ligne.
@@ -1060,23 +1460,6 @@
                             </tr>
                         </thead>
                         <tbody>
-                            <tr class="software-row-highlight">
-                                <td>
-                                    <div class="software-name">Projet provincial (Québec)</div>
-                                    <div class="software-vendor">Technologie à déterminer</div>
-                                </td>
-                                <td>AGSCIQ / MSI / UMQ / ?</td>
-                                <td><span class="badge badge-unavailable">Développement débuté, livraison 2027?</span></td>
-                                <td><small style="color:var(--text-muted)">Open-source ou code fermé? À déterminer</small></td>
-                                <td><span class="badge badge-available">Français</span></td>
-                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
-                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
-                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
-                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
-                                <td>Efforts considérables déployés en ce moment pour développer ce projet provincial.</td>
-                            </tr>
-
-
 
 
                             <tr>
@@ -1376,6 +1759,23 @@
                             </tr>
 
 
+                            <tr>
+                                <td>
+                                    <div class="software-name">Projet provincial (Québec)</div>
+                                    <div class="software-vendor">Technologie à déterminer</div>
+                                </td>
+                                <td>AGSCIQ / MSP?</td>
+                                <td><span class="badge badge-unavailable">Développement non-débuté</span></td>
+                                <td><small style="color:var(--text-muted)">Open-source ou commercial? À déterminer</small></td>
+                                <td><span class="badge badge-available">Français</span></td>
+                                <td><span class="badge badge-unavailable">À l'étape d'étude</span></td>
+                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
+                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
+                                <td><small style="color:var(--text-muted)">À déterminer</small></td>
+                                <td>Le développement et la stabilisation d'un tel produit peut prendre des années, à considérer...</td>
+                            </tr>
+
+
                             <tr style="background:rgba(0, 20, 50, 1)">
                                 <td>
                                     <div class="software-name"><a href="#produit">M4o</a>
@@ -1564,6 +1964,10 @@
     <!-- Scroll-to-top -->
     <a href="#" class="scroll-top" id="scrollTop" aria-label="Retour en haut">↑</a>
 
+    <!-- Libraries for Word document generation -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://unpkg.com/docx@7.8.2/build/index.js"></script>
+
     <script>
         // Scroll-reveal
         const revealObserver = new IntersectionObserver((entries) => {
@@ -1626,6 +2030,287 @@
                 step.classList.toggle('expanded');
             });
         });
+
+        // Nested plan items collapse/expand
+        const planItems = document.querySelectorAll('.plan-step-item');
+        planItems.forEach(item => {
+            const itemHeader = item.querySelector('.plan-step-item-header');
+
+            if (itemHeader) {
+                itemHeader.addEventListener('click', (e) => {
+                    // Don't toggle if clicking on progress badge or checkbox
+                    if (e.target.closest('.plan-step-item-progress') || e.target.closest('input[type="checkbox"]')) {
+                        return;
+                    }
+                    e.stopPropagation();
+                    item.classList.toggle('expanded');
+                });
+            }
+        });
+
+        // Checkbox persistence and progress tracking
+        const STORAGE_KEY = 'migration-plan-checkboxes';
+
+        // Load saved checkbox states
+        function loadCheckboxStates() {
+            const saved = localStorage.getItem(STORAGE_KEY);
+            return saved ? JSON.parse(saved) : {};
+        }
+
+        // Save checkbox state
+        function saveCheckboxState(itemId, checkboxIndex, checked) {
+            const states = loadCheckboxStates();
+            if (!states[itemId]) states[itemId] = {};
+            states[itemId][checkboxIndex] = checked;
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(states));
+        }
+
+        // Calculate and update progress for an item
+        function updateItemProgress(item) {
+            const itemId = item.dataset.itemId;
+            if (!itemId) return;
+
+            const checkboxes = item.querySelectorAll('.plan-step-item-content input[type="checkbox"]');
+            if (checkboxes.length === 0) return;
+
+            const checkedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            const totalCount = checkboxes.length;
+            const percentage = (checkedCount / totalCount) * 100;
+
+            // Find or create progress bar
+            let progressBar = item.querySelector('.plan-step-item-progress');
+            if (!progressBar) {
+                progressBar = document.createElement('div');
+                progressBar.className = 'plan-step-item-progress';
+                progressBar.innerHTML = '<div class="plan-step-item-progress-fill"></div>';
+                const itemText = item.querySelector('.plan-step-item-text');
+                if (itemText) {
+                    itemText.after(progressBar);
+                }
+            }
+
+            const progressFill = progressBar.querySelector('.plan-step-item-progress-fill');
+            if (progressFill) {
+                progressFill.style.width = `${percentage}%`;
+                if (percentage === 100) {
+                    progressBar.classList.add('complete');
+                } else {
+                    progressBar.classList.remove('complete');
+                }
+            }
+        }
+
+        // Calculate and update progress for a main step
+        function updateMainStepProgress(step) {
+            const items = step.querySelectorAll('.plan-step-item[data-item-id]');
+            if (items.length === 0) return;
+
+            let totalCheckboxes = 0;
+            let checkedCheckboxes = 0;
+
+            items.forEach(item => {
+                const checkboxes = item.querySelectorAll('.plan-step-item-content input[type="checkbox"]');
+                totalCheckboxes += checkboxes.length;
+                checkedCheckboxes += Array.from(checkboxes).filter(cb => cb.checked).length;
+            });
+
+            const percentage = totalCheckboxes > 0 ? (checkedCheckboxes / totalCheckboxes) * 100 : 0;
+
+            // Find or create progress bar
+            let progressBar = step.querySelector('.plan-step-progress');
+            if (!progressBar) {
+                progressBar = document.createElement('div');
+                progressBar.className = 'plan-step-progress';
+                progressBar.innerHTML = '<div class="plan-step-progress-fill"></div>';
+                // Append to the end of the step to position at bottom
+                step.appendChild(progressBar);
+            }
+
+            const progressFill = progressBar.querySelector('.plan-step-progress-fill');
+            if (progressFill) {
+                progressFill.style.width = `${percentage}%`;
+                if (percentage === 100) {
+                    progressBar.classList.add('complete');
+                } else {
+                    progressBar.classList.remove('complete');
+                }
+            }
+        }
+
+        // Initialize checkboxes
+        function initializeCheckboxes() {
+            const states = loadCheckboxStates();
+
+            planItems.forEach(item => {
+                const itemId = item.dataset.itemId;
+                if (!itemId) return;
+
+                const checkboxes = item.querySelectorAll('.plan-step-item-content input[type="checkbox"]');
+                checkboxes.forEach((checkbox, index) => {
+                    // Restore saved state
+                    if (states[itemId] && states[itemId][index]) {
+                        checkbox.checked = true;
+                    }
+
+                    // Add change listener
+                    checkbox.addEventListener('change', (e) => {
+                        e.stopPropagation();
+                        saveCheckboxState(itemId, index, checkbox.checked);
+                        updateItemProgress(item);
+                        // Update parent step progress
+                        const parentStep = item.closest('.plan-step');
+                        if (parentStep) {
+                            updateMainStepProgress(parentStep);
+                        }
+                    });
+                });
+
+                // Initial progress update
+                updateItemProgress(item);
+            });
+
+            // Initial main step progress update
+            planSteps.forEach(step => {
+                updateMainStepProgress(step);
+            });
+        }
+
+        // Run initialization after DOM is ready
+        initializeCheckboxes();
+
+        // Generate and download Word document
+        async function generateWordDocument() {
+            const { Document, Paragraph, TextRun, HeadingLevel, AlignmentType, UnderlineType, PageBreak, CheckBox } = docx;
+
+            // Collect checkbox states
+            const states = loadCheckboxStates();
+
+            // Create document sections
+            const sections = [];
+
+            // Title page
+            sections.push(
+                new Paragraph({
+                    text: "Plan de Migration",
+                    heading: HeadingLevel.HEADING_1,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 200 }
+                }),
+                new Paragraph({
+                    text: "Transition de Première Ligne vers un nouveau système",
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 400 }
+                }),
+                new Paragraph({
+                    text: `Généré le ${new Date().toLocaleDateString('fr-CA', { year: 'numeric', month: 'long', day: 'numeric' })}`,
+                    alignment: AlignmentType.CENTER,
+                    spacing: { after: 400 }
+                }),
+                new Paragraph({
+                    text: "",
+                    pageBreakBefore: true
+                })
+            );
+
+            // Introduction
+            sections.push(
+                new Paragraph({
+                    text: "Introduction",
+                    heading: HeadingLevel.HEADING_1,
+                    spacing: { before: 200, after: 200 }
+                }),
+                new Paragraph({
+                    text: "La réussite de votre migration nécessitera une approche structurée en plusieurs étapes. Ce document présente le plan recommandé pour assurer une transition en douceur.",
+                    spacing: { after: 400 }
+                })
+            );
+
+            // Process each step
+            const planSteps = document.querySelectorAll('.plan-step');
+            planSteps.forEach((step, stepIndex) => {
+                // Step title
+                const stepTitle = step.querySelector('.plan-step-title');
+                if (stepTitle) {
+                    sections.push(
+                        new Paragraph({
+                            text: `${stepIndex + 1}. ${stepTitle.textContent.trim()}`,
+                            heading: HeadingLevel.HEADING_1,
+                            spacing: { before: 400, after: 200 }
+                        })
+                    );
+                }
+
+                // Step intro paragraph
+                const stepIntro = step.querySelector('.plan-step-content > p');
+                if (stepIntro) {
+                    sections.push(
+                        new Paragraph({
+                            text: stepIntro.textContent.trim(),
+                            spacing: { after: 200 }
+                        })
+                    );
+                }
+
+                // Process items
+                const items = step.querySelectorAll('.plan-step-item[data-item-id]');
+                items.forEach((item) => {
+                    const itemId = item.dataset.itemId;
+                    const itemText = item.querySelector('.plan-step-item-text');
+
+                    if (itemText) {
+                        sections.push(
+                            new Paragraph({
+                                text: itemText.textContent.trim(),
+                                heading: HeadingLevel.HEADING_2,
+                                spacing: { before: 200, after: 100 }
+                            })
+                        );
+
+                        // Process checkboxes
+                        const checkboxes = item.querySelectorAll('.plan-step-item-content input[type="checkbox"]');
+                        checkboxes.forEach((checkbox, index) => {
+                            const label = checkbox.nextElementSibling;
+                            const isChecked = states[itemId] && states[itemId][index];
+
+                            if (label) {
+                                sections.push(
+                                    new Paragraph({
+                                        children: [
+                                            new TextRun({
+                                                text: isChecked ? "☑ " : "☐ ",
+                                                size: 24
+                                            }),
+                                            new TextRun({
+                                                text: label.textContent.trim(),
+                                                strike: isChecked
+                                            })
+                                        ],
+                                        spacing: { after: 100 },
+                                        indent: { left: 720 }
+                                    })
+                                );
+                            }
+                        });
+                    }
+                });
+            });
+
+            // Create the document
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: sections
+                }]
+            });
+
+            // Generate and download
+            const blob = await docx.Packer.toBlob(doc);
+            saveAs(blob, `Plan_Migration_PL_${new Date().toISOString().split('T')[0]}.docx`);
+        }
+
+        // Add click handlers to both download buttons
+        document.getElementById('downloadChecklistTop').addEventListener('click', generateWordDocument);
+        document.getElementById('downloadChecklistBottom').addEventListener('click', generateWordDocument);
 
         // Table scroll hint
         const tableWrap = document.getElementById('tableWrap');

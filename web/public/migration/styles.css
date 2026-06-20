@@ -42,6 +42,9 @@ body {
     overflow-x: hidden;
 }
 
+
+
+
 /* ── Navigation ────────────────────────────────── */
 nav {
     position: fixed;
@@ -407,7 +410,422 @@ section {
     font-size: 1.05rem;
     color: var(--text-secondary);
     max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
     line-height: 1.65;
+}
+
+/* ── Migration Plan section ──────────────────────────────── */
+.migration-plan-section {
+    position: relative;
+    background: linear-gradient(180deg, var(--blue-deep) 0%, var(--blue-dark) 100%);
+    border-top: 1px solid var(--border);
+}
+
+.plan-header {
+    text-align: center;
+    margin-bottom: 4rem;
+}
+
+.migration-diagram {
+    max-width: 900px;
+    margin: 0 auto 4rem;
+    padding: 2.5rem;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    border-radius: var(--radius-lg);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.diagram-scenario {
+    margin-bottom: 2rem;
+}
+
+.diagram-scenario:last-child {
+    margin-bottom: 0;
+}
+
+.diagram-subtitle {
+    color: #e2e8f0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 1.5rem 0;
+    text-align: left;
+    letter-spacing: 0.02em;
+}
+
+.diagram-subtitle strong {
+    color: var(--blue-light);
+}
+
+
+.diagram-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(59, 130, 246, 0.3), transparent);
+    margin: 3rem 0;
+}
+
+.migration-diagram svg {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.plan-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.plan-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition);
+    position: relative;
+}
+
+.plan-step:hover {
+    border-color: rgba(101, 171, 255, 0.2);
+    transform: translateY(-2px);
+}
+
+.plan-step-highlight {
+    border-color: var(--gold);
+    background: linear-gradient(135deg, var(--surface) 0%, rgba(245, 158, 11, 0.05) 100%);
+}
+
+.plan-step-highlight:hover {
+    border-color: var(--gold-light);
+}
+
+.plan-step-header {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    padding: 2rem;
+    cursor: pointer;
+    user-select: none;
+}
+
+.plan-step-number {
+    flex-shrink: 0;
+    width: 80px;
+    height: 80px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 900;
+    color: var(--blue-light);
+    background: linear-gradient(135deg, var(--blue-mid) 0%, var(--blue-dark) 100%);
+    border-radius: 16px;
+    border: 2px solid rgba(101, 171, 255, 0.2);
+    line-height: 1;
+}
+
+.plan-step-highlight .plan-step-number {
+    color: var(--gold);
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.05) 100%);
+    border-color: var(--gold);
+}
+
+.plan-step-title {
+    flex: 1;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    line-height: 1.3;
+}
+
+.plan-step-title .highlight {
+    color: var(--blue-light);
+}
+
+
+
+.plan-step-toggle {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 1);
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.plan-step-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: white;
+}
+
+.plan-step-toggle svg {
+    transition: transform var(--transition);
+}
+
+.plan-step.expanded .plan-step-toggle svg {
+    transform: rotate(180deg);
+}
+
+.plan-step-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.plan-step.expanded .plan-step-content {
+    max-height: 1000px;
+}
+
+.plan-step-content>p,
+.plan-step-content>ul {
+    padding: 0 2rem 2rem 2rem;
+}
+
+.plan-step-content p {
+    color: var(--text-secondary);
+    line-height: 1.7;
+    margin-bottom: 1rem;
+}
+
+.plan-step-content ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.plan-step-content li {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    padding-left: 1.5rem;
+    position: relative;
+}
+
+.plan-step-content>ul>li::before {
+    content: '→';
+    position: absolute;
+    left: 0;
+    color: var(--blue-light);
+    font-weight: 600;
+}
+
+/* Remove arrow from expandable items */
+.plan-step-content>ul>li.plan-step-item::before {
+    content: none;
+}
+
+.plan-step-highlight .plan-step-content>ul>li::before {
+    color: var(--gold);
+}
+
+.plan-step-content p a:visited {
+    color: var(--blue-light);
+    font-weight: 500;
+    transition: color var(--transition);
+}
+
+
+/* Nested expandable items */
+.plan-step-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-left: 0 !important;
+}
+
+.plan-step-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.25rem 0;
+}
+
+.plan-step-item-toggle {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 4px;
+    color: white;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+
+.plan-step-item-toggle:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-color: white;
+}
+
+.plan-step-item-toggle svg {
+    width: 14px;
+    height: 14px;
+    transition: transform var(--transition);
+}
+
+.plan-step-item.expanded .plan-step-item-toggle svg {
+    transform: rotate(180deg);
+}
+
+.plan-step-item-text {
+    flex: 1;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.plan-step-item-progress {
+    display: inline-block;
+    width: 50px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    margin-left: 0.5rem;
+    overflow: hidden;
+}
+
+.plan-step-item-progress-fill {
+    height: 100%;
+    background: var(--blue-light);
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+.plan-step-item-progress.complete .plan-step-item-progress-fill {
+    background: #10b981;
+}
+
+.plan-step-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 0 0 18px 18px;
+    overflow: hidden;
+}
+
+.plan-step-progress-fill {
+    height: 100%;
+    background: var(--blue-light);
+    transition: width 0.3s ease;
+    border-radius: 0 0 18px 18px;
+}
+
+.plan-step-progress.complete .plan-step-progress-fill {
+    background: #10b981;
+}
+
+.plan-step-item-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    padding-left: 2rem;
+}
+
+.plan-step-item.expanded .plan-step-item-content {
+    max-height: 800px;
+}
+
+.plan-step-item-content ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+    padding: 0;
+}
+
+.plan-step-item-content li {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    padding-left: 0;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+
+.plan-step-item-content li input[type="checkbox"] {
+    flex-shrink: 0;
+    margin-top: 0.15rem;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #10b981;
+}
+
+.plan-step-highlight .plan-step-item-content li input[type="checkbox"] {
+    accent-color: #10b981;
+}
+
+.plan-step-item-content li label {
+    flex: 1;
+    cursor: pointer;
+    user-select: none;
+}
+
+.plan-step-item-content li input[type="checkbox"]:checked+label {
+    text-decoration: line-through;
+    opacity: 0.6;
+}
+
+.plan-step-cta {
+    margin-top: 1.5rem;
+    padding: 0 2rem 2rem 2rem;
+}
+
+.plan-step-cta .btn {
+    display: inline-block;
+}
+
+/* Responsive for plan section */
+@media (max-width: 768px) {
+    .plan-step-header {
+        padding: 1.5rem;
+        gap: 1rem;
+    }
+
+    .plan-step-number {
+        width: 60px;
+        height: 60px;
+        font-size: 2rem;
+    }
+
+    .plan-step-title {
+        font-size: 1.1rem;
+    }
+
+    .plan-step-content>p,
+    .plan-step-content>ul,
+    .plan-step-cta {
+        padding-left: 1.5rem;
+        padding-right: 1.5rem;
+    }
+
+    .plan-step-item-content {
+        padding-left: 1.5rem;
+    }
+
+    .plan-step-item-text {
+        font-size: 0.95rem;
+    }
 }
 
 /* ── Stakes section ──────────────────────────────── */
@@ -1110,6 +1528,15 @@ section {
 
 .software-table tbody tr {
     transition: background var(--transition);
+}
+
+.software-table tbody tr.software-row-highlight {
+    background: linear-gradient(90deg, rgba(59, 246, 72, 0.08) 0%, rgba(59, 246, 87, 0.04) 100%);
+    border-left: 3px solid rgba(59, 246, 96, 0.4);
+}
+
+.software-table tbody tr.software-row-highlight:hover {
+    background: linear-gradient(90deg, rgba(59, 246, 65, 0.12) 0%, rgba(59, 246, 96, 0.06) 100%);
 }
 
 .software-table tbody tr:hover {
